@@ -1,0 +1,7 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    url: jdbc:postgresql://user-db:5432/${POSTGRES_DB}
