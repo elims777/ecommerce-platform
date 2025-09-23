@@ -17,7 +17,7 @@
     <packaging>jar</packaging>
 
     <dependencies>
-        <!-- Spring Boot starters -->
+        <!-- ================== SPRING ================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -39,7 +39,7 @@
             <artifactId>spring-kafka</artifactId>
         </dependency>
 
-        <!-- JWT (версии берутся из родителя) -->
+        <!-- ================== JWT ================== -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -55,13 +55,15 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- DB + миграции -->
+        <!-- ================== DATABASE ================== -->
+        <!-- JDBC-драйвер PostgreSQL -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.7.7</version>
             <scope>runtime</scope>
         </dependency>
+
+        <!-- Flyway миграции -->
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
@@ -69,32 +71,57 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
-            <!-- можно не указывать версию, если BOM/parent задаёт -->
         </dependency>
-        <!-- Monitoring -->
+
+        <!-- In-memory DB (H2) для тестов -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ================== MONITORING ================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Lombok (версия подтянется из родителя) -->
+        <!-- ================== LOMBOK ================== -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
 
-        <!-- Tests -->
+        <!-- ================== TESTS ================== -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.vintage</groupId>
+                    <artifactId>junit-vintage-engine</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Testcontainers (интеграционные тесты с PostgreSQL) -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- Используем spring-boot-maven-plugin для запуска -->
+            <!-- Плагин для сборки и запуска Spring Boot приложения -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
