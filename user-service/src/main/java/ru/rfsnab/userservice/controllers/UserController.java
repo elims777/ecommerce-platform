@@ -6,7 +6,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.userservice.exceptions.CustomException;
+import ru.rfsnab.userservice.mappers.RegistrationMapper;
 import ru.rfsnab.userservice.mappers.UserMapper;
+import ru.rfsnab.userservice.models.UserEntity;
+import ru.rfsnab.userservice.models.dto.RegistrationRequest;
+import ru.rfsnab.userservice.models.dto.RegAuthResponse;
 import ru.rfsnab.userservice.models.dto.UserDto;
 import ru.rfsnab.userservice.services.UserService;
 
@@ -20,16 +24,24 @@ public class UserController {
     private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/signup")
-    public ResponseEntity<UserDto> registerUser(@RequestBody UserDto userDto){
+    public ResponseEntity<RegAuthResponse> registerUser(@RequestBody RegistrationRequest userDto){
         if(userService.findUserByEmail(userDto.getEmail()).isPresent()){
             throw new CustomException("User already existed!", HttpStatus.CONFLICT.value());
         } else {
-            userDto.setPassword(passwordEncoder.encode(userDto.getPassword()));
-            return ResponseEntity.ok(
-                    UserMapper.mapToUserDto(
-                            userService.registerUser(
-                                    UserMapper.mapToUserEntity(userDto))));
+            UserEntity user = RegistrationMapper.mapToUserEntity(userDto);
+
+            user = userService.registerUser(user);
+
+            RegAuthResponse response = RegistrationMapper.mapToResponse(user);
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                            .body(response);
         }
+    }
+    //TODO
+    @PostMapping("/authenticate")
+    public ResponseEntity<RegAuthResponse> authenticate(){
+        return ResponseEntity.status(HttpStatus.OK).body(new RegAuthResponse());
     }
 
     @PutMapping("/{id}")

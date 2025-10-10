@@ -15,7 +15,11 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/v1/users/signup").permitAll()
+                        .requestMatchers(
+                                "/v1/users/signup",
+                                "/api/v1/auth/register",
+                                "/api/v1/users/check/**")
+                        .permitAll()
                         .anyRequest().authenticated());
         return http.build();
     }
