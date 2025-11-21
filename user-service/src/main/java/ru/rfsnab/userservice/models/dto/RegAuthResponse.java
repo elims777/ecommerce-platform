@@ -7,15 +7,14 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
-@Builder
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserDto {
+public class RegAuthResponse {
     private Long id;
     private String email;
-    private String password;
     private String firstname;
     private String lastname;
     private String surname;

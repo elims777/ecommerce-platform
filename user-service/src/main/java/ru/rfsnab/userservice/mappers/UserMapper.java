@@ -17,6 +17,7 @@ public class UserMapper {
                 .surname(user.getSurname())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .emailVerified(user.isEmailVerified())
                 .roles(user.getRoles())
                 .build();
     }
@@ -31,6 +32,7 @@ public class UserMapper {
                 .surname(userDto.getSurname())
                 .createdAt(userDto.getCreatedAt())
                 .updatedAt(userDto.getUpdatedAt())
+                .emailVerified(userDto.isEmailVerified())
                 .roles(userDto.getRoles())
                 .build();
     }

@@ -49,7 +49,7 @@ public class UserService {
                         userEntity -> {
                             userEntity.setEmail(user.getEmail());
                             userEntity.setPassword(passwordEncoder.encode(user.getPassword()));
-                            userEntity.setFirstname(userEntity.getFirstname());
+                            userEntity.setFirstname(user.getFirstname());
                             userEntity.setLastname(user.getLastname());
                             userEntity.setSurname(user.getSurname());
                             userEntity.setRoles(user.getRoles());

@@ -28,6 +28,8 @@ public class UserEntity {
     private String lastname;
     private String surname;
 
+    private boolean emailVerified;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
