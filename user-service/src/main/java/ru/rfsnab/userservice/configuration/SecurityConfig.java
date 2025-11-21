@@ -18,7 +18,10 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/v1/users/signup",
                                 "/api/v1/auth/register",
-                                "/api/v1/users/check/**")
+                                "/v1/users/oauth2-login",
+                                "/api/v1/users/check/**",
+                                "/v1/users/by-email",
+                                "/v1/users/authenticate")
                         .permitAll()
                         .anyRequest().authenticated());
         return http.build();

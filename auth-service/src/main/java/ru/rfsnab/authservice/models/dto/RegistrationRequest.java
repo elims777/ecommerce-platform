@@ -3,11 +3,13 @@ package ru.rfsnab.authservice.models.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class RegistrationRequest {
     @NotBlank
     @Email
@@ -23,4 +25,7 @@ public class RegistrationRequest {
     private String lastname;
 
     private String surname;
+
+    @Builder.Default
+    private boolean emailVerified = false;
 }

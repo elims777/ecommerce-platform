@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        label .required {
+            color: #dc3545;
+            margin-left: 3px;
+        }
+
+        input[type="email"],
+        input[type="password"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        input:invalid:not(:placeholder-shown) {
+            border-color: #dc3545;
+        }
+
+        input:valid:not(:placeholder-shown) {
+            border-color: #28a745;
+        }
+
+        .password-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 100%;
+            height: 1px;
+            background: #e9ecef;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 15px;
+            color: #999;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .oauth-btn {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            color: #333;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .oauth-btn:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            margin-top: 10px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 480px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📝 Регистрация</h1>
+    <p class="subtitle">Создайте аккаунт чтобы начать использовать сервис</p>
+
+    <div id="error" class="error"></div>
+    <div id="success" class="success"></div>
+
+    <form id="registerForm">
+        <div class="form-group">
+            <label for="email">
+                Email<span class="required">*</span>
+            </label>
+            <input type="email" id="email" name="email" required
+                   placeholder="example@mail.com">
+        </div>
+
+        <div class="form-group">
+            <label for="password">
+                Пароль<span class="required">*</span>
+            </label>
+            <input type="password" id="password" name="password" required
+                   placeholder="Минимум 8 символов" minlength="8">
+            <div class="password-hint">Минимум 8 символов</div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="firstname">
+                    Имя<span class="required">*</span>
+                </label>
+                <input type="text" id="firstname" name="firstname" required
+                       placeholder="Иван">
+            </div>
+
+            <div class="form-group">
+                <label for="lastname">
+                    Фамилия<span class="required">*</span>
+                </label>
+                <input type="text" id="lastname" name="lastname" required
+                       placeholder="Иванов">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="surname">
+                Отчество
+            </label>
+            <input type="text" id="surname" name="surname"
+                   placeholder="Иванович (необязательно)">
+        </div>
+
+        <button type="submit" class="btn" id="submitBtn">
+            Зарегистрироваться
+        </button>
+    </form>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Создание аккаунта...</p>
+    </div>
+
+    <div class="divider">
+        <span>или</span>
+    </div>
+
+    <a href="/oauth2/authorization/yandex" class="oauth-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="11" fill="#FC3F1D"/>
+            <path d="M13.5 7.5H10.5V16.5H13.5C15.433 16.5 17 14.933 17 13C17 11.067 15.433 9.5 13.5 9.5H12V11.5H13.5C14.3284 11.5 15 12.1716 15 13C15 13.8284 14.3284 14.5 13.5 14.5H12.5V7.5H13.5Z" fill="white"/>
+        </svg>
+        Зарегистрироваться через Яндекс
+    </a>
+
+    <div class="back-link">
+        Уже есть аккаунт?
+        <a href="/">Войти</a>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('registerForm');
+    const errorDiv = document.getElementById('error');
+    const successDiv = document.getElementById('success');
+    const submitBtn = document.getElementById('submitBtn');
+    const loadingDiv = document.getElementById('loading');
+
+    // Проверяем есть ли ошибка в URL параметрах (от OAuth2)
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const errorParam = urlParams.get('error');
+
+        if (errorParam) {
+            errorDiv.textContent = decodeURIComponent(errorParam);
+            errorDiv.style.display = 'block';
+
+            // Очищаем URL от параметра ошибки
+            window.history.replaceState({}, '', '/auth/register');
+        }
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = {
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+            firstname: document.getElementById('firstname').value,
+            lastname: document.getElementById('lastname').value,
+            surname: document.getElementById('surname').value || null
+        };
+
+        // Скрываем сообщения, показываем loading
+        errorDiv.style.display = 'none';
+        successDiv.style.display = 'none';
+        submitBtn.disabled = true;
+        loadingDiv.style.display = 'block';
+
+        try {
+            const response = await fetch('/api/v1/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.message || 'Ошибка регистрации');
+            }
+
+            // Успешная регистрация
+            successDiv.innerHTML = `
+                    <strong>✅ Регистрация успешна!</strong><br>
+                    На адрес <strong>${formData.email}</strong> отправлено письмо для подтверждения.<br>
+                    Пожалуйста, проверьте почту и перейдите по ссылке.
+                `;
+            successDiv.style.display = 'block';
+
+            // Очищаем форму
+            form.reset();
+
+            // Через 5 секунд редиректим на страницу входа
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 5000);
+
+        } catch (error) {
+            console.error('Ошибка регистрации:', error);
+            errorDiv.textContent = error.message || 'Произошла ошибка при регистрации';
+            errorDiv.style.display = 'block';
+            submitBtn.disabled = false;
+            loadingDiv.style.display = 'none';
+        }
+    });
+</script>
+</body>
+</html>

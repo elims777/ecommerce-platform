@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в систему</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 450px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 100%;
+            height: 1px;
+            background: #e9ecef;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 15px;
+            color: #999;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .oauth-btn {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            color: #333;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .oauth-btn:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            margin-top: 10px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔐 Вход в систему</h1>
+    <p class="subtitle">Войдите используя email и пароль или через Яндекс</p>
+
+    <div id="error" class="error"></div>
+
+    <form id="loginForm">
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required
+                   placeholder="example@mail.com">
+        </div>
+
+        <div class="form-group">
+            <label for="password">Пароль</label>
+            <input type="password" id="password" name="password" required
+                   placeholder="Введите пароль" minlength="8">
+        </div>
+
+        <button type="submit" class="btn" id="submitBtn">
+            Войти
+        </button>
+    </form>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Вход в систему...</p>
+    </div>
+
+    <div class="divider">
+        <span>или</span>
+    </div>
+
+    <a href="/oauth2/authorization/yandex" class="oauth-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="11" fill="#FC3F1D"/>
+            <path d="M13.5 7.5H10.5V16.5H13.5C15.433 16.5 17 14.933 17 13C17 11.067 15.433 9.5 13.5 9.5H12V11.5H13.5C14.3284 11.5 15 12.1716 15 13C15 13.8284 14.3284 14.5 13.5 14.5H12.5V7.5H13.5Z" fill="white"/>
+        </svg>
+        Войти через Яндекс
+    </a>
+
+    <div style="text-align: center; margin-top: 25px; color: #666; font-size: 14px;">
+        Нет аккаунта?
+        <a href="/auth/register" style="color: #667eea; text-decoration: none; font-weight: 600; margin-left: 5px;">
+            Зарегистрироваться
+        </a>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('loginForm');
+    const errorDiv = document.getElementById('error');
+    const submitBtn = document.getElementById('submitBtn');
+    const loadingDiv = document.getElementById('loading');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        // Скрываем ошибку, показываем loading
+        errorDiv.style.display = 'none';
+        submitBtn.disabled = true;
+        loadingDiv.style.display = 'block';
+
+        try {
+            const response = await fetch('/v1/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (response.redirected) {
+                // Если сервер вернул redirect - переходим
+                window.location.href = response.url;
+                return;
+            }
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Неверный email или пароль');
+            }
+
+            // Если ответ JSON - парсим и формируем redirect вручную
+            const data = await response.json();
+
+            // Формируем данные для страницы успеха
+            const successData = {
+                access_token: data.accessToken || data.access_token,
+                refresh_token: data.refreshToken || data.refresh_token,
+                token_type: data.tokenType || data.token_type || 'Bearer',
+                expires_in: 3600,
+                user: data.user || {
+                    email: email,
+                    firstname: 'User',
+                    lastname: '',
+                    emailVerified: true
+                }
+            };
+
+            const dataJson = encodeURIComponent(JSON.stringify(successData));
+            window.location.href = '/oauth2/success?data=' + dataJson;
+
+        } catch (error) {
+            console.error('Ошибка входа:', error);
+            errorDiv.textContent = error.message || 'Произошла ошибка при входе';
+            errorDiv.style.display = 'block';
+            submitBtn.disabled = false;
+            loadingDiv.style.display = 'none';
+        }
+    });
+</script>
+</body>
+</html>

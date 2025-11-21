@@ -21,6 +21,7 @@ public class UserDto {
     private String surname;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean emailVerified;
     @Builder.Default
     private Set<RoleEntity> roles = new HashSet<>();
 }

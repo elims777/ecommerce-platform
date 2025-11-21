@@ -1,0 +1,68 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: auth-service
+
+    # OAuth2 Client (не Authorization Server!)
+  security:
+    oauth2:
+      client:
+        registration:
+
+          yandex:
+            client-id: ${YANDEX_CLIENT_ID}
+            client-secret: ${YANDEX_CLIENT_SECRET}
+            client-name: Yandex
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - login:email
+              - login:info
+
+        provider:
+          yandex:
+            authorization-uri: https://oauth.yandex.ru/authorize
+            token-uri: https://oauth.yandex.ru/token
+            user-info-uri: https://login.yandex.ru/info
+            user-name-attribute: login
+
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/authdb
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  codec:
+    max-in-memory-size: 2MB
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.web.reactive: DEBUG
+
+user:
+  service:
+    url: http://localhost:8081  # локально user-service в IDE (или http://user-service:8081 в Docker)
+    auth: /v1/users/authenticate
+
+jwt:
+  secret: "${SECRET_JWT}"  # подставляется через ENV, но есть дефолт
+  expiration-ms: 3600000          # 1 час
+  refresh-expiration-ms: 86400000 # 1 день
+

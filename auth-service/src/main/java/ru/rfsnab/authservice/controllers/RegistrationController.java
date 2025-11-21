@@ -2,6 +2,7 @@ package ru.rfsnab.authservice.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -14,12 +15,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.authservice.models.dto.RegistrationRequest;
-import ru.rfsnab.authservice.models.dto.UserDto;
+import ru.rfsnab.authservice.models.dto.UserDtoResponse;
 
 import java.util.Map;
 
+@Slf4j
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class RegistrationController {
 
@@ -27,7 +29,7 @@ public class RegistrationController {
     private final PasswordEncoder passwordEncoder;
 
     // base URL user-service, задаём в application.yml (см. ниже)
-    @Value("${user.service.url:http://localhost:8081}")
+    @Value("${user.service.url}")
     private String userServiceUrl;
 
     /**
@@ -40,19 +42,29 @@ public class RegistrationController {
     public ResponseEntity<?> registerJson(@Valid @RequestBody RegistrationRequest request) {
         request.setPassword(passwordEncoder.encode(request.getPassword()));
         try {
-            UserDto created =
+            UserDtoResponse created =
                     restTemplate.postForObject(
                             userServiceUrl + "/v1/users/signup",
                                 request,
-                                UserDto.class
+                                UserDtoResponse.class
                     );
+            if(created==null){
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "Failed to create user: empty response"));
+            }
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (HttpClientErrorException.Conflict e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("error", "User already exists"));
+                    .body(new ErrorResponse("User already exists"));
+        } catch (HttpClientErrorException.BadRequest e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("Invalid registration data"));
         } catch (Exception e) {
+            log.error("Registration failed", e); // добавь логгер!
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Registration failed"));
+                    .body(new ErrorResponse("Registration failed due to internal error"));
         }
     }
+
+    record ErrorResponse(String error) { }
 }

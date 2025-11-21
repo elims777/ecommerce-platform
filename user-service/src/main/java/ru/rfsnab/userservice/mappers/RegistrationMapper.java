@@ -26,6 +26,7 @@ public class RegistrationMapper {
                 .roles(user.getRoles())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .emailVerified(user.isEmailVerified())
                 .build();
     }
 

@@ -1,4 +1,4 @@
-INSERT INTO users (id, email, password, firstname, lastname, surname) VALUES (1, 'elims777@yandex.ru',
+INSERT INTO users (email, password, firstname, lastname, surname) VALUES ( 'elims777@yandex.ru',
                           '$2a$12$QgwT7lCmYH4FNSauNxEJhOEw3RYLMvkfsOorRHxIgK.w1EArzPJ1u',
                           'Max',
                           'Kokorin',

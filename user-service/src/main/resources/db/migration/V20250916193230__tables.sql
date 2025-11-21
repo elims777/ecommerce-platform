@@ -6,7 +6,8 @@ CREATE TABLE users (
     lastname VARCHAR(50) NOT NULL ,
     surname VARCHAR(50),
     created_at TIMESTAMP,
-    updated_at TIMESTAMP
+    updated_at TIMESTAMP,
+    email_verified BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE roles (
