@@ -20,7 +20,6 @@ public class SecurityConfig {
                                 "/api/v1/auth/register",
                                 "/v1/users/oauth2-login",
                                 "/api/v1/users/check/**",
-                                "/v1/users/by-email",
                                 "/v1/users/authenticate")
                         .permitAll()
                         .anyRequest().authenticated());

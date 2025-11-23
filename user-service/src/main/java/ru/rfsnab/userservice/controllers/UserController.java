@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.userservice.exceptions.CustomException;
 import ru.rfsnab.userservice.mappers.RegistrationMapper;
@@ -17,6 +18,7 @@ import ru.rfsnab.userservice.models.dto.UserDto;
 import ru.rfsnab.userservice.services.UserService;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -25,6 +27,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * OAuth2 login/register endpoint
@@ -65,27 +68,20 @@ public class UserController {
         }
     }
 
-    @GetMapping("/by-email")
-    public ResponseEntity<RegAuthResponse> getUserByEmail(@RequestParam String email) {
-        UserEntity user = userService.findUserByEmail(email)
-                .orElseThrow(() -> new CustomException(
-                        "Пользователь с email " + email + " не найден",
-                        HttpStatus.NOT_FOUND.value()
-                ));
-
-        return ResponseEntity.ok(RegistrationMapper.mapToResponse(user));
-    }
-
     /***
      * Аутентификация пользователей через логин, пароль
      */
     @PostMapping("/authenticate")
-    public ResponseEntity<UserDto> authenticate(@RequestBody SimpleAuthRequest authRequest){
+    public ResponseEntity<?> authenticate(@RequestBody SimpleAuthRequest authRequest){
         UserDto userDto = UserMapper.mapToUserDto(userService.findUserByEmail(authRequest.getEmail())
                 .orElseThrow(() -> new CustomException(
                         "Пользователь с email " + authRequest.getEmail() + " не найден",
                         HttpStatus.NOT_FOUND.value()
                 )));
+        if (!passwordEncoder.matches(authRequest.getPassword(), userDto.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Неверный пароль"));
+        }
         return ResponseEntity.status(HttpStatus.OK).body(userDto);
     }
 

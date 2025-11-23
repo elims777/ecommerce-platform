@@ -3,15 +3,14 @@ package ru.rfsnab.authservice.utils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.rfsnab.authservice.configuration.JWTProperties;
 
+import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.security.Key;
 import java.util.Date;
 
 @Service
@@ -24,7 +23,7 @@ public class JWTService {
     /**
      * Создает секретный ключ для подписи токена
      */
-    private Key getSignedKey(){
+    private SecretKey getSignedKey(){
         byte[] keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
@@ -34,10 +33,10 @@ public class JWTService {
      */
     public String generateToken(String email){
         return Jwts.builder()
-                .setSubject(email)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis()+jwtProperties.getExpirationMs()))
-                .signWith(getSignedKey(), SignatureAlgorithm.HS256)
+                .subject(email)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis()+jwtProperties.getExpirationMs()))
+                .signWith(getSignedKey())
                 .compact();
     }
 
@@ -46,10 +45,10 @@ public class JWTService {
      */
     public String generateRefreshToken(String email){
         return Jwts.builder()
-                .setSubject(email)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis()+jwtProperties.getRefreshExpirationMs()))
-                .signWith(getSignedKey(), SignatureAlgorithm.HS256)
+                .subject(email)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis()+jwtProperties.getRefreshExpirationMs()))
+                .signWith(getSignedKey())
                 .compact();
     }
 
@@ -58,10 +57,10 @@ public class JWTService {
      */
     public boolean validateToken(String token){
         try{
-            Jwts.parserBuilder()
-                    .setSigningKey(getSignedKey())
+            Jwts.parser()
+                    .verifyWith(getSignedKey())
                     .build()
-                    .parseClaimsJws(token);
+                    .parseSignedClaims(token);
             return true;
         } catch (JwtException | IllegalArgumentException e){
             log.error("JWT validation failed: {}", e.getMessage());
@@ -73,11 +72,11 @@ public class JWTService {
      * Извлечение всех claims из токена
      */
     private Claims extractClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSignedKey())
+        return Jwts.parser()
+                .verifyWith(getSignedKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     /**
