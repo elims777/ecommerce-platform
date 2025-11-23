@@ -4,6 +4,9 @@ import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
@@ -99,6 +102,42 @@ public class AuthService {
         result.put("user", user);
 
         return result;
+    }
+
+    /**
+     * Получение данных текущего пользователя по JWT токену.
+     * Вызывает user-service endpoint /v1/users/me с Bearer токеном.
+     */
+    public UserDtoResponse getCurrentUser(String accessToken){
+        String meUrl = userServiceUrl + "/v1/users/me";
+
+        try{
+            //Создаем Headers c Bearer токеном
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            // GET запрос к user-service
+            ResponseEntity<UserDtoResponse> response = restTemplate.exchange(
+                    meUrl,
+                    HttpMethod.GET,
+                    entity,
+                    UserDtoResponse.class
+            );
+
+            UserDtoResponse user = response.getBody();
+            if(user==null){
+                throw new RuntimeException("Не удалось получить данные пользователя");
+            }
+            log.debug("Получены данные пользователя: {}", user.getEmail());
+            return user;
+        } catch (HttpClientErrorException.Unauthorized e){
+            log.warn("Невалидный токен при запросе данных пользователя");
+            throw new JwtException("Токен недействителен или истек");
+        } catch (HttpClientErrorException e){
+            log.error("Ошибка при обращении к user-service: {}", e.getMessage());
+            throw new RuntimeException("Ошибка получения данных пользователя");
+        }
     }
 
     /**
