@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.userservice.exceptions.CustomException;
@@ -111,12 +112,14 @@ public class UserController {
                 HttpStatus.NOT_FOUND.value());}
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<UserDto> getUserById(@PathVariable("id") Long id){
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
+        String email = authentication.getName(); // email из JWT токена
         return ResponseEntity.ok(
                 UserMapper.mapToUserDto(
-                        userService.findUserById(id)
-                                .orElseThrow(()->new CustomException(
-                                        String.format("User whith id = %s not found", id)))));
+                        userService.findUserByEmail(email)
+                                .orElseThrow(() -> new CustomException(
+                                        "Пользователь не найден",
+                                        HttpStatus.NOT_FOUND.value()))));
     }
 }

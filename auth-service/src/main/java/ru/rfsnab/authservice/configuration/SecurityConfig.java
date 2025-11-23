@@ -85,7 +85,7 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/", "/auth/**").permitAll()  // Разрешаем главную страницу и auth pages
+                        .requestMatchers("/", "/auth/**", "/profile").permitAll()  // Разрешаем главную страницу и auth pages
                         .anyRequest().authenticated()
                 );
 

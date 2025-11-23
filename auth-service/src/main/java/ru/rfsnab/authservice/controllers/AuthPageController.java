@@ -36,4 +36,12 @@ public class AuthPageController {
     public String success() {
         return "oauth2-success";
     }
+
+    /**
+     * Страница личного кабинета
+     */
+    @GetMapping("/profile")
+    public String profile() {
+        return "profile";
+    }
 }

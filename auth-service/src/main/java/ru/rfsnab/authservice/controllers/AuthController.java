@@ -4,11 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.authservice.models.dto.AuthResponse;
 import ru.rfsnab.authservice.models.dto.SimpleAuthRequest;
+import ru.rfsnab.authservice.models.dto.UserDtoResponse;
 import ru.rfsnab.authservice.service.AuthService;
 
 import java.io.IOException;
@@ -17,12 +21,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @RestController
+@Slf4j
 @RequestMapping("/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
     private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate;
+
+    @Value("${user.service.url}")
+    private String userServiceUrl;
 
     /**
      * REST API endpoint для login (возвращает JSON)
@@ -61,6 +70,45 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refresh(@RequestParam String refreshToken) {
         return ResponseEntity.ok(authService.refresh(refreshToken));
     }
+
+    /**
+     * Получение данных текущего пользователя.
+     * Проксирует запрос в user-service с JWT токеном.
+     */
+    @GetMapping("me")
+    public ResponseEntity<?> getCurrentUser(@RequestHeader("Authorization") String authHeader){
+        try{
+            //Создаем header c authorization
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", authHeader);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+            // Запрос в user-service
+            ResponseEntity<UserDtoResponse> response = restTemplate.exchange(
+                    userServiceUrl + "/v1/users/me",
+                    HttpMethod.GET,
+                    httpEntity,
+                    UserDtoResponse.class
+            );
+
+            return ResponseEntity.ok(response.getBody());
+        } catch (HttpClientErrorException.Unauthorized e) {
+            log.warn("Unauthorized request to /me");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Недействительный или истёкший токен"));
+        } catch (HttpClientErrorException.Forbidden e) {
+            log.warn("Forbidden request to /me");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Доступ запрещён"));
+        } catch (Exception e) {
+            log.error("Error getting user data: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Ошибка получения данных пользователя"));
+        }
+    }
+
 
     /**
      * Logout endpoint (пока просто возвращает success)
