@@ -5,10 +5,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import ru.rfsnab.userservice.exceptions.CustomException;
+import ru.rfsnab.userservice.exceptions.UserAlreadyExistsException;
 import ru.rfsnab.userservice.mappers.RegistrationMapper;
 import ru.rfsnab.userservice.mappers.UserMapper;
 import ru.rfsnab.userservice.models.UserEntity;
@@ -19,7 +21,6 @@ import ru.rfsnab.userservice.models.dto.UserDto;
 import ru.rfsnab.userservice.services.UserService;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -54,9 +55,9 @@ public class UserController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<RegAuthResponse> registerUser(@RequestBody RegistrationRequest userDto){
+    public ResponseEntity<RegAuthResponse> registerUser(@Valid @RequestBody RegistrationRequest userDto){
         if(userService.findUserByEmail(userDto.getEmail()).isPresent()){
-            throw new CustomException("User already existed!", HttpStatus.CONFLICT.value());
+            throw new UserAlreadyExistsException(userDto.getEmail());
         } else {
             UserEntity user = RegistrationMapper.mapToUserEntity(userDto);
 
@@ -73,15 +74,11 @@ public class UserController {
      * Аутентификация пользователей через логин, пароль
      */
     @PostMapping("/authenticate")
-    public ResponseEntity<?> authenticate(@RequestBody SimpleAuthRequest authRequest){
+    public ResponseEntity<?> authenticate(@Valid @RequestBody SimpleAuthRequest authRequest){
         UserDto userDto = UserMapper.mapToUserDto(userService.findUserByEmail(authRequest.getEmail())
-                .orElseThrow(() -> new CustomException(
-                        "Пользователь с email " + authRequest.getEmail() + " не найден",
-                        HttpStatus.NOT_FOUND.value()
-                )));
+                .orElseThrow(() -> new BadCredentialsException("Неверный email или пароль")));
         if (!passwordEncoder.matches(authRequest.getPassword(), userDto.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Неверный пароль"));
+            throw new BadCredentialsException("Неверный email или пароль");
         }
         return ResponseEntity.status(HttpStatus.OK).body(userDto);
     }
@@ -104,22 +101,22 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteUser(@PathVariable("id") Long id){
-        if(userService.findUserById(id).isPresent()){
-            userService.deleteUser(id);
-            return ResponseEntity.ok("User deleted.");
-        } else {throw new CustomException(
-                String.format("User whith id = %s not found", id),
-                HttpStatus.NOT_FOUND.value());}
+        UserEntity user = userService.findUserById(id)
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "Пользователь с id " + id + " не найден"));
+
+        userService.deleteUser(id);
+        return ResponseEntity.ok("User deleted.");
     }
 
     @GetMapping("/me")
     public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
-        String email = authentication.getName(); // email из JWT токена
-        return ResponseEntity.ok(
-                UserMapper.mapToUserDto(
-                        userService.findUserByEmail(email)
-                                .orElseThrow(() -> new CustomException(
-                                        "Пользователь не найден",
-                                        HttpStatus.NOT_FOUND.value()))));
+        String email = authentication.getName();
+
+        UserEntity user = userService.findUserByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "Пользователь " + email + " не найден"));
+
+        return ResponseEntity.ok(UserMapper.mapToUserDto(user));
     }
 }

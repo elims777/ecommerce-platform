@@ -12,76 +12,151 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
             min-height: 100vh;
-            padding: 20px;
+            display: flex;
         }
 
-        .container {
+        .sidebar {
+            width: 280px;
             background: white;
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 600px;
-            width: 100%;
-            animation: slideIn 0.5s ease-out;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            padding: 30px 20px;
         }
 
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .header {
+        .sidebar-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
 
-        .avatar {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
+        .sidebar-header h2 {
+            color: #667eea;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .menu {
+            flex: 1;
+        }
+
+        .menu-item {
+            padding: 15px 20px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            font-size: 48px;
+            gap: 12px;
+            color: #333;
+            text-decoration: none;
+        }
+
+        .menu-item:hover {
+            background: #f5f5f5;
+        }
+
+        .menu-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
 
-        h1 {
-            color: #333;
-            font-size: 28px;
-            margin-bottom: 5px;
+        .menu-item-icon {
+            font-size: 20px;
         }
 
-        .subtitle {
+        .logout-btn {
+            padding: 15px 20px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .logout-btn:hover {
+            background: #ee5a6f;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(255, 71, 87, 0.3);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .profile-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .profile-info h1 {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .profile-info p {
             color: #666;
             font-size: 16px;
         }
 
-        .user-card {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
+        .profile-section {
+            margin-bottom: 35px;
         }
 
-        .user-card h2 {
-            color: #667eea;
+        .profile-section h2 {
+            font-size: 20px;
+            color: #333;
             margin-bottom: 20px;
-            font-size: 18px;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -89,148 +164,74 @@
 
         .info-grid {
             display: grid;
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
         }
 
-        .info-row {
-            display: flex;
-            align-items: center;
-            padding: 15px;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #e9ecef;
+        .info-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
         }
 
-        .info-icon {
-            font-size: 24px;
-            min-width: 40px;
-            text-align: center;
-        }
-
-        .info-content {
-            flex: 1;
-            margin-left: 15px;
+        .info-item:hover {
+            background: #f0f1f3;
+            transform: translateY(-2px);
         }
 
         .info-label {
-            font-size: 12px;
+            font-size: 14px;
             color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 3px;
+            margin-bottom: 8px;
+            font-weight: 500;
         }
 
         .info-value {
-            font-size: 16px;
+            font-size: 18px;
             color: #333;
-            font-weight: 500;
-            word-break: break-word;
-        }
-
-        .roles-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 5px;
-        }
-
-        .role-badge {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
             font-weight: 600;
         }
 
-        .verified-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-right: 8px;
+            margin-top: 8px;
+        }
+
+        .badge-success {
             background: #d4edda;
             color: #155724;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
         }
 
-        .not-verified-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            background: #f8d7da;
-            color: #721c24;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
         }
 
-        .actions {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-secondary {
-            background: #e9ecef;
-            color: #495057;
-        }
-
-        .btn-secondary:hover {
-            background: #dee2e6;
-        }
-
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
+        .badge-primary {
+            background: #e3e7ff;
+            color: #667eea;
         }
 
         .loading {
-            text-align: center;
-            color: #666;
-            padding: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
         }
 
         .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
             width: 50px;
             height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
         }
 
         @keyframes spin {
@@ -238,9 +239,11 @@
             100% { transform: rotate(360deg); }
         }
 
-        .error-container {
+        .error-state {
             text-align: center;
-            padding: 40px;
+            padding: 60px 20px;
+            max-width: 500px;
+            margin: 0 auto;
         }
 
         .error-icon {
@@ -248,141 +251,123 @@
             margin-bottom: 20px;
         }
 
-        .error-message {
-            color: #dc3545;
-            font-size: 18px;
-            margin-bottom: 20px;
+        .error-state h2 {
+            color: #333;
+            margin-bottom: 16px;
+            font-size: 28px;
         }
 
-        .timestamp {
-            font-size: 12px;
-            color: #999;
+        .error-message {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 32px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                padding: 20px;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .profile-avatar {
+                width: 100px;
+                height: 100px;
+                font-size: 40px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <!-- Loading state -->
-    <div id="loading" class="loading">
-        <div class="spinner"></div>
-        <p>Загрузка данных профиля...</p>
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-header">
+        <h2>📋 Меню</h2>
+        <p>Управление аккаунтом</p>
     </div>
 
-    <!-- Error state -->
-    <div id="error" class="error-container" style="display: none;">
-        <div class="error-icon">❌</div>
-        <p class="error-message" id="errorMessage">Ошибка загрузки данных</p>
-        <button class="btn btn-primary" onclick="window.location.href='/'">
-            <span>🔑</span> Войти снова
-        </button>
-    </div>
+    <nav class="menu">
+        <a href="#" class="menu-item active">
+            <span class="menu-item-icon">👤</span>
+            <span>Профиль</span>
+        </a>
+        <a href="#" class="menu-item">
+            <span class="menu-item-icon">⚙️</span>
+            <span>Настройки</span>
+        </a>
+        <a href="#" class="menu-item">
+            <span class="menu-item-icon">🔔</span>
+            <span>Уведомления</span>
+        </a>
+        <a href="#" class="menu-item">
+            <span class="menu-item-icon">🔒</span>
+            <span>Безопасность</span>
+        </a>
+    </nav>
 
-    <!-- Content -->
-    <div id="content" style="display: none;">
-        <div class="header">
-            <div class="avatar" id="avatarInitials">👤</div>
-            <h1 id="fullName">-</h1>
-            <p class="subtitle" id="userEmail">-</p>
-        </div>
+    <button class="logout-btn" onclick="logout()">
+        <span>🚪</span>
+        <span>Выйти</span>
+    </button>
+</div>
 
-        <div class="user-card">
-            <h2>
-                <span>📋</span>
-                <span>Информация профиля</span>
-            </h2>
-            <div class="info-grid">
-                <div class="info-row">
-                    <span class="info-icon">🆔</span>
-                    <div class="info-content">
-                        <div class="info-label">ID пользователя</div>
-                        <div class="info-value" id="userId">-</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon">📧</span>
-                    <div class="info-content">
-                        <div class="info-label">Email</div>
-                        <div class="info-value" id="emailValue">-</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon">👤</span>
-                    <div class="info-content">
-                        <div class="info-label">Имя</div>
-                        <div class="info-value" id="firstName">-</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon">👥</span>
-                    <div class="info-content">
-                        <div class="info-label">Фамилия</div>
-                        <div class="info-value" id="lastName">-</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon">📝</span>
-                    <div class="info-content">
-                        <div class="info-label">Отчество</div>
-                        <div class="info-value" id="surname">-</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon">✅</span>
-                    <div class="info-content">
-                        <div class="info-label">Email подтверждён</div>
-                        <div class="info-value" id="emailVerified">-</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon">🛡️</span>
-                    <div class="info-content">
-                        <div class="info-label">Роли</div>
-                        <div class="info-value">
-                            <div class="roles-container" id="rolesContainer">-</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon">📅</span>
-                    <div class="info-content">
-                        <div class="info-label">Дата регистрации</div>
-                        <div class="info-value" id="createdAt">-</div>
-                    </div>
-                </div>
-                <div class="info-row">
-                    <span class="info-icon">🔄</span>
-                    <div class="info-content">
-                        <div class="info-label">Последнее обновление</div>
-                        <div class="info-value" id="updatedAt">-</div>
-                    </div>
-                </div>
+<!-- Main Content -->
+<div class="main-content">
+    <div class="container">
+        <div id="profile-container">
+            <div class="loading">
+                <div class="spinner"></div>
             </div>
-        </div>
-
-        <div class="actions">
-            <button class="btn btn-secondary" onclick="refreshData()">
-                <span>🔄</span> Обновить
-            </button>
-            <button class="btn btn-danger" onclick="logout()">
-                <span>🚪</span> Выйти
-            </button>
         </div>
     </div>
 </div>
 
 <script>
-    // Загружаем данные при открытии страницы
-    window.addEventListener('DOMContentLoaded', function() {
+    // Загрузка данных профиля при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
         loadUserData();
     });
 
     async function loadUserData() {
-        showLoading();
-
         const accessToken = localStorage.getItem('access_token');
 
         if (!accessToken) {
-            showError('Токен не найден. Пожалуйста, войдите в систему.');
+            showError('Вы не авторизованы. Пожалуйста, войдите в систему.');
+            setTimeout(() => window.location.href = '/', 2000);
             return;
         }
 
@@ -395,178 +380,205 @@
                 }
             });
 
-            if (response.status === 401) {
-                // Попробуем обновить токен
-                const refreshed = await tryRefreshToken();
-                if (refreshed) {
-                    // Повторяем запрос с новым токеном
-                    await loadUserData();
+            // Если получили ответ, парсим его
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Обработка разных типов ошибок
+                if (response.status === 401) {
+                    // Токен истёк или невалидный
+                    const refreshToken = localStorage.getItem('refresh_token');
+                    if (refreshToken) {
+                        console.log('Токен истёк, пробуем обновить...');
+                        const refreshed = await tryRefreshToken(refreshToken);
+                        if (refreshed) {
+                            // Токен обновлён, пробуем ещё раз
+                            return await loadUserData();
+                        }
+                    }
+
+                    // Не удалось обновить токен
+                    showError(data.message || 'Сессия истекла. Пожалуйста, войдите снова.');
+                    setTimeout(() => window.location.href = '/', 2000);
                     return;
+
+                } else if (response.status === 403) {
+                    showError(data.message || 'Доступ запрещён.');
+                    return;
+
+                } else if (response.status === 404) {
+                    showError(data.message || 'Пользователь не найден.');
+                    return;
+
+                } else if (response.status >= 500) {
+                    showError('Ошибка сервера. Пожалуйста, попробуйте позже.');
+                    return;
+
                 } else {
-                    showError('Сессия истекла. Пожалуйста, войдите снова.');
+                    showError(data.message || 'Не удалось загрузить данные профиля.');
                     return;
                 }
             }
 
-            if (!response.ok) {
-                throw new Error('Ошибка получения данных: ' + response.status);
-            }
-
-            const userData = await response.json();
-            displayUserData(userData);
+            // Успешно получили данные
+            displayUserData(data);
 
         } catch (error) {
-            console.error('Error loading user data:', error);
-            showError('Не удалось загрузить данные профиля');
-        }
-    }
+            console.error('Ошибка при загрузке профиля:', error);
 
-    async function tryRefreshToken() {
-        const refreshToken = localStorage.getItem('refresh_token');
-
-        if (!refreshToken) {
-            return false;
-        }
-
-        try {
-            const response = await fetch('/v1/auth/refresh?refreshToken=' + encodeURIComponent(refreshToken), {
-                method: 'POST'
-            });
-
-            if (!response.ok) {
-                return false;
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                showError('Не удалось подключиться к серверу. Проверьте соединение.');
+            } else {
+                showError('Произошла ошибка при загрузке профиля. Пожалуйста, попробуйте позже.');
             }
-
-            const data = await response.json();
-            localStorage.setItem('access_token', data.accessToken);
-            localStorage.setItem('refresh_token', data.refreshToken);
-            return true;
-
-        } catch (error) {
-            console.error('Error refreshing token:', error);
-            return false;
         }
     }
 
-    function displayUserData(user) {
-        // Скрываем loading, показываем content
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('error').style.display = 'none';
-        document.getElementById('content').style.display = 'block';
-
-        // Заполняем данные
-        const firstName = user.firstname || '';
-        const lastName = user.lastname || '';
-        const fullName = [lastName, firstName].filter(Boolean).join(' ') || 'Пользователь';
-
-        document.getElementById('fullName').textContent = fullName;
-        document.getElementById('userEmail').textContent = user.email || '';
-
-        // Инициалы для аватара
-        const initials = getInitials(firstName, lastName);
-        document.getElementById('avatarInitials').textContent = initials || '👤';
-
-        // Детальная информация
-        document.getElementById('userId').textContent = user.id || '-';
-        document.getElementById('emailValue').textContent = user.email || '-';
-        document.getElementById('firstName').textContent = user.firstname || '-';
-        document.getElementById('lastName').textContent = user.lastname || '-';
-        document.getElementById('surname').textContent = user.surname || '-';
-
-        // Email verified
-        const verifiedEl = document.getElementById('emailVerified');
-        if (user.emailVerified) {
-            verifiedEl.innerHTML = '<span class="verified-badge">✅ Подтверждён</span>';
-        } else {
-            verifiedEl.innerHTML = '<span class="not-verified-badge">❌ Не подтверждён</span>';
-        }
-
-        // Роли
-        const rolesContainer = document.getElementById('rolesContainer');
-        if (user.roles && user.roles.length > 0) {
-            rolesContainer.innerHTML = user.roles
-                .map(role => `<span class="role-badge">${formatRole(role.name || role)}</span>`)
-                .join('');
-        } else {
-            rolesContainer.innerHTML = '<span style="color: #666;">Роли не назначены</span>';
-        }
-
-        // Даты
-        document.getElementById('createdAt').textContent = formatDate(user.createdAt);
-        document.getElementById('updatedAt').textContent = formatDate(user.updatedAt);
-    }
-
-    function getInitials(firstName, lastName) {
-        const first = firstName ? firstName.charAt(0).toUpperCase() : '';
-        const last = lastName ? lastName.charAt(0).toUpperCase() : '';
-        return first + last;
-    }
-
-    function formatRole(role) {
-        // ROLE_USER -> User, ROLE_ADMIN -> Admin
-        return role.replace('ROLE_', '').charAt(0) + role.replace('ROLE_', '').slice(1).toLowerCase();
-    }
-
-    function formatDate(dateString) {
-        if (!dateString) return '-';
+    // Функция попытки обновить токен
+    async function tryRefreshToken(refreshToken) {
         try {
-            const date = new Date(dateString);
-            return date.toLocaleString('ru-RU', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch (e) {
-            return dateString;
-        }
-    }
-
-    function showLoading() {
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('error').style.display = 'none';
-        document.getElementById('content').style.display = 'none';
-    }
-
-    function showError(message) {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('content').style.display = 'none';
-        document.getElementById('errorMessage').textContent = message;
-    }
-
-    function refreshData() {
-        loadUserData();
-    }
-
-    function logout() {
-        const confirmed = confirm('Вы уверены что хотите выйти?');
-
-        if (!confirmed) {
-            return;
-        }
-
-        const accessToken = localStorage.getItem('access_token');
-
-        // Отправляем запрос на logout
-        if (accessToken) {
-            fetch('/v1/auth/logout', {
+            const response = await fetch('/v1/auth/refresh', {
                 method: 'POST',
                 headers: {
-                    'Authorization': 'Bearer ' + accessToken,
                     'Content-Type': 'application/json'
-                }
-            }).catch(err => {
-                console.warn('Server logout failed:', err);
+                },
+                body: JSON.stringify({ refresh_token: refreshToken })
             });
-        }
 
-        // Очищаем localStorage
+            if (response.ok) {
+                const data = await response.json();
+
+                // Сохраняем новые токены
+                localStorage.setItem('access_token', data.access_token);
+                if (data.refresh_token) {
+                    localStorage.setItem('refresh_token', data.refresh_token);
+                }
+
+                console.log('Токен успешно обновлён');
+                return true;
+            } else {
+                console.log('Не удалось обновить токен');
+                // Удаляем невалидные токены
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                return false;
+            }
+        } catch (error) {
+            console.error('Ошибка обновления токена:', error);
+            return false;
+        }
+    }
+
+    // Функция отображения данных пользователя
+    function displayUserData(user) {
+        const container = document.getElementById('profile-container');
+
+        // Получаем первую букву имени для аватара
+        const initial = user.firstname ? user.firstname.charAt(0).toUpperCase() : '?';
+
+        // Форматируем дату создания
+        const createdDate = new Date(user.createdAt).toLocaleDateString('ru-RU', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        // Генерируем HTML с данными пользователя
+        container.innerHTML = `
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <div class="profile-avatar">${initial}</div>
+                        <div class="profile-info">
+                            <h1>${user.firstname} ${user.lastname}</h1>
+                            <p>${user.email}</p>
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <h2>📝 Основная информация</h2>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Email</div>
+                                <div class="info-value">${user.email}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Имя</div>
+                                <div class="info-value">${user.firstname}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Фамилия</div>
+                                <div class="info-value">${user.lastname}</div>
+                            </div>
+                            ${user.surname ? `
+                            <div class="info-item">
+                                <div class="info-label">Отчество</div>
+                                <div class="info-value">${user.surname}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <h2>🔐 Статус аккаунта</h2>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Email подтверждён</div>
+                                <div class="info-value">
+                                    ${user.emailVerified
+            ? '<span class="badge badge-success">✓ Подтверждён</span>'
+            : '<span class="badge badge-warning">✗ Не подтверждён</span>'}
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Дата регистрации</div>
+                                <div class="info-value">${createdDate}</div>
+                            </div>
+                            ${user.updatedAt ? `
+                            <div class="info-item">
+                                <div class="info-label">Последнее обновление</div>
+                                <div class="info-value">${new Date(user.updatedAt).toLocaleDateString('ru-RU')}</div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <div class="profile-section">
+                        <h2>👥 Роли</h2>
+                        <div>
+                            ${user.roles.map(role =>
+            `<span class="badge badge-primary">${role.name}</span>`
+        ).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+    }
+
+    // Функция отображения ошибки
+    function showError(message) {
+        const container = document.getElementById('profile-container');
+        container.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">⚠️</div>
+                    <h2>Ошибка</h2>
+                    <p class="error-message">${message}</p>
+                    <button onclick="window.location.href='/'" class="btn-primary">
+                        Вернуться на главную
+                    </button>
+                </div>
+            `;
+
+        // Скрываем sidebar при ошибке
+        document.querySelector('.sidebar')?.remove();
+    }
+
+    // Функция выхода
+    function logout() {
+        // Удаляем токены из localStorage
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
 
-        // Редиректим на страницу входа
+        // Редирект на главную страницу
         window.location.href = '/';
     }
 </script>

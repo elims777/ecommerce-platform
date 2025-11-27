@@ -1,4 +1,5 @@
 services:
+  # PostgreSQL для user-service
   user-db:
     image: postgres:16.4
     container_name: user-db
@@ -12,8 +13,65 @@ services:
     networks:
       - ecommerce-net
 
+  # --- KAFKA INFRASTRUCTURE ---
+  # Zookeeper - координатор для Kafka (управляет метаданными кластера, выборами лидеров партиций)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    restart: unless-stopped
+    environment:
+      # Порт, на котором Zookeeper слушает клиентские подключения
+      ZOOKEEPER_CLIENT_PORT: 2181
+      # Базовая единица времени в миллисекундах (для heartbeats и timeouts)
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - ecommerce-net
+
+  # Kafka Broker - основной сервер Kafka для обработки сообщений
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper  # Kafka не стартует без Zookeeper
+    ports:
+      - "9092:9092"  # Порт для подключения клиентов (producer/consumer)
+    environment:
+      # Уникальный идентификатор брокера в кластере
+      KAFKA_BROKER_ID: 1
+      # Адрес Zookeeper для координации
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Список адресов, которые Kafka сообщает клиентам для подключения
+      # localhost:9092 - для подключения с хост-машины (IntelliJ IDEA)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      # Репликация для служебных топиков (у нас один брокер, поэтому = 1)
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - ecommerce-net
+
+  # PostgreSQL для notification-service
+  notification-db:
+    image: postgres:16.4
+    container_name: notification-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: notification_user
+      POSTGRES_PASSWORD: notification_pass
+    ports:
+      - "5434:5432"  # Внешний порт 5434, чтобы не конфликтовать с user-db
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-net
+
 volumes:
   user_db_data:
+  notification_db_data:
 
 networks:
   ecommerce-net:

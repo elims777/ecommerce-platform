@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.authservice.models.dto.AuthResponse;
+import ru.rfsnab.authservice.models.dto.ErrorResponse;
 import ru.rfsnab.authservice.models.dto.SimpleAuthRequest;
 import ru.rfsnab.authservice.models.dto.UserDtoResponse;
 import ru.rfsnab.authservice.service.AuthService;
@@ -18,6 +19,7 @@ import ru.rfsnab.authservice.service.AuthService;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
@@ -76,36 +78,105 @@ public class AuthController {
      * Проксирует запрос в user-service с JWT токеном.
      */
     @GetMapping("me")
-    public ResponseEntity<?> getCurrentUser(@RequestHeader("Authorization") String authHeader){
-        try{
-            //Создаем header c authorization
+    public ResponseEntity<?> getCurrentUser(@RequestHeader(value = "Authorization", required = false) String authHeader){
+        try {
+            // Проверка наличия заголовка
+            if (authHeader == null || authHeader.isBlank()) {
+                log.warn("Missing Authorization header in /me request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.UNAUTHORIZED.value())
+                                .error("Unauthorized")
+                                .message("Требуется аутентификация. Токен не предоставлен")
+                                .path("/v1/auth/me")
+                                .build());
+            }
+
+            // Проверка формата Bearer
+            if (!authHeader.startsWith("Bearer ")) {
+                log.warn("Invalid Authorization header format in /me request");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.UNAUTHORIZED.value())
+                                .error("Unauthorized")
+                                .message("Неверный формат токена. Ожидается: Bearer <token>")
+                                .path("/v1/auth/me")
+                                .build());
+            }
+
+            // Подготовка заголовков для user-service
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", authHeader);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-            // Запрос в user-service
+            // Запрос к user-service
             ResponseEntity<UserDtoResponse> response = restTemplate.exchange(
                     userServiceUrl + "/v1/users/me",
                     HttpMethod.GET,
-                    httpEntity,
+                    requestEntity,
                     UserDtoResponse.class
             );
 
             return ResponseEntity.ok(response.getBody());
+
         } catch (HttpClientErrorException.Unauthorized e) {
-            log.warn("Unauthorized request to /me");
+            log.warn("Unauthorized request to /me: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Недействительный или истёкший токен"));
+                    .body(ErrorResponse.builder()
+                            .timestamp(LocalDateTime.now())
+                            .status(HttpStatus.UNAUTHORIZED.value())
+                            .error("Unauthorized")
+                            .message("Токен недействителен или истёк. Пожалуйста, войдите снова")
+                            .path("/v1/auth/me")
+                            .build());
+
         } catch (HttpClientErrorException.Forbidden e) {
-            log.warn("Forbidden request to /me");
+            log.warn("Forbidden request to /me: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Доступ запрещён"));
+                    .body(ErrorResponse.builder()
+                            .timestamp(LocalDateTime.now())
+                            .status(HttpStatus.FORBIDDEN.value())
+                            .error("Forbidden")
+                            .message("Доступ запрещён")
+                            .path("/v1/auth/me")
+                            .build());
+
+        } catch (HttpClientErrorException.NotFound e) {
+            log.warn("User not found in /me request");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ErrorResponse.builder()
+                            .timestamp(LocalDateTime.now())
+                            .status(HttpStatus.NOT_FOUND.value())
+                            .error("Not Found")
+                            .message("Пользователь не найден")
+                            .path("/v1/auth/me")
+                            .build());
+
+        } catch (HttpClientErrorException e) {
+            log.error("Client error in /me request: {}", e.getMessage());
+            return ResponseEntity.status(e.getStatusCode())
+                    .body(ErrorResponse.builder()
+                            .timestamp(LocalDateTime.now())
+                            .status(e.getStatusCode().value())
+                            .error(e.getStatusText())
+                            .message("Ошибка при получении данных пользователя")
+                            .path("/v1/auth/me")
+                            .build());
+
         } catch (Exception e) {
-            log.error("Error getting user data: {}", e.getMessage());
+            log.error("Unexpected error in /me request", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Ошибка получения данных пользователя"));
+                    .body(ErrorResponse.builder()
+                            .timestamp(LocalDateTime.now())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .error("Internal Server Error")
+                            .message("Внутренняя ошибка сервера")
+                            .path("/v1/auth/me")
+                            .build());
         }
     }
 
