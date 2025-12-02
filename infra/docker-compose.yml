@@ -59,11 +59,11 @@ services:
     container_name: notification-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: notification_db
-      POSTGRES_USER: notification_user
-      POSTGRES_PASSWORD: notification_pass
+      POSTGRES_DB: "${NOTIFICATION_DB_NAME}"
+      POSTGRES_USER: "${NOTIFICATION_DB_USER}"
+      POSTGRES_PASSWORD: "${NOTIFICATION_DB_PASSWORD}"
     ports:
-      - "5434:5432"  # Внешний порт 5434, чтобы не конфликтовать с user-db
+      - "${NOTIFICATION_DB_PORT}:5432"
     volumes:
       - notification_db_data:/var/lib/postgresql/data
     networks:
