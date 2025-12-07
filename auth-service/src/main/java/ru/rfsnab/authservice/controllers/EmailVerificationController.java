@@ -3,6 +3,7 @@ package ru.rfsnab.authservice.controllers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,9 +38,16 @@ public class EmailVerificationController {
             ResponseEntity<VerificationResponse> verificationResponse =
                     restTemplate.postForEntity(notificationUrl, null, VerificationResponse.class);
 
-            if (!verificationResponse.getBody().isValid()) {
+            VerificationResponse body = verificationResponse.getBody();
+            if (body == null) {
+                log.error("Notification service returned empty response");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Ошибка при проверке токена");
+            }
+
+            if (!body.isValid()) {
                 return ResponseEntity.badRequest()
-                        .body("Verification failed: " + verificationResponse.getBody().getMessage());
+                        .body("Verification failed: " + body.getMessage());
             }
 
             // 2. Обновляем статус пользователя в user-service
