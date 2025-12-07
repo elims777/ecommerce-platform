@@ -1,4 +1,4 @@
-package ru.rfsnab.notificationservice.models;
+package ru.rfsnab.userservice.models.kafka;
 
 import lombok.*;
 

@@ -60,9 +60,14 @@ user:
   service:
     url: http://localhost:8081  # локально user-service в IDE (или http://user-service:8081 в Docker)
     auth: /v1/users/authenticate
+    verify: http://localhost:8081/v1/users/
 
 jwt:
   secret: "${SECRET_JWT}"  # подставляется через ENV, но есть дефолт
   expiration-ms: 3600000          # 1 час
   refresh-expiration-ms: 86400000 # 1 день
 
+notification:
+  service:
+    url: http://localhost:8082
+    verification: /api/verification/verify?token=

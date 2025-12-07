@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.rfsnab.notificationservice.models.EmailVerificationToken;
+import ru.rfsnab.notificationservice.models.VerificationResponse;
 import ru.rfsnab.notificationservice.repository.EmailVerificationTokenRepository;
 
 import java.time.LocalDateTime;
@@ -46,5 +47,48 @@ public class EmailVerificationTokenService {
         tokenRepository.save(token);
         log.info("Token verified successfully for userId: {}, email: {}",
                 token.getUserId(), token.getEmail());
+    }
+
+    public boolean existsByToken(String token) {
+        return tokenRepository.existsByToken(token);
+    }
+
+    public VerificationResponse verifyToken(String token){
+        Optional<EmailVerificationToken> tokenOptional = tokenRepository.findByToken(token);
+
+        if(tokenOptional.isEmpty()){
+            return VerificationResponse.builder()
+                    .valid(false)
+                    .message("Token not found")
+                    .build();
+        }
+
+        EmailVerificationToken tokenEntity = tokenOptional.get();
+
+        if(tokenEntity.isVerified()){
+            return VerificationResponse.builder()
+                    .valid(false)
+                    .message("Email already verified")
+                    .build();
+        }
+
+        if( tokenEntity.getExpiresAt().isBefore(LocalDateTime.now())){
+            return VerificationResponse.builder()
+                    .valid(false)
+                    .message("Token expired")
+                    .build();
+        }
+
+        tokenEntity.setVerified(true);
+        tokenRepository.save(tokenEntity);
+
+        log.info("Token verified successfully for userId: {}", tokenEntity.getUserId());
+
+        return VerificationResponse.builder()
+                .valid(true)
+                .userId(tokenEntity.getUserId())
+                .email(tokenEntity.getEmail())
+                .message("Email verified successfully")
+                .build();
     }
 }

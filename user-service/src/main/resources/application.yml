@@ -1,8 +1,22 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: user-service
   profiles:
     active: dev
 
-server:
-  port: 8081
+# === KAFKA PRODUCER ===
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+# === CUSTOM PROPERTIES ===
+app:
+  kafka:
+    topic:
+      user-events: user-events

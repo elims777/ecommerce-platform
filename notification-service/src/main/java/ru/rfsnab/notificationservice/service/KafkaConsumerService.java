@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 public class KafkaConsumerService {
     private final EmailVerificationTokenService tokenService;
     private final EmailService emailService;
+    private final EmailVerificationTokenService emailVerificationTokenService;
 
     @KafkaListener(
             topics = "${app.kafka.topic.user-events}",
@@ -22,7 +23,7 @@ public class KafkaConsumerService {
     )
     public void consumeUserEvent(UserEvent event){
         log.info("Received event from Kafka: type={}, userId={}, email={}",
-                event.getEventType(), event.getId(), event.getEmail());
+                event.getEventType(), event.getUserId(), event.getEmail());
 
         try{
             if("USER_REGISTERED".equals(event.getEventType())){
@@ -39,10 +40,15 @@ public class KafkaConsumerService {
     private void handleUserRegistrationEvent(UserEvent event){
         log.info("Processing user registration for: {}", event.getEmail());
 
+        if (emailVerificationTokenService.existsByToken(event.getVerificationToken())) {
+            log.info("Token already exists, skipping: {}", event.getVerificationToken());
+            return;
+        }
+
         LocalDateTime now = LocalDateTime.now();
         EmailVerificationToken token = EmailVerificationToken.builder()
                 .token(event.getVerificationToken())
-                .userId(event.getId())
+                .userId(event.getUserId())
                 .email(event.getEmail())
                 .createdAt(now)
                 .expiresAt(now.plusHours(1))
@@ -50,11 +56,11 @@ public class KafkaConsumerService {
                 .build();
 
         tokenService.save(token);
-        log.info("Verification token saved for userId: {}", event.getId());
+        log.info("Verification token saved for userId: {}", event.getUserId());
 
         try{
             emailService.sendVerificationEmail(
-                    event.getEmail(), event.getFirsName(), event.getVerificationToken()
+                    event.getEmail(), event.getFirstName(), event.getVerificationToken()
             );
             log.info("Verification email send to: {}", event.getEmail());
         } catch (Exception e){

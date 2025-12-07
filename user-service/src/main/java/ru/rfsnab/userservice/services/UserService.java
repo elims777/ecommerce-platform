@@ -1,23 +1,26 @@
 package ru.rfsnab.userservice.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.userservice.models.RoleEntity;
 import ru.rfsnab.userservice.models.UserEntity;
+import ru.rfsnab.userservice.models.kafka.UserEvent;
 import ru.rfsnab.userservice.repository.UserRepository;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleService roleService;
+    private final KafkaProducerService kafkaProducerService;
 
     public List<UserEntity> findAllUsers(){
         return userRepository.findAll();
@@ -40,7 +43,22 @@ public class UserService {
 
     public UserEntity registerUser(UserEntity user){
         user=setDefaultRole(user);
-        return userRepository.save(user);
+        UserEntity savedUser = userRepository.save(user);
+        String verificationToken = UUID.randomUUID().toString();
+
+        UserEvent event = UserEvent.builder()
+                .eventType("USER_REGISTERED")
+                .userId(savedUser.getId())
+                .email(savedUser.getEmail())
+                .firstName(savedUser.getFirstname())
+                .lastName(savedUser.getLastname())
+                .verificationToken(verificationToken)
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        kafkaProducerService.sendUserRegisteredEvent(event);
+
+        return savedUser;
     }
 
     public UserEntity updateUser(Long id,UserEntity user){
@@ -61,5 +79,16 @@ public class UserService {
     public void deleteUser(Long id){
 
         userRepository.deleteById(id);
+    }
+
+    @Transactional
+    public void verifyUser(Long userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setEmailVerified(true);
+        userRepository.save(user);
+
+        log.info("User {} verified", userId);
     }
 }

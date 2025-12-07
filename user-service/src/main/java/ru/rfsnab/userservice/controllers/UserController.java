@@ -119,4 +119,13 @@ public class UserController {
 
         return ResponseEntity.ok(UserMapper.mapToUserDto(user));
     }
+
+    @PutMapping("/{userId}/verify")
+    public ResponseEntity<String> verifyUser(@PathVariable Long userId) {
+        log.info("Verifying user: {}", userId);
+
+        userService.verifyUser(userId);
+
+        return ResponseEntity.ok("User verified successfully");
+    }
 }
