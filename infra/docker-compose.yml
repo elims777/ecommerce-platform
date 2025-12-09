@@ -69,9 +69,25 @@ services:
     networks:
       - ecommerce-net
 
+  product-db:
+    image: postgres:16.4
+    container_name: product-db
+    environment:
+      POSTGRES_DB: "${PRODUCT_DB_NAME}"
+      POSTGRES_USER: "${PRODUCT_DB_USER}"
+      POSTGRES_PASSWORD: "${PRODUCT_DB_PASSWORD}"
+    ports:
+      - "${PRODUCT_DB_PORT}:5432"
+    volumes:
+      - product_db_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-net
+
+
 volumes:
   user_db_data:
   notification_db_data:
+  product_db_data:
 
 networks:
   ecommerce-net:

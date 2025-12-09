@@ -23,6 +23,7 @@
         <module>user-service</module>
         <module>auth-service</module>
         <module>notification-service</module>
+        <module>product-service</module>
         <!-- позже добавишь product-service, order-service -->
     </modules>
 
