@@ -26,8 +26,8 @@ public class ProductService {
 
     /***
      * Подсчет товаров в категории
-     * @param parentId
-     * @return
+     * @param parentId категории
+     * @return long
      */
     public long countByCategoryId(Long parentId){
         return productRepository.countByCategoryId(parentId);
@@ -41,7 +41,7 @@ public class ProductService {
     public Product createProduct(Product product){
         log.info("Создание продукта: {}", product.getName());
 
-        String baseSlug = slugGenerator.generatedSlug(product.getName());
+        String baseSlug = slugGenerator.generateSlug(product.getName());
         String uniqSlug = generateUniqueSlug(baseSlug);
         product.setSlug(uniqSlug);
 
@@ -122,14 +122,14 @@ public class ProductService {
     /**
      * Получить товары по категории
      */
-    public List<Product> getProductsByCategory(Long categoryId) {
+    public Page<Product> getProductsByCategory(Long categoryId, Pageable pageable) {
         log.debug("Getting products for category id={}", categoryId);
 
         if (!categoryRepository.existsById(categoryId)) {
             throw new CategoryNotFoundException(categoryId);
         }
 
-        return productRepository.findByCategoryId(categoryId);
+        return productRepository.findByCategoryId(categoryId, pageable);
     }
 
     /**
@@ -330,6 +330,17 @@ public class ProductService {
         }
 
         return slug;
+    }
+
+    /**
+     * Удаление товара по id
+     * @param id товара
+     */
+    public void deleteProduct(Long id){
+        if(productRepository.findById(id).isEmpty()){
+            throw new ProductNotFoundException("Товар не найден с id="+id);
+        }
+        productRepository.deleteById(id);
     }
 
 }

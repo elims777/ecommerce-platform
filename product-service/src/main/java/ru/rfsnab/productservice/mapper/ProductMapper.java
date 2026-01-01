@@ -18,8 +18,8 @@ public class ProductMapper {
                 .build();
     }
 
-    public static ProductResponse mapToResponse(Product product){
-        return ProductResponse.builder()
+    public static ProductResponse mapToResponse(Product product) {
+        ProductResponse.ProductResponseBuilder builder = ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())
                 .slug(product.getSlug())
@@ -27,16 +27,20 @@ public class ProductMapper {
                 .shortDescription(product.getShortDescription())
                 .price(product.getPrice())
                 .stockQuantity(product.getStockQuantity())
-                .categoryId(product.getCategory().getId())
-                .categoryName(product.getCategory().getName())
                 .isActive(product.getIsActive())
                 .isFeatured(product.getIsFeatured())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .images(product.getImages().stream().map(ImageMapper::mapToResponse).toList())
                 .videos(product.getVideos().stream().map(VideoMapper::mapToResponse).toList())
-                .attributes(product.getAttributes().stream().map(AttributeMapper::mapToResponse).toList())
-                .build();
-    }
+                .attributes(product.getAttributes().stream().map(AttributeMapper::mapToResponse).toList());
 
+        // Добавляем категорию если есть
+        if (product.getCategory() != null) {
+            builder.categoryId(product.getCategory().getId());
+            builder.categoryName(product.getCategory().getName());
+        }
+
+        return builder.build();
+    }
 }

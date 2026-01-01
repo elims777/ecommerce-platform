@@ -36,7 +36,7 @@ public class SlugGeneratorService {
      * Пример:
      * "Огнетушитель ОП-4(з)-АВСЕ-01" → "ognetushitel-op-4-z-avse-01"
      */
-    public String generatedSlug(String name){
+    public String generateSlug(String name){
         if(name == null || name.trim().isEmpty()){
             throw new IllegalArgumentException("Название не может быть пустым");
         }
