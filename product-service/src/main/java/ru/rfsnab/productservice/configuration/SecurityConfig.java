@@ -38,6 +38,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
 
                         // Управление категориями - только ADMIN и MANAGER
                         .requestMatchers(HttpMethod.POST, "/api/v1/categories/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")

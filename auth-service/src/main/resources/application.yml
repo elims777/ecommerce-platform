@@ -71,3 +71,11 @@ notification:
   service:
     url: http://localhost:8082
     verification: /api/verification/verify?token=
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha

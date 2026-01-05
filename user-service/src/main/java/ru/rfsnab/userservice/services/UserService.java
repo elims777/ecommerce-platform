@@ -1,7 +1,6 @@
 package ru.rfsnab.userservice.services;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,7 +12,7 @@ import ru.rfsnab.userservice.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.*;
 
-@Slf4j
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -88,7 +87,5 @@ public class UserService {
 
         user.setEmailVerified(true);
         userRepository.save(user);
-
-        log.info("User {} verified", userId);
     }
 }

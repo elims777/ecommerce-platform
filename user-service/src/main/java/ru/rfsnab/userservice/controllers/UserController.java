@@ -2,7 +2,6 @@ package ru.rfsnab.userservice.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -23,7 +22,7 @@ import ru.rfsnab.userservice.services.UserService;
 import java.util.List;
 import java.util.Optional;
 
-@Slf4j
+
 @RestController
 @RequestMapping("/v1/users")
 @RequiredArgsConstructor
@@ -42,11 +41,9 @@ public class UserController {
 
         if (existingUser.isPresent()) {
             // Пользователь уже существует - возвращаем его данные (login)
-            log.info("OAuth2 login: пользователь {} уже существует", request.getEmail());
             return ResponseEntity.ok(RegistrationMapper.mapToResponse(existingUser.get()));
         } else {
             // Пользователь не существует - создаём нового (register)
-            log.info("OAuth2 register: создаём нового пользователя {}", request.getEmail());
             UserEntity user = RegistrationMapper.mapToUserEntity(request);
             user = userService.registerUser(user);
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -123,10 +120,7 @@ public class UserController {
 
     @PutMapping("/{userId}/verify")
     public ResponseEntity<String> verifyUser(@PathVariable Long userId) {
-        log.info("Verifying user: {}", userId);
-
         userService.verifyUser(userId);
-
         return ResponseEntity.ok("User verified successfully");
     }
 }

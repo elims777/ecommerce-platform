@@ -2,7 +2,6 @@ package ru.rfsnab.userservice.exceptions;
 
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -16,7 +15,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
-@Slf4j
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     /**
@@ -29,8 +28,6 @@ public class GlobalExceptionHandler {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getFieldErrors()
                 .forEach(error-> errors.put(error.getField(), error.getDefaultMessage()));
-
-        log.warn("Validation failed for request {}: {}", request.getRequestURI(), errors);
 
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
@@ -52,8 +49,6 @@ public class GlobalExceptionHandler {
             JwtException ex,
             HttpServletRequest request) {
 
-        log.warn("JWT validation failed: {}", ex.getMessage());
-
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.UNAUTHORIZED.value())
@@ -72,8 +67,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUserNotFoundException(
             UsernameNotFoundException ex,
             HttpServletRequest request) {
-
-        log.warn("User not found: {}", ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
@@ -94,8 +87,6 @@ public class GlobalExceptionHandler {
             BadCredentialsException ex,
             HttpServletRequest request) {
 
-        log.warn("Bad credentials for request: {}", request.getRequestURI());
-
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.UNAUTHORIZED.value())
@@ -107,27 +98,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
     }
 
-//    /**
-//     * Обработка CustomException (если используешь)
-//     */
-//    @ExceptionHandler(CustomException.class)
-//    public ResponseEntity<ErrorResponse> handleCustomException(
-//            CustomException ex,
-//            HttpServletRequest request) {
-//
-//        log.warn("Custom exception: {}", ex.getMessage());
-//
-//        ErrorResponse errorResponse = ErrorResponse.builder()
-//                .timestamp(LocalDateTime.now())
-//                .status(ex.getStatus())
-//                .error(HttpStatus.valueOf(ex.getStatus()).getReasonPhrase())
-//                .message(ex.getMessage())
-//                .path(request.getRequestURI())
-//                .build();
-//
-//        return ResponseEntity.status(ex.getStatus()).body(errorResponse);
-//    }
-
     /**
      * Обработка всех остальных ошибок
      */
@@ -135,8 +105,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGeneralException(
             Exception ex,
             HttpServletRequest request) {
-
-        log.error("Unexpected error occurred: ", ex);
 
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
@@ -156,8 +124,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUserAlreadyExists(
             UserAlreadyExistsException ex,
             HttpServletRequest request) {
-
-        log.warn("User already exists: {}", ex.getMessage());
 
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
