@@ -8,14 +8,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.rfsnab.authservice.configuration.JWTProperties;
-import ru.rfsnab.authservice.models.dto.RoleEntity;
-import ru.rfsnab.authservice.models.dto.UserDtoResponse;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j

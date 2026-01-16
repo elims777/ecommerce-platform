@@ -53,6 +53,7 @@ public class EmailVerificationTokenService {
         return tokenRepository.existsByToken(token);
     }
 
+    @Transactional
     public VerificationResponse verifyToken(String token){
         Optional<EmailVerificationToken> tokenOptional = tokenRepository.findByToken(token);
 
