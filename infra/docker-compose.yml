@@ -1,88 +1,214 @@
 services:
-  # PostgreSQL для user-service
+  # ==================== DATABASES ====================
+
+  # PostgreSQL для user-service и auth-service
   user-db:
-    image: postgres:16.4
+    image: postgres:16-alpine
     container_name: user-db
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - user_db_data:/var/lib/postgresql/data
     networks:
       - ecommerce-net
-
-  # --- KAFKA INFRASTRUCTURE ---
-  # Zookeeper - координатор для Kafka (управляет метаданными кластера, выборами лидеров партиций)
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: zookeeper
-    restart: unless-stopped
-    environment:
-      # Порт, на котором Zookeeper слушает клиентские подключения
-      ZOOKEEPER_CLIENT_PORT: 2181
-      # Базовая единица времени в миллисекундах (для heartbeats и timeouts)
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-    networks:
-      - ecommerce-net
-
-  # Kafka Broker - основной сервер Kafka для обработки сообщений
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: kafka
-    restart: unless-stopped
-    depends_on:
-      - zookeeper  # Kafka не стартует без Zookeeper
-    ports:
-      - "9092:9092"  # Порт для подключения клиентов (producer/consumer)
-    environment:
-      # Уникальный идентификатор брокера в кластере
-      KAFKA_BROKER_ID: 1
-      # Адрес Zookeeper для координации
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # Список адресов, которые Kafka сообщает клиентам для подключения
-      # localhost:9092 - для подключения с хост-машины (IntelliJ IDEA)
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      # Репликация для служебных топиков (у нас один брокер, поэтому = 1)
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-    networks:
-      - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # PostgreSQL для notification-service
   notification-db:
-    image: postgres:16.4
+    image: postgres:16-alpine
     container_name: notification-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: "${NOTIFICATION_DB_NAME}"
-      POSTGRES_USER: "${NOTIFICATION_DB_USER}"
-      POSTGRES_PASSWORD: "${NOTIFICATION_DB_PASSWORD}"
+      POSTGRES_DB: ${NOTIFICATION_DB_NAME}
+      POSTGRES_USER: ${NOTIFICATION_DB_USER}
+      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASSWORD}
     ports:
       - "${NOTIFICATION_DB_PORT}:5432"
     volumes:
       - notification_db_data:/var/lib/postgresql/data
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${NOTIFICATION_DB_USER} -d ${NOTIFICATION_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # PostgreSQL для product-service
   product-db:
-    image: postgres:16.4
+    image: postgres:16-alpine
     container_name: product-db
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: "${PRODUCT_DB_NAME}"
-      POSTGRES_USER: "${PRODUCT_DB_USER}"
-      POSTGRES_PASSWORD: "${PRODUCT_DB_PASSWORD}"
+      POSTGRES_DB: ${PRODUCT_DB_NAME}
+      POSTGRES_USER: ${PRODUCT_DB_USER}
+      POSTGRES_PASSWORD: ${PRODUCT_DB_PASSWORD}
     ports:
       - "${PRODUCT_DB_PORT}:5432"
     volumes:
       - product_db_data:/var/lib/postgresql/data
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PRODUCT_DB_USER} -d ${PRODUCT_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ==================== KAFKA ====================
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    networks:
+      - ecommerce-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== SERVICES ====================
+
+  user-service:
+    build:
+      context: ../user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      LOGGING_FILE_NAME: ""
+    depends_on:
+      user-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  auth-service:
+    build:
+      context: ../auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # JWT
+      SECRET_JWT: ${SECRET_JWT}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
+      JWT_REFRESH_EXPIRATION_MS: ${JWT_REFRESH_EXPIRATION_MS}
+      # OAuth2 Yandex
+      YANDEX_CLIENT_ID: ${YANDEX_CLIENT_ID}
+      YANDEX_CLIENT_SECRET: ${YANDEX_CLIENT_SECRET}
+      # Internal services
+      USER_SERVICE_URL: http://user-service:8081
+      NOTIFICATION_SERVICE_URL: http://notification-service:8082
+      LOGGING_FILE_NAME: ""
+    depends_on:
+      user-db:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    networks:
+      - ecommerce-net
+
+  notification-service:
+    build:
+      context: ../notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://notification-db:5432/${NOTIFICATION_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${NOTIFICATION_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${NOTIFICATION_DB_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      # SMTP
+      MAIL_USER: ${MAIL_USER}
+      SPRING_MAIL_HOST: ${SMTP_HOST}
+      SPRING_MAIL_PORT: ${SMTP_PORT}
+      SPRING_MAIL_USERNAME: ${MAIL_USER}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
+      LOGGING_FILE_NAME: ""
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
+  product-service:
+    build:
+      context: ../product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5432/${PRODUCT_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${PRODUCT_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${PRODUCT_DB_PASSWORD}
+      # Yandex Object Storage
+      YANDEX_STORAGE_ACCESS_KEY: ${YANDEX_STORAGE_ACCESS_KEY}
+      YANDEX_STORAGE_SECRET_KEY: ${YANDEX_STORAGE_SECRET_KEY}
+      LOGGING_FILE_NAME: ""
+    depends_on:
+      product-db:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
 
 volumes:
   user_db_data:
