@@ -1,0 +1,69 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: notification-service
+
+  # === POSTGRESQL ===
+  datasource:
+      url: jdbc:postgresql://localhost:${NOTIFICATION_DB_PORT:5434}/${NOTIFICATION_DB_NAME:notification_db}
+      username: ${NOTIFICATION_DB_USER}
+      password: ${NOTIFICATION_DB_PASSWORD}
+      driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # === KAFKA CONSUMER ===
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    consumer:
+      group-id: notification-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "ru.rfsnab.*"
+
+  # === EMAIL (SMTP) ===
+  mail:
+    host: "${SMTP_HOST}"
+    port: "${SMTP_PORT}"
+    username: "${MAIL_USER}"
+    password: "${MAIL_PASSWORD}"
+
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+# === CUSTOM PROPERTIES ===
+app:
+  kafka:
+    topic:
+      user-events: user-events
+
+  # Email
+  email:
+    from: "${MAIL_USER}"
+    verification-url: http://localhost:9000/verify-email
+
+# === LOGGING ===
+logging:
+  level:
+    ru.rfsnab.notificationservice: DEBUG
+    org.springframework.kafka: INFO
+    org.springframework.mail: DEBUG

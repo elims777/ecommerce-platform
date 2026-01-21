@@ -12,6 +12,7 @@ import ru.rfsnab.authservice.configuration.JWTProperties;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -31,9 +32,10 @@ public class JWTService {
     /**
      * Генерирует аксес-токен
      */
-    public String generateToken(String email){
+    public String generateToken(String email, List<String> roles){
         return Jwts.builder()
                 .subject(email)
+                .claim("roles", roles)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis()+jwtProperties.getExpirationMs()))
                 .signWith(getSignedKey())
@@ -43,9 +45,10 @@ public class JWTService {
     /**
      * Генерирует рефреш-токен
      */
-    public String generateRefreshToken(String email){
+    public String generateRefreshToken(String email, List<String> roles){
         return Jwts.builder()
                 .subject(email)
+                .claim("roles", roles)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis()+jwtProperties.getRefreshExpirationMs()))
                 .signWith(getSignedKey())
@@ -84,6 +87,14 @@ public class JWTService {
      */
     public String extractEmail(String token) {
         return extractClaims(token).getSubject();
+    }
+
+    /**
+     * Извлечение ролей из токена
+     */
+    @SuppressWarnings("unchecked")
+    public List<String> extractRolesFromToken(String token) {
+        return extractClaims(token).get("roles", List.class);
     }
 
     /**
