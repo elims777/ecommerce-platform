@@ -1,0 +1,4 @@
+2026-01-11 15:05:56.574 ERROR 24592 --- [SpringApplicationShutdownHook] .SchemaDropperImpl$DelayedDropActionImpl : HHH000478: Unsuccessful: 
+    set client_min_messages = WARNING
+2026-01-11 15:09:59.965 ERROR 10228 --- [SpringApplicationShutdownHook] .SchemaDropperImpl$DelayedDropActionImpl : HHH000478: Unsuccessful: 
+    set client_min_messages = WARNING

@@ -1,0 +1,153 @@
+2026-01-04 14:10:38.910  INFO 8988 --- [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-01-04 14:10:38.930  INFO 8988 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-01-04 14:10:38.943  INFO 8988 --- [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-04 14:10:38.950  INFO 8988 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-01-04 14:10:38.953  INFO 8988 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-01-04 15:25:28.687  INFO 3968 --- [background-preinit] o.h.validator.internal.util.Version      : HV000001: Hibernate Validator 8.0.2.Final
+2026-01-04 15:25:28.736  INFO 3968 --- [main] r.r.userservice.UserServiceApplication   : Starting UserServiceApplication using Java 21.0.8 with PID 3968 (D:\Max\java\my-application\ecommerce-platform\user-service\target\classes started by elims in D:\Max\java\my-application\ecommerce-platform)
+2026-01-04 15:25:28.736 DEBUG 3968 --- [main] r.r.userservice.UserServiceApplication   : Running with Spring Boot v3.4.4, Spring v6.2.5
+2026-01-04 15:25:28.737  INFO 3968 --- [main] r.r.userservice.UserServiceApplication   : The following 1 profile is active: "dev"
+2026-01-04 15:25:29.966  INFO 3968 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-04 15:25:30.047  INFO 3968 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 68 ms. Found 2 JPA repository interfaces.
+2026-01-04 15:25:31.021  INFO 3968 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2026-01-04 15:25:31.034  INFO 3968 --- [main] o.a.coyote.http11.Http11NioProtocol      : Initializing ProtocolHandler ["http-nio-8081"]
+2026-01-04 15:25:31.036  INFO 3968 --- [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-01-04 15:25:31.037  INFO 3968 --- [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.39]
+2026-01-04 15:25:31.088  INFO 3968 --- [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-01-04 15:25:31.088  INFO 3968 --- [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2315 ms
+2026-01-04 15:25:31.465  INFO 3968 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-01-04 15:25:31.605  INFO 3968 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@651cedfb
+2026-01-04 15:25:31.607  INFO 3968 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-01-04 15:25:31.636  INFO 3968 --- [main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/userdb (PostgreSQL 16.4)
+2026-01-04 15:25:31.725  INFO 3968 --- [main] o.f.core.internal.command.DbValidate     : Successfully validated 2 migrations (execution time 00:00.034s)
+2026-01-04 15:25:31.747  INFO 3968 --- [main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 20251005184424
+2026-01-04 15:25:31.751  INFO 3968 --- [main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-01-04 15:25:31.850  INFO 3968 --- [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-04 15:25:31.904  INFO 3968 --- [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.11.Final
+2026-01-04 15:25:31.936  INFO 3968 --- [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-01-04 15:25:32.192  INFO 3968 --- [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-04 15:25:32.255  WARN 3968 --- [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-01-04 15:25:32.276  INFO 3968 --- [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 16.4
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-01-04 15:25:33.005  INFO 3968 --- [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-04 15:25:33.059  INFO 3968 --- [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-04 15:25:33.444 DEBUG 3968 --- [main] r.r.u.c.JwtAuthenticationFilter          : Filter 'jwtAuthenticationFilter' configured for use
+2026-01-04 15:25:33.510  WARN 3968 --- [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-04 15:25:33.549  WARN 3968 --- [main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: cac46ea7-e175-44ed-bce4-10a6d2653775
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-01-04 15:25:33.555  INFO 3968 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-01-04 15:25:34.004  INFO 3968 --- [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-01-04 15:25:34.062 DEBUG 3968 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, JwtAuthenticationFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-04 15:25:34.579  INFO 3968 --- [main] o.a.coyote.http11.Http11NioProtocol      : Starting ProtocolHandler ["http-nio-8081"]
+2026-01-04 15:25:34.597  INFO 3968 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path '/'
+2026-01-04 15:25:34.606  INFO 3968 --- [main] r.r.userservice.UserServiceApplication   : Started UserServiceApplication in 6.449 seconds (process running for 7.116)
+2026-01-04 15:25:34.971  INFO 3968 --- [RMI TCP Connection(3)-192.168.0.28] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-04 15:25:34.971  INFO 3968 --- [RMI TCP Connection(3)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-01-04 15:25:34.973  INFO 3968 --- [RMI TCP Connection(3)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-01-04 16:05:51.322  INFO 3968 --- [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-01-04 16:05:51.332  INFO 3968 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-01-04 16:05:51.344  INFO 3968 --- [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-01-04 16:05:51.352  INFO 3968 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-01-04 16:05:51.356  INFO 3968 --- [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-01-04 16:05:58.159  INFO 16336 --- [background-preinit] o.h.validator.internal.util.Version      : HV000001: Hibernate Validator 8.0.2.Final
+2026-01-04 16:05:58.215  INFO 16336 --- [main] r.r.userservice.UserServiceApplication   : Starting UserServiceApplication using Java 21.0.8 with PID 16336 (D:\Max\java\my-application\ecommerce-platform\user-service\target\classes started by elims in D:\Max\java\my-application\ecommerce-platform)
+2026-01-04 16:05:58.216 DEBUG 16336 --- [main] r.r.userservice.UserServiceApplication   : Running with Spring Boot v3.4.4, Spring v6.2.5
+2026-01-04 16:05:58.216  INFO 16336 --- [main] r.r.userservice.UserServiceApplication   : The following 1 profile is active: "dev"
+2026-01-04 16:05:59.466  INFO 16336 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-04 16:05:59.529  INFO 16336 --- [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 53 ms. Found 2 JPA repository interfaces.
+2026-01-04 16:06:00.461  INFO 16336 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2026-01-04 16:06:00.476  INFO 16336 --- [main] o.a.coyote.http11.Http11NioProtocol      : Initializing ProtocolHandler ["http-nio-8081"]
+2026-01-04 16:06:00.478  INFO 16336 --- [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-01-04 16:06:00.478  INFO 16336 --- [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.39]
+2026-01-04 16:06:00.548  INFO 16336 --- [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-01-04 16:06:00.549  INFO 16336 --- [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2283 ms
+2026-01-04 16:06:01.026  INFO 16336 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-01-04 16:06:01.191  INFO 16336 --- [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@3dbbed3e
+2026-01-04 16:06:01.193  INFO 16336 --- [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-01-04 16:06:01.226  INFO 16336 --- [main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/userdb (PostgreSQL 16.4)
+2026-01-04 16:06:01.318  INFO 16336 --- [main] o.f.core.internal.command.DbValidate     : Successfully validated 2 migrations (execution time 00:00.045s)
+2026-01-04 16:06:01.342  INFO 16336 --- [main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 20251005184424
+2026-01-04 16:06:01.345  INFO 16336 --- [main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-01-04 16:06:01.468  INFO 16336 --- [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-04 16:06:01.532  INFO 16336 --- [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.11.Final
+2026-01-04 16:06:01.567  INFO 16336 --- [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-01-04 16:06:01.908  INFO 16336 --- [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-04 16:06:01.983  WARN 16336 --- [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-01-04 16:06:02.004  INFO 16336 --- [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 16.4
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-01-04 16:06:02.984  INFO 16336 --- [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-04 16:06:03.036  INFO 16336 --- [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-04 16:06:03.464 DEBUG 16336 --- [main] r.r.u.c.JwtAuthenticationFilter          : Filter 'jwtAuthenticationFilter' configured for use
+2026-01-04 16:06:03.624  WARN 16336 --- [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-04 16:06:03.670  WARN 16336 --- [main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 551ef565-c192-493f-94be-f5a233446eac
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-01-04 16:06:03.675  INFO 16336 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-01-04 16:06:04.137  INFO 16336 --- [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-01-04 16:06:04.211 DEBUG 16336 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, JwtAuthenticationFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-04 16:06:04.800  INFO 16336 --- [main] o.a.coyote.http11.Http11NioProtocol      : Starting ProtocolHandler ["http-nio-8081"]
+2026-01-04 16:06:04.815  INFO 16336 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path '/'
+2026-01-04 16:06:04.825  INFO 16336 --- [main] r.r.userservice.UserServiceApplication   : Started UserServiceApplication in 7.315 seconds (process running for 8.078)
+2026-01-04 16:06:05.147  INFO 16336 --- [RMI TCP Connection(3)-192.168.0.28] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-04 16:06:05.147  INFO 16336 --- [RMI TCP Connection(3)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-01-04 16:06:05.149  INFO 16336 --- [RMI TCP Connection(3)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-01-04 16:06:11.605 DEBUG 16336 --- [http-nio-8081-exec-1] o.s.security.web.FilterChainProxy        : Securing GET /swagger-ui.html
+2026-01-04 16:06:11.615 DEBUG 16336 --- [http-nio-8081-exec-1] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-04 16:06:11.616 DEBUG 16336 --- [http-nio-8081-exec-1] o.s.s.w.session.SessionManagementFilter  : Request requested invalid session id 1F63417DF325718EF5666E13BF31A443
+2026-01-04 16:06:11.623 DEBUG 16336 --- [http-nio-8081-exec-1] o.s.security.web.FilterChainProxy        : Secured GET /swagger-ui.html
+2026-01-04 16:06:11.713 DEBUG 16336 --- [http-nio-8081-exec-2] o.s.security.web.FilterChainProxy        : Securing GET /swagger-ui/index.html
+2026-01-04 16:06:11.714 DEBUG 16336 --- [http-nio-8081-exec-2] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-04 16:06:11.714 DEBUG 16336 --- [http-nio-8081-exec-2] o.s.s.w.session.SessionManagementFilter  : Request requested invalid session id 1F63417DF325718EF5666E13BF31A443
+2026-01-04 16:06:11.715 DEBUG 16336 --- [http-nio-8081-exec-2] o.s.security.web.FilterChainProxy        : Secured GET /swagger-ui/index.html
+2026-01-04 16:06:11.760 DEBUG 16336 --- [http-nio-8081-exec-3] o.s.security.web.FilterChainProxy        : Securing GET /swagger-ui/swagger-ui.css
+2026-01-04 16:06:11.762 DEBUG 16336 --- [http-nio-8081-exec-8] o.s.security.web.FilterChainProxy        : Securing GET /swagger-ui/swagger-ui-standalone-preset.js
+2026-01-04 16:06:11.762 DEBUG 16336 --- [http-nio-8081-exec-7] o.s.security.web.FilterChainProxy        : Securing GET /swagger-ui/swagger-initializer.js
+2026-01-04 16:06:11.762 DEBUG 16336 --- [http-nio-8081-exec-3] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-04 16:06:11.762 DEBUG 16336 --- [http-nio-8081-exec-5] o.s.security.web.FilterChainProxy        : Securing GET /swagger-ui/swagger-ui-bundle.js
+2026-01-04 16:06:11.762 DEBUG 16336 --- [http-nio-8081-exec-4] o.s.security.web.FilterChainProxy        : Securing GET /swagger-ui/index.css
+2026-01-04 16:06:11.762 DEBUG 16336 --- [http-nio-8081-exec-3] o.s.s.w.session.SessionManagementFilter  : Request requested invalid session id 1F63417DF325718EF5666E13BF31A443
+2026-01-04 16:06:11.762 DEBUG 16336 --- [http-nio-8081-exec-8] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-04 16:06:11.763 DEBUG 16336 --- [http-nio-8081-exec-8] o.s.s.w.session.SessionManagementFilter  : Request requested invalid session id 1F63417DF325718EF5666E13BF31A443
+2026-01-04 16:06:11.763 DEBUG 16336 --- [http-nio-8081-exec-7] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-04 16:06:11.763 DEBUG 16336 --- [http-nio-8081-exec-7] o.s.s.w.session.SessionManagementFilter  : Request requested invalid session id 1F63417DF325718EF5666E13BF31A443
+2026-01-04 16:06:11.763 DEBUG 16336 --- [http-nio-8081-exec-5] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-04 16:06:11.763 DEBUG 16336 --- [http-nio-8081-exec-5] o.s.s.w.session.SessionManagementFilter  : Request requested invalid session id 1F63417DF325718EF5666E13BF31A443
+2026-01-04 16:06:11.763 DEBUG 16336 --- [http-nio-8081-exec-3] o.s.security.web.FilterChainProxy        : Secured GET /swagger-ui/swagger-ui.css
+2026-01-04 16:06:11.763 DEBUG 16336 --- [http-nio-8081-exec-8] o.s.security.web.FilterChainProxy        : Secured GET /swagger-ui/swagger-ui-standalone-preset.js
+2026-01-04 16:06:11.764 DEBUG 16336 --- [http-nio-8081-exec-5] o.s.security.web.FilterChainProxy        : Secured GET /swagger-ui/swagger-ui-bundle.js
+2026-01-04 16:06:11.764 DEBUG 16336 --- [http-nio-8081-exec-7] o.s.security.web.FilterChainProxy        : Secured GET /swagger-ui/swagger-initializer.js
+2026-01-04 16:06:11.764 DEBUG 16336 --- [http-nio-8081-exec-4] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-04 16:06:11.764 DEBUG 16336 --- [http-nio-8081-exec-4] o.s.s.w.session.SessionManagementFilter  : Request requested invalid session id 1F63417DF325718EF5666E13BF31A443
+2026-01-04 16:06:11.764 DEBUG 16336 --- [http-nio-8081-exec-4] o.s.security.web.FilterChainProxy        : Secured GET /swagger-ui/index.css
+2026-01-04 16:06:11.890 DEBUG 16336 --- [http-nio-8081-exec-9] o.s.security.web.FilterChainProxy        : Securing GET /api-docs/swagger-config
+2026-01-04 16:06:11.890 DEBUG 16336 --- [http-nio-8081-exec-6] o.s.security.web.FilterChainProxy        : Securing GET /swagger-ui/favicon-32x32.png
+2026-01-04 16:06:11.891 DEBUG 16336 --- [http-nio-8081-exec-6] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-04 16:06:11.891 DEBUG 16336 --- [http-nio-8081-exec-9] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-04 16:06:11.891 DEBUG 16336 --- [http-nio-8081-exec-6] o.s.s.w.session.SessionManagementFilter  : Request requested invalid session id 1F63417DF325718EF5666E13BF31A443
+2026-01-04 16:06:11.891 DEBUG 16336 --- [http-nio-8081-exec-9] o.s.s.w.session.SessionManagementFilter  : Request requested invalid session id 1F63417DF325718EF5666E13BF31A443
+2026-01-04 16:06:11.891 DEBUG 16336 --- [http-nio-8081-exec-9] o.s.security.web.FilterChainProxy        : Secured GET /api-docs/swagger-config
+2026-01-04 16:06:11.891 DEBUG 16336 --- [http-nio-8081-exec-6] o.s.security.web.FilterChainProxy        : Secured GET /swagger-ui/favicon-32x32.png
+2026-01-04 16:06:11.913 DEBUG 16336 --- [http-nio-8081-exec-10] o.s.security.web.FilterChainProxy        : Securing GET /api-docs
+2026-01-04 16:06:11.914 DEBUG 16336 --- [http-nio-8081-exec-10] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-04 16:06:11.914 DEBUG 16336 --- [http-nio-8081-exec-10] o.s.s.w.session.SessionManagementFilter  : Request requested invalid session id 1F63417DF325718EF5666E13BF31A443
+2026-01-04 16:06:11.916 DEBUG 16336 --- [http-nio-8081-exec-10] o.s.security.web.FilterChainProxy        : Secured GET /api-docs
+2026-01-04 16:06:12.176  INFO 16336 --- [http-nio-8081-exec-10] o.springdoc.api.AbstractOpenApiResource  : Init duration for springdoc-openapi is: 248 ms

@@ -1,0 +1,15 @@
+2026-01-18 13:17:48.333 ERROR 10976 --- [main] r.r.productservice.aspect.LoggingAspect  : <!> Service failed: ProductService.getProductById(..) after 2 ms - Error: Товар с id=999 не найден
+2026-01-18 13:17:48.335 ERROR 10976 --- [main] r.r.productservice.aspect.LoggingAspect  : !!! Exception in controller: ProductController.getProductById(..) - Error: Товар с id=999 не найден
+2026-01-18 13:17:48.342 ERROR 10976 --- [main] r.r.p.exception.GlobalExceptionHandler   : Product not found: Товар с id=999 не найден
+2026-01-18 13:34:10.400 ERROR 9028 --- [main] r.r.productservice.aspect.LoggingAspect  : <!> Service failed: ProductService.getProductById(..) after 3 ms - Error: Товар с id=999 не найден
+2026-01-18 13:34:10.400 ERROR 9028 --- [main] r.r.productservice.aspect.LoggingAspect  : !!! Exception in controller: ProductController.getProductById(..) - Error: Товар с id=999 не найден
+2026-01-18 13:34:10.403 ERROR 9028 --- [main] r.r.p.exception.GlobalExceptionHandler   : Product not found: Товар с id=999 не найден
+2026-01-18 14:00:42.358 ERROR 3876 --- [main] r.r.productservice.aspect.LoggingAspect  : <!> Service failed: ProductService.getProductById(..) after 2 ms - Error: Товар с id=999 не найден
+2026-01-18 14:00:42.359 ERROR 3876 --- [main] r.r.productservice.aspect.LoggingAspect  : !!! Exception in controller: ProductController.getProductById(..) - Error: Товар с id=999 не найден
+2026-01-18 14:00:42.362 ERROR 3876 --- [main] r.r.p.exception.GlobalExceptionHandler   : Product not found: Товар с id=999 не найден
+2026-01-18 21:47:34.463 ERROR 21208 --- [main] r.r.productservice.aspect.LoggingAspect  : <!> Service failed: ProductService.getProductById(..) after 2 ms - Error: Товар с id=999 не найден
+2026-01-18 21:47:34.463 ERROR 21208 --- [main] r.r.productservice.aspect.LoggingAspect  : !!! Exception in controller: ProductController.getProductById(..) - Error: Товар с id=999 не найден
+2026-01-18 21:47:34.466 ERROR 21208 --- [main] r.r.p.exception.GlobalExceptionHandler   : Product not found: Товар с id=999 не найден
+2026-01-18 21:56:23.412 ERROR 19844 --- [main] r.r.productservice.aspect.LoggingAspect  : <!> Service failed: ProductService.getProductById(..) after 1 ms - Error: Товар с id=999 не найден
+2026-01-18 21:56:23.412 ERROR 19844 --- [main] r.r.productservice.aspect.LoggingAspect  : !!! Exception in controller: ProductController.getProductById(..) - Error: Товар с id=999 не найден
+2026-01-18 21:56:23.415 ERROR 19844 --- [main] r.r.p.exception.GlobalExceptionHandler   : Product not found: Товар с id=999 не найден

@@ -1,0 +1,1011 @@
+2026-01-13 21:32:52.852  INFO 248 --- [main] r.r.a.controllers.AuthControllerTest     : Starting AuthControllerTest using Java 21.0.8 with PID 248 (started by elims in D:\Max\java\my-application\ecommerce-platform\auth-service)
+2026-01-13 21:32:52.857  INFO 248 --- [main] r.r.a.controllers.AuthControllerTest     : The following 1 profile is active: "test"
+2026-01-13 21:32:52.884 DEBUG 248 --- [main] o.s.w.c.s.GenericWebApplicationContext   : Refreshing org.springframework.web.context.support.GenericWebApplicationContext@1ef93e01
+2026-01-13 21:32:57.569  INFO 248 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name remoteUserDetailsService
+2026-01-13 21:32:58.074 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : 19 mappings in 'requestMappingHandlerMapping'
+2026-01-13 21:32:58.173 DEBUG 248 --- [main] o.s.w.s.handler.SimpleUrlHandlerMapping  : Patterns [/webjars/**, /**, /swagger-ui*/*swagger-initializer.js, /swagger-ui*/**] in 'resourceHandlerMapping'
+2026-01-13 21:32:58.647 DEBUG 248 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure Or [Mvc [pattern='/api/**'], Mvc [pattern='/v1/**'], Mvc [pattern='/actuator/**']] with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-13 21:32:58.731 DEBUG 248 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure Or [Mvc [pattern='/oauth2/**'], Mvc [pattern='/login/**']] with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, OAuth2AuthorizationRequestRedirectFilter, OAuth2LoginAuthenticationFilter, DefaultResourcesFilter, DefaultLoginPageGeneratingFilter, DefaultLogoutPageGeneratingFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-13 21:32:58.743 DEBUG 248 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-13 21:32:59.323 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerAdapter : ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+2026-01-13 21:32:59.494 DEBUG 248 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : ControllerAdvice beans: 2 @ExceptionHandler, 1 ResponseBodyAdvice
+2026-01-13 21:33:00.018 DEBUG 248 --- [main] o.s.w.f.ServerHttpObservationFilter      : Filter 'webMvcObservationFilter' configured for use
+2026-01-13 21:33:00.018 DEBUG 248 --- [main] o.s.w.s.r.ResourceUrlEncodingFilter      : Filter 'resourceUrlEncodingFilter' configured for use
+2026-01-13 21:33:00.182  WARN 248 --- [main] iguration$LoadBalancerCaffeineWarnLogger : Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2026-01-13 21:33:00.273  INFO 248 --- [main] r.r.a.controllers.AuthControllerTest     : Started AuthControllerTest in 8.137 seconds (process running for 10.257)
+2026-01-13 21:33:00.529 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:33:00.554 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:00.562 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:33:00.568 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:33:00.599  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:33:00.599  WARN 248 --- [main] r.r.a.controllers.AuthController         : Invalid Authorization header format in /me request
+2026-01-13 21:33:00.610  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:33:00.670 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:00.670 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@5fb927a2]
+2026-01-13 21:33:00.836 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:33:00.836 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:00.836 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:33:00.836 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:33:00.873 DEBUG 248 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@36ac7956]
+2026-01-13 21:33:00.947 DEBUG 248 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleValidationErrors(MethodArgumentNotValidException, HttpServletRequest)
+2026-01-13 21:33:00.950  WARN 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleValidationErrors(..) - Exception type: MethodArgumentNotValidException - Message: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'password': rejected value []; codes [NotBlank.simpleAuthRequest.password,NotBlank.password,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.password,password]; arguments []; default message [password]]; default message [Пароль обязателен]] 
+2026-01-13 21:33:00.951  WARN 248 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Validation failed for request /v1/auth/login: {password=Пароль обязателен}
+2026-01-13 21:33:00.951  WARN 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleValidationErrors(..)
+2026-01-13 21:33:00.951 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:00.951 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@1339f9e0]
+2026-01-13 21:33:00.962 DEBUG 248 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'password': rejected value []; codes [NotBlank.simpleAuthRequest.password,NotBlank.password,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.password,password]; arguments []; default message [password]]; default message [Пароль обязателен]] ]
+2026-01-13 21:33:00.978 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:33:00.978 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:00.978 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:33:00.982 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:33:00.982  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:33:00.982  WARN 248 --- [main] r.r.a.controllers.AuthController         : Missing Authorization header in /me request
+2026-01-13 21:33:00.982  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:33:00.982 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:00.984 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@3a7cfd1d]
+2026-01-13 21:33:01.016 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:33:01.016 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:01.016 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:33:01.016 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:33:01.016  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:33:01.026  WARN 248 --- [main] r.r.a.controllers.AuthController         : Unauthorized request to /me: 401 Unauthorized
+2026-01-13 21:33:01.026  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:33:01.026 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:01.026 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@5c33ab81]
+2026-01-13 21:33:01.042 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/refresh
+2026-01-13 21:33:01.042 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:01.042 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/refresh
+2026-01-13 21:33:01.042 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#refresh(String)
+2026-01-13 21:33:01.042  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.refresh(..)
+2026-01-13 21:33:01.050  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.refresh(..)
+2026-01-13 21:33:01.050 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:01.050 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.AuthResponse@1ad833b4]
+2026-01-13 21:33:01.065 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:33:01.065 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:01.065 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:33:01.065 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:33:01.067  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:33:01.067  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:33:01.074 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:01.074 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.UserDtoResponse@5da0292e]
+2026-01-13 21:33:01.090 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:33:01.090 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:01.090 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:33:01.090 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:33:01.090 DEBUG 248 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@1c0d0745]
+2026-01-13 21:33:01.094 DEBUG 248 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleValidationErrors(MethodArgumentNotValidException, HttpServletRequest)
+2026-01-13 21:33:01.094  WARN 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleValidationErrors(..) - Exception type: MethodArgumentNotValidException - Message: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value []; codes [NotBlank.simpleAuthRequest.email,NotBlank.email,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email]]; default message [Email обязателен]] 
+2026-01-13 21:33:01.094  WARN 248 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Validation failed for request /v1/auth/login: {email=Email обязателен}
+2026-01-13 21:33:01.094  WARN 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleValidationErrors(..)
+2026-01-13 21:33:01.094 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:01.094 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@9ef0118]
+2026-01-13 21:33:01.094 DEBUG 248 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value []; codes [NotBlank.simpleAuthRequest.email,NotBlank.email,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email]]; default message [Email обязателен]] ]
+2026-01-13 21:33:01.110 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:33:01.110 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:01.110 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:33:01.110 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:33:01.110 DEBUG 248 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@2c7490b1]
+2026-01-13 21:33:01.110  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.loginJson(..)
+2026-01-13 21:33:01.110  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.loginJson(..)
+2026-01-13 21:33:01.110 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json]
+2026-01-13 21:33:01.110 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [{refresh_token=refresh.token.here, expires_in=3600, token_type=Bearer, access_token=access.token.her (truncated)...]
+2026-01-13 21:33:01.140 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:33:01.140 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:01.140 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:33:01.140 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:33:01.140  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:33:01.140  WARN 248 --- [main] r.r.a.controllers.AuthController         : User not found in /me request
+2026-01-13 21:33:01.140  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:33:01.147 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:01.147 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@43c9c679]
+2026-01-13 21:33:01.160 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:33:01.161 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:01.162 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:33:01.162 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:33:01.162 DEBUG 248 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@6e4b3e56]
+2026-01-13 21:33:01.165 DEBUG 248 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleValidationErrors(MethodArgumentNotValidException, HttpServletRequest)
+2026-01-13 21:33:01.165  WARN 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleValidationErrors(..) - Exception type: MethodArgumentNotValidException - Message: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value [not-an-email]; codes [Email.simpleAuthRequest.email,Email.email,Email.java.lang.String,Email]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email],[Ljakarta.validation.constraints.Pattern$Flag;@7773054a,.*]; default message [Некорректный формат email]] 
+2026-01-13 21:33:01.165  WARN 248 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Validation failed for request /v1/auth/login: {email=Некорректный формат email}
+2026-01-13 21:33:01.165  WARN 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleValidationErrors(..)
+2026-01-13 21:33:01.165 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:01.165 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@22f144b1]
+2026-01-13 21:33:01.165 DEBUG 248 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value [not-an-email]; codes [Email.simpleAuthRequest.email,Email.email,Email.java.lang.String,Email]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email],[Ljakarta.validation.constraints.Pattern$Flag;@7773054a,.*]; default message [Некорректный формат email]] ]
+2026-01-13 21:33:01.179 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/refresh
+2026-01-13 21:33:01.179 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:01.179 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/refresh
+2026-01-13 21:33:01.179 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#refresh(String)
+2026-01-13 21:33:01.188 DEBUG 248 --- [main] o.s.web.method.HandlerMethod             : Could not resolve parameter [0] in public org.springframework.http.ResponseEntity<ru.rfsnab.authservice.models.dto.AuthResponse> ru.rfsnab.authservice.controllers.AuthController.refresh(java.lang.String): Required request parameter 'refreshToken' for method parameter type String is not present
+2026-01-13 21:33:01.188 DEBUG 248 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleMissingParams(MissingServletRequestParameterException, HttpServletRequest)
+2026-01-13 21:33:01.188  WARN 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleMissingParams(..) - Exception type: MissingServletRequestParameterException - Message: Required request parameter 'refreshToken' for method parameter type String is not present
+2026-01-13 21:33:01.188  WARN 248 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Missing required parameter 'refreshToken' for request /v1/auth/refresh
+2026-01-13 21:33:01.188  WARN 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleMissingParams(..)
+2026-01-13 21:33:01.193 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:01.193 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@5e96ad97]
+2026-01-13 21:33:01.193 DEBUG 248 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'refreshToken' for method parameter type String is not present]
+2026-01-13 21:33:01.203 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:33:01.203 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:01.203 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:33:01.203 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:33:01.203  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:33:01.203  WARN 248 --- [main] r.r.a.controllers.AuthController         : Missing Authorization header in /me request
+2026-01-13 21:33:01.203  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:33:01.208 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:01.208 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@53df0cd6]
+2026-01-13 21:33:01.215 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/logout
+2026-01-13 21:33:01.218 DEBUG 248 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:33:01.218 DEBUG 248 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/logout
+2026-01-13 21:33:01.218 DEBUG 248 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#logout()
+2026-01-13 21:33:01.218  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.logout()
+2026-01-13 21:33:01.218  INFO 248 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.logout()
+2026-01-13 21:33:01.218 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:33:01.218 DEBUG 248 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [{status=success, message=Logout successful}]
+2026-01-13 21:33:01.491  WARN 248 --- [main] r.r.authservice.service.AuthService      : Невалидный токен при запросе данных пользователя
+2026-01-13 21:33:01.519 ERROR 248 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 500 Internal server error
+2026-01-13 21:33:01.522 DEBUG 248 --- [main] r.r.authservice.service.AuthService      : Получены данные пользователя: test@example.com
+2026-01-13 21:33:01.546 ERROR 248 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 500 Internal server error
+2026-01-13 21:33:01.552  WARN 248 --- [main] r.r.authservice.service.AuthService      : Неудачная попытка входа: test@example.com
+2026-01-13 21:33:01.564  INFO 248 --- [main] r.r.authservice.service.AuthService      : Refresh token обновлён для пользователя: test@example.com
+2026-01-13 21:33:01.572 ERROR 248 --- [main] r.r.authservice.service.AuthService      : Ошибка при получении пользователя по email: 404 Not found
+2026-01-13 21:33:01.583  WARN 248 --- [main] r.r.authservice.service.AuthService      : Неудачная попытка входа: test@example.com
+2026-01-13 21:33:01.587  INFO 248 --- [main] r.r.authservice.service.AuthService      : Успешная аутентификация пользователя: test@example.com
+2026-01-13 21:33:01.608  INFO 248 --- [main] r.r.authservice.service.AuthService      : Успешная аутентификация пользователя: test@example.com
+2026-01-13 21:33:01.790 ERROR 248 --- [main] ru.rfsnab.authservice.utils.JWTService   : JWT validation failed: CharSequence cannot be null or empty.
+2026-01-13 21:33:01.803 ERROR 248 --- [main] ru.rfsnab.authservice.utils.JWTService   : JWT validation failed: CharSequence cannot be null or empty.
+2026-01-13 21:33:01.817 ERROR 248 --- [main] ru.rfsnab.authservice.utils.JWTService   : JWT validation failed: Malformed protected header JSON: Unable to deserialize: Unexpected character ('�' (code 65533 / 0xfffd)): expected a valid value (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
+ at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 1]
+2026-01-13 21:33:02.242  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:33:02.242  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:33:02.242  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {default_email=oauth@example.com}
+2026-01-13 21:33:02.242  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: Гость, lastname: Фамилия
+2026-01-13 21:33:02.242 ERROR 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === Ошибка в OAuth2LoginSuccessHandler ===
+2026-01-13 21:33:02.242 ERROR 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Ошибка при обработке OAuth2 login: User service unavailable
+java.lang.RuntimeException: User service unavailable
+	at org.springframework.web.client.RestTemplate.postForEntity(RestTemplate.java:547)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.oauth2LoginOrRegister(OAuth2LoginSuccessHandler.java:129)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.onAuthenticationSuccess(OAuth2LoginSuccessHandler.java:64)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandlerTest.onAuthenticationSuccess_UserServiceError_ReturnsError(OAuth2LoginSuccessHandlerTest.java:168)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:767)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$8(TestMethodTestDescriptor.java:217)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:213)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:138)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:68)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:156)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2026-01-13 21:33:02.264  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:33:02.264  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:33:02.264  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {default_email=oauth@example.com}
+2026-01-13 21:33:02.264  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: Гость, lastname: Фамилия
+2026-01-13 21:33:02.264  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login/register успешен для: oauth@example.com
+2026-01-13 21:33:02.264  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Токены сгенерированы успешно
+2026-01-13 21:33:02.264  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Access token: access.token...
+2026-01-13 21:33:02.276  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Редирект на: /oauth2/success?data=%7B%22access_token%22%3A%22access.token%22%2C%22refresh_token%22%3A%22refresh.token%22%2C%22token_type%22%3A%22Bearer%22%2C%22expires_in%22%3A3600%2C%22user%22%3A%7B%22id%22%3A1%2C%22email%22%3A%22oauth%40example.com%22%2C%22firstname%22%3A%22%D0%93%D0%BE%D1%81%D1%82%D1%8C%22%2C%22lastname%22%3A%22%D0%A4%D0%B0%D0%BC%D0%B8%D0%BB%D0%B8%D1%8F%22%2C%22surname%22%3Anull%2C%22createdAt%22%3Anull%2C%22updatedAt%22%3Anull%2C%22emailVerified%22%3Afalse%2C%22roles%22%3A%5B%7B%22id%22%3A1%2C%22name%22%3A%22ROLE_USER%22%7D%5D%7D%7D
+2026-01-13 21:33:02.287  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:33:02.287  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:33:02.287  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {last_name=User, first_name=OAuth, default_email=oauth@example.com}
+2026-01-13 21:33:02.290  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: OAuth, lastname: User
+2026-01-13 21:33:02.290  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login/register успешен для: oauth@example.com
+2026-01-13 21:33:02.290  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Токены сгенерированы успешно
+2026-01-13 21:33:02.290  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Access token: access.token...
+2026-01-13 21:33:02.293  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Редирект на: /oauth2/success?data=%7B%22access_token%22%3A%22access.token%22%2C%22refresh_token%22%3A%22refresh.token%22%2C%22token_type%22%3A%22Bearer%22%2C%22expires_in%22%3A3600%2C%22user%22%3A%7B%22id%22%3A1%2C%22email%22%3A%22oauth%40example.com%22%2C%22firstname%22%3A%22OAuth%22%2C%22lastname%22%3A%22User%22%2C%22surname%22%3Anull%2C%22createdAt%22%3Anull%2C%22updatedAt%22%3Anull%2C%22emailVerified%22%3Afalse%2C%22roles%22%3A%5B%7B%22id%22%3A1%2C%22name%22%3A%22ROLE_USER%22%7D%5D%7D%7D
+2026-01-13 21:33:02.296  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:33:02.296  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:33:02.296  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {}
+2026-01-13 21:33:02.317  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:33:02.317  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:33:02.317  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {default_email=oauth@example.com}
+2026-01-13 21:33:02.317  INFO 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: Test, lastname: User
+2026-01-13 21:33:02.321 ERROR 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === Ошибка в OAuth2LoginSuccessHandler ===
+2026-01-13 21:33:02.321 ERROR 248 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Ошибка при обработке OAuth2 login: Не удалось получить данные пользователя
+java.lang.IllegalStateException: Не удалось получить данные пользователя
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.oauth2LoginOrRegister(OAuth2LoginSuccessHandler.java:137)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.onAuthenticationSuccess(OAuth2LoginSuccessHandler.java:64)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandlerTest.onAuthenticationSuccess_NullUserResponse_ReturnsError(OAuth2LoginSuccessHandlerTest.java:196)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:767)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$8(TestMethodTestDescriptor.java:217)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:213)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:138)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:68)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:156)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2026-01-13 21:33:02.330  WARN 248 --- [main] r.r.authservice.utils.RoleExtractor      : У пользователя test@example.com нет ролей, используется ROLE_USER
+2026-01-13 21:33:02.332  WARN 248 --- [main] r.r.authservice.utils.RoleExtractor      : UserDtoResponse is null, используется ROLE_USER
+2026-01-13 21:33:02.332  WARN 248 --- [main] r.r.authservice.utils.RoleExtractor      : У пользователя test@example.com нет ролей, используется ROLE_USER
+2026-01-13 21:33:02.428 DEBUG 248 --- [SpringApplicationShutdownHook] o.s.w.c.s.GenericWebApplicationContext   : Closing org.springframework.web.context.support.GenericWebApplicationContext@1ef93e01, started on Tue Jan 13 21:32:52 MSK 2026
+2026-01-13 21:35:11.143  INFO 14396 --- [main] r.r.a.controllers.AuthControllerTest     : Starting AuthControllerTest using Java 21.0.8 with PID 14396 (started by elims in D:\Max\java\my-application\ecommerce-platform\auth-service)
+2026-01-13 21:35:11.145  INFO 14396 --- [main] r.r.a.controllers.AuthControllerTest     : The following 1 profile is active: "test"
+2026-01-13 21:35:11.152 DEBUG 14396 --- [main] o.s.w.c.s.GenericWebApplicationContext   : Refreshing org.springframework.web.context.support.GenericWebApplicationContext@77ea960f
+2026-01-13 21:35:15.683  INFO 14396 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name remoteUserDetailsService
+2026-01-13 21:35:16.150 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : 19 mappings in 'requestMappingHandlerMapping'
+2026-01-13 21:35:16.264 DEBUG 14396 --- [main] o.s.w.s.handler.SimpleUrlHandlerMapping  : Patterns [/webjars/**, /**, /swagger-ui*/*swagger-initializer.js, /swagger-ui*/**] in 'resourceHandlerMapping'
+2026-01-13 21:35:16.705 DEBUG 14396 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure Or [Mvc [pattern='/api/**'], Mvc [pattern='/v1/**'], Mvc [pattern='/actuator/**']] with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-13 21:35:16.786 DEBUG 14396 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure Or [Mvc [pattern='/oauth2/**'], Mvc [pattern='/login/**']] with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, OAuth2AuthorizationRequestRedirectFilter, OAuth2LoginAuthenticationFilter, DefaultResourcesFilter, DefaultLoginPageGeneratingFilter, DefaultLogoutPageGeneratingFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-13 21:35:16.809 DEBUG 14396 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-13 21:35:17.347 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerAdapter : ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+2026-01-13 21:35:17.529 DEBUG 14396 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : ControllerAdvice beans: 2 @ExceptionHandler, 1 ResponseBodyAdvice
+2026-01-13 21:35:18.034 DEBUG 14396 --- [main] o.s.w.f.ServerHttpObservationFilter      : Filter 'webMvcObservationFilter' configured for use
+2026-01-13 21:35:18.034 DEBUG 14396 --- [main] o.s.w.s.r.ResourceUrlEncodingFilter      : Filter 'resourceUrlEncodingFilter' configured for use
+2026-01-13 21:35:18.214  WARN 14396 --- [main] iguration$LoadBalancerCaffeineWarnLogger : Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2026-01-13 21:35:18.319  INFO 14396 --- [main] r.r.a.controllers.AuthControllerTest     : Started AuthControllerTest in 7.853 seconds (process running for 9.864)
+2026-01-13 21:35:18.545 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:35:18.574 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:18.596 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:35:18.607 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:35:18.633  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:35:18.633  WARN 14396 --- [main] r.r.a.controllers.AuthController         : Invalid Authorization header format in /me request
+2026-01-13 21:35:18.638  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:35:18.716 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:18.718 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@2c35cdd1]
+2026-01-13 21:35:18.861 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:35:18.868 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:18.868 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:35:18.868 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:35:18.920 DEBUG 14396 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@74a175ce]
+2026-01-13 21:35:19.003 DEBUG 14396 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleValidationErrors(MethodArgumentNotValidException, HttpServletRequest)
+2026-01-13 21:35:19.003  WARN 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleValidationErrors(..) - Exception type: MethodArgumentNotValidException - Message: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'password': rejected value []; codes [NotBlank.simpleAuthRequest.password,NotBlank.password,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.password,password]; arguments []; default message [password]]; default message [Пароль обязателен]] 
+2026-01-13 21:35:19.003  WARN 14396 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Validation failed for request /v1/auth/login: {password=Пароль обязателен}
+2026-01-13 21:35:19.010  WARN 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleValidationErrors(..)
+2026-01-13 21:35:19.010 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:19.010 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@6742e276]
+2026-01-13 21:35:19.022 DEBUG 14396 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'password': rejected value []; codes [NotBlank.simpleAuthRequest.password,NotBlank.password,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.password,password]; arguments []; default message [password]]; default message [Пароль обязателен]] ]
+2026-01-13 21:35:19.026 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:35:19.026 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:19.026 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:35:19.026 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:35:19.026  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:35:19.026  WARN 14396 --- [main] r.r.a.controllers.AuthController         : Missing Authorization header in /me request
+2026-01-13 21:35:19.026  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:35:19.026 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:19.026 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@38c0e34]
+2026-01-13 21:35:19.058 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:35:19.058 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:19.058 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:35:19.058 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:35:19.058  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:35:19.058  WARN 14396 --- [main] r.r.a.controllers.AuthController         : Unauthorized request to /me: 401 Unauthorized
+2026-01-13 21:35:19.058  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:35:19.058 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:19.058 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@627b59c6]
+2026-01-13 21:35:19.089 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/refresh
+2026-01-13 21:35:19.089 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:19.089 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/refresh
+2026-01-13 21:35:19.089 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#refresh(String)
+2026-01-13 21:35:19.089  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.refresh(..)
+2026-01-13 21:35:19.089  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.refresh(..)
+2026-01-13 21:35:19.089 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:19.089 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.AuthResponse@2c22ac54]
+2026-01-13 21:35:19.125 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:35:19.125 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:19.125 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:35:19.125 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:35:19.125  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:35:19.125  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:35:19.125 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:19.137 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.UserDtoResponse@57c97ec8]
+2026-01-13 21:35:19.159 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:35:19.159 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:19.159 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:35:19.159 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:35:19.159 DEBUG 14396 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@1263613f]
+2026-01-13 21:35:19.159 DEBUG 14396 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleValidationErrors(MethodArgumentNotValidException, HttpServletRequest)
+2026-01-13 21:35:19.159  WARN 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleValidationErrors(..) - Exception type: MethodArgumentNotValidException - Message: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value []; codes [NotBlank.simpleAuthRequest.email,NotBlank.email,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email]]; default message [Email обязателен]] 
+2026-01-13 21:35:19.159  WARN 14396 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Validation failed for request /v1/auth/login: {email=Email обязателен}
+2026-01-13 21:35:19.159  WARN 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleValidationErrors(..)
+2026-01-13 21:35:19.159 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:19.159 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@6c3e27af]
+2026-01-13 21:35:19.159 DEBUG 14396 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value []; codes [NotBlank.simpleAuthRequest.email,NotBlank.email,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email]]; default message [Email обязателен]] ]
+2026-01-13 21:35:19.169 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:35:19.169 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:19.169 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:35:19.169 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:35:19.169 DEBUG 14396 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@ff6d02e]
+2026-01-13 21:35:19.169  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.loginJson(..)
+2026-01-13 21:35:19.169  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.loginJson(..)
+2026-01-13 21:35:19.169 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json]
+2026-01-13 21:35:19.169 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [{access_token=access.token.here, user=ru.rfsnab.authservice.models.dto.UserDtoResponse@6a35ab2e, ref (truncated)...]
+2026-01-13 21:35:19.205 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:35:19.205 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:19.205 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:35:19.205 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:35:19.205  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:35:19.205  WARN 14396 --- [main] r.r.a.controllers.AuthController         : User not found in /me request
+2026-01-13 21:35:19.205  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:35:19.205 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:19.205 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@22f144b1]
+2026-01-13 21:35:19.223 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:35:19.223 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:19.223 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:35:19.223 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:35:19.223 DEBUG 14396 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@607b3ed4]
+2026-01-13 21:35:19.223 DEBUG 14396 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleValidationErrors(MethodArgumentNotValidException, HttpServletRequest)
+2026-01-13 21:35:19.223  WARN 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleValidationErrors(..) - Exception type: MethodArgumentNotValidException - Message: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value [not-an-email]; codes [Email.simpleAuthRequest.email,Email.email,Email.java.lang.String,Email]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email],[Ljakarta.validation.constraints.Pattern$Flag;@6e12bc3d,.*]; default message [Некорректный формат email]] 
+2026-01-13 21:35:19.223  WARN 14396 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Validation failed for request /v1/auth/login: {email=Некорректный формат email}
+2026-01-13 21:35:19.223  WARN 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleValidationErrors(..)
+2026-01-13 21:35:19.223 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:19.223 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@32f4eb5c]
+2026-01-13 21:35:19.223 DEBUG 14396 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value [not-an-email]; codes [Email.simpleAuthRequest.email,Email.email,Email.java.lang.String,Email]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email],[Ljakarta.validation.constraints.Pattern$Flag;@6e12bc3d,.*]; default message [Некорректный формат email]] ]
+2026-01-13 21:35:19.235 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/refresh
+2026-01-13 21:35:19.235 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:19.235 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/refresh
+2026-01-13 21:35:19.235 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#refresh(String)
+2026-01-13 21:35:19.235 DEBUG 14396 --- [main] o.s.web.method.HandlerMethod             : Could not resolve parameter [0] in public org.springframework.http.ResponseEntity<ru.rfsnab.authservice.models.dto.AuthResponse> ru.rfsnab.authservice.controllers.AuthController.refresh(java.lang.String): Required request parameter 'refreshToken' for method parameter type String is not present
+2026-01-13 21:35:19.248 DEBUG 14396 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleMissingParams(MissingServletRequestParameterException, HttpServletRequest)
+2026-01-13 21:35:19.248  WARN 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleMissingParams(..) - Exception type: MissingServletRequestParameterException - Message: Required request parameter 'refreshToken' for method parameter type String is not present
+2026-01-13 21:35:19.248  WARN 14396 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Missing required parameter 'refreshToken' for request /v1/auth/refresh
+2026-01-13 21:35:19.248  WARN 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleMissingParams(..)
+2026-01-13 21:35:19.248 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:19.248 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@5a0afdef]
+2026-01-13 21:35:19.251 DEBUG 14396 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'refreshToken' for method parameter type String is not present]
+2026-01-13 21:35:19.258 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:35:19.258 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:19.258 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:35:19.258 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:35:19.258  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:35:19.258  WARN 14396 --- [main] r.r.a.controllers.AuthController         : Missing Authorization header in /me request
+2026-01-13 21:35:19.258  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:35:19.258 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:19.258 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@76ade9ef]
+2026-01-13 21:35:19.272 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/logout
+2026-01-13 21:35:19.272 DEBUG 14396 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:35:19.272 DEBUG 14396 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/logout
+2026-01-13 21:35:19.272 DEBUG 14396 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#logout()
+2026-01-13 21:35:19.272  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.logout()
+2026-01-13 21:35:19.276  INFO 14396 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.logout()
+2026-01-13 21:35:19.276 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:35:19.276 DEBUG 14396 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [{status=success, message=Logout successful}]
+2026-01-13 21:35:19.474  WARN 14396 --- [main] r.r.authservice.service.AuthService      : Невалидный токен при запросе данных пользователя
+2026-01-13 21:35:19.492 ERROR 14396 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 500 Internal server error
+2026-01-13 21:35:19.497 DEBUG 14396 --- [main] r.r.authservice.service.AuthService      : Получены данные пользователя: test@example.com
+2026-01-13 21:35:19.509 ERROR 14396 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 500 Internal server error
+2026-01-13 21:35:19.513  WARN 14396 --- [main] r.r.authservice.service.AuthService      : Неудачная попытка входа: test@example.com
+2026-01-13 21:35:19.524  INFO 14396 --- [main] r.r.authservice.service.AuthService      : Refresh token обновлён для пользователя: test@example.com
+2026-01-13 21:35:19.524 ERROR 14396 --- [main] r.r.authservice.service.AuthService      : Ошибка при получении пользователя по email: 404 Not found
+2026-01-13 21:35:19.542  WARN 14396 --- [main] r.r.authservice.service.AuthService      : Неудачная попытка входа: test@example.com
+2026-01-13 21:35:19.542  INFO 14396 --- [main] r.r.authservice.service.AuthService      : Успешная аутентификация пользователя: test@example.com
+2026-01-13 21:35:19.572  INFO 14396 --- [main] r.r.authservice.service.AuthService      : Успешная аутентификация пользователя: test@example.com
+2026-01-13 21:35:19.759 ERROR 14396 --- [main] ru.rfsnab.authservice.utils.JWTService   : JWT validation failed: CharSequence cannot be null or empty.
+2026-01-13 21:35:19.771 ERROR 14396 --- [main] ru.rfsnab.authservice.utils.JWTService   : JWT validation failed: CharSequence cannot be null or empty.
+2026-01-13 21:35:19.780 ERROR 14396 --- [main] ru.rfsnab.authservice.utils.JWTService   : JWT validation failed: Malformed protected header JSON: Unable to deserialize: Unexpected character ('�' (code 65533 / 0xfffd)): expected a valid value (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
+ at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 1]
+2026-01-13 21:35:20.130  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:35:20.130  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:35:20.130  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {default_email=oauth@example.com}
+2026-01-13 21:35:20.130  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: Гость, lastname: Фамилия
+2026-01-13 21:35:20.133 ERROR 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === Ошибка в OAuth2LoginSuccessHandler ===
+2026-01-13 21:35:20.133 ERROR 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Ошибка при обработке OAuth2 login: User service unavailable
+java.lang.RuntimeException: User service unavailable
+	at org.springframework.web.client.RestTemplate.postForEntity(RestTemplate.java:547)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.oauth2LoginOrRegister(OAuth2LoginSuccessHandler.java:129)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.onAuthenticationSuccess(OAuth2LoginSuccessHandler.java:64)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandlerTest.onAuthenticationSuccess_UserServiceError_ReturnsError(OAuth2LoginSuccessHandlerTest.java:163)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:767)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$8(TestMethodTestDescriptor.java:217)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:213)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:138)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:68)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:156)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2026-01-13 21:35:20.133  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:35:20.146  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:35:20.146  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {}
+2026-01-13 21:35:20.146  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:35:20.146  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:35:20.146  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {default_email=oauth@example.com}
+2026-01-13 21:35:20.146  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: Гость, lastname: Фамилия
+2026-01-13 21:35:20.146  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login/register успешен для: oauth@example.com
+2026-01-13 21:35:20.146  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Токены сгенерированы успешно
+2026-01-13 21:35:20.146  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Access token: access.token...
+2026-01-13 21:35:20.160  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Редирект на: /oauth2/success?data=%7B%22access_token%22%3A%22access.token%22%2C%22refresh_token%22%3A%22refresh.token%22%2C%22token_type%22%3A%22Bearer%22%2C%22expires_in%22%3A3600%2C%22user%22%3A%7B%22id%22%3A1%2C%22email%22%3A%22oauth%40example.com%22%2C%22firstname%22%3A%22%D0%93%D0%BE%D1%81%D1%82%D1%8C%22%2C%22lastname%22%3A%22%D0%A4%D0%B0%D0%BC%D0%B8%D0%BB%D0%B8%D1%8F%22%2C%22surname%22%3Anull%2C%22createdAt%22%3Anull%2C%22updatedAt%22%3Anull%2C%22emailVerified%22%3Afalse%2C%22roles%22%3A%5B%7B%22id%22%3A1%2C%22name%22%3A%22ROLE_USER%22%7D%5D%7D%7D
+2026-01-13 21:35:20.162  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:35:20.162  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:35:20.162  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {default_email=oauth@example.com, last_name=User, first_name=OAuth}
+2026-01-13 21:35:20.162  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: OAuth, lastname: User
+2026-01-13 21:35:20.162  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login/register успешен для: oauth@example.com
+2026-01-13 21:35:20.162  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Токены сгенерированы успешно
+2026-01-13 21:35:20.162  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Access token: access.token...
+2026-01-13 21:35:20.162  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Редирект на: /oauth2/success?data=%7B%22access_token%22%3A%22access.token%22%2C%22refresh_token%22%3A%22refresh.token%22%2C%22token_type%22%3A%22Bearer%22%2C%22expires_in%22%3A3600%2C%22user%22%3A%7B%22id%22%3A1%2C%22email%22%3A%22oauth%40example.com%22%2C%22firstname%22%3A%22OAuth%22%2C%22lastname%22%3A%22User%22%2C%22surname%22%3Anull%2C%22createdAt%22%3Anull%2C%22updatedAt%22%3Anull%2C%22emailVerified%22%3Afalse%2C%22roles%22%3A%5B%7B%22id%22%3A1%2C%22name%22%3A%22ROLE_USER%22%7D%5D%7D%7D
+2026-01-13 21:35:20.180  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:35:20.180  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:35:20.180  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {default_email=oauth@example.com}
+2026-01-13 21:35:20.180  INFO 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: Test, lastname: User
+2026-01-13 21:35:20.180 ERROR 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === Ошибка в OAuth2LoginSuccessHandler ===
+2026-01-13 21:35:20.180 ERROR 14396 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Ошибка при обработке OAuth2 login: Не удалось получить данные пользователя
+java.lang.IllegalStateException: Не удалось получить данные пользователя
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.oauth2LoginOrRegister(OAuth2LoginSuccessHandler.java:137)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.onAuthenticationSuccess(OAuth2LoginSuccessHandler.java:64)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandlerTest.onAuthenticationSuccess_NullUserResponse_ReturnsError(OAuth2LoginSuccessHandlerTest.java:191)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:767)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$8(TestMethodTestDescriptor.java:217)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:213)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:138)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:68)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:156)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2026-01-13 21:35:20.186  WARN 14396 --- [main] r.r.authservice.utils.RoleExtractor      : У пользователя test@example.com нет ролей, используется ROLE_USER
+2026-01-13 21:35:20.189  WARN 14396 --- [main] r.r.authservice.utils.RoleExtractor      : UserDtoResponse is null, используется ROLE_USER
+2026-01-13 21:35:20.194  WARN 14396 --- [main] r.r.authservice.utils.RoleExtractor      : У пользователя test@example.com нет ролей, используется ROLE_USER
+2026-01-13 21:35:20.268 DEBUG 14396 --- [SpringApplicationShutdownHook] o.s.w.c.s.GenericWebApplicationContext   : Closing org.springframework.web.context.support.GenericWebApplicationContext@77ea960f, started on Tue Jan 13 21:35:11 MSK 2026
+2026-01-13 21:57:39.986  INFO 17724 --- [main] r.r.a.controllers.AuthControllerTest     : Starting AuthControllerTest using Java 21.0.8 with PID 17724 (started by elims in D:\Max\java\my-application\ecommerce-platform\auth-service)
+2026-01-13 21:57:39.990  INFO 17724 --- [main] r.r.a.controllers.AuthControllerTest     : The following 1 profile is active: "test"
+2026-01-13 21:57:40.029 DEBUG 17724 --- [main] o.s.w.c.s.GenericWebApplicationContext   : Refreshing org.springframework.web.context.support.GenericWebApplicationContext@77ea960f
+2026-01-13 21:57:47.190  INFO 17724 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name remoteUserDetailsService
+2026-01-13 21:57:47.934 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : 19 mappings in 'requestMappingHandlerMapping'
+2026-01-13 21:57:48.093 DEBUG 17724 --- [main] o.s.w.s.handler.SimpleUrlHandlerMapping  : Patterns [/webjars/**, /**, /swagger-ui*/*swagger-initializer.js, /swagger-ui*/**] in 'resourceHandlerMapping'
+2026-01-13 21:57:48.838 DEBUG 17724 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure Or [Mvc [pattern='/api/**'], Mvc [pattern='/v1/**'], Mvc [pattern='/actuator/**']] with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-13 21:57:48.982 DEBUG 17724 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure Or [Mvc [pattern='/oauth2/**'], Mvc [pattern='/login/**']] with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, OAuth2AuthorizationRequestRedirectFilter, OAuth2LoginAuthenticationFilter, DefaultResourcesFilter, DefaultLoginPageGeneratingFilter, DefaultLogoutPageGeneratingFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-13 21:57:49.019 DEBUG 17724 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-13 21:57:49.831 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerAdapter : ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+2026-01-13 21:57:50.069 DEBUG 17724 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : ControllerAdvice beans: 2 @ExceptionHandler, 1 ResponseBodyAdvice
+2026-01-13 21:57:50.827 DEBUG 17724 --- [main] o.s.w.f.ServerHttpObservationFilter      : Filter 'webMvcObservationFilter' configured for use
+2026-01-13 21:57:50.828 DEBUG 17724 --- [main] o.s.w.s.r.ResourceUrlEncodingFilter      : Filter 'resourceUrlEncodingFilter' configured for use
+2026-01-13 21:57:51.104  WARN 17724 --- [main] iguration$LoadBalancerCaffeineWarnLogger : Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2026-01-13 21:57:51.270  INFO 17724 --- [main] r.r.a.controllers.AuthControllerTest     : Started AuthControllerTest in 12.392 seconds (process running for 14.641)
+2026-01-13 21:57:51.634 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:57:51.668 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:51.687 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:57:51.695 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:57:51.730  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:57:51.733  WARN 17724 --- [main] r.r.a.controllers.AuthController         : Invalid Authorization header format in /me request
+2026-01-13 21:57:51.743  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:57:51.888 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:51.891 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@2c35cdd1]
+2026-01-13 21:57:52.124 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:57:52.126 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.127 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:57:52.128 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:57:52.195 DEBUG 17724 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@74a175ce]
+2026-01-13 21:57:52.312 DEBUG 17724 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleValidationErrors(MethodArgumentNotValidException, HttpServletRequest)
+2026-01-13 21:57:52.314  WARN 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleValidationErrors(..) - Exception type: MethodArgumentNotValidException - Message: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'password': rejected value []; codes [NotBlank.simpleAuthRequest.password,NotBlank.password,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.password,password]; arguments []; default message [password]]; default message [Пароль обязателен]] 
+2026-01-13 21:57:52.316  WARN 17724 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Validation failed for request /v1/auth/login: {password=Пароль обязателен}
+2026-01-13 21:57:52.317  WARN 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleValidationErrors(..)
+2026-01-13 21:57:52.318 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:52.318 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@6742e276]
+2026-01-13 21:57:52.333 DEBUG 17724 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'password': rejected value []; codes [NotBlank.simpleAuthRequest.password,NotBlank.password,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.password,password]; arguments []; default message [password]]; default message [Пароль обязателен]] ]
+2026-01-13 21:57:52.356 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:57:52.358 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.359 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:57:52.359 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:57:52.360  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:57:52.360  WARN 17724 --- [main] r.r.a.controllers.AuthController         : Missing Authorization header in /me request
+2026-01-13 21:57:52.361  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:57:52.361 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:52.361 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@38c0e34]
+2026-01-13 21:57:52.398 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:57:52.399 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.400 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:57:52.401 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:57:52.402  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:57:52.415  WARN 17724 --- [main] r.r.a.controllers.AuthController         : Unauthorized request to /me: 401 Unauthorized
+2026-01-13 21:57:52.416  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:57:52.417 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:52.417 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@627b59c6]
+2026-01-13 21:57:52.445 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/refresh
+2026-01-13 21:57:52.446 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.447 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/refresh
+2026-01-13 21:57:52.447 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#refresh(String)
+2026-01-13 21:57:52.449  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.refresh(..)
+2026-01-13 21:57:52.452  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.refresh(..)
+2026-01-13 21:57:52.457 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:52.457 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.AuthResponse@2c22ac54]
+2026-01-13 21:57:52.477 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:57:52.478 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.479 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:57:52.480 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:57:52.480  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:57:52.481  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:57:52.492 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:52.493 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.UserDtoResponse@57c97ec8]
+2026-01-13 21:57:52.522 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:57:52.523 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.524 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:57:52.525 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:57:52.526 DEBUG 17724 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@1263613f]
+2026-01-13 21:57:52.528 DEBUG 17724 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleValidationErrors(MethodArgumentNotValidException, HttpServletRequest)
+2026-01-13 21:57:52.528  WARN 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleValidationErrors(..) - Exception type: MethodArgumentNotValidException - Message: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value []; codes [NotBlank.simpleAuthRequest.email,NotBlank.email,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email]]; default message [Email обязателен]] 
+2026-01-13 21:57:52.529  WARN 17724 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Validation failed for request /v1/auth/login: {email=Email обязателен}
+2026-01-13 21:57:52.529  WARN 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleValidationErrors(..)
+2026-01-13 21:57:52.530 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:52.530 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@6c3e27af]
+2026-01-13 21:57:52.531 DEBUG 17724 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value []; codes [NotBlank.simpleAuthRequest.email,NotBlank.email,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email]]; default message [Email обязателен]] ]
+2026-01-13 21:57:52.545 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:57:52.546 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.547 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:57:52.548 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:57:52.549 DEBUG 17724 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@ff6d02e]
+2026-01-13 21:57:52.550  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.loginJson(..)
+2026-01-13 21:57:52.550  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.loginJson(..)
+2026-01-13 21:57:52.550 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json]
+2026-01-13 21:57:52.554 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [{token_type=Bearer, access_token=access.token.here, user=ru.rfsnab.authservice.models.dto.UserDtoRes (truncated)...]
+2026-01-13 21:57:52.579 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:57:52.580 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.581 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:57:52.582 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:57:52.583  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:57:52.585  WARN 17724 --- [main] r.r.a.controllers.AuthController         : User not found in /me request
+2026-01-13 21:57:52.585  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:57:52.585 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:52.586 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@22f144b1]
+2026-01-13 21:57:52.599 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-13 21:57:52.599 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.600 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/login
+2026-01-13 21:57:52.601 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#loginJson(SimpleAuthRequest)
+2026-01-13 21:57:52.601 DEBUG 17724 --- [main] m.m.a.RequestResponseBodyMethodProcessor : Read "application/json;charset=UTF-8" to [ru.rfsnab.authservice.models.dto.SimpleAuthRequest@607b3ed4]
+2026-01-13 21:57:52.604 DEBUG 17724 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleValidationErrors(MethodArgumentNotValidException, HttpServletRequest)
+2026-01-13 21:57:52.604  WARN 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleValidationErrors(..) - Exception type: MethodArgumentNotValidException - Message: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value [not-an-email]; codes [Email.simpleAuthRequest.email,Email.email,Email.java.lang.String,Email]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email],[Ljakarta.validation.constraints.Pattern$Flag;@6e12bc3d,.*]; default message [Некорректный формат email]] 
+2026-01-13 21:57:52.604  WARN 17724 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Validation failed for request /v1/auth/login: {email=Некорректный формат email}
+2026-01-13 21:57:52.605  WARN 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleValidationErrors(..)
+2026-01-13 21:57:52.605 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [application/json] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:52.605 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@32f4eb5c]
+2026-01-13 21:57:52.606 DEBUG 17724 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MethodArgumentNotValidException: Validation failed for argument [0] in public org.springframework.http.ResponseEntity<java.util.Map<java.lang.String, java.lang.Object>> ru.rfsnab.authservice.controllers.AuthController.loginJson(ru.rfsnab.authservice.models.dto.SimpleAuthRequest): [Field error in object 'simpleAuthRequest' on field 'email': rejected value [not-an-email]; codes [Email.simpleAuthRequest.email,Email.email,Email.java.lang.String,Email]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [simpleAuthRequest.email,email]; arguments []; default message [email],[Ljakarta.validation.constraints.Pattern$Flag;@6e12bc3d,.*]; default message [Некорректный формат email]] ]
+2026-01-13 21:57:52.619 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/refresh
+2026-01-13 21:57:52.620 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.620 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/refresh
+2026-01-13 21:57:52.621 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#refresh(String)
+2026-01-13 21:57:52.631 DEBUG 17724 --- [main] o.s.web.method.HandlerMethod             : Could not resolve parameter [0] in public org.springframework.http.ResponseEntity<ru.rfsnab.authservice.models.dto.AuthResponse> ru.rfsnab.authservice.controllers.AuthController.refresh(java.lang.String): Required request parameter 'refreshToken' for method parameter type String is not present
+2026-01-13 21:57:52.632 DEBUG 17724 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Using @ExceptionHandler ru.rfsnab.authservice.exceptions.GlobalExceptionHandler#handleMissingParams(MissingServletRequestParameterException, HttpServletRequest)
+2026-01-13 21:57:52.632  WARN 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Handling exception in: GlobalExceptionHandler.handleMissingParams(..) - Exception type: MissingServletRequestParameterException - Message: Required request parameter 'refreshToken' for method parameter type String is not present
+2026-01-13 21:57:52.633  WARN 17724 --- [main] r.r.a.exceptions.GlobalExceptionHandler  : Missing required parameter 'refreshToken' for request /v1/auth/refresh
+2026-01-13 21:57:52.633  WARN 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Exception handled by: GlobalExceptionHandler.handleMissingParams(..)
+2026-01-13 21:57:52.634 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:52.634 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@5a0afdef]
+2026-01-13 21:57:52.635 DEBUG 17724 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'refreshToken' for method parameter type String is not present]
+2026-01-13 21:57:52.648 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-13 21:57:52.649 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.649 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured GET /v1/auth/me
+2026-01-13 21:57:52.650 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#getCurrentUser(String)
+2026-01-13 21:57:52.651  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.getCurrentUser(..)
+2026-01-13 21:57:52.651  WARN 17724 --- [main] r.r.a.controllers.AuthController         : Missing Authorization header in /me request
+2026-01-13 21:57:52.651  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.getCurrentUser(..)
+2026-01-13 21:57:52.651 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:52.652 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [ru.rfsnab.authservice.models.dto.ErrorResponse@76ade9ef]
+2026-01-13 21:57:52.664 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/logout
+2026-01-13 21:57:52.665 DEBUG 17724 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-13 21:57:52.666 DEBUG 17724 --- [main] o.s.security.web.FilterChainProxy        : Secured POST /v1/auth/logout
+2026-01-13 21:57:52.667 DEBUG 17724 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : Mapped to ru.rfsnab.authservice.controllers.AuthController#logout()
+2026-01-13 21:57:52.667  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : >>> Incoming request: AuthController.logout()
+2026-01-13 21:57:52.667  INFO 17724 --- [main] r.r.authservice.aspect.LoggingAspect     : <<< Response from: AuthController.logout()
+2026-01-13 21:57:52.670 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Using 'application/json', given [*/*] and supported [application/json, application/*+json, application/yaml]
+2026-01-13 21:57:52.671 DEBUG 17724 --- [main] o.s.w.s.m.m.a.HttpEntityMethodProcessor  : Writing [{message=Logout successful, status=success}]
+2026-01-13 21:57:53.018  WARN 17724 --- [main] r.r.authservice.service.AuthService      : Невалидный токен при запросе данных пользователя
+2026-01-13 21:57:53.059 ERROR 17724 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 500 Internal server error
+2026-01-13 21:57:53.066 DEBUG 17724 --- [main] r.r.authservice.service.AuthService      : Получены данные пользователя: test@example.com
+2026-01-13 21:57:53.090 ERROR 17724 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 500 Internal server error
+2026-01-13 21:57:53.099  WARN 17724 --- [main] r.r.authservice.service.AuthService      : Неудачная попытка входа: test@example.com
+2026-01-13 21:57:53.112  INFO 17724 --- [main] r.r.authservice.service.AuthService      : Refresh token обновлён для пользователя: test@example.com
+2026-01-13 21:57:53.121 ERROR 17724 --- [main] r.r.authservice.service.AuthService      : Ошибка при получении пользователя по email: 404 Not found
+2026-01-13 21:57:53.134  WARN 17724 --- [main] r.r.authservice.service.AuthService      : Неудачная попытка входа: test@example.com
+2026-01-13 21:57:53.140  INFO 17724 --- [main] r.r.authservice.service.AuthService      : Успешная аутентификация пользователя: test@example.com
+2026-01-13 21:57:53.171  INFO 17724 --- [main] r.r.authservice.service.AuthService      : Успешная аутентификация пользователя: test@example.com
+2026-01-13 21:57:53.426 ERROR 17724 --- [main] ru.rfsnab.authservice.utils.JWTService   : JWT validation failed: CharSequence cannot be null or empty.
+2026-01-13 21:57:53.448 ERROR 17724 --- [main] ru.rfsnab.authservice.utils.JWTService   : JWT validation failed: CharSequence cannot be null or empty.
+2026-01-13 21:57:53.467 ERROR 17724 --- [main] ru.rfsnab.authservice.utils.JWTService   : JWT validation failed: Malformed protected header JSON: Unable to deserialize: Unexpected character ('�' (code 65533 / 0xfffd)): expected a valid value (JSON String, Number, Array, Object or token 'null', 'true' or 'false')
+ at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 1]
+2026-01-13 21:57:54.015  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:57:54.016  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:57:54.016  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {default_email=oauth@example.com}
+2026-01-13 21:57:54.017  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: Гость, lastname: Фамилия
+2026-01-13 21:57:54.021 ERROR 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === Ошибка в OAuth2LoginSuccessHandler ===
+2026-01-13 21:57:54.021 ERROR 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Ошибка при обработке OAuth2 login: User service unavailable
+java.lang.RuntimeException: User service unavailable
+	at org.springframework.web.client.RestTemplate.postForEntity(RestTemplate.java:547)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.oauth2LoginOrRegister(OAuth2LoginSuccessHandler.java:129)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.onAuthenticationSuccess(OAuth2LoginSuccessHandler.java:64)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandlerTest.onAuthenticationSuccess_UserServiceError_ReturnsError(OAuth2LoginSuccessHandlerTest.java:163)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:767)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$8(TestMethodTestDescriptor.java:217)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:213)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:138)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:68)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:156)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2026-01-13 21:57:54.083  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:57:54.084  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:57:54.084  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {}
+2026-01-13 21:57:54.092  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:57:54.094  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:57:54.096  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {default_email=oauth@example.com}
+2026-01-13 21:57:54.097  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: Гость, lastname: Фамилия
+2026-01-13 21:57:54.098  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login/register успешен для: oauth@example.com
+2026-01-13 21:57:54.099  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Токены сгенерированы успешно
+2026-01-13 21:57:54.099  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Access token: access.token...
+2026-01-13 21:57:54.108  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Редирект на: /oauth2/success?data=%7B%22access_token%22%3A%22access.token%22%2C%22refresh_token%22%3A%22refresh.token%22%2C%22token_type%22%3A%22Bearer%22%2C%22expires_in%22%3A3600%2C%22user%22%3A%7B%22id%22%3A1%2C%22email%22%3A%22oauth%40example.com%22%2C%22firstname%22%3A%22%D0%93%D0%BE%D1%81%D1%82%D1%8C%22%2C%22lastname%22%3A%22%D0%A4%D0%B0%D0%BC%D0%B8%D0%BB%D0%B8%D1%8F%22%2C%22surname%22%3Anull%2C%22createdAt%22%3Anull%2C%22updatedAt%22%3Anull%2C%22emailVerified%22%3Afalse%2C%22roles%22%3A%5B%7B%22id%22%3A1%2C%22name%22%3A%22ROLE_USER%22%7D%5D%7D%7D
+2026-01-13 21:57:54.119  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:57:54.119  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:57:54.120  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {last_name=User, first_name=OAuth, default_email=oauth@example.com}
+2026-01-13 21:57:54.120  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: OAuth, lastname: User
+2026-01-13 21:57:54.121  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login/register успешен для: oauth@example.com
+2026-01-13 21:57:54.122  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Токены сгенерированы успешно
+2026-01-13 21:57:54.122  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Access token: access.token...
+2026-01-13 21:57:54.127  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Редирект на: /oauth2/success?data=%7B%22access_token%22%3A%22access.token%22%2C%22refresh_token%22%3A%22refresh.token%22%2C%22token_type%22%3A%22Bearer%22%2C%22expires_in%22%3A3600%2C%22user%22%3A%7B%22id%22%3A1%2C%22email%22%3A%22oauth%40example.com%22%2C%22firstname%22%3A%22OAuth%22%2C%22lastname%22%3A%22User%22%2C%22surname%22%3Anull%2C%22createdAt%22%3Anull%2C%22updatedAt%22%3Anull%2C%22emailVerified%22%3Afalse%2C%22roles%22%3A%5B%7B%22id%22%3A1%2C%22name%22%3A%22ROLE_USER%22%7D%5D%7D%7D
+2026-01-13 21:57:54.133  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === OAuth2LoginSuccessHandler вызван ===
+2026-01-13 21:57:54.134  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Request URI: /login/oauth2/code/yandex
+2026-01-13 21:57:54.134  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2User attributes: {default_email=oauth@example.com}
+2026-01-13 21:57:54.134  INFO 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : OAuth2 login для email: oauth@example.com, firstname: Test, lastname: User
+2026-01-13 21:57:54.135 ERROR 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : === Ошибка в OAuth2LoginSuccessHandler ===
+2026-01-13 21:57:54.135 ERROR 17724 --- [main] r.r.a.utils.OAuth2LoginSuccessHandler    : Ошибка при обработке OAuth2 login: Не удалось получить данные пользователя
+java.lang.IllegalStateException: Не удалось получить данные пользователя
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.oauth2LoginOrRegister(OAuth2LoginSuccessHandler.java:137)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler.onAuthenticationSuccess(OAuth2LoginSuccessHandler.java:64)
+	at ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandlerTest.onAuthenticationSuccess_NullUserResponse_ReturnsError(OAuth2LoginSuccessHandlerTest.java:191)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:767)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$8(TestMethodTestDescriptor.java:217)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:213)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:138)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:68)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:156)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:160)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:146)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:144)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:143)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:100)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+2026-01-13 21:57:54.148  WARN 17724 --- [main] r.r.authservice.utils.RoleExtractor      : У пользователя test@example.com нет ролей, используется ROLE_USER
+2026-01-13 21:57:54.155  WARN 17724 --- [main] r.r.authservice.utils.RoleExtractor      : UserDtoResponse is null, используется ROLE_USER
+2026-01-13 21:57:54.156  WARN 17724 --- [main] r.r.authservice.utils.RoleExtractor      : У пользователя test@example.com нет ролей, используется ROLE_USER
+2026-01-13 21:57:54.386 DEBUG 17724 --- [SpringApplicationShutdownHook] o.s.w.c.s.GenericWebApplicationContext   : Closing org.springframework.web.context.support.GenericWebApplicationContext@77ea960f, started on Tue Jan 13 21:57:40 MSK 2026

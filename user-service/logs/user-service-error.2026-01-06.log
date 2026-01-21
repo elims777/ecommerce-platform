@@ -1,0 +1,42 @@
+2026-01-06 14:13:26.998 ERROR 15920 --- [main] o.h.engine.jdbc.spi.SqlExceptionHelper   : Нарушение уникального индекса или первичного ключа: "PUBLIC.CONSTRAINT_INDEX_4 ON PUBLIC.ROLES(NAME NULLS FIRST) VALUES ( /* 4 */ 'ROLE_ADMIN' )"
+Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4 ON PUBLIC.ROLES(NAME NULLS FIRST) VALUES ( /* 4 */ 'ROLE_ADMIN' )"; SQL statement:
+insert into roles (name,id) values (?,default) [23505-232]
+2026-01-06 14:13:27.142 ERROR 15920 --- [main] o.h.engine.jdbc.spi.SqlExceptionHelper   : Нарушение уникального индекса или первичного ключа: "PUBLIC.CONSTRAINT_INDEX_4D ON PUBLIC.USERS(EMAIL NULLS FIRST) VALUES ( /* 2 */ 'test@test.com' )"
+Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4D ON PUBLIC.USERS(EMAIL NULLS FIRST) VALUES ( /* 2 */ 'test@test.com' )"; SQL statement:
+insert into users (created_at,email,email_verified,firstname,lastname,password,surname,updated_at,id) values (?,?,?,?,?,?,?,?,default) [23505-232]
+2026-01-06 17:40:59.637 ERROR 22580 --- [main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Parameter 0 of constructor in ru.rfsnab.userservice.configuration.JwtAuthenticationFilter required a bean of type 'ru.rfsnab.userservice.configuration.JWTService' that could not be found.
+
+
+Action:
+
+Consider defining a bean of type 'ru.rfsnab.userservice.configuration.JWTService' in your configuration.
+
+2026-01-06 17:41:03.401 ERROR 22580 --- [main] o.h.engine.jdbc.spi.SqlExceptionHelper   : Нарушение уникального индекса или первичного ключа: "PUBLIC.CONSTRAINT_INDEX_4 ON PUBLIC.ROLES(NAME NULLS FIRST) VALUES ( /* 4 */ 'ROLE_ADMIN' )"
+Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4 ON PUBLIC.ROLES(NAME NULLS FIRST) VALUES ( /* 4 */ 'ROLE_ADMIN' )"; SQL statement:
+insert into roles (name,id) values (?,default) [23505-232]
+2026-01-06 17:41:03.519 ERROR 22580 --- [main] o.h.engine.jdbc.spi.SqlExceptionHelper   : Нарушение уникального индекса или первичного ключа: "PUBLIC.CONSTRAINT_INDEX_4D ON PUBLIC.USERS(EMAIL NULLS FIRST) VALUES ( /* 2 */ 'test@test.com' )"
+Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4D ON PUBLIC.USERS(EMAIL NULLS FIRST) VALUES ( /* 2 */ 'test@test.com' )"; SQL statement:
+insert into users (created_at,email,email_verified,firstname,lastname,password,surname,updated_at,id) values (?,?,?,?,?,?,?,?,default) [23505-232]
+2026-01-06 17:42:52.257 ERROR 25880 --- [main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Parameter 0 of constructor in ru.rfsnab.userservice.configuration.JwtAuthenticationFilter required a bean of type 'ru.rfsnab.userservice.configuration.JWTService' that could not be found.
+
+
+Action:
+
+Consider defining a bean of type 'ru.rfsnab.userservice.configuration.JWTService' in your configuration.
+

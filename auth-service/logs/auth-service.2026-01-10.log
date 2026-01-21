@@ -1,0 +1,83 @@
+2026-01-10 23:16:07.790  INFO 21604 --- [background-preinit] o.h.validator.internal.util.Version      : HV000001: Hibernate Validator 8.0.2.Final
+2026-01-10 23:16:07.850  INFO 21604 --- [main] r.r.a.controllers.AuthControllerTest     : Starting AuthControllerTest using Java 21.0.8 with PID 21604 (started by elims in D:\Max\java\my-application\ecommerce-platform\auth-service)
+2026-01-10 23:16:07.852  INFO 21604 --- [main] r.r.a.controllers.AuthControllerTest     : No active profile set, falling back to 1 default profile: "default"
+2026-01-10 23:16:07.873 DEBUG 21604 --- [main] o.s.w.c.s.GenericWebApplicationContext   : Refreshing org.springframework.web.context.support.GenericWebApplicationContext@6ef1a1b9
+2026-01-10 23:16:10.373 DEBUG 21604 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : 7 mappings in 'requestMappingHandlerMapping'
+2026-01-10 23:16:10.454 DEBUG 21604 --- [main] o.s.w.s.handler.SimpleUrlHandlerMapping  : Patterns [/webjars/**, /**] in 'resourceHandlerMapping'
+2026-01-10 23:16:10.647 DEBUG 21604 --- [main] s.w.s.m.m.a.RequestMappingHandlerAdapter : ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+2026-01-10 23:16:10.800 DEBUG 21604 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : ControllerAdvice beans: 1 @ExceptionHandler, 1 ResponseBodyAdvice
+2026-01-10 23:16:10.855 DEBUG 21604 --- [main] swordEncoderAuthenticationManagerBuilder : No authenticationProviders and no parentAuthenticationManager defined. Returning null.
+2026-01-10 23:16:11.111 DEBUG 21604 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, CsrfFilter, LogoutFilter, OAuth2AuthorizationRequestRedirectFilter, OAuth2AuthorizationRequestRedirectFilter, OAuth2LoginAuthenticationFilter, DefaultResourcesFilter, DefaultLoginPageGeneratingFilter, DefaultLogoutPageGeneratingFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, OAuth2AuthorizationCodeGrantFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-01-10 23:16:11.256 DEBUG 21604 --- [main] o.s.w.s.r.ResourceUrlEncodingFilter      : Filter 'resourceUrlEncodingFilter' configured for use
+2026-01-10 23:16:11.261  INFO 21604 --- [main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-01-10 23:16:11.262  INFO 21604 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-01-10 23:16:11.263  INFO 21604 --- [main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
+2026-01-10 23:16:11.301  INFO 21604 --- [main] r.r.a.controllers.AuthControllerTest     : Started AuthControllerTest in 3.987 seconds (process running for 5.051)
+2026-01-10 23:16:11.408 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-10 23:16:11.418 DEBUG 21604 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-10 23:16:11.431 DEBUG 21604 --- [main] o.s.s.w.s.HttpSessionRequestCache        : Saved request http://localhost/v1/auth/me?continue to session
+2026-01-10 23:16:11.437 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], Not [And [Or [Ant [pattern='/login'], Ant [pattern='/favicon.ico']], And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@696105c4, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]]], org.springframework.security.config.annotation.web.configurers.oauth2.client.OAuth2LoginConfigurer$$Lambda/0x000001c416699088@e04b8a0]
+2026-01-10 23:16:11.438 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@1ef5cde4
+2026-01-10 23:16:11.440 DEBUG 21604 --- [main] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost/oauth2/authorization/yandex
+2026-01-10 23:16:11.542 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-10 23:16:11.543 DEBUG 21604 --- [main] o.s.security.web.csrf.CsrfFilter         : Invalid CSRF token found for http://localhost/v1/auth/login
+2026-01-10 23:16:11.543 DEBUG 21604 --- [main] o.s.s.w.access.AccessDeniedHandlerImpl   : Responding with 403 status code
+2026-01-10 23:16:11.555 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-10 23:16:11.555 DEBUG 21604 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-10 23:16:11.556 DEBUG 21604 --- [main] o.s.s.w.s.HttpSessionRequestCache        : Saved request http://localhost/v1/auth/me?continue to session
+2026-01-10 23:16:11.556 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], Not [And [Or [Ant [pattern='/login'], Ant [pattern='/favicon.ico']], And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@696105c4, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]]], org.springframework.security.config.annotation.web.configurers.oauth2.client.OAuth2LoginConfigurer$$Lambda/0x000001c416699088@e04b8a0]
+2026-01-10 23:16:11.556 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@1ef5cde4
+2026-01-10 23:16:11.556 DEBUG 21604 --- [main] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost/oauth2/authorization/yandex
+2026-01-10 23:16:11.616 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-10 23:16:11.616 DEBUG 21604 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-10 23:16:11.618 DEBUG 21604 --- [main] o.s.s.w.s.HttpSessionRequestCache        : Saved request http://localhost/v1/auth/me?continue to session
+2026-01-10 23:16:11.618 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], Not [And [Or [Ant [pattern='/login'], Ant [pattern='/favicon.ico']], And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@696105c4, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]]], org.springframework.security.config.annotation.web.configurers.oauth2.client.OAuth2LoginConfigurer$$Lambda/0x000001c416699088@e04b8a0]
+2026-01-10 23:16:11.618 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@1ef5cde4
+2026-01-10 23:16:11.618 DEBUG 21604 --- [main] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost/oauth2/authorization/yandex
+2026-01-10 23:16:11.633 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/refresh
+2026-01-10 23:16:11.634 DEBUG 21604 --- [main] o.s.security.web.csrf.CsrfFilter         : Invalid CSRF token found for http://localhost/v1/auth/refresh
+2026-01-10 23:16:11.634 DEBUG 21604 --- [main] o.s.s.w.access.AccessDeniedHandlerImpl   : Responding with 403 status code
+2026-01-10 23:16:11.647 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-10 23:16:11.648 DEBUG 21604 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-10 23:16:11.648 DEBUG 21604 --- [main] o.s.s.w.s.HttpSessionRequestCache        : Saved request http://localhost/v1/auth/me?continue to session
+2026-01-10 23:16:11.648 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], Not [And [Or [Ant [pattern='/login'], Ant [pattern='/favicon.ico']], And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@696105c4, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]]], org.springframework.security.config.annotation.web.configurers.oauth2.client.OAuth2LoginConfigurer$$Lambda/0x000001c416699088@e04b8a0]
+2026-01-10 23:16:11.648 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@1ef5cde4
+2026-01-10 23:16:11.649 DEBUG 21604 --- [main] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost/oauth2/authorization/yandex
+2026-01-10 23:16:11.659 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-10 23:16:11.660 DEBUG 21604 --- [main] o.s.security.web.csrf.CsrfFilter         : Invalid CSRF token found for http://localhost/v1/auth/login
+2026-01-10 23:16:11.661 DEBUG 21604 --- [main] o.s.s.w.access.AccessDeniedHandlerImpl   : Responding with 403 status code
+2026-01-10 23:16:11.670 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-10 23:16:11.670 DEBUG 21604 --- [main] o.s.security.web.csrf.CsrfFilter         : Invalid CSRF token found for http://localhost/v1/auth/login
+2026-01-10 23:16:11.670 DEBUG 21604 --- [main] o.s.s.w.access.AccessDeniedHandlerImpl   : Responding with 403 status code
+2026-01-10 23:16:11.679 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-10 23:16:11.680 DEBUG 21604 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-10 23:16:11.682 DEBUG 21604 --- [main] o.s.s.w.s.HttpSessionRequestCache        : Saved request http://localhost/v1/auth/me?continue to session
+2026-01-10 23:16:11.682 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], Not [And [Or [Ant [pattern='/login'], Ant [pattern='/favicon.ico']], And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@696105c4, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]]], org.springframework.security.config.annotation.web.configurers.oauth2.client.OAuth2LoginConfigurer$$Lambda/0x000001c416699088@e04b8a0]
+2026-01-10 23:16:11.682 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@1ef5cde4
+2026-01-10 23:16:11.682 DEBUG 21604 --- [main] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost/oauth2/authorization/yandex
+2026-01-10 23:16:11.691 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/login
+2026-01-10 23:16:11.692 DEBUG 21604 --- [main] o.s.security.web.csrf.CsrfFilter         : Invalid CSRF token found for http://localhost/v1/auth/login
+2026-01-10 23:16:11.692 DEBUG 21604 --- [main] o.s.s.w.access.AccessDeniedHandlerImpl   : Responding with 403 status code
+2026-01-10 23:16:11.700 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/refresh
+2026-01-10 23:16:11.700 DEBUG 21604 --- [main] o.s.security.web.csrf.CsrfFilter         : Invalid CSRF token found for http://localhost/v1/auth/refresh
+2026-01-10 23:16:11.700 DEBUG 21604 --- [main] o.s.s.w.access.AccessDeniedHandlerImpl   : Responding with 403 status code
+2026-01-10 23:16:11.709 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing GET /v1/auth/me
+2026-01-10 23:16:11.709 DEBUG 21604 --- [main] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2026-01-10 23:16:11.709 DEBUG 21604 --- [main] o.s.s.w.s.HttpSessionRequestCache        : Saved request http://localhost/v1/auth/me?continue to session
+2026-01-10 23:16:11.709 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Trying to match using And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], Not [And [Or [Ant [pattern='/login'], Ant [pattern='/favicon.ico']], And [Not [RequestHeaderRequestMatcher [expectedHeaderName=X-Requested-With, expectedHeaderValue=XMLHttpRequest]], MediaTypeRequestMatcher [contentNegotiationStrategy=org.springframework.web.accept.ContentNegotiationManager@696105c4, matchingMediaTypes=[application/xhtml+xml, image/*, text/html, text/plain], useEquals=false, ignoredMediaTypes=[*/*]]]]], org.springframework.security.config.annotation.web.configurers.oauth2.client.OAuth2LoginConfigurer$$Lambda/0x000001c416699088@e04b8a0]
+2026-01-10 23:16:11.711 DEBUG 21604 --- [main] s.w.a.DelegatingAuthenticationEntryPoint : Match found! Executing org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint@1ef5cde4
+2026-01-10 23:16:11.711 DEBUG 21604 --- [main] o.s.s.web.DefaultRedirectStrategy        : Redirecting to http://localhost/oauth2/authorization/yandex
+2026-01-10 23:16:11.720 DEBUG 21604 --- [main] o.s.security.web.FilterChainProxy        : Securing POST /v1/auth/logout
+2026-01-10 23:16:11.721 DEBUG 21604 --- [main] o.s.security.web.csrf.CsrfFilter         : Invalid CSRF token found for http://localhost/v1/auth/logout
+2026-01-10 23:16:11.721 DEBUG 21604 --- [main] o.s.s.w.access.AccessDeniedHandlerImpl   : Responding with 403 status code
+2026-01-10 23:16:11.987 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 401 UNAUTHORIZED
+2026-01-10 23:16:12.066 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 500 INTERNAL_SERVER_ERROR
+2026-01-10 23:16:12.079 DEBUG 21604 --- [main] r.r.authservice.service.AuthService      : Получены данные пользователя: test@example.com
+2026-01-10 23:16:12.100 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 500 INTERNAL_SERVER_ERROR
+2026-01-10 23:16:12.105 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 401 UNAUTHORIZED
+2026-01-10 23:16:12.114  INFO 21604 --- [main] r.r.authservice.service.AuthService      : Refresh token обновлён для пользователя: test@example.com
+2026-01-10 23:16:12.119 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при получении пользователя по email: 404 NOT_FOUND
+2026-01-10 23:16:12.128 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 403 FORBIDDEN
+2026-01-10 23:16:12.134  INFO 21604 --- [main] r.r.authservice.service.AuthService      : Успешная аутентификация пользователя: test@example.com
+2026-01-10 23:16:12.156  INFO 21604 --- [main] r.r.authservice.service.AuthService      : Успешная аутентификация пользователя: test@example.com
+2026-01-10 23:16:12.175 DEBUG 21604 --- [SpringApplicationShutdownHook] o.s.w.c.s.GenericWebApplicationContext   : Closing org.springframework.web.context.support.GenericWebApplicationContext@6ef1a1b9, started on Sat Jan 10 23:16:07 MSK 2026
