@@ -1,0 +1,2 @@
+2026-01-05 15:14:45.529  INFO 16312 --- [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-01-05 15:14:45.546  INFO 16312 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete

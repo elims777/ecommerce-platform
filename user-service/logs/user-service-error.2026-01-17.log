@@ -1,0 +1,12 @@
+2026-01-17 23:06:31.332 ERROR 15744 --- [main] o.h.engine.jdbc.spi.SqlExceptionHelper   : Нарушение уникального индекса или первичного ключа: "PUBLIC.CONSTRAINT_INDEX_4 ON PUBLIC.ROLES(NAME NULLS FIRST) VALUES ( /* 4 */ 'ROLE_ADMIN' )"
+Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4 ON PUBLIC.ROLES(NAME NULLS FIRST) VALUES ( /* 4 */ 'ROLE_ADMIN' )"; SQL statement:
+insert into roles (name,id) values (?,default) [23505-224]
+2026-01-17 23:06:31.456 ERROR 15744 --- [main] o.h.engine.jdbc.spi.SqlExceptionHelper   : Нарушение уникального индекса или первичного ключа: "PUBLIC.CONSTRAINT_INDEX_4D ON PUBLIC.USERS(EMAIL NULLS FIRST) VALUES ( /* 2 */ 'test@test.com' )"
+Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4D ON PUBLIC.USERS(EMAIL NULLS FIRST) VALUES ( /* 2 */ 'test@test.com' )"; SQL statement:
+insert into users (created_at,email,email_verified,firstname,lastname,password,surname,updated_at,id) values (?,?,?,?,?,?,?,?,default) [23505-224]
+2026-01-17 23:12:26.829 ERROR 9864 --- [main] o.h.engine.jdbc.spi.SqlExceptionHelper   : Нарушение уникального индекса или первичного ключа: "PUBLIC.CONSTRAINT_INDEX_4 ON PUBLIC.ROLES(NAME NULLS FIRST) VALUES ( /* 4 */ 'ROLE_ADMIN' )"
+Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4 ON PUBLIC.ROLES(NAME NULLS FIRST) VALUES ( /* 4 */ 'ROLE_ADMIN' )"; SQL statement:
+insert into roles (name,id) values (?,default) [23505-224]
+2026-01-17 23:12:26.943 ERROR 9864 --- [main] o.h.engine.jdbc.spi.SqlExceptionHelper   : Нарушение уникального индекса или первичного ключа: "PUBLIC.CONSTRAINT_INDEX_4D ON PUBLIC.USERS(EMAIL NULLS FIRST) VALUES ( /* 2 */ 'test@test.com' )"
+Unique index or primary key violation: "PUBLIC.CONSTRAINT_INDEX_4D ON PUBLIC.USERS(EMAIL NULLS FIRST) VALUES ( /* 2 */ 'test@test.com' )"; SQL statement:
+insert into users (created_at,email,email_verified,firstname,lastname,password,surname,updated_at,id) values (?,?,?,?,?,?,?,?,default) [23505-224]
