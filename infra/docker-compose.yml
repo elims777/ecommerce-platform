@@ -104,6 +104,24 @@ services:
       timeout: 5s
       retries: 5
 
+  # ==================== REDIS ====================
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ==================== SERVICES ====================
 
   user-service:
@@ -214,6 +232,7 @@ volumes:
   user_db_data:
   notification_db_data:
   product_db_data:
+  redis_data:
 
 networks:
   ecommerce-net:
