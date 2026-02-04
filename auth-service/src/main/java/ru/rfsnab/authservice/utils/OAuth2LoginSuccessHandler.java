@@ -66,8 +66,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             List<String> roles = roleExtractor.extractRoles(user);
 
             // Генерируем JWT tokens
-            String accessToken = jwtService.generateToken(user.getEmail(), roles);
-            String refreshToken = jwtService.generateRefreshToken(user.getEmail(), roles);
+            String accessToken = jwtService.generateToken(user.getId(), user.getEmail(), roles);
+            String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), roles);
 
             // Формируем данные для передачи на страницу успеха
             Map<String, Object> tokens = new HashMap<>();

@@ -49,6 +49,8 @@ class AuthServiceTest {
 
     private static final String USER_SERVICE_URL = "http://localhost:8081";
     private static final String USER_SERVICE_AUTH_URL = "/v1/users/authenticate";
+    private static final Long USER_ID = 1L;
+    private static final String USER_EMAIL = "test@example.com";
 
     private SimpleAuthRequest validAuthRequest;
     private UserDtoResponse validUserResponse;
@@ -62,7 +64,7 @@ class AuthServiceTest {
 
         // Подготовка тестовых данных
         validAuthRequest = new SimpleAuthRequest();
-        validAuthRequest.setEmail("test@example.com");
+        validAuthRequest.setEmail(USER_EMAIL);
         validAuthRequest.setPassword("password123");
 
         RoleEntity userRole = new RoleEntity();
@@ -70,8 +72,8 @@ class AuthServiceTest {
         userRole.setName("USER");
 
         validUserResponse = new UserDtoResponse();
-        validUserResponse.setId(1L);
-        validUserResponse.setEmail("test@example.com");
+        validUserResponse.setId(USER_ID);
+        validUserResponse.setEmail(USER_EMAIL);
         validUserResponse.setFirstname("Test");
         validUserResponse.setLastname("User");
         validUserResponse.setRoles(Set.of(userRole));
@@ -97,8 +99,9 @@ class AuthServiceTest {
         )).thenReturn(responseEntity);
 
         when(roleExtractor.extractRoles(validUserResponse)).thenReturn(userRoles);
-        when(jwtService.generateToken("test@example.com", userRoles)).thenReturn(expectedAccessToken);
-        when(jwtService.generateRefreshToken("test@example.com", userRoles)).thenReturn(expectedRefreshToken);
+        // ИЗМЕНЕНО: добавлен userId как первый параметр
+        when(jwtService.generateToken(USER_ID, USER_EMAIL, userRoles)).thenReturn(expectedAccessToken);
+        when(jwtService.generateRefreshToken(USER_ID, USER_EMAIL, userRoles)).thenReturn(expectedRefreshToken);
 
         // When
         AuthResponse result = authService.authenticate(validAuthRequest);
@@ -111,8 +114,9 @@ class AuthServiceTest {
 
         verify(restTemplate).postForEntity(anyString(), any(), eq(UserDtoResponse.class));
         verify(roleExtractor).extractRoles(validUserResponse);
-        verify(jwtService).generateToken("test@example.com", userRoles);
-        verify(jwtService).generateRefreshToken("test@example.com", userRoles);
+        // ИЗМЕНЕНО: проверяем новую сигнатуру
+        verify(jwtService).generateToken(USER_ID, USER_EMAIL, userRoles);
+        verify(jwtService).generateRefreshToken(USER_ID, USER_EMAIL, userRoles);
     }
 
     @Test
@@ -129,7 +133,8 @@ class AuthServiceTest {
                 .isInstanceOf(BadCredentialsException.class)
                 .hasMessageContaining("Не удалось получить данные пользователя");
 
-        verify(jwtService, never()).generateToken(anyString(), anyList());
+        // ИЗМЕНЕНО: новая сигнатура с anyLong()
+        verify(jwtService, never()).generateToken(anyLong(), anyString(), anyList());
     }
 
     @Test
@@ -150,7 +155,7 @@ class AuthServiceTest {
                 .isInstanceOf(BadCredentialsException.class)
                 .hasMessageContaining("Неверный email или пароль");
 
-        verify(jwtService, never()).generateToken(anyString(), anyList());
+        verify(jwtService, never()).generateToken(anyLong(), anyString(), anyList());
     }
 
     @Test
@@ -200,20 +205,15 @@ class AuthServiceTest {
         String oldRefreshToken = "old.refresh.token";
         String newAccessToken = "new.access.token";
         String newRefreshToken = "new.refresh.token";
-        String email = "test@example.com";
 
         when(jwtService.validateToken(oldRefreshToken)).thenReturn(true);
-        when(jwtService.extractEmail(oldRefreshToken)).thenReturn(email);
+        // ИЗМЕНЕНО: теперь данные берутся из токена, без запроса в user-service
+        when(jwtService.extractUserId(oldRefreshToken)).thenReturn(USER_ID);
+        when(jwtService.extractEmail(oldRefreshToken)).thenReturn(USER_EMAIL);
+        when(jwtService.extractRolesFromToken(oldRefreshToken)).thenReturn(userRoles);
 
-        ResponseEntity<UserDtoResponse> responseEntity = ResponseEntity.ok(validUserResponse);
-        when(restTemplate.getForEntity(
-                eq(USER_SERVICE_URL + "/v1/users/email/" + email),
-                eq(UserDtoResponse.class)
-        )).thenReturn(responseEntity);
-
-        when(roleExtractor.extractRoles(validUserResponse)).thenReturn(userRoles);
-        when(jwtService.generateToken(email, userRoles)).thenReturn(newAccessToken);
-        when(jwtService.generateRefreshToken(email, userRoles)).thenReturn(newRefreshToken);
+        when(jwtService.generateToken(USER_ID, USER_EMAIL, userRoles)).thenReturn(newAccessToken);
+        when(jwtService.generateRefreshToken(USER_ID, USER_EMAIL, userRoles)).thenReturn(newRefreshToken);
 
         // When
         AuthResponse result = authService.refresh(oldRefreshToken);
@@ -225,9 +225,13 @@ class AuthServiceTest {
         assertThat(result.getTokenType()).isEqualTo("Bearer");
 
         verify(jwtService).validateToken(oldRefreshToken);
+        verify(jwtService).extractUserId(oldRefreshToken);
         verify(jwtService).extractEmail(oldRefreshToken);
-        verify(jwtService).generateToken(email, userRoles);
-        verify(jwtService).generateRefreshToken(email, userRoles);
+        verify(jwtService).extractRolesFromToken(oldRefreshToken);
+        verify(jwtService).generateToken(USER_ID, USER_EMAIL, userRoles);
+        verify(jwtService).generateRefreshToken(USER_ID, USER_EMAIL, userRoles);
+        // ИЗМЕНЕНО: проверяем что НЕТ запроса к user-service
+        verifyNoInteractions(restTemplate);
     }
 
     @Test
@@ -243,32 +247,11 @@ class AuthServiceTest {
                 .hasMessageContaining("Недопустимый токен");
 
         verify(jwtService).validateToken(invalidToken);
+        verify(jwtService, never()).extractUserId(anyString());
         verify(jwtService, never()).extractEmail(anyString());
     }
 
-    @Test
-    @DisplayName("refresh() - user-service не находит пользователя → RuntimeException")
-    void refresh_UserNotFound_ThrowsRuntimeException() {
-        // Given
-        String validToken = "valid.token";
-        String email = "test@example.com";
-
-        when(jwtService.validateToken(validToken)).thenReturn(true);
-        when(jwtService.extractEmail(validToken)).thenReturn(email);
-        when(restTemplate.getForEntity(anyString(), eq(UserDtoResponse.class)))
-                .thenThrow(HttpClientErrorException.NotFound.create(
-                        HttpStatus.NOT_FOUND,
-                        "Not found",
-                        HttpHeaders.EMPTY,
-                        null,
-                        null
-                ));
-
-        // When & Then
-        assertThatThrownBy(() -> authService.refresh(validToken))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Ошибка получения данных пользователя");
-    }
+    // УДАЛЁН тест refresh_UserNotFound - больше нет запроса в user-service
 
     // ==================== authenticateWithUserData() Tests ====================
 
@@ -287,8 +270,9 @@ class AuthServiceTest {
         )).thenReturn(responseEntity);
 
         when(roleExtractor.extractRoles(validUserResponse)).thenReturn(userRoles);
-        when(jwtService.generateToken("test@example.com", userRoles)).thenReturn(accessToken);
-        when(jwtService.generateRefreshToken("test@example.com", userRoles)).thenReturn(refreshToken);
+        // ИЗМЕНЕНО: добавлен userId как первый параметр
+        when(jwtService.generateToken(USER_ID, USER_EMAIL, userRoles)).thenReturn(accessToken);
+        when(jwtService.generateRefreshToken(USER_ID, USER_EMAIL, userRoles)).thenReturn(refreshToken);
 
         // When
         Map<String, Object> result = authService.authenticateWithUserData(validAuthRequest);
@@ -302,8 +286,8 @@ class AuthServiceTest {
         assertThat(result).containsEntry("user", validUserResponse);
 
         verify(restTemplate).postForEntity(anyString(), any(), eq(UserDtoResponse.class));
-        verify(jwtService).generateToken("test@example.com", userRoles);
-        verify(jwtService).generateRefreshToken("test@example.com", userRoles);
+        verify(jwtService).generateToken(USER_ID, USER_EMAIL, userRoles);
+        verify(jwtService).generateRefreshToken(USER_ID, USER_EMAIL, userRoles);
     }
 
     // ==================== getCurrentUser() Tests ====================
@@ -333,8 +317,8 @@ class AuthServiceTest {
 
         // Then
         assertThat(result).isNotNull();
-        assertThat(result.getEmail()).isEqualTo("test@example.com");
-        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getEmail()).isEqualTo(USER_EMAIL);
+        assertThat(result.getId()).isEqualTo(USER_ID);
 
         verify(restTemplate).exchange(
                 eq(meUrl),

@@ -13,6 +13,7 @@ import ru.rfsnab.orderservice.models.dto.order.AddressDto;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.entity.*;
+import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.repository.OrderRepository;
 import ru.rfsnab.orderservice.service.client.ProductServiceClient;
@@ -41,6 +42,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final CartService cartService;
+    private final WarehousePointService warehousePointService;
     private final ProductServiceClient productServiceClient;
     private final OrderKafkaProducer kafkaProducer;
 
@@ -94,6 +96,7 @@ public class OrderService {
 
         Map<Long, ProductDto> products = productServiceClient.getProducts(productIds);
         validateStock(cart.getItems(), products);
+        validateDeliveryInfo(request);
 
         // 3. Создаём заказ
         Order order = buildOrder(userId, request, cart, products);
@@ -263,6 +266,14 @@ public class OrderService {
                 .comment(request.comment())
                 .build();
 
+        if (request.deliveryMethod() == DeliveryMethod.PICKUP) {
+            order.setWarehousePointId(request.warehousePointId());
+            order.setDeliveryAddress(null);
+        } else {
+            order.setDeliveryAddress(AddressMapper.mapToDeliveryAddress(request.deliveryAddress()));
+            order.setWarehousePointId(null);
+        }
+
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (CartItem cartItem : cart.getItems()) {
@@ -368,5 +379,22 @@ public class OrderService {
         return order;
     }
 
-
+    /**
+     * ДОБАВЛЕНО: Валидация данных доставки.
+     * PICKUP → warehousePointId обязателен
+     * DELIVERY/COURIER → deliveryAddress обязателен
+     */
+    private void validateDeliveryInfo(CreateOrderRequest request) {
+        if (request.deliveryMethod() == DeliveryMethod.PICKUP) {
+            if (request.warehousePointId() == null) {
+                throw new InvalidOrderStateException("Для самовывоза необходимо указать точку получения");
+            }
+            // Проверка через сервис — выбросит WarehousePointNotFoundException если не найдена/неактивна
+            warehousePointService.getActivePoint(request.warehousePointId());
+        } else {
+            if (request.deliveryAddress() == null) {
+                throw new InvalidOrderStateException("Для доставки необходимо указать адрес");
+            }
+        }
+    }
 }

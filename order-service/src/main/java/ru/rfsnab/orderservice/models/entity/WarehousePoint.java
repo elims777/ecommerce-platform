@@ -50,7 +50,7 @@ public class WarehousePoint {
 
     @Column(nullable = false)
     @Builder.Default
-    private boolean isActive = true;
+    private boolean active = true;
 
     @CreationTimestamp
     @Column(updatable = false)

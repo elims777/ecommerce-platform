@@ -39,7 +39,7 @@ public class UserAddressMapper {
                 .intercomCode(request.intercomCode())
                 .postalCode(request.postalCode())
                 .deliveryInstructions(request.deliveryInstructions())
-                .defaultAddress(request.isDefault())
+                .defaultAddress(request.defaultAddress())
                 .build();
     }
 

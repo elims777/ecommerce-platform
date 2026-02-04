@@ -87,10 +87,8 @@ public class CartController {
 
     /**
      * Извлечение userId из JWT токена.
-     * После обновления auth-service subject будет содержать userId.
      */
     private Long getCurrentUserId(Authentication authentication) {
-        // TODO: сейчас в subject лежит email, после обновления auth-service будет userId
         return Long.parseLong(authentication.getName());
     }
 }

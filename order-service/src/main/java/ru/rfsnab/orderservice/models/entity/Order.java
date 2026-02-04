@@ -53,5 +53,9 @@ public class Order {
 
     private String trackingNumber;
 
+    /** ID точки самовывоза (только для PICKUP) */
+    @Column(name = "warehouse_point_id")
+    private Long warehousePointId;
+
     private String comment;
 }

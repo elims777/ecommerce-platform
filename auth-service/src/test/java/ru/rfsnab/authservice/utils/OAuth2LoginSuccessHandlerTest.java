@@ -114,14 +114,14 @@ class OAuth2LoginSuccessHandlerTest {
                 eq(UserDtoResponse.class)
         )).thenReturn(ResponseEntity.ok(user));
         when(roleExtractor.extractRoles(user)).thenReturn(List.of("ROLE_USER"));
-        when(jwtService.generateToken(email,List.of("ROLE_USER"))).thenReturn(accessToken);
-        when(jwtService.generateRefreshToken(email, List.of("ROLE_USER"))).thenReturn(refreshToken);
+        when(jwtService.generateToken(user.getId(), email,List.of("ROLE_USER"))).thenReturn(accessToken);
+        when(jwtService.generateRefreshToken(user.getId(), email, List.of("ROLE_USER"))).thenReturn(refreshToken);
 
         handler.onAuthenticationSuccess(request, response, authentication);
 
         verify(response).sendRedirect(contains("/oauth2/success?data="));
-        verify(jwtService).generateToken(email, List.of("ROLE_USER"));
-        verify(jwtService).generateRefreshToken(email, List.of("ROLE_USER"));
+        verify(jwtService).generateToken(user.getId(), email, List.of("ROLE_USER"));
+        verify(jwtService).generateRefreshToken(user.getId(), email, List.of("ROLE_USER"));
     }
 
     @Test
@@ -226,8 +226,8 @@ class OAuth2LoginSuccessHandlerTest {
                 .thenReturn(ResponseEntity.ok(user));
 
         when(roleExtractor.extractRoles(user)).thenReturn(List.of("ROLE_USER"));
-        when(jwtService.generateToken(email, List.of("ROLE_USER"))).thenReturn(accessToken);
-        when(jwtService.generateRefreshToken(email, List.of("ROLE_USER"))).thenReturn(refreshToken);
+        when(jwtService.generateToken(user.getId(), email, List.of("ROLE_USER"))).thenReturn(accessToken);
+        when(jwtService.generateRefreshToken(user.getId(), email, List.of("ROLE_USER"))).thenReturn(refreshToken);
 
         // When
         handler.onAuthenticationSuccess(request, response, authentication);

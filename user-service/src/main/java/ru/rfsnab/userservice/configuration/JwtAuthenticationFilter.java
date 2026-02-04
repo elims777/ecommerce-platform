@@ -23,7 +23,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JWTService jwtService;
-    private final UserService userService;
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
@@ -47,32 +46,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try{
             //Проверяем валидность токена
             if(jwtService.isTokenValid(jwt)){
-                String email = jwtService.extractEmail(jwt);
+                Long userId = jwtService.extractUserId(jwt);
 
                 // Проверяем что пользователь ещё не аутентифицирован в текущем контексте
-                if(email!=null && SecurityContextHolder.getContext().getAuthentication()==null){
+                if(userId != null && SecurityContextHolder.getContext().getAuthentication() == null){
 
-                    // Загружаем пользователя из БД для получения ролей
-                    UserEntity user = userService.findUserByEmail(email).orElse(null);
+                    List<String> roles = jwtService.extractRolesFromToken(jwt);
 
-                    if(user!=null){
-                        // Преобразуем роли в GrantedAuthority
-                        List<SimpleGrantedAuthority> authorities = user.getRoles().stream()
-                                .map(role -> new SimpleGrantedAuthority(role.getName()))
-                                .toList();
+                    // Преобразуем роли в GrantedAuthority
+                    List<SimpleGrantedAuthority> authorities = roles.stream()
+                            .map(SimpleGrantedAuthority::new)
+                            .toList();
 
-                        // Создаём Authentication token
-                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                                email,
-                                null,
-                                authorities
-                        );
+                    // Создаём Authentication token
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userId.toString(),
+                            null,
+                            authorities
+                    );
 
-                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                        // Устанавливаем в SecurityContext
-                        SecurityContextHolder.getContext().setAuthentication(authToken);
-                    }
+                    // Устанавливаем в SecurityContext
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
         } catch (Exception e){

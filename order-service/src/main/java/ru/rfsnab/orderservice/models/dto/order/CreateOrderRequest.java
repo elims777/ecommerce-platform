@@ -15,6 +15,8 @@ public record CreateOrderRequest(
         @Valid
         AddressDto deliveryAddress,
 
+        Long warehousePointId,
+
         String comment
 ) {
 }
