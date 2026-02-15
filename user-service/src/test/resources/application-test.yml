@@ -19,10 +19,9 @@ spring:
   flyway:
     enabled: false
 
-# JWT configuration для тестов (если понадобится)
+# JWT configuration для тестов
 jwt:
   secret: test-secret-key-for-testing-must-be-at-least-256-bits-long-for-hs256
-  expiration: 3600000
 
 # Минимальное логирование
 logging:

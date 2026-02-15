@@ -118,3 +118,10 @@ jobs:
           context: ./product-service
           push: true
           tags: ${{ env.IMAGE_PREFIX }}/product-service:${{ steps.tag.outputs.TAG }}
+
+      - name: Build and push order-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./order-service
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/order-service:${{ steps.tag.outputs.TAG }}

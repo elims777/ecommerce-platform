@@ -57,8 +57,8 @@ public class AuthService {
 
             List<String> roles = roleExtractor.extractRoles(user);
 
-            String accessToken = jwtService.generateToken(authRequest.getEmail(), roles);
-            String refreshToken = jwtService.generateRefreshToken(authRequest.getEmail(), roles);
+            String accessToken = jwtService.generateToken(user.getId(), user.getEmail(), roles);
+            String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), roles);
 
             log.info("Успешная аутентификация пользователя: {}", user.getEmail());
 
@@ -79,12 +79,12 @@ public class AuthService {
         if(!jwtService.validateToken(refreshToken)){
             throw new JwtException("Недопустимый токен");
         }
+        Long userId = jwtService.extractUserId(refreshToken);
         String email = jwtService.extractEmail(refreshToken);
-        UserDtoResponse user = getUserByEmail(email);
-        List<String> roles = roleExtractor.extractRoles(user);
+        List<String> roles = jwtService.extractRolesFromToken(refreshToken);
 
-        String accessToken = jwtService.generateToken(email, roles);
-        String newRefreshToken = jwtService.generateRefreshToken(email, roles);
+        String accessToken = jwtService.generateToken(userId, email, roles);
+        String newRefreshToken = jwtService.generateRefreshToken(userId, email, roles);
         log.info("Refresh token обновлён для пользователя: {}", email);
 
         return new AuthResponse(accessToken, newRefreshToken,"Bearer");
@@ -100,8 +100,8 @@ public class AuthService {
         List<String> roles = roleExtractor.extractRoles(user);
 
         // Генерируем JWT токены
-        String accessToken = jwtService.generateToken(user.getEmail(), roles);
-        String refreshToken = jwtService.generateRefreshToken(user.getEmail(), roles);
+        String accessToken = jwtService.generateToken(user.getId(), user.getEmail(), roles);
+        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), roles);
 
         log.info("Успешная аутентификация пользователя: {}", user.getEmail());
 

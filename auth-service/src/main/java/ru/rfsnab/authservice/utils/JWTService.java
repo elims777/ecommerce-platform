@@ -32,9 +32,10 @@ public class JWTService {
     /**
      * Генерирует аксес-токен
      */
-    public String generateToken(String email, List<String> roles){
+    public String generateToken(Long userId, String email, List<String> roles){
         return Jwts.builder()
-                .subject(email)
+                .subject(String.valueOf(userId))
+                .claim("email", email)
                 .claim("roles", roles)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis()+jwtProperties.getExpirationMs()))
@@ -45,9 +46,10 @@ public class JWTService {
     /**
      * Генерирует рефреш-токен
      */
-    public String generateRefreshToken(String email, List<String> roles){
+    public String generateRefreshToken(Long userId, String email, List<String> roles){
         return Jwts.builder()
-                .subject(email)
+                .subject(String.valueOf(userId))
+                .claim("email", email)
                 .claim("roles", roles)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis()+jwtProperties.getRefreshExpirationMs()))
@@ -83,10 +85,19 @@ public class JWTService {
     }
 
     /**
+     * Извлечение userId из токена (из subject)
+     */
+    public Long extractUserId(String token) {
+        String subject = extractClaims(token).getSubject();
+        return Long.parseLong(subject);
+    }
+
+    /**
      * Извлечение email из токена
      */
     public String extractEmail(String token) {
-        return extractClaims(token).getSubject();
+
+        return extractClaims(token).get("email", String.class);
     }
 
     /**

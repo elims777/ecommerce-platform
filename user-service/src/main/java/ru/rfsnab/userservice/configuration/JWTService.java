@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -54,10 +55,26 @@ public class JWTService {
     }
 
     /**
+     * Извлечение userId из токена (из subject)
+     */
+    public Long extractUserId(String token) {
+        String subject = extractClaims(token).getSubject();
+        return Long.parseLong(subject);
+    }
+
+    /**
      * Извлечение email (subject) из токена
      */
     public String extractEmail(String token){
-        return extractClaims(token).getSubject();
+        return extractClaims(token).get("email", String.class);
+    }
+
+    /**
+     * ДОБАВЛЕНО: Извлечение ролей из токена
+     */
+    @SuppressWarnings("unchecked")
+    public List<String> extractRolesFromToken(String token) {
+        return extractClaims(token).get("roles", List.class);
     }
 
     /**
