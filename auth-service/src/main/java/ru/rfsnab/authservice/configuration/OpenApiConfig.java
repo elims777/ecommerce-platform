@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Configuration;
                 description = "API для аутентификации и авторизации пользователей (JWT, OAuth2)",
                 contact = @Contact(
                         name = "Max",
-                        email = "elims777@yandex.ru"
+                        email = "elims777@gmail.com"
                 )
         )
 )

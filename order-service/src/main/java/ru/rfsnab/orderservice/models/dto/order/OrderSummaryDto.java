@@ -10,7 +10,6 @@ public record OrderSummaryDto(
         UUID id,
         String orderNumber,
         OrderStatus status,
-        String statusDisplayName,
         int itemsCount,
         BigDecimal totalAmount,
         LocalDateTime createdAt

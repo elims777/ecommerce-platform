@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
                 description = "API для управления пользователями и ролями",
                 contact = @Contact(
                         name = "Max",
-                        email = "elims777@yandex.ru"
+                        email = "elims777@gmail.com"
                 )
         )
 )

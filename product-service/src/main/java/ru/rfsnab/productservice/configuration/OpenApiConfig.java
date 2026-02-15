@@ -22,7 +22,7 @@ public class OpenApiConfig {
                         .description("API для управления товарами и категориями в eCommerce платформе")
                         .contact(new Contact()
                                 .name("Max")
-                                .email("elims777@yandex.ru")))
+                                .email("elims777@gmail.com")))
                 .addSecurityItem(new SecurityRequirement()
                         .addList(securitySchemeName))
                 .components(new Components()
