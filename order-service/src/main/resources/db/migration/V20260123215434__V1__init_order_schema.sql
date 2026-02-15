@@ -27,8 +27,7 @@ CREATE TABLE order_items (
     product_id BIGINT NOT NULL,
     product_name VARCHAR(255) NOT NULL,
     quantity INTEGER NOT NULL CHECK ( quantity > 0),
-    price DECIMAL(12, 2) NOT NULL CHECK ( price >= 0 ),
-    CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id)
+    price DECIMAL(12, 2) NOT NULL CHECK ( price >= 0 )
 );
 
 CREATE TABLE carts(
