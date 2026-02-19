@@ -21,6 +21,7 @@ import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
+import ru.rfsnab.orderservice.service.CartService;
 import ru.rfsnab.orderservice.service.OrderService;
 import ru.rfsnab.orderservice.service.WarehousePointService;
 
@@ -58,6 +59,9 @@ class OrderControllerTest extends BaseIntegrationTest {
 
     @MockitoBean
     private OrderService orderService;
+
+    @MockitoBean
+    private CartService cartService;
 
     @MockitoBean
     private WarehousePointService warehousePointService;

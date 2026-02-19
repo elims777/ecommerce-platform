@@ -1,8 +1,11 @@
 package ru.rfsnab.orderservice.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import ru.rfsnab.orderservice.exception.InsufficientStockException;
 import ru.rfsnab.orderservice.exception.ProductNotFoundException;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
@@ -13,14 +16,20 @@ import ru.rfsnab.orderservice.repository.CartRepository;
 import ru.rfsnab.orderservice.service.client.ProductServiceClient;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Сервис управления корзиной.
- *
- * Корзина хранится в Redis для быстрого доступа.
- * При завершении сессии сохраняется в PostgreSQL.
- * При возвращении пользователя — загружается из PostgreSQL в Redis.
+ * Стратегия хранения:
+ * - Активная сессия: Redis (primary storage, TTL 7 дней)
+ * - Завершение сессии / logout: Redis → PostgreSQL (backup)
+ * - Новая сессия: PostgreSQL → Redis (восстановление)
+ * - Оформление заказа: очистка Redis + PostgreSQL
+ * Redis-операции выполняются вне DB-транзакций. Очистка Redis
+ * происходит через afterCommit, чтобы не потерять данные при rollback.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CartService {
@@ -47,6 +56,20 @@ public class CartService {
     }
 
     /**
+     * Получение данных о товарах из product-service для позиций корзины.
+     * Используется контроллером для enrichment при маппинге в DTO.
+     *
+     * @param cart корзина
+     * @return map productId → ProductDto
+     */
+    public Map<Long, ProductDto> fetchProductsForCart(Cart cart){
+        Set<Long> productIds = cart.getItems().stream()
+                .map(CartItem::getProductId)
+                .collect(Collectors.toSet());
+        return productServiceClient.getProducts(productIds);
+    }
+
+    /**
      * Добавление товара в корзину.
      * Проверяет существование товара и наличие на складе.
      *
@@ -64,6 +87,9 @@ public class CartService {
             throw new ProductNotFoundException("Product is not available " + productId);
         }
 
+        // Гарантируем, что корзина загружена в Redis (если была только в БД)
+        ensureCartInRedis(userId);
+
         Map<Long, Integer> currentCart = cartRedisRepository.getCart(userId);
         int currentQuantity = currentCart.getOrDefault(productId, 0);
         int newQuantity = currentQuantity + quantity;
@@ -71,7 +97,8 @@ public class CartService {
         validateStock(product, newQuantity);
 
         cartRedisRepository.addItem(userId,productId,newQuantity);
-
+        log.debug("Товар {} добавлен в корзину пользователя {}, количество: {}",
+                productId, userId, newQuantity);
         return getCart(userId);
     }
 
@@ -114,8 +141,12 @@ public class CartService {
      */
     @Transactional
     public void clearCart(Long userId){
-        cartRedisRepository.clearCart(userId);
-        cartRepository.findByUserId(userId).ifPresent(cartRepository::delete);
+        cartRepository.deleteByUserId(userId);
+
+        registerAfterCommit(() -> {
+            cartRedisRepository.clearCart(userId);
+            log.debug("Корзина пользователя {} очищена из Redis (afterCommit)", userId);
+        });
     }
 
     /**
@@ -127,39 +158,67 @@ public class CartService {
      */
     @Transactional
     public void saveCartToDB(Long userId){
-        Map<Long, Integer> items = cartRedisRepository.getCart(userId);
-        if(items.isEmpty()){
+        Map<Long, Integer> redisItems = cartRedisRepository.getCart(userId);
+        if (redisItems.isEmpty()) {
             return;
         }
-        // Удаляем старую корзину если есть
-        cartRepository.findByUserId(userId).ifPresent(cartRepository::delete);
-        // Сохраняем новую
-        Cart cart = buildCartFromRedis(userId, items);
-        cartRepository.save(cart);
 
-        // Очищаем Redis
-        cartRedisRepository.clearCart(userId);
+        // Merge: находим существующую или создаём новую
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseGet(() -> Cart.builder().userId(userId).build());
+
+        // orphanRemoval удалит старые CartItem при clear
+        cart.getItems().clear();
+
+        redisItems.forEach((productId, quantity) -> {
+            CartItem item = CartItem.builder()
+                    .cart(cart)
+                    .productId(productId)
+                    .quantity(quantity)
+                    .build();
+            cart.getItems().add(item);
+        });
+
+        cartRepository.save(cart);
+        log.info("Корзина пользователя {} сохранена в БД ({} позиций)", userId, redisItems.size());
+
+        // Очищаем Redis только после успешного commit
+        registerAfterCommit(() -> {
+            cartRedisRepository.clearCart(userId);
+            log.debug("Корзина пользователя {} очищена из Redis после persist (afterCommit)", userId);
+        });
     }
 
     /**
      * Загрузка корзины из PostgreSQL или создание пустой.
-     * При загрузке переносит данные в Redis и удаляет из БД.
+     * При загрузке копирует данные в Redis для активной сессии.
+     * НЕ удаляет из БД — БД остаётся backup до следующего saveCartToDB или clearCart.
      */
     private Cart loadFromDatabaseOrEmpty(Long userId){
         return cartRepository.findByUserId(userId)
                 .map(cart -> {
-                    // Переносим в Redis
+                    // Копируем в Redis для текущей сессии
                     cart.getItems().forEach(item ->
                             cartRedisRepository.addItem(userId, item.getProductId(), item.getQuantity()));
-                    cartRepository.delete(cart);
+                    log.debug("Корзина пользователя {} восстановлена из БД в Redis ({} позиций)",
+                            userId, cart.getItems().size());
                     return cart;
                 })
-                .orElseGet(()-> emptyCart(userId));
+                .orElseGet(() -> emptyCart(userId));
     }
 
     /**
-     * Создание Cart entity из данных Redis.
-     * Cart будет transient (не сохранён в БД).
+     * Гарантирует, что корзина загружена в Redis.
+     * Если Redis пуст — проверяет БД и восстанавливает.
+     */
+    private void ensureCartInRedis(Long userId) {
+        if (!cartRedisRepository.exists(userId)) {
+            loadFromDatabaseOrEmpty(userId);
+        }
+    }
+
+    /**
+     * Создание Cart entity из данных Redis (transient, без ID).
      */
     private Cart buildCartFromRedis(Long userId, Map<Long, Integer> items) {
         Cart cart = Cart.builder()
@@ -196,5 +255,19 @@ public class CartService {
                     String.format("Not enough stock for product %s. Available: %d, Requested: %d",
                             product.name(), product.stockQuantity(), requestedQuantity));
         }
+    }
+
+    /**
+     * Регистрация callback после успешного commit транзакции.
+     */
+    private void registerAfterCommit(Runnable action) {
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        action.run();
+                    }
+                }
+        );
     }
 }
