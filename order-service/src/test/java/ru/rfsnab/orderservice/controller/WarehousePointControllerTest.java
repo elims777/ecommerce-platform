@@ -8,6 +8,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
+import ru.rfsnab.orderservice.service.CartService;
+import ru.rfsnab.orderservice.service.OrderService;
 import ru.rfsnab.orderservice.service.WarehousePointService;
 
 import java.util.List;
@@ -28,6 +30,11 @@ class WarehousePointControllerTest extends BaseIntegrationTest {
 
     @MockitoBean
     private WarehousePointService warehousePointService;
+    @MockitoBean
+    private CartService cartService;
+
+    @MockitoBean
+    private OrderService orderService;
 
     @Test
     @DisplayName("GET /api/v1/warehouse-points — возвращает список активных точек")

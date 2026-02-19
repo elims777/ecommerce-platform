@@ -18,27 +18,28 @@ import org.testcontainers.utility.DockerImageName;
  * Контейнеры static — один набор на все тесты (lifecycle per JVM).
  */
 @SpringBootTest
-@Testcontainers
 @SuppressWarnings("resource")
 @ActiveProfiles("test")
 public class BaseIntegrationTest {
 
-    @Container
-    protected static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
-            DockerImageName.parse("postgres:16-alpine"))
-            .withDatabaseName("order_test_db")
-            .withUsername("test")
-            .withPassword("test");
+    protected static final PostgreSQLContainer<?> postgres;
+    protected static final KafkaContainer kafka;
+    protected static final GenericContainer<?> redis;
 
-    @Container
-    protected static final KafkaContainer kafka = new KafkaContainer(
-            DockerImageName.parse("apache/kafka-native:3.8.0"));
+    static {
+        postgres = new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"))
+                .withDatabaseName("order_test_db")
+                .withUsername("test")
+                .withPassword("test");
+        postgres.start();
 
-    @Container
-    @SuppressWarnings("resource")
-    protected static final GenericContainer<?> redis = new GenericContainer<>(
-            DockerImageName.parse("redis:7-alpine"))
-            .withExposedPorts(6379);
+        kafka = new KafkaContainer(DockerImageName.parse("apache/kafka-native:3.8.0"));
+        kafka.start();
+
+        redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+                .withExposedPorts(6379);
+        redis.start();
+    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry){

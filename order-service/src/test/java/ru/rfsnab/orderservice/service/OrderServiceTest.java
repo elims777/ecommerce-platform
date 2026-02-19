@@ -12,8 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import ru.rfsnab.orderservice.BaseIntegrationTest;
+import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
 import ru.rfsnab.orderservice.exception.CartEmptyException;
 import ru.rfsnab.orderservice.exception.InsufficientStockException;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
@@ -32,7 +31,6 @@ import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
 import ru.rfsnab.orderservice.repository.OrderRepository;
 import ru.rfsnab.orderservice.repository.WarehousePointRepository;
-import ru.rfsnab.orderservice.service.client.ProductServiceClient;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -49,7 +47,7 @@ import static org.mockito.Mockito.when;
  * ProductServiceClient — mock (внешний сервис).
  */
 @DisplayName("OrderService — интеграционные тесты")
-class OrderServiceIntegrationTest extends BaseIntegrationTest {
+class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
     @Autowired
     private OrderService orderService;
@@ -63,8 +61,8 @@ class OrderServiceIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private WarehousePointRepository warehousePointRepository;
 
-    @MockitoBean
-    private ProductServiceClient productServiceClient;
+//    @MockitoBean
+//    private ProductServiceClient productServiceClient;
 
     private static final Long USER_ID = 100L;
     private static final Long PRODUCT_ID_1 = 1L;
