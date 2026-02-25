@@ -26,6 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("OrderMapper")
 class OrderMapperTest {
 
+    private static final String USER_EMAIL = "user@email.com";
+
     @Nested
     @DisplayName("toDto")
     class ToDtoTests {
@@ -121,7 +123,7 @@ class OrderMapperTest {
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
                     address, null, "Комментарий");
 
-            Order order = OrderMapper.toEntity(100L, request);
+            Order order = OrderMapper.toEntity(100L, USER_EMAIL, request);
 
             assertThat(order.getUserId()).isEqualTo(100L);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
@@ -140,7 +142,7 @@ class OrderMapperTest {
                     PaymentMethod.CASH_ON_DELIVERY, DeliveryMethod.PICKUP,
                     null, 1L, null);
 
-            Order order = OrderMapper.toEntity(100L, request);
+            Order order = OrderMapper.toEntity(100L, USER_EMAIL, request);
 
             assertThat(order.getWarehousePointId()).isEqualTo(1L);
             assertThat(order.getDeliveryAddress()).isNull();
@@ -154,7 +156,7 @@ class OrderMapperTest {
                     PaymentMethod.SBP, DeliveryMethod.PICKUP,
                     null, 1L, null);
 
-            Order order = OrderMapper.toEntity(100L, request);
+            Order order = OrderMapper.toEntity(100L, USER_EMAIL, request);
 
             assertThat(order.getItems()).isEmpty();
             assertThat(order.getTotalAmount()).isNull();

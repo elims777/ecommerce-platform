@@ -33,6 +33,7 @@ public class OrderMapper {
                         ? WarehousePointMapper.mapToWarehousePointDto(warehousePoint)
                         : null,
                 order.getTrackingNumber(),
+                order.getCustomerEmail(),
                 order.getComment(),
                 order.getCreatedAt(),
                 order.getUpdatedAt()
@@ -56,6 +57,7 @@ public class OrderMapper {
                 order.getStatus(),
                 order.getItems().size(),
                 order.getTotalAmount(),
+                order.getCustomerEmail(),
                 order.getCreatedAt()
         );
     }
@@ -66,14 +68,16 @@ public class OrderMapper {
      * Items, totalAmount, orderNumber заполняются в сервисном слое.
      *
      * @param userId идентификатор пользователя из JWT
+     * @param customerEmail email пользователя из JWT
      * @param request данные для создания заказа
      */
-    public static Order toEntity(Long userId, CreateOrderRequest request) {
+    public static Order toEntity(Long userId, String customerEmail,CreateOrderRequest request) {
         Order order = Order.builder()
                 .userId(userId)
                 .status(OrderStatus.CREATED)
                 .paymentMethod(request.paymentMethod())
                 .deliveryMethod(request.deliveryMethod())
+                .customerEmail(customerEmail)
                 .comment(request.comment())
                 .build();
 

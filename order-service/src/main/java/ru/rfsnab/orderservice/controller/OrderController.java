@@ -23,6 +23,7 @@ import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.service.OrderService;
 import ru.rfsnab.orderservice.service.WarehousePointService;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -44,9 +45,10 @@ public class OrderController {
     public ResponseEntity<OrderDto> createOrder(
             Authentication authentication,
             @Valid @RequestBody CreateOrderRequest request) {
-
-        Long userId = getCurrentUserId(authentication);
-        Order order = orderService.createOrder(userId, request);
+        Order order = orderService.createOrder(
+                getCurrentUserId(authentication),
+                getCurrentUserEmail(authentication),
+                request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(enrichAndMap(order));
     }
@@ -57,9 +59,7 @@ public class OrderController {
             Authentication authentication,
             @PageableDefault(size = 20, sort = "createdAt")
             @Parameter(hidden = true) Pageable pageable) {
-
-        Long userId = getCurrentUserId(authentication);
-        Page<OrderSummaryDto> page = orderService.getUserOrders(userId, pageable)
+        Page<OrderSummaryDto> page = orderService.getUserOrders(getCurrentUserId(authentication), pageable)
                 .map(OrderMapper::toSummaryDto);
         return ResponseEntity.ok(page);
     }
@@ -69,9 +69,7 @@ public class OrderController {
     public ResponseEntity<OrderDto> getOrder(
             Authentication authentication,
             @PathVariable UUID orderId) {
-
-        Long userId = getCurrentUserId(authentication);
-        Order order = orderService.getOrderByIdAndUser(orderId, userId);
+        Order order = orderService.getOrderByIdAndUser(orderId, getCurrentUserId(authentication));
         return ResponseEntity.ok(enrichAndMap(order));
     }
 
@@ -81,9 +79,7 @@ public class OrderController {
             Authentication authentication,
             @PathVariable UUID orderId,
             @Valid @RequestBody UpdateOrderRequest request) {
-
-        Long userId = getCurrentUserId(authentication);
-        Order order = orderService.updateOrder(orderId, userId, request);
+        Order order = orderService.updateOrder(orderId, getCurrentUserId(authentication), request);
         return ResponseEntity.ok(enrichAndMap(order));
     }
 
@@ -92,9 +88,7 @@ public class OrderController {
     public ResponseEntity<OrderDto> cancelOrder(
             Authentication authentication,
             @PathVariable UUID orderId) {
-
-        Long userId = getCurrentUserId(authentication);
-        Order order = orderService.cancelOrder(orderId, userId);
+        Order order = orderService.cancelOrder(orderId, getCurrentUserId(authentication));
         return ResponseEntity.ok(enrichAndMap(order));
     }
 
@@ -103,9 +97,7 @@ public class OrderController {
     public ResponseEntity<OrderDto> initiatePayment(
             Authentication authentication,
             @PathVariable UUID orderId) {
-
-        Long userId = getCurrentUserId(authentication);
-        Order order = orderService.initiatePayment(orderId, userId);
+        Order order = orderService.initiatePayment(orderId, getCurrentUserId(authentication));
         return ResponseEntity.ok(enrichAndMap(order));
     }
 
@@ -114,9 +106,10 @@ public class OrderController {
     public ResponseEntity<OrderDto> repeatOrder(
             Authentication authentication,
             @PathVariable UUID orderId) {
-
-        Long userId = getCurrentUserId(authentication);
-        Order order = orderService.repeatOrder(orderId, userId);
+        Order order = orderService.repeatOrder(
+                orderId,
+                getCurrentUserId(authentication),
+                getCurrentUserEmail(authentication));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(enrichAndMap(order));
     }
@@ -138,5 +131,14 @@ public class OrderController {
      */
     private Long getCurrentUserId(Authentication authentication) {
         return Long.parseLong(authentication.getName());
+    }
+
+    /**
+     * Извлечение userEmail из JWT токена.
+     */
+    private String getCurrentUserEmail(Authentication authentication) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> details = (Map<String, Object>) authentication.getDetails();
+        return (String) details.get("email");
     }
 }

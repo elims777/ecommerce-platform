@@ -9,8 +9,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
@@ -29,6 +33,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -37,7 +42,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -68,6 +72,7 @@ class OrderControllerTest extends BaseIntegrationTest {
 
     private static final Long USER_ID = 100L;
     private static final UUID ORDER_ID = UUID.randomUUID();
+    private static final String USER_EMAIL = "user@email.com";
 
     // ==================== POST /api/v1/orders ====================
 
@@ -79,7 +84,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("201 Created — заказ успешно создан (DELIVERY)")
         void shouldCreateDeliveryOrder() throws Exception {
             Order order = buildDeliveryOrder();
-            when(orderService.createOrder(eq(USER_ID), any(CreateOrderRequest.class)))
+            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class)))
                     .thenReturn(order);
 
             String json = """
@@ -98,7 +103,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     """;
 
             mockMvc.perform(post("/api/v1/orders")
-                            .with(user("100")).with(csrf())
+                            .with(jwtUser()).with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isCreated())
@@ -106,7 +111,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.status.code").value("CREATED"))
                     .andExpect(jsonPath("$.deliveryAddress.city").value("Сыктывкар"));
 
-            verify(orderService).createOrder(eq(USER_ID), any(CreateOrderRequest.class));
+            verify(orderService).createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class));
         }
 
         @Test
@@ -114,7 +119,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         void shouldCreatePickupOrder() throws Exception {
             Order order = buildPickupOrder();
             WarehousePoint point = buildWarehousePoint();
-            when(orderService.createOrder(eq(USER_ID), any(CreateOrderRequest.class)))
+            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class)))
                     .thenReturn(order);
             when(warehousePointService.getActivePoint(1L)).thenReturn(point);
 
@@ -127,7 +132,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     """;
 
             mockMvc.perform(post("/api/v1/orders")
-                            .with(user("100")).with(csrf())
+                            .with(jwtUser()).with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isCreated())
@@ -145,7 +150,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     """;
 
             mockMvc.perform(post("/api/v1/orders")
-                            .with(user("100")).with(csrf())
+                            .with(jwtUser()).with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest());
@@ -167,7 +172,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     .thenReturn(page);
 
             mockMvc.perform(get("/api/v1/orders")
-                            .with(user("100")))
+                            .with(jwtUser()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content", hasSize(1)))
                     .andExpect(jsonPath("$.content[0].orderNumber").value("ABC-00001"))
@@ -181,7 +186,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     .thenReturn(Page.empty());
 
             mockMvc.perform(get("/api/v1/orders")
-                            .with(user("100")))
+                            .with(jwtUser()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content", hasSize(0)));
         }
@@ -201,7 +206,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     .thenReturn(order);
 
             mockMvc.perform(get("/api/v1/orders/{id}", order.getId())
-                            .with(user("100")))
+                            .with(jwtUser()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.orderNumber").value("ABC-00001"))
                     .andExpect(jsonPath("$.items", hasSize(1)))
@@ -242,7 +247,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     """;
 
             mockMvc.perform(put("/api/v1/orders/{id}", ORDER_ID)
-                            .with(user("100")).with(csrf())
+                            .with(jwtUser()).with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isOk())
@@ -262,7 +267,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     """;
 
             mockMvc.perform(put("/api/v1/orders/{id}", ORDER_ID)
-                            .with(user("100")).with(csrf())
+                            .with(jwtUser()).with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isBadRequest());
@@ -283,7 +288,7 @@ class OrderControllerTest extends BaseIntegrationTest {
             when(orderService.cancelOrder(ORDER_ID, USER_ID)).thenReturn(cancelledOrder);
 
             mockMvc.perform(post("/api/v1/orders/{id}/cancel", ORDER_ID)
-                            .with(user("100")).with(csrf()))
+                            .with(jwtUser()).with(csrf()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status.code").value("CANCELLED"));
         }
@@ -303,7 +308,7 @@ class OrderControllerTest extends BaseIntegrationTest {
             when(orderService.initiatePayment(ORDER_ID, USER_ID)).thenReturn(order);
 
             mockMvc.perform(post("/api/v1/orders/{id}/pay", ORDER_ID)
-                            .with(user("100")).with(csrf()))
+                            .with(jwtUser()).with(csrf()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status.code").value("PENDING_PAYMENT"));
         }
@@ -320,10 +325,10 @@ class OrderControllerTest extends BaseIntegrationTest {
         void shouldRepeatOrder() throws Exception {
             Order newOrder = buildDeliveryOrder();
             newOrder.setOrderNumber("ABC-00002");
-            when(orderService.repeatOrder(ORDER_ID, USER_ID)).thenReturn(newOrder);
+            when(orderService.repeatOrder(eq(ORDER_ID), eq(USER_ID), eq(USER_EMAIL))).thenReturn(newOrder);
 
             mockMvc.perform(post("/api/v1/orders/{id}/repeat", ORDER_ID)
-                            .with(user("100")).with(csrf()))
+                            .with(jwtUser()).with(csrf()))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.orderNumber").value("ABC-00002"))
                     .andExpect(jsonPath("$.status.code").value("CREATED"));
@@ -346,6 +351,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                         .building("1").phone("+79001234567")
                         .recipientName("Иванов Иван").build())
                 .trackingNumber("TRACK-123")
+                .customerEmail(USER_EMAIL)
                 .comment("Тестовый заказ")
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -370,6 +376,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                 .deliveryMethod(DeliveryMethod.PICKUP)
                 .totalAmount(new BigDecimal("5000.00"))
                 .warehousePointId(1L)
+                .customerEmail(USER_EMAIL)
                 .items(new ArrayList<>())
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -384,5 +391,14 @@ class OrderControllerTest extends BaseIntegrationTest {
                 .phoneNumber("+7 (8212) 00-00-00")
                 .workingHours("Пн-Пт: 9:00-18:00")
                 .active(true).build();
+    }
+
+    private static RequestPostProcessor jwtUser() {
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(
+                        USER_ID.toString(), null,
+                        List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        auth.setDetails(Map.of("email", USER_EMAIL));
+        return SecurityMockMvcRequestPostProcessors.authentication(auth);
     }
 }

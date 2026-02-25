@@ -67,6 +67,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
     private static final Long USER_ID = 100L;
     private static final Long PRODUCT_ID_1 = 1L;
     private static final Long PRODUCT_ID_2 = 2L;
+    private static final String USER_EMAIL = "user@email.com";
+
 
     private static final ProductDto PRODUCT_1 = new ProductDto(
             PRODUCT_ID_1, "Доска обрезная 50x150", new BigDecimal("1500.00"), 100, true);
@@ -115,7 +117,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
                     buildAddressDto(), null, "Тестовый заказ");
 
-            Order order = orderService.createOrder(USER_ID, request);
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
 
             assertThat(order.getId()).isNotNull();
             assertThat(order.getOrderNumber()).isNotBlank();
@@ -150,7 +152,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     PaymentMethod.CASH_ON_DELIVERY, DeliveryMethod.PICKUP,
                     null, savedWarehousePoint.getId(), null);
 
-            Order order = orderService.createOrder(USER_ID, request);
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
 
             assertThat(order.getDeliveryMethod()).isEqualTo(DeliveryMethod.PICKUP);
             assertThat(order.getWarehousePointId()).isEqualTo(savedWarehousePoint.getId());
@@ -164,7 +166,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
                     null, savedWarehousePoint.getId(), null);
 
-            assertThatThrownBy(() -> orderService.createOrder(USER_ID, request))
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
                     .isInstanceOf(CartEmptyException.class);
         }
 
@@ -183,7 +185,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
                     null, savedWarehousePoint.getId(), null);
 
-            assertThatThrownBy(() -> orderService.createOrder(USER_ID, request))
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
                     .isInstanceOf(InsufficientStockException.class)
                     .hasMessageContaining("Доска");
         }
@@ -197,7 +199,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
                     null, null, null);
 
-            assertThatThrownBy(() -> orderService.createOrder(USER_ID, request))
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessageContaining("точку получения");
         }
@@ -211,7 +213,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
                     null, null, null);
 
-            assertThatThrownBy(() -> orderService.createOrder(USER_ID, request))
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessageContaining("адрес");
         }
@@ -297,7 +299,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         void shouldRepeatOrder() {
             Order original = createTestOrder();
 
-            Order repeated = orderService.repeatOrder(original.getId(), USER_ID);
+            Order repeated = orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL);
 
             assertThat(repeated.getId()).isNotEqualTo(original.getId());
             assertThat(repeated.getOrderNumber()).isNotEqualTo(original.getOrderNumber());
@@ -317,7 +319,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     PRODUCT_ID_2, new ProductDto(PRODUCT_ID_2, "Брус", new BigDecimal("1000.00"), 100, true)
             ));
 
-            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID))
+            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL))
                     .isInstanceOf(InsufficientStockException.class)
                     .hasMessageContaining("Доска");
         }
@@ -395,7 +397,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
                     null, savedWarehousePoint.getId(), null);
 
-            Order order = orderService.createOrder(USER_ID, request);
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
 
             List<OrderEvent> events = consumeEvents("order-events", 10);
 
@@ -455,7 +457,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                 PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
                 buildAddressDto(), null, "Тест");
 
-        return orderService.createOrder(USER_ID, request);
+        return orderService.createOrder(USER_ID, USER_EMAIL, request);
     }
 
     private AddressDto buildAddressDto() {

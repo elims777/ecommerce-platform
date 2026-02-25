@@ -59,6 +59,9 @@ public class Order {
     @Column(name = "warehouse_point_id")
     private Long warehousePointId;
 
+    @Column(name = "customer_email", nullable = false)
+    private String customerEmail;
+
     private String comment;
 
     @CreationTimestamp

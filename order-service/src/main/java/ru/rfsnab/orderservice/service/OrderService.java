@@ -75,7 +75,7 @@ public class OrderService {
      * 6. Отправляем Kafka event
      */
     @Transactional
-    public Order createOrder(Long userId, CreateOrderRequest request) {
+    public Order createOrder(Long userId, String customerEmail, CreateOrderRequest request) {
         // 1. Получаем корзину
         Cart cart = cartService.getCart(userId);
         if (cart.getItems().isEmpty()) {
@@ -87,7 +87,7 @@ public class OrderService {
         validateDeliveryInfo(request);
 
         // 3. Создаём заказ — базовые поля через маппер
-        Order order = OrderMapper.toEntity(userId, request);
+        Order order = OrderMapper.toEntity(userId,customerEmail, request);
         order.setOrderNumber(generateOrderNumber(userId));
 
         // 4. Обогащаем items данными из product-service
@@ -161,7 +161,7 @@ public class OrderService {
      * ошибку с указанием доступного количества.
      */
     @Transactional
-    public Order repeatOrder(UUID orderId, Long userId) {
+    public Order repeatOrder(UUID orderId, Long userId, String customerEmail) {
         Order sourceOrder = getOrderAndValidateOwner(orderId, userId);
 
         // Получаем данные о товарах
@@ -182,6 +182,7 @@ public class OrderService {
                 .deliveryMethod(sourceOrder.getDeliveryMethod())
                 .warehousePointId(sourceOrder.getWarehousePointId())
                 .deliveryAddress(copyDeliveryAddress(sourceOrder.getDeliveryAddress()))
+                .customerEmail(customerEmail)
                 .comment(sourceOrder.getComment())
                 .build();
 
