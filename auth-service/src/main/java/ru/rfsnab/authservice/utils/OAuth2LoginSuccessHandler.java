@@ -21,6 +21,7 @@ import ru.rfsnab.authservice.models.dto.UserDtoResponse;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -32,6 +33,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final JWTService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
+    private final RoleExtractor roleExtractor;
 
     @Value("${user.service.url}")
     private String userServiceUrl;
@@ -61,9 +63,11 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             // Проверяем существует ли пользователь в user-service
             UserDtoResponse user = oauth2LoginOrRegister(email, firstName, lastName);
 
+            List<String> roles = roleExtractor.extractRoles(user);
+
             // Генерируем JWT tokens
-            String accessToken = jwtService.generateToken(user.getEmail());
-            String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+            String accessToken = jwtService.generateToken(user.getId(), user.getEmail(), roles);
+            String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), roles);
 
             // Формируем данные для передачи на страницу успеха
             Map<String, Object> tokens = new HashMap<>();

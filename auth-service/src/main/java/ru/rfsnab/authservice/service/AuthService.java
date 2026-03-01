@@ -4,18 +4,25 @@ import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.authservice.models.dto.AuthResponse;
+import ru.rfsnab.authservice.models.dto.RoleEntity;
 import ru.rfsnab.authservice.models.dto.SimpleAuthRequest;
 import ru.rfsnab.authservice.models.dto.UserDtoResponse;
 import ru.rfsnab.authservice.utils.JWTService;
+import ru.rfsnab.authservice.utils.RoleExtractor;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -24,6 +31,8 @@ public class AuthService {
 
     private final RestTemplate restTemplate;
     private final JWTService jwtService;
+    private final RoleExtractor roleExtractor;
+
     @Value("${user.service.url}")
     private String userServiceUrl;
     @Value("${user.service.auth}")
@@ -46,8 +55,10 @@ public class AuthService {
                 throw new BadCredentialsException("Не удалось получить данные пользователя");
             }
 
-            String accessToken = jwtService.generateToken(authRequest.getEmail());
-            String refreshToken = jwtService.generateRefreshToken(authRequest.getEmail());
+            List<String> roles = roleExtractor.extractRoles(user);
+
+            String accessToken = jwtService.generateToken(user.getId(), user.getEmail(), roles);
+            String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), roles);
 
             log.info("Успешная аутентификация пользователя: {}", user.getEmail());
 
@@ -68,10 +79,12 @@ public class AuthService {
         if(!jwtService.validateToken(refreshToken)){
             throw new JwtException("Недопустимый токен");
         }
+        Long userId = jwtService.extractUserId(refreshToken);
         String email = jwtService.extractEmail(refreshToken);
+        List<String> roles = jwtService.extractRolesFromToken(refreshToken);
 
-        String accessToken = jwtService.generateToken(email);
-        String newRefreshToken = jwtService.generateRefreshToken(email);
+        String accessToken = jwtService.generateToken(userId, email, roles);
+        String newRefreshToken = jwtService.generateRefreshToken(userId, email, roles);
         log.info("Refresh token обновлён для пользователя: {}", email);
 
         return new AuthResponse(accessToken, newRefreshToken,"Bearer");
@@ -84,9 +97,11 @@ public class AuthService {
     public Map<String, Object> authenticateWithUserData(SimpleAuthRequest authRequest) {
         UserDtoResponse user = authenticateUser(authRequest);
 
+        List<String> roles = roleExtractor.extractRoles(user);
+
         // Генерируем JWT токены
-        String accessToken = jwtService.generateToken(user.getEmail());
-        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+        String accessToken = jwtService.generateToken(user.getId(), user.getEmail(), roles);
+        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), roles);
 
         log.info("Успешная аутентификация пользователя: {}", user.getEmail());
 
@@ -99,6 +114,42 @@ public class AuthService {
         result.put("user", user);
 
         return result;
+    }
+
+    /**
+     * Получение данных текущего пользователя по JWT токену.
+     * Вызывает user-service endpoint /v1/users/me с Bearer токеном.
+     */
+    public UserDtoResponse getCurrentUser(String accessToken){
+        String meUrl = userServiceUrl + "/v1/users/me";
+
+        try{
+            //Создаем Headers c Bearer токеном
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            // GET запрос к user-service
+            ResponseEntity<UserDtoResponse> response = restTemplate.exchange(
+                    meUrl,
+                    HttpMethod.GET,
+                    entity,
+                    UserDtoResponse.class
+            );
+
+            UserDtoResponse user = response.getBody();
+            if(user==null){
+                throw new RuntimeException("Не удалось получить данные пользователя");
+            }
+            log.debug("Получены данные пользователя: {}", user.getEmail());
+            return user;
+        } catch (HttpClientErrorException.Unauthorized e){
+            log.warn("Невалидный токен при запросе данных пользователя");
+            throw new JwtException("Токен недействителен или истек");
+        } catch (HttpClientErrorException e){
+            log.error("Ошибка при обращении к user-service: {}", e.getMessage());
+            throw new RuntimeException("Ошибка получения данных пользователя");
+        }
     }
 
     /**
@@ -129,6 +180,30 @@ public class AuthService {
         } catch (HttpClientErrorException e) {
             log.error("Ошибка при обращении к user-service: {}", e.getMessage());
             throw new RuntimeException("Ошибка аутентификации. Попробуйте позже");
+        }
+    }
+
+    /**
+     * Получение пользователя по email из user-service
+     */
+    private UserDtoResponse getUserByEmail(String email) {
+        String userUrl = userServiceUrl + "/v1/users/email/" + email;
+
+        try {
+            ResponseEntity<UserDtoResponse> response = restTemplate.getForEntity(
+                    userUrl,
+                    UserDtoResponse.class
+            );
+
+            UserDtoResponse user = response.getBody();
+            if (user == null) {
+                throw new RuntimeException("Не удалось получить данные пользователя");
+            }
+            return user;
+
+        } catch (HttpClientErrorException e) {
+            log.error("Ошибка при получении пользователя по email: {}", e.getMessage());
+            throw new RuntimeException("Ошибка получения данных пользователя");
         }
     }
 }

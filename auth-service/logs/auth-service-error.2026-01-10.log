@@ -1,0 +1,6 @@
+2026-01-10 23:16:11.987 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 401 UNAUTHORIZED
+2026-01-10 23:16:12.066 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 500 INTERNAL_SERVER_ERROR
+2026-01-10 23:16:12.100 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 500 INTERNAL_SERVER_ERROR
+2026-01-10 23:16:12.105 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 401 UNAUTHORIZED
+2026-01-10 23:16:12.119 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при получении пользователя по email: 404 NOT_FOUND
+2026-01-10 23:16:12.128 ERROR 21604 --- [main] r.r.authservice.service.AuthService      : Ошибка при обращении к user-service: 403 FORBIDDEN

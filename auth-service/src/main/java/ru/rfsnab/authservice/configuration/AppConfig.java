@@ -8,6 +8,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.authservice.utils.JWTService;
 import ru.rfsnab.authservice.utils.OAuth2LoginSuccessHandler;
+import ru.rfsnab.authservice.utils.RoleExtractor;
 
 @Configuration
 public class AppConfig {
@@ -26,7 +27,8 @@ public class AppConfig {
             RestTemplate restTemplate,
             JWTService jwtService,
             PasswordEncoder passwordEncoder,
-            ObjectMapper objectMapper) {
-        return new OAuth2LoginSuccessHandler(restTemplate, jwtService, passwordEncoder, objectMapper);
+            ObjectMapper objectMapper,
+            RoleExtractor roleExtractor) {
+        return new OAuth2LoginSuccessHandler(restTemplate, jwtService, passwordEncoder, objectMapper, roleExtractor);
     }
 }

@@ -1,0 +1,36 @@
+2026-02-04 21:13:11.523  INFO 460 --- [background-preinit] o.h.validator.internal.util.Version      : HV000001: Hibernate Validator 8.0.3.Final
+2026-02-04 21:13:11.560  INFO 460 --- [main] r.r.authservice.AuthServiceApplication   : Starting AuthServiceApplication using Java 21.0.8 with PID 460 (D:\Max\java\my-application\ecommerce-platform\auth-service\target\classes started by elims in D:\Max\java\my-application\ecommerce-platform)
+2026-02-04 21:13:11.561  INFO 460 --- [main] r.r.authservice.AuthServiceApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-02-04 21:13:12.472  INFO 460 --- [main] o.s.cloud.context.scope.GenericScope     : BeanFactory id=ef15f0fe-e7c1-3d97-8200-241f88e5cfa2
+2026-02-04 21:13:12.837  INFO 460 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 9000 (http)
+2026-02-04 21:13:12.847  INFO 460 --- [main] o.a.coyote.http11.Http11NioProtocol      : Initializing ProtocolHandler ["http-nio-9000"]
+2026-02-04 21:13:12.848  INFO 460 --- [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-04 21:13:12.848  INFO 460 --- [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.50]
+2026-02-04 21:13:12.900  INFO 460 --- [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-02-04 21:13:12.900  INFO 460 --- [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1306 ms
+2026-02-04 21:13:13.000 DEBUG 460 --- [main] o.s.w.f.ServerHttpObservationFilter      : Filter 'webMvcObservationFilter' configured for use
+2026-02-04 21:13:13.000 DEBUG 460 --- [main] o.s.w.s.r.ResourceUrlEncodingFilter      : Filter 'resourceUrlEncodingFilter' configured for use
+2026-02-04 21:13:13.336 DEBUG 460 --- [main] s.w.s.m.m.a.RequestMappingHandlerMapping : 19 mappings in 'requestMappingHandlerMapping'
+2026-02-04 21:13:13.358 DEBUG 460 --- [main] o.s.w.s.handler.SimpleUrlHandlerMapping  : Patterns [/webjars/**, /**, /swagger-ui*/*swagger-initializer.js, /swagger-ui*/**] in 'resourceHandlerMapping'
+2026-02-04 21:13:13.463  INFO 460 --- [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-02-04 21:13:13.483  INFO 460 --- [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name remoteUserDetailsService
+2026-02-04 21:13:13.549 DEBUG 460 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure Or [Mvc [pattern='/api/**'], Mvc [pattern='/v1/**'], Mvc [pattern='/actuator/**']] with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-02-04 21:13:13.589 DEBUG 460 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure Or [Mvc [pattern='/oauth2/**'], Mvc [pattern='/login/**']] with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, OAuth2AuthorizationRequestRedirectFilter, OAuth2LoginAuthenticationFilter, DefaultResourcesFilter, DefaultLoginPageGeneratingFilter, DefaultLogoutPageGeneratingFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-02-04 21:13:13.600 DEBUG 460 --- [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, LogoutFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, ExceptionTranslationFilter, AuthorizationFilter
+2026-02-04 21:13:13.698 DEBUG 460 --- [main] s.w.s.m.m.a.RequestMappingHandlerAdapter : ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+2026-02-04 21:13:13.749 DEBUG 460 --- [main] .m.m.a.ExceptionHandlerExceptionResolver : ControllerAdvice beans: 2 @ExceptionHandler, 1 ResponseBodyAdvice
+2026-02-04 21:13:13.937  WARN 460 --- [main] iguration$LoadBalancerCaffeineWarnLogger : Spring Cloud LoadBalancer is currently working with the default cache. While this cache implementation is useful for development and tests, it's recommended to use Caffeine cache in production.You can switch to using Caffeine cache, by adding it and org.springframework.cache.caffeine.CaffeineCacheManager to the classpath.
+2026-02-04 21:13:13.980  INFO 460 --- [main] o.a.coyote.http11.Http11NioProtocol      : Starting ProtocolHandler ["http-nio-9000"]
+2026-02-04 21:13:13.995  INFO 460 --- [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 9000 (http) with context path '/'
+2026-02-04 21:13:14.009  INFO 460 --- [main] r.r.authservice.AuthServiceApplication   : Started AuthServiceApplication in 3.002 seconds (process running for 3.681)
+2026-02-04 21:13:14.524  INFO 460 --- [RMI TCP Connection(2)-192.168.0.28] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-04 21:13:14.524  INFO 460 --- [RMI TCP Connection(2)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-02-04 21:13:14.524 DEBUG 460 --- [RMI TCP Connection(2)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : Detected StandardServletMultipartResolver
+2026-02-04 21:13:14.524 DEBUG 460 --- [RMI TCP Connection(2)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : Detected AcceptHeaderLocaleResolver
+2026-02-04 21:13:14.524 DEBUG 460 --- [RMI TCP Connection(2)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : Detected FixedThemeResolver
+2026-02-04 21:13:14.526 DEBUG 460 --- [RMI TCP Connection(2)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : Detected org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator@301bd948
+2026-02-04 21:13:14.526 DEBUG 460 --- [RMI TCP Connection(2)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : Detected org.springframework.web.servlet.support.SessionFlashMapManager@2bafb758
+2026-02-04 21:13:14.526 DEBUG 460 --- [RMI TCP Connection(2)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data
+2026-02-04 21:13:14.526  INFO 460 --- [RMI TCP Connection(2)-192.168.0.28] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-02-04 22:04:05.181  INFO 460 --- [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-02-04 22:04:05.187  INFO 460 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete

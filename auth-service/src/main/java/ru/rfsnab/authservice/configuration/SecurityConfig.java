@@ -85,7 +85,12 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/", "/auth/**").permitAll()  // Разрешаем главную страницу и auth pages
+                        .requestMatchers("/",
+                                "/auth/**",
+                                "/profile",
+                                "/swagger-ui/**",
+                                "/api-docs/**",
+                                "/swagger-ui.html").permitAll()  // Разрешаем главную страницу и auth pages
                         .anyRequest().authenticated()
                 );
 

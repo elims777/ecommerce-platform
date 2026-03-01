@@ -1,0 +1,43 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: product-service
+
+  # === H2 для тестов (PostgreSQL mode) ===
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  # === Отключаем Flyway для тестов ===
+  flyway:
+    enabled: false
+
+# === JWT (тестовые значения) ===
+jwt:
+  secret: dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtYXV0aGVudGljYXRpb24tdGVzdGluZy1wcm9kdWN0LXNlcnZpY2U=
+  expiration: 3600000
+
+# === Yandex Storage (моковые значения) ===
+yandex:
+  storage:
+    access-key: test-access-key
+    secret-key: test-secret-key
+    bucket-name: test-bucket
+    endpoint: https://storage.yandexcloud.net
+
+# === Logging ===
+logging:
+  level:
+    root: WARN
+    ru.rfsnab: INFO
+    org.springframework.security: WARN

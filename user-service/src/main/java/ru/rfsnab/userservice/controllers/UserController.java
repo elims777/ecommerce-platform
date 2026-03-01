@@ -2,11 +2,14 @@ package ru.rfsnab.userservice.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-import ru.rfsnab.userservice.exceptions.CustomException;
+import ru.rfsnab.userservice.exceptions.UserAlreadyExistsException;
 import ru.rfsnab.userservice.mappers.RegistrationMapper;
 import ru.rfsnab.userservice.mappers.UserMapper;
 import ru.rfsnab.userservice.models.UserEntity;
@@ -19,12 +22,13 @@ import ru.rfsnab.userservice.services.UserService;
 import java.util.List;
 import java.util.Optional;
 
-@Slf4j
+
 @RestController
 @RequestMapping("/v1/users")
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * OAuth2 login/register endpoint
@@ -37,11 +41,9 @@ public class UserController {
 
         if (existingUser.isPresent()) {
             // Пользователь уже существует - возвращаем его данные (login)
-            log.info("OAuth2 login: пользователь {} уже существует", request.getEmail());
             return ResponseEntity.ok(RegistrationMapper.mapToResponse(existingUser.get()));
         } else {
             // Пользователь не существует - создаём нового (register)
-            log.info("OAuth2 register: создаём нового пользователя {}", request.getEmail());
             UserEntity user = RegistrationMapper.mapToUserEntity(request);
             user = userService.registerUser(user);
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -50,9 +52,9 @@ public class UserController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<RegAuthResponse> registerUser(@RequestBody RegistrationRequest userDto){
+    public ResponseEntity<RegAuthResponse> registerUser(@Valid @RequestBody RegistrationRequest userDto){
         if(userService.findUserByEmail(userDto.getEmail()).isPresent()){
-            throw new CustomException("User already existed!", HttpStatus.CONFLICT.value());
+            throw new UserAlreadyExistsException(userDto.getEmail());
         } else {
             UserEntity user = RegistrationMapper.mapToUserEntity(userDto);
 
@@ -65,27 +67,16 @@ public class UserController {
         }
     }
 
-    @GetMapping("/by-email")
-    public ResponseEntity<RegAuthResponse> getUserByEmail(@RequestParam String email) {
-        UserEntity user = userService.findUserByEmail(email)
-                .orElseThrow(() -> new CustomException(
-                        "Пользователь с email " + email + " не найден",
-                        HttpStatus.NOT_FOUND.value()
-                ));
-
-        return ResponseEntity.ok(RegistrationMapper.mapToResponse(user));
-    }
-
     /***
      * Аутентификация пользователей через логин, пароль
      */
     @PostMapping("/authenticate")
-    public ResponseEntity<UserDto> authenticate(@RequestBody SimpleAuthRequest authRequest){
+    public ResponseEntity<?> authenticate(@Valid @RequestBody SimpleAuthRequest authRequest){
         UserDto userDto = UserMapper.mapToUserDto(userService.findUserByEmail(authRequest.getEmail())
-                .orElseThrow(() -> new CustomException(
-                        "Пользователь с email " + authRequest.getEmail() + " не найден",
-                        HttpStatus.NOT_FOUND.value()
-                )));
+                .orElseThrow(() -> new BadCredentialsException("Неверный email или пароль")));
+        if (!passwordEncoder.matches(authRequest.getPassword(), userDto.getPassword())) {
+            throw new BadCredentialsException("Неверный email или пароль");
+        }
         return ResponseEntity.status(HttpStatus.OK).body(userDto);
     }
 
@@ -110,17 +101,26 @@ public class UserController {
         if(userService.findUserById(id).isPresent()){
             userService.deleteUser(id);
             return ResponseEntity.ok("User deleted.");
-        } else {throw new CustomException(
-                String.format("User whith id = %s not found", id),
-                HttpStatus.NOT_FOUND.value());}
+        } else{
+            throw new UsernameNotFoundException(
+                    "Пользователь с id " + id + " не найден");
+        }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<UserDto> getUserById(@PathVariable("id") Long id){
-        return ResponseEntity.ok(
-                UserMapper.mapToUserDto(
-                        userService.findUserById(id)
-                                .orElseThrow(()->new CustomException(
-                                        String.format("User whith id = %s not found", id)))));
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
+        String email = authentication.getName();
+
+        UserEntity user = userService.findUserByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException(
+                        "Пользователь " + email + " не найден"));
+
+        return ResponseEntity.ok(UserMapper.mapToUserDto(user));
+    }
+
+    @PutMapping("/{userId}/verify")
+    public ResponseEntity<String> verifyUser(@PathVariable Long userId) {
+        userService.verifyUser(userId);
+        return ResponseEntity.ok("User verified successfully");
     }
 }

@@ -1,0 +1,60 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: notification-service
+
+  # === H2 для тестов ===
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  # === Kafka (EmbeddedKafka) ===
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification-service-test
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "ru.rfsnab.*"
+
+  # === Mail (мок) ===
+  mail:
+    host: localhost
+    port: 1025
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+# === Custom properties ===
+app:
+  kafka:
+    topic:
+      user-events: user-events
+
+  email:
+    from: test@example.com
+    verification-url: http://localhost:9000/verify-email
+
+# === Logging ===
+logging:
+  level:
+    ru.rfsnab.notificationservice: DEBUG
+    org.springframework.kafka: WARN
+    org.apache.kafka: WARN

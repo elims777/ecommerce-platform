@@ -334,7 +334,10 @@
         </div>
 
         <div class="actions">
-            <button class="btn btn-primary" onclick="testToken()">
+            <button class="btn btn-primary" onclick="goToProfile()">
+                <span>👤</span> Личный кабинет
+            </button>
+            <button class="btn btn-secondary" onclick="testToken()">
                 <span>🧪</span> Тестировать токен
             </button>
             <button class="btn btn-secondary" onclick="logout()">
@@ -439,6 +442,10 @@
         alert('Access Token скопирован в буфер обмена!\n\nИспользуйте его в заголовке:\nAuthorization: Bearer ' + accessToken.substring(0, 50) + '...');
 
         navigator.clipboard.writeText(accessToken);
+    }
+
+    function goToProfile() {
+        window.location.href = '/profile';
     }
 
     function logout() {

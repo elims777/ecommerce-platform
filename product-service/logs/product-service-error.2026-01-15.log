@@ -1,0 +1,3 @@
+2026-01-15 22:15:58.149 ERROR 14356 --- [main] r.r.productservice.aspect.LoggingAspect  : <!> Service failed: ProductService.getProductById(..) after 3 ms - Error: Товар с id=999 не найден
+2026-01-15 22:15:58.151 ERROR 14356 --- [main] r.r.productservice.aspect.LoggingAspect  : !!! Exception in controller: ProductController.getProductById(..) - Error: Товар с id=999 не найден
+2026-01-15 22:15:58.157 ERROR 14356 --- [main] r.r.p.exception.GlobalExceptionHandler   : Product not found: Товар с id=999 не найден
