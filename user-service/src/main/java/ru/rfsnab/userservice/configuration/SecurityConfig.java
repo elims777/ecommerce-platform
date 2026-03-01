@@ -14,6 +14,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import ru.rfsnab.userservice.models.dto.ErrorResponse;
+import ru.rfsnab.userservice.security.JwtAuthenticationFilter;
 
 import java.time.LocalDateTime;
 

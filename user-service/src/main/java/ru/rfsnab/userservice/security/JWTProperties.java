@@ -1,4 +1,4 @@
-package ru.rfsnab.userservice.configuration;
+package ru.rfsnab.userservice.security;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
