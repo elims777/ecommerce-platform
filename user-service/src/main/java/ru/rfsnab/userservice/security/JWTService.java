@@ -1,4 +1,4 @@
-package ru.rfsnab.userservice.configuration;
+package ru.rfsnab.userservice.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -93,8 +93,6 @@ public class JWTService {
      * Комплексная проверка токен, валиден и не истек
      */
     public boolean isTokenValid(String token){
-        boolean valid = validateToken(token);
-        boolean notExpired = !isTokenExpired(token);
-        return valid && notExpired;
+        return validateToken(token) && !isTokenExpired(token);
     }
 }

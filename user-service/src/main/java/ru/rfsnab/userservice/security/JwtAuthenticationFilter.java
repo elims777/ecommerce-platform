@@ -1,4 +1,4 @@
-package ru.rfsnab.userservice.configuration;
+package ru.rfsnab.userservice.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -12,8 +12,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import ru.rfsnab.userservice.models.UserEntity;
-import ru.rfsnab.userservice.services.UserService;
 
 import java.io.IOException;
 import java.util.List;
