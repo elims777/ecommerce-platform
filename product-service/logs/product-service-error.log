@@ -1,3 +1,0 @@
-2026-02-15 13:14:37.474 ERROR 22792 --- [main] r.r.productservice.aspect.LoggingAspect  : <!> Service failed: ProductService.getProductById(..) after 2 ms - Error: Товар с id=999 не найден
-2026-02-15 13:14:37.475 ERROR 22792 --- [main] r.r.productservice.aspect.LoggingAspect  : !!! Exception in controller: ProductController.getProductById(..) - Error: Товар с id=999 не найден
-2026-02-15 13:14:37.478 ERROR 22792 --- [main] r.r.p.exception.GlobalExceptionHandler   : Product not found: Товар с id=999 не найден
