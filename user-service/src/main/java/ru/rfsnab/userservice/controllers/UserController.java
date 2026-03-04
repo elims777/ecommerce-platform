@@ -72,12 +72,14 @@ public class UserController {
      */
     @PostMapping("/authenticate")
     public ResponseEntity<?> authenticate(@Valid @RequestBody SimpleAuthRequest authRequest){
-        UserDto userDto = UserMapper.mapToUserDto(userService.findUserByEmail(authRequest.getEmail())
-                .orElseThrow(() -> new BadCredentialsException("Неверный email или пароль")));
-        if (!passwordEncoder.matches(authRequest.getPassword(), userDto.getPassword())) {
+        UserEntity user = userService.findUserByEmail(authRequest.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("Неверный email или пароль"));
+
+        if (!passwordEncoder.matches(authRequest.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Неверный email или пароль");
         }
-        return ResponseEntity.status(HttpStatus.OK).body(userDto);
+
+        return ResponseEntity.ok(UserMapper.mapToUserDto(user));
     }
 
     @PutMapping("/{id}")
@@ -109,11 +111,10 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
-        String email = authentication.getName();
+        Long userId = Long.parseLong(authentication.getName());
 
-        UserEntity user = userService.findUserByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "Пользователь " + email + " не найден"));
+        UserEntity user = userService.findUserById(userId)
+                .orElseThrow(()->new UsernameNotFoundException("Пользователь не найден"));
 
         return ResponseEntity.ok(UserMapper.mapToUserDto(user));
     }

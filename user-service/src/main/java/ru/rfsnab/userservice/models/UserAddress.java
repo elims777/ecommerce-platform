@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Table(name = "user_addresses",
         uniqueConstraints = @UniqueConstraint(
                 name = "user_addresses_label",
-                columnNames = {"user_id", "lable"}
+                columnNames = {"user_id", "label"}
         ))
 @Getter
 @Setter
@@ -67,7 +67,7 @@ public class UserAddress {
     @Column(length = 500)
     private String deliveryInstructions;
 
-    @Column(nullable = false)
+    @Column(name = "is_default", nullable = false)
     @Builder.Default
     private boolean defaultAddress = false;
 
