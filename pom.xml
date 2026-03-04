@@ -25,6 +25,7 @@
         <module>notification-service</module>
         <module>product-service</module>
         <module>order-service</module>
+        <module>gateway-service</module>
     </modules>
 
     <properties>
@@ -43,6 +44,7 @@
         <failsafe.version>3.5.3</failsafe.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <logback.version>1.5.25</logback.version>
+        <jackson-bom.version>2.21.1</jackson-bom.version>
     </properties>
 
     <dependencyManagement>

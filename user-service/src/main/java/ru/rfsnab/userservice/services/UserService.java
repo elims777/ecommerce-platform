@@ -88,4 +88,8 @@ public class UserService {
         user.setEmailVerified(true);
         userRepository.save(user);
     }
+
+    public UserEntity findById(Long userId) {
+        return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+    }
 }

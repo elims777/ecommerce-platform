@@ -109,11 +109,9 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
-        String email = authentication.getName();
+        Long userId = Long.parseLong(authentication.getName());
 
-        UserEntity user = userService.findUserByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "Пользователь " + email + " не найден"));
+        UserEntity user = userService.findById(userId);
 
         return ResponseEntity.ok(UserMapper.mapToUserDto(user));
     }
