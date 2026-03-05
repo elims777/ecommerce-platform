@@ -80,11 +80,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     .parseSignedClaims(token)
                     .getPayload();
 
-            String email = claims.getSubject();
+            String email = claims.get("email", String.class);
 
             // Пробрасываем данные пользователя в заголовках для downstream сервисов
-            ServerHttpRequest modifiedRequest = request.mutate().header("X-User-Email", email).build();
+            ServerHttpRequest modifiedRequest = request.mutate()
+                    .header("X-User-Email", email)
+                    .build();
             log.debug("JWT валиден для пользователя: {}, {} {}", email, method, path);
+
             return chain.filter(exchange.mutate().request(modifiedRequest).build());
         } catch (ExpiredJwtException e) {
             log.warn("Истёкший JWT токен: {} {}", method, path);
@@ -105,23 +108,25 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
      * GET запросы к каталогу (products, categories) — публичные.
      * POST/PUT/DELETE к ним — требуют авторизации.
      */
-    private boolean isPublicPath(String path, String method){
-        // Главная страница
-        if("/".equals(path)){
+    private boolean isPublicPath(String path, String method) {
+        // Главная страница — точное совпадение
+        if ("/".equals(path)) {
             return true;
         }
 
-        // Каталог — только GET без авторизации
-        if (("GET".equals(method)) &&
-                (path.startsWith("/api/v1/products") || path.startsWith("/api/v1/categories")
+        // Каталог и точки самовывоза — только GET
+        if ("GET".equals(method) &&
+                (path.startsWith("/api/v1/products")
+                        || path.startsWith("/api/v1/categories")
                         || path.startsWith("/api/v1/warehouse-points"))) {
             return true;
         }
 
-        // Остальные публичные пути
+        // Остальные публичные пути (исключаем "/", products, categories — уже проверены выше)
         return PUBLIC_PATHS.stream()
-                .filter(publicPath -> !publicPath.equals("/api/v1/products")
-                && !publicPath.equals("/api/v1/categories"))
+                .filter(publicPath -> !"/".equals(publicPath)
+                        && !"/api/v1/products".equals(publicPath)
+                        && !"/api/v1/categories".equals(publicPath))
                 .anyMatch(path::startsWith);
     }
 
