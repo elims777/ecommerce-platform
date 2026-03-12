@@ -24,6 +24,13 @@ public class ProductResponse {
     private Boolean isActive;
     private Boolean isFeatured;
 
+    //интеграция с 1с
+    private String externalId;
+    private String sku;
+    private String externalCode;
+    private String unitOfMeasure;
+    private Integer vatRate;
+
     // Вложенные данные
     private List<ProductImageResponse> images;
     private List<ProductVideoResponse> videos;

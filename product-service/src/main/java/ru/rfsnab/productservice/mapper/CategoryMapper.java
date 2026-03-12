@@ -10,6 +10,7 @@ public class CategoryMapper {
         Category category = Category.builder()
                 .name(request.getName())
                 .description(request.getDescription())
+                .externalId(request.getExternalId())
                 .build();
 
         // Устанавливаем parent если указан
@@ -30,6 +31,7 @@ public class CategoryMapper {
                 .description(category.getDescription())
                 .isActive(category.getIsActive())
                 .displayOrder(category.getDisplayOrder())
+                .externalId(category.getExternalId())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt());
 

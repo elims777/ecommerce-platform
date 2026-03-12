@@ -19,6 +19,7 @@ public class CategoryResponse {
     private String parentName;
     private Boolean isActive;
     private Integer displayOrder;
+    private String externalId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

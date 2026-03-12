@@ -54,6 +54,20 @@ public class Product {
     @Builder.Default
     private Boolean isFeatured = false;
 
+    @Column(length = 50)
+    private String externalId;
+
+    @Column(length = 100)
+    private String sku;
+
+    @Column(length = 50)
+    private String externalCode;
+
+    @Column(length = 20)
+    private String unitOfMeasure;
+
+    private Integer vatRate;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     @Builder.Default
