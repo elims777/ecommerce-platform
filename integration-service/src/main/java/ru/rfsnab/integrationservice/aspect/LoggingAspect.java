@@ -1,11 +1,11 @@
-package ru.rfsnab.productservice.aspect;
+package ru.rfsnab.integrationservice.aspect;
 
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.*;
-import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 @Aspect
 @Component
@@ -15,25 +15,25 @@ public class LoggingAspect {
     /**
      * Pointcut для всех методов в Controllers
      */
-    @Pointcut("execution(* ru.rfsnab.productservice.controller..*(..))")
+    @Pointcut("execution(* ru.rfsnab.integrationservice.controller..*(..))")
     public void controllerLayer(){}
 
     /**
      * Pointcut для всех методов в Services
      */
-    @Pointcut("execution(* ru.rfsnab.productservice.service..*(..))")
+    @Pointcut("execution(* ru.rfsnab.integrationservice.service..*(..))")
     public void serviceLayer(){}
 
     /**
      * Pointcut для всех методов в Repositories
      */
-    @Pointcut("execution(* ru.rfsnab.productservice.repository..*(..))")
+    @Pointcut("execution(* ru.rfsnab.integrationservice.repository..*(..))")
     public void repositoryLayer(){}
 
     /**
      * Pointcut для GlobalExceptionHandler
      */
-    @Pointcut("execution(* ru.rfsnab.productservice.exception.GlobalExceptionHandler.*(..))")
+    @Pointcut("execution(* ru.rfsnab.integrationservice.exception.GlobalExceptionHandler.*(..))")
     public void exceptionHandlerLayer() {}
 
     /**

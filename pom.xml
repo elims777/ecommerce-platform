@@ -26,6 +26,7 @@
         <module>product-service</module>
         <module>order-service</module>
         <module>gateway-service</module>
+        <module>integration-service</module>
     </modules>
 
     <properties>
@@ -45,6 +46,7 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <logback.version>1.5.25</logback.version>
         <jackson-bom.version>2.21.1</jackson-bom.version>
+        <tomcat.version>10.1.52</tomcat.version>
     </properties>
 
     <dependencyManagement>
@@ -116,6 +118,11 @@
                 <groupId>com.nimbusds</groupId>
                 <artifactId>nimbus-jose-jwt</artifactId>
                 <version>10.7</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper</artifactId>
+                <version>3.9.5</version>
             </dependency>
             <!-- OpenAPI / Swagger (добавлено) -->
             <dependency>

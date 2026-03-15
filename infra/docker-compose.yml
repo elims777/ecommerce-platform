@@ -85,6 +85,27 @@ services:
       timeout: 5s
       retries: 5
 
+  # PostgreSQL для integration-service
+  integration-db:
+    image: postgres:16-alpine
+    container_name: integration-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${INTEGRATION_DB_NAME}
+      POSTGRES_USER: ${INTEGRATION_DB_USER}
+      POSTGRES_PASSWORD: ${INTEGRATION_DB_PASSWORD}
+    ports:
+      - "${INTEGRATION_DB_PORT}:5432"
+    volumes:
+      - integration_db_data:/var/lib/postgresql/data
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${INTEGRATION_DB_USER} -d ${INTEGRATION_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ==================== KAFKA ====================
 
   zookeeper:
@@ -265,7 +286,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       PRODUCT_SERVICE_URL: http://product-service:8083
-      PAYMENT_SERVICE_URL: http://payment-service:8085
+      PAYMENT_SERVICE_URL: http://payment-service:8090
       LOGGING_FILE_NAME: ""
     depends_on:
       order-db:
@@ -277,12 +298,51 @@ services:
     networks:
       - ecommerce-net
 
+  integration-service:
+    build:
+      context: ../integration-service
+      dockerfile: Dockerfile
+    container_name: integration-service
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://integration-db:5432/${INTEGRATION_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${INTEGRATION_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${INTEGRATION_DB_PASSWORD}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      # 1С CommerceML авторизация
+      CML_USERNAME: ${CML_USERNAME}
+      CML_PASSWORD: ${CML_PASSWORD}
+      CML_TEMP_DIR: /app/1c-exchange
+      # Внутренние сервисы
+      PRODUCT_SERVICE_URL: http://product-service:8083
+      ORDER_SERVICE_URL: http://order-service:8084
+      LOGGING_FILE_NAME: ""
+    volumes:
+      - integration_exchange_data:/app/1c-exchange
+    depends_on:
+      integration-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+    networks:
+      - ecommerce-net
+
+
 volumes:
   user_db_data:
   notification_db_data:
   product_db_data:
   redis_data:
   order_db_data:
+  integration_db_data:
+  integration_exchange_data:
 
 networks:
   ecommerce-net:
