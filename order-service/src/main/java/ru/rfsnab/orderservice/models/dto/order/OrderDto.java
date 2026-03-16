@@ -15,6 +15,7 @@ public record OrderDto(
         UUID id,
         Long userId,
         String orderNumber,
+        String externalId,
         OrderStatus status,
         PaymentMethod paymentMethod,
         DeliveryMethod deliveryMethod,

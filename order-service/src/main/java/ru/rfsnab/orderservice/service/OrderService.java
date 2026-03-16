@@ -310,6 +310,17 @@ public class OrderService {
     }
 
     /**
+     * Обновление статусов заказа для обмена с 1С
+     */
+    @Transactional
+    public Order syncFrom1C(UUID orderId, String externalId, OrderStatus newStatus) {
+        Order order = getOrder(orderId);
+        order.setExternalId(externalId);
+        order.setStatus(newStatus);
+        return orderRepository.save(order);
+    }
+
+    /**
      * Отмена заказа пользователем. Возможна только до статуса SHIPPED.
      */
     @Transactional

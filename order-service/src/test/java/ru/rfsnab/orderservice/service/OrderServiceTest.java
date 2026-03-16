@@ -382,6 +382,54 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         }
     }
 
+    // ==================== syncFrom1C ====================
+
+    @Nested
+    @DisplayName("syncFrom1C")
+    class SyncFrom1CTests {
+
+        @Test
+        @DisplayName("записывает externalId и обновляет статус")
+        void shouldSyncExternalIdAndStatus() {
+            Order order = createTestOrder();
+            assertThat(order.getExternalId()).isNull();
+
+            // Первый ответ от 1С: присваивает свой номер + ставит "В обработке"
+            Order synced = orderService.syncFrom1C(order.getId(), "РФ-000123", OrderStatus.PROCESSING);
+
+            assertThat(synced.getExternalId()).isEqualTo("РФ-000123");
+            assertThat(synced.getStatus()).isEqualTo(OrderStatus.PROCESSING);
+
+            // Проверяем что сохранено в БД
+            Order fromDb = orderRepository.findById(order.getId()).orElseThrow();
+            assertThat(fromDb.getExternalId()).isEqualTo("РФ-000123");
+            assertThat(fromDb.getStatus()).isEqualTo(OrderStatus.PROCESSING);
+        }
+
+        @Test
+        @DisplayName("обновляет статус при повторной синхронизации")
+        void shouldUpdateStatusOnReSync() {
+            Order order = createTestOrder();
+            orderService.syncFrom1C(order.getId(), "РФ-000123", OrderStatus.PROCESSING);
+
+            // Повторный вызов: 1С обновила статус
+            Order synced = orderService.syncFrom1C(order.getId(), "РФ-000123", OrderStatus.SHIPPED);
+
+            assertThat(synced.getStatus()).isEqualTo(OrderStatus.SHIPPED);
+            assertThat(synced.getExternalId()).isEqualTo("РФ-000123");
+        }
+
+        @Test
+        @DisplayName("выбрасывает исключение для несуществующего заказа")
+        void shouldThrowForNonExistentOrder() {
+            UUID fakeId = UUID.randomUUID();
+
+            assertThatThrownBy(() ->
+                    orderService.syncFrom1C(fakeId, "РФ-000999", OrderStatus.PROCESSING))
+                    .isInstanceOf(Exception.class);
+        }
+    }
+
     // ==================== Kafka events ====================
 
     @Nested

@@ -14,10 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.orderservice.mapper.OrderMapper;
-import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
-import ru.rfsnab.orderservice.models.dto.order.OrderDto;
-import ru.rfsnab.orderservice.models.dto.order.OrderSummaryDto;
-import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
+import ru.rfsnab.orderservice.models.dto.order.*;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.service.OrderService;
@@ -112,6 +109,14 @@ public class OrderController {
                 getCurrentUserEmail(authentication));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(enrichAndMap(order));
+    }
+
+    @PatchMapping("/{orderId}/1c-sync")
+    @Operation(summary = "Обновление статуса заказа от 1С")
+    public ResponseEntity<OrderDto> syncFrom1C(@PathVariable(name = "orderId") UUID orderId,
+                                               @Valid @RequestBody OrderSyncRequest request){
+        return ResponseEntity.ok(OrderMapper.toDto(
+                orderService.syncFrom1C(orderId, request.externalId(), request.newStatus())));
     }
 
     /**

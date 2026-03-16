@@ -12,6 +12,7 @@ import java.util.UUID;
 public record OrderSummaryDto(
         UUID id,
         String orderNumber,
+        String externalId,
         OrderStatus status,
         int itemsCount,
         BigDecimal totalAmount,
