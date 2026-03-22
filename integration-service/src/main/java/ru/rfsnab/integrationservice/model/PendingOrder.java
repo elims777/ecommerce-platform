@@ -2,6 +2,8 @@ package ru.rfsnab.integrationservice.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -32,6 +34,7 @@ public class PendingOrder {
 
     /** Полные данные заказа в JSON (Order1CExportEvent as-is из Kafka) */
     @Column(name = "order_data", nullable = false, columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String orderData;
 
     /** Уже передан в 1С */

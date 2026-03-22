@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.9</version>
+        <version>3.5.12</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
@@ -46,7 +46,6 @@
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <logback.version>1.5.25</logback.version>
         <jackson-bom.version>2.21.1</jackson-bom.version>
-        <tomcat.version>10.1.52</tomcat.version>
     </properties>
 
     <dependencyManagement>
