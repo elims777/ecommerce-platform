@@ -10,6 +10,7 @@ public record ProductDto(
         String name,
         BigDecimal price,
         Integer stockQuantity,
-        Boolean active
+        Boolean active,
+        String externalId
 ) {
 }

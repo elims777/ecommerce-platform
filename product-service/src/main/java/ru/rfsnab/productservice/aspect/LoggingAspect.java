@@ -40,7 +40,7 @@ public class LoggingAspect {
      * Логирование перед выполнением метода контроллера
      */
     @Before("controllerLayer()")
-    public void logBeforController(JoinPoint joinPoint){
+    public void logBeforeController(JoinPoint joinPoint){
         String methodName = joinPoint.getSignature().toShortString();
         Object[] args = joinPoint.getArgs();
         log.info(">>> Incoming request: {} with args: {}", methodName, args);
@@ -72,7 +72,7 @@ public class LoggingAspect {
         String methodName = joinPoint.getSignature().toShortString();
         Object[] args = joinPoint.getArgs();
 
-        log.debug("==> Executing service: {} whith args: {}", methodName, args);
+        log.debug("==> Executing service: {} with args: {}", methodName, args);
 
         long startTime = System.currentTimeMillis();
 
@@ -92,10 +92,10 @@ public class LoggingAspect {
      * Логирование перед выполнением метода репозитория
      */
     @Before("repositoryLayer()")
-    public void logBeforRepository(JoinPoint joinPoint){
+    public void logBeforeRepository(JoinPoint joinPoint){
         String methodName = joinPoint.getSignature().toShortString();
         Object[] args = joinPoint.getArgs();
-        log.debug("--- DB query: {} whith params: {}", methodName, args);
+        log.debug("--- DB query: {} with params: {}", methodName, args);
     }
 
     /**

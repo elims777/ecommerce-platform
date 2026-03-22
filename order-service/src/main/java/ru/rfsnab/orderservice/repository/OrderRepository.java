@@ -2,6 +2,7 @@ package ru.rfsnab.orderservice.repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import ru.rfsnab.orderservice.models.entity.Order;
@@ -14,6 +15,7 @@ import java.util.UUID;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, UUID> {
 
+    @EntityGraph(attributePaths = "items")
     Optional<Order> findByOrderNumber(String orderNumber);
 
     Page<Order> findByUserId(Long userId, Pageable pageable);
@@ -29,4 +31,7 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     Page<Order> findByStatusOrderByCreatedAtDesc(OrderStatus status, Pageable pageable);
+
+    @EntityGraph(attributePaths = "items")
+    Optional<Order> findWithItemsById(UUID id);
 }

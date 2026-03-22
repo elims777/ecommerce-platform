@@ -15,6 +15,11 @@ public class ProductMapper {
                 .stockQuantity(productRequest.getStockQuantity())
                 .isActive(productRequest.getIsActive())
                 .isFeatured(productRequest.getIsFeatured())
+                .externalId(productRequest.getExternalId())
+                .sku(productRequest.getSku())
+                .externalCode(productRequest.getExternalCode())
+                .unitOfMeasure(productRequest.getUnitOfMeasure())
+                .vatRate(productRequest.getVatRate())
                 .build();
     }
 
@@ -29,6 +34,11 @@ public class ProductMapper {
                 .stockQuantity(product.getStockQuantity())
                 .isActive(product.getIsActive())
                 .isFeatured(product.getIsFeatured())
+                .externalId(product.getExternalId())
+                .sku(product.getSku())
+                .externalCode(product.getExternalCode())
+                .unitOfMeasure(product.getUnitOfMeasure())
+                .vatRate(product.getVatRate())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .images(product.getImages().stream().map(ImageMapper::mapToResponse).toList())

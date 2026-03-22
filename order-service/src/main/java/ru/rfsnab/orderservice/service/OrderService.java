@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.orderservice.exception.*;
+import ru.rfsnab.orderservice.kafka.Order1CKafkaProducer;
 import ru.rfsnab.orderservice.kafka.OrderKafkaProducer;
 import ru.rfsnab.orderservice.mapper.AddressMapper;
 import ru.rfsnab.orderservice.mapper.OrderMapper;
@@ -43,6 +44,7 @@ public class OrderService {
     private final WarehousePointService warehousePointService;
     private final ProductServiceClient productServiceClient;
     private final OrderKafkaProducer kafkaProducer;
+    private final Order1CKafkaProducer order1CKafkaProducer;
 
     /** Допустимые переходы между статусами */
     private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = Map.of(
@@ -102,6 +104,7 @@ public class OrderService {
 
         // 6. Kafka event
         kafkaProducer.sendOrderCreated(order);
+        order1CKafkaProducer.sendOrderFor1C(order);
 
         return order;
     }
@@ -198,6 +201,7 @@ public class OrderService {
                     .productName(product.name())
                     .quantity(sourceItem.getQuantity())
                     .price(product.price())
+                    .externalId(product.externalId())
                     .build();
 
             newOrder.getItems().add(newItem);
@@ -228,7 +232,7 @@ public class OrderService {
      */
     @Transactional(readOnly = true)
     public Order getOrder(UUID orderId) {
-        return orderRepository.findById(orderId)
+        return orderRepository.findWithItemsById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Заказ не найден: " + orderId));
     }
 
@@ -310,6 +314,17 @@ public class OrderService {
     }
 
     /**
+     * Обновление статусов заказа для обмена с 1С
+     */
+    @Transactional
+    public Order syncFrom1C(UUID orderId, String externalId, OrderStatus newStatus) {
+        Order order = getOrder(orderId);
+        order.setExternalId(externalId);
+        order.setStatus(newStatus);
+        return orderRepository.save(order);
+    }
+
+    /**
      * Отмена заказа пользователем. Возможна только до статуса SHIPPED.
      */
     @Transactional
@@ -372,6 +387,7 @@ public class OrderService {
                     .productName(product.name())
                     .quantity(cartItem.getQuantity())
                     .price(product.price())
+                    .externalId(product.externalId())
                     .build();
 
             order.getItems().add(orderItem);
@@ -401,6 +417,7 @@ public class OrderService {
                     .productName(product.name())
                     .quantity(itemDto.quantity())
                     .price(product.price())
+                    .externalId(product.externalId())
                     .build();
 
             order.getItems().add(orderItem);
@@ -546,7 +563,7 @@ public class OrderService {
      * Получение заказа с проверкой владельца.
      */
     private Order getOrderAndValidateOwner(UUID orderId, Long userId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findWithItemsById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Заказ не найден: " + orderId));
 
         if (!order.getUserId().equals(userId)) {

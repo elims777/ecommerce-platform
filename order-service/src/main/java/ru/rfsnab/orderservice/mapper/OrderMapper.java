@@ -21,6 +21,7 @@ public class OrderMapper {
                 order.getId(),
                 order.getUserId(),
                 order.getOrderNumber(),
+                order.getExternalId(),
                 order.getStatus(),
                 order.getPaymentMethod(),
                 order.getDeliveryMethod(),
@@ -54,6 +55,7 @@ public class OrderMapper {
         return new OrderSummaryDto(
                 order.getId(),
                 order.getOrderNumber(),
+                order.getExternalId(),
                 order.getStatus(),
                 order.getItems().size(),
                 order.getTotalAmount(),

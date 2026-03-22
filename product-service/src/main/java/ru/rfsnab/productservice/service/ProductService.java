@@ -343,4 +343,8 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
+    public Product findByExternalId(String externalId) {
+        return productRepository.findByExternalId(externalId).orElseThrow(
+                ()-> new ProductNotFoundException("Товар с id= " + externalId + " не найден"));
+    }
 }

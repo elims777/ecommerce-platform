@@ -71,9 +71,11 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
 
     private static final ProductDto PRODUCT_1 = new ProductDto(
-            PRODUCT_ID_1, "Доска обрезная 50x150", new BigDecimal("1500.00"), 100, true);
+            PRODUCT_ID_1, "Доска обрезная 50x150", new BigDecimal("1500.00"),
+            100, true, "ext-001");
     private static final ProductDto PRODUCT_2 = new ProductDto(
-            PRODUCT_ID_2, "Брус 100x100", new BigDecimal("1000.00"), 50, true);
+            PRODUCT_ID_2, "Брус 100x100", new BigDecimal("1000.00"),
+            50, true, "ext-002");
 
     private final ObjectMapper jsonMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule());
@@ -177,8 +179,12 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             // Переопределяем мок — мало на складе
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(
-                    PRODUCT_ID_1, new ProductDto(PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"), 1, true),
-                    PRODUCT_ID_2, new ProductDto(PRODUCT_ID_2, "Брус", new BigDecimal("1000.00"), 100, true)
+                    PRODUCT_ID_1, new ProductDto(
+                            PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"),
+                            1, true, "ext-001"),
+                    PRODUCT_ID_2, new ProductDto(
+                            PRODUCT_ID_2, "Брус", new BigDecimal("1000.00"),
+                            100, true, "ext-002")
             ));
 
             CreateOrderRequest request = new CreateOrderRequest(
@@ -217,6 +223,28 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessageContaining("адрес");
         }
+
+        @Test
+        @DisplayName("сохраняет externalId товара при создании заказа (snapshot)")
+        void shouldSaveProductExternalIdInOrderItem() {
+            addItemsToCart();
+
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, "Тест externalId");
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
+
+            OrderItem item1 = order.getItems().stream()
+                    .filter(i -> i.getProductId().equals(PRODUCT_ID_1))
+                    .findFirst().orElseThrow();
+            assertThat(item1.getExternalId()).isEqualTo("ext-001");
+
+            OrderItem item2 = order.getItems().stream()
+                    .filter(i -> i.getProductId().equals(PRODUCT_ID_2))
+                    .findFirst().orElseThrow();
+            assertThat(item2.getExternalId()).isEqualTo("ext-002");
+        }
     }
 
     // ==================== updateOrder ====================
@@ -235,7 +263,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .deliveryMethod(DeliveryMethod.PICKUP)
                     .warehousePointId(savedWarehousePoint.getId())
                     .items(List.of(
-                            new OrderItemDto(PRODUCT_ID_1, null, 20, null, null)))
+                            new OrderItemDto(
+                                    PRODUCT_ID_1, null, 20, null, null, null)))
                     .comment("Обновлённый комментарий")
                     .build();
 
@@ -262,7 +291,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .paymentMethod(PaymentMethod.CARD)
                     .deliveryMethod(DeliveryMethod.PICKUP)
                     .warehousePointId(savedWarehousePoint.getId())
-                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null)))
+                    .items(List.of(new OrderItemDto(
+                            PRODUCT_ID_1, null, 5, null, null, null)))
                     .build();
 
             assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, request))
@@ -279,7 +309,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .paymentMethod(PaymentMethod.CARD)
                     .deliveryMethod(DeliveryMethod.PICKUP)
                     .warehousePointId(savedWarehousePoint.getId())
-                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null)))
+                    .items(List.of(new OrderItemDto(
+                            PRODUCT_ID_1, null, 5, null, null, null)))
                     .build();
 
             assertThatThrownBy(() -> orderService.updateOrder(order.getId(), 999L, request))
@@ -315,8 +346,12 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             Order original = createTestOrder();
 
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(
-                    PRODUCT_ID_1, new ProductDto(PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"), 0, true),
-                    PRODUCT_ID_2, new ProductDto(PRODUCT_ID_2, "Брус", new BigDecimal("1000.00"), 100, true)
+                    PRODUCT_ID_1, new ProductDto(
+                            PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"),
+                            0, true, "ext-001"),
+                    PRODUCT_ID_2, new ProductDto(
+                            PRODUCT_ID_2, "Брус", new BigDecimal("1000.00"),
+                            100, true, "ext-002")
             ));
 
             assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL))
@@ -382,6 +417,54 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         }
     }
 
+    // ==================== syncFrom1C ====================
+
+    @Nested
+    @DisplayName("syncFrom1C")
+    class SyncFrom1CTests {
+
+        @Test
+        @DisplayName("записывает externalId и обновляет статус")
+        void shouldSyncExternalIdAndStatus() {
+            Order order = createTestOrder();
+            assertThat(order.getExternalId()).isNull();
+
+            // Первый ответ от 1С: присваивает свой номер + ставит "В обработке"
+            Order synced = orderService.syncFrom1C(order.getId(), "РФ-000123", OrderStatus.PROCESSING);
+
+            assertThat(synced.getExternalId()).isEqualTo("РФ-000123");
+            assertThat(synced.getStatus()).isEqualTo(OrderStatus.PROCESSING);
+
+            // Проверяем что сохранено в БД
+            Order fromDb = orderRepository.findById(order.getId()).orElseThrow();
+            assertThat(fromDb.getExternalId()).isEqualTo("РФ-000123");
+            assertThat(fromDb.getStatus()).isEqualTo(OrderStatus.PROCESSING);
+        }
+
+        @Test
+        @DisplayName("обновляет статус при повторной синхронизации")
+        void shouldUpdateStatusOnReSync() {
+            Order order = createTestOrder();
+            orderService.syncFrom1C(order.getId(), "РФ-000123", OrderStatus.PROCESSING);
+
+            // Повторный вызов: 1С обновила статус
+            Order synced = orderService.syncFrom1C(order.getId(), "РФ-000123", OrderStatus.SHIPPED);
+
+            assertThat(synced.getStatus()).isEqualTo(OrderStatus.SHIPPED);
+            assertThat(synced.getExternalId()).isEqualTo("РФ-000123");
+        }
+
+        @Test
+        @DisplayName("выбрасывает исключение для несуществующего заказа")
+        void shouldThrowForNonExistentOrder() {
+            UUID fakeId = UUID.randomUUID();
+
+            assertThatThrownBy(() ->
+                    orderService.syncFrom1C(fakeId, "РФ-000999", OrderStatus.PROCESSING))
+                    .isInstanceOf(Exception.class);
+        }
+    }
+
     // ==================== Kafka events ====================
 
     @Nested
@@ -427,6 +510,31 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             assertThat(cancelEvent).isPresent();
             assertThat(cancelEvent.get().userId()).isEqualTo(USER_ID);
+        }
+
+        @Test
+        @DisplayName("ORDER_1C_EXPORT — producer вызывается при создании заказа, externalId сохранён")
+        void shouldSendOrder1CExportEvent() {
+            addItemsToCart();
+
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, "Тест 1С export");
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
+
+            // order из createOrder() — items загружены внутри @Transactional сервиса
+            assertThat(order.getItems()).isNotEmpty();
+
+            OrderItem item1 = order.getItems().stream()
+                    .filter(i -> i.getProductId().equals(PRODUCT_ID_1))
+                    .findFirst().orElseThrow();
+            assertThat(item1.getExternalId()).isEqualTo("ext-001");
+
+            OrderItem item2 = order.getItems().stream()
+                    .filter(i -> i.getProductId().equals(PRODUCT_ID_2))
+                    .findFirst().orElseThrow();
+            assertThat(item2.getExternalId()).isEqualTo("ext-002");
         }
     }
 
@@ -500,5 +608,33 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         }
 
         return events;
+    }
+
+    /**
+     * Чтение raw сообщений из Kafka топика (без десериализации в конкретный тип).
+     */
+    private List<String> consumeRawMessages(String topic, int maxMessages) {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-raw-" + UUID.randomUUID());
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+
+        List<String> messages = new ArrayList<>();
+
+        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
+            consumer.subscribe(List.of(topic));
+
+            long deadline = System.currentTimeMillis() + 15_000;
+            while (messages.size() < maxMessages && System.currentTimeMillis() < deadline) {
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
+                for (ConsumerRecord<String, String> record : records) {
+                    messages.add(record.value());
+                }
+            }
+        }
+
+        return messages;
     }
 }

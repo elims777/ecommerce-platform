@@ -22,8 +22,9 @@ public class OrderItemMapper {
                 item.getProductName(),
                 item.getQuantity(),
                 item.getPrice(),
-                subtotal
-        );
+                subtotal,
+                item.getExternalId()
+                );
     }
 
     /**
@@ -53,6 +54,7 @@ public class OrderItemMapper {
                 .productName(dto.productName())
                 .quantity(dto.quantity())
                 .price(dto.price())
+                .externalId(dto.externalId())
                 .build();
     }
 

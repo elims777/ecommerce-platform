@@ -335,6 +335,49 @@ class OrderControllerTest extends BaseIntegrationTest {
         }
     }
 
+    // ==================== PATCH /api/v1/orders/{id}/1c-sync ====================
+
+    @Nested
+    @DisplayName("PATCH /api/v1/orders/{id}/1c-sync — синхронизация с 1С")
+    class SyncFrom1CTests {
+
+        @Test
+        @DisplayName("200 OK — externalId и статус обновлены")
+        void shouldSyncFrom1C() throws Exception {
+            Order order = buildDeliveryOrder();
+            order.setExternalId("РФ-000123");
+            order.setStatus(OrderStatus.PROCESSING);
+            when(orderService.syncFrom1C(eq(ORDER_ID), eq("РФ-000123"), eq(OrderStatus.PROCESSING)))
+                    .thenReturn(order);
+
+            String json = """
+                {
+                    "externalId": "РФ-000123",
+                    "newStatus": "PROCESSING"
+                }
+                """;
+
+            mockMvc.perform(patch("/api/v1/orders/{id}/1c-sync", ORDER_ID)
+                            .with(jwtUser()).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.externalId").value("РФ-000123"))
+                    .andExpect(jsonPath("$.status.code").value("PROCESSING"));
+
+            verify(orderService).syncFrom1C(ORDER_ID, "РФ-000123", OrderStatus.PROCESSING);
+        }
+
+        @Test
+        @DisplayName("400 Bad Request — без body")
+        void shouldReturn400WithoutBody() throws Exception {
+            mockMvc.perform(patch("/api/v1/orders/{id}/1c-sync", ORDER_ID)
+                            .with(jwtUser()).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isInternalServerError());
+        }
+    }
+
     // ==================== Test data builders ====================
 
     private Order buildDeliveryOrder() {

@@ -13,6 +13,7 @@ public record OrderItemDto(
         @Min(value = 1, message = "Количество должно быть не менее 1")
         Integer quantity,
         BigDecimal price,
-        BigDecimal subtotal
+        BigDecimal subtotal,
+        String externalId
 ) {
 }

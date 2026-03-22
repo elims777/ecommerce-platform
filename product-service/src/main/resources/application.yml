@@ -70,3 +70,7 @@ springdoc:
     path: /swagger-ui.html
     operationsSorter: method
     tagsSorter: alpha
+
+product-service:
+  import:
+    chunk-size: 25
