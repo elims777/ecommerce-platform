@@ -143,18 +143,37 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/config/*</exclude>
+                        <exclude>**/dto/*</exclude>
+                        <exclude>**/model/*</exclude>
+                        <exclude>**/model/commerceml/*</exclude>
+                        <exclude>**/aspect/*</exclude>
+                        <exclude>**/exception/*</exclude>
+                        <exclude>**/IntegrationServiceApplication.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <execution>
                         <id>jacoco-check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
                         <configuration>
-                            <excludes>
-                                <exclude>**/config/**</exclude>
-                                <exclude>**/dto/**</exclude>
-                                <exclude>**/model/**</exclude>
-                                <exclude>**/aspect/**</exclude>
-                                <exclude>**/exception/**</exclude>
-                                <exclude>**/IntegrationServiceApplication.class</exclude>
-                            </excludes>
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
