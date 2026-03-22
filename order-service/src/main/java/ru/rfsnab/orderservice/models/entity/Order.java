@@ -2,6 +2,7 @@ package ru.rfsnab.orderservice.models.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
@@ -52,6 +53,7 @@ public class Order {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @BatchSize(size = 50)
     private List<OrderItem> items = new ArrayList<>();
 
     @Embedded

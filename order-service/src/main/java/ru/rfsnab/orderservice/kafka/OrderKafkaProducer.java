@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 @Component
 @RequiredArgsConstructor
 public class OrderKafkaProducer {
-    private static final String TOPIC_ORDERS = "order-events";
-    private final KafkaTemplate<String, OrderEvent> kafkaTemplate;
+    private final KafkaTopicsProperties topics;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private void send(String eventType, Order order){
         OrderEvent event = OrderEvent.builder()
@@ -29,7 +29,7 @@ public class OrderKafkaProducer {
                 .timestamp(LocalDateTime.now())
                 .build();
 
-        kafkaTemplate.send(TOPIC_ORDERS, order.getId().toString(), event);
+        kafkaTemplate.send(topics.getOrderEvents(), order.getId().toString(), event);
     }
 
     public void sendOrderCreated(Order order) {

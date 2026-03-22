@@ -31,6 +31,8 @@ spring:
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
 
   servlet:
     multipart:
@@ -78,7 +80,7 @@ app:
   kafka:
     topics:
       order-events: order-events
-
+      order-1c-export: order-1c-export
 # ===== Swagger =====
 springdoc:
   api-docs:

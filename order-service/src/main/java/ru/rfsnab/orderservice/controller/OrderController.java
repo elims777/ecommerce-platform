@@ -22,6 +22,7 @@ import ru.rfsnab.orderservice.service.WarehousePointService;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 /**
  * REST контроллер для управления заказами.

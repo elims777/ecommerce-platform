@@ -15,12 +15,19 @@ spring:
   flyway:
     enabled: false
 
+  # Kafka consumer отключён в тестах — нет контейнера Kafka
+  # Order1CEventConsumer тестируем через прямой вызов consume()
+  kafka:
+    listener:
+      auto-startup: false
+    bootstrap-servers: localhost:9999
+
 integration:
   commerceml:
     username: test_user
     password: test_pass
     file-limit: 52428800
-    temp-dir: /tmp/1c-exchange-test
+    temp-dir: ${java.io.tmpdir}/1c-exchange-test
   product-service:
     url: http://localhost:9999
     batch-size: 100

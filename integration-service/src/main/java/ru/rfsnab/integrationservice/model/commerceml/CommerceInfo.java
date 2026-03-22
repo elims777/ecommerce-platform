@@ -8,6 +8,9 @@ import jakarta.xml.bind.annotation.XmlRootElement;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Корневой элемент CommerceML 2.08.
  * Используется и для import.xml (Классификатор + Каталог),
@@ -36,4 +39,8 @@ public class CommerceInfo {
     /** Присутствует в offers.xml */
     @XmlElement(name = "ПакетПредложений")
     private OffersPackage offersPackage;
+
+    /** Документы (заказы) — для выгрузки в 1С и получения статусов */
+    @XmlElement(name = "Документ")
+    private List<CmlDocument> documents = new ArrayList<>();
 }
