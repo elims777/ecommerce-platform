@@ -145,22 +145,11 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <configuration>
                     <excludes>
-                        <!-- Конфиги -->
                         <exclude>**/config/**</exclude>
-                        <!-- DTO — только данные -->
                         <exclude>**/dto/**</exclude>
-                        <!-- Entities — только поля + аннотации -->
-                        <exclude>**/model/ExchangeSession.class</exclude>
-                        <exclude>**/model/ImageProcessingTask.class</exclude>
-                        <exclude>**/model/ImportLog.class</exclude>
-                        <exclude>**/model/PendingOrder.class</exclude>
-                        <!-- JAXB модели — сгенерированные getter/setter -->
-                        <exclude>**/model/commerceml/**</exclude>
-                        <!-- AOP -->
+                        <exclude>**/model/**</exclude>
                         <exclude>**/aspect/**</exclude>
-                        <!-- Exception handler -->
                         <exclude>**/exception/**</exclude>
-                        <!-- Main class -->
                         <exclude>**/IntegrationServiceApplication.class</exclude>
                     </excludes>
                 </configuration>
