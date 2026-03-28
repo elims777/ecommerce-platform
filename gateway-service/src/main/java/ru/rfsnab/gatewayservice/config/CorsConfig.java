@@ -22,6 +22,7 @@ public class CorsConfig {
         // Разрешённые origins — для разработки localhost
         config.setAllowedOrigins(List.of(
                 "http://localhost:3000",   // React dev server
+                "http://localhost:5173",
                 "http://localhost:8080"    // Gateway (Thymeleaf страницы)
         ));
 

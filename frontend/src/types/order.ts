@@ -1,4 +1,4 @@
-/** Способы оплаты — маппится на PaymentMethod enum */
+/** Способы оплаты */
 export enum PaymentMethod {
     CARD = 'CARD',
     SBP = 'SBP',
@@ -11,7 +11,7 @@ export const PaymentMethodLabels: Record<PaymentMethod, string> = {
     [PaymentMethod.CASH_ON_DELIVERY]: 'Оплата при получении',
 };
 
-/** Способы доставки — маппится на DeliveryMethod enum */
+/** Способы доставки */
 export enum DeliveryMethod {
     PICKUP = 'PICKUP',
     SUPPLIER_DELIVERY = 'SUPPLIER_DELIVERY',
@@ -22,7 +22,7 @@ export const DeliveryMethodLabels: Record<DeliveryMethod, string> = {
     [DeliveryMethod.SUPPLIER_DELIVERY]: 'Доставка поставщиком',
 };
 
-/** Адрес доставки — маппится на AddressDto */
+/** Адрес доставки */
 export interface AddressDto {
     city: string;
     street: string;
@@ -33,7 +33,36 @@ export interface AddressDto {
     recipientName: string;
 }
 
-/** Запрос на создание заказа — маппится на CreateOrderRequest */
+/** Статусы заказа — по Swagger */
+export enum OrderStatus {
+    CREATED = 'CREATED',
+    PENDING_PAYMENT = 'PENDING_PAYMENT',
+    PAID = 'PAID',
+    PAYMENT_FAILED = 'PAYMENT_FAILED',
+    PROCESSING = 'PROCESSING',
+    SHIPPED = 'SHIPPED',
+    IN_TRANSIT = 'IN_TRANSIT',
+    DELIVERED = 'DELIVERED',
+    CANCELLED = 'CANCELLED',
+    REFUNDED = 'REFUNDED',
+    AWAITING_CONFIRMATION = 'AWAITING_CONFIRMATION',
+}
+
+export const OrderStatusLabels: Record<OrderStatus, string> = {
+    [OrderStatus.CREATED]: 'Создан',
+    [OrderStatus.PENDING_PAYMENT]: 'Ожидает оплаты',
+    [OrderStatus.PAID]: 'Оплачен',
+    [OrderStatus.PAYMENT_FAILED]: 'Ошибка оплаты',
+    [OrderStatus.PROCESSING]: 'В обработке',
+    [OrderStatus.SHIPPED]: 'Отправлен',
+    [OrderStatus.IN_TRANSIT]: 'В пути',
+    [OrderStatus.DELIVERED]: 'Доставлен',
+    [OrderStatus.CANCELLED]: 'Отменён',
+    [OrderStatus.REFUNDED]: 'Возврат',
+    [OrderStatus.AWAITING_CONFIRMATION]: 'Ожидает подтверждения',
+};
+
+/** Запрос на создание заказа */
 export interface CreateOrderRequest {
     paymentMethod: PaymentMethod;
     deliveryMethod: DeliveryMethod;
@@ -42,50 +71,55 @@ export interface CreateOrderRequest {
     comment?: string;
 }
 
-/** Статус заказа */
-export enum OrderStatus {
-    NEW = 'NEW',
-    AWAITING_CONFIRMATION = 'AWAITING_CONFIRMATION',
-    CONFIRMED = 'CONFIRMED',
-    IN_PROGRESS = 'IN_PROGRESS',
-    SHIPPED = 'SHIPPED',
-    DELIVERED = 'DELIVERED',
-    CANCELLED = 'CANCELLED',
-}
-
-export const OrderStatusLabels: Record<OrderStatus, string> = {
-    [OrderStatus.NEW]: 'Новый',
-    [OrderStatus.AWAITING_CONFIRMATION]: 'Ожидает подтверждения',
-    [OrderStatus.CONFIRMED]: 'Подтверждён',
-    [OrderStatus.IN_PROGRESS]: 'В обработке',
-    [OrderStatus.SHIPPED]: 'Отправлен',
-    [OrderStatus.DELIVERED]: 'Доставлен',
-    [OrderStatus.CANCELLED]: 'Отменён',
-};
-
 /** Позиция заказа */
 export interface OrderItemDto {
-    id: number;
     productId: number;
     productName: string;
     quantity: number;
     price: number;
-    totalPrice: number;
+    subtotal: number;
 }
 
-/** Заказ — ответ от order-service */
-export interface OrderDto {
+/** Точка самовывоза */
+export interface WarehousePointDto {
     id: number;
-    orderNumber: string;
+    name: string;
+    city: string;
+    street: string;
+    building: string;
+    postalCode: string;
+    phone: string;
+    workingHours: string;
+    description: string;
+    active: boolean;
+}
+
+/** Полный заказ — id это UUID (string) */
+export interface OrderDto {
+    id: string;
     userId: number;
-    customerEmail: string;
+    orderNumber: string;
     status: OrderStatus;
     paymentMethod: PaymentMethod;
     deliveryMethod: DeliveryMethod;
     totalAmount: number;
     items: OrderItemDto[];
     deliveryAddress?: AddressDto;
+    warehousePoint?: WarehousePointDto;
+    trackingNumber?: string;
+    customerEmail: string;
     comment?: string;
     createdAt: string;
     updatedAt: string;
+}
+
+/** Краткая сводка заказа — для списка */
+export interface OrderSummaryDto {
+    id: string;
+    orderNumber: string;
+    status: OrderStatus;
+    itemsCount: number;
+    totalAmount: number;
+    customerEmail: string;
+    createdAt: string;
 }

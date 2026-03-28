@@ -5,7 +5,6 @@ import {
     Input,
     Button,
     Typography,
-    Spin,
     Descriptions,
     Space,
     Tag,
@@ -18,8 +17,9 @@ import {
     SaveOutlined,
     CloseOutlined,
 } from '@ant-design/icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getProfile, updateProfile } from '@/api/profile';
+import { useMutation } from '@tanstack/react-query';
+import { useAuthStore } from '@/store/authStore';
+import { updateProfile } from '@/api/profile';
 import type { UpdateProfileRequest } from '@/api/profile';
 import type { AxiosError } from 'axios';
 
@@ -29,22 +29,15 @@ const ProfilePage = () => {
     const [editing, setEditing] = useState(false);
     const [form] = Form.useForm<UpdateProfileRequest>();
     const { message: messageApi } = App.useApp();
-    const queryClient = useQueryClient();
+    const user = useAuthStore((state) => state.user);
 
-    // Загрузка профиля
-    const { data: profile, isLoading } = useQuery({
-        queryKey: ['profile'],
-        queryFn: getProfile,
-    });
-
-    // Мутация для обновления профиля
     const updateMutation = useMutation({
         mutationFn: (values: UpdateProfileRequest) =>
-            updateProfile(profile!.id, values),
+            updateProfile(user!.id, values),
         onSuccess: () => {
             messageApi.success('Профиль обновлён');
-            queryClient.invalidateQueries({ queryKey: ['profile'] });
             setEditing(false);
+            // TODO: обновить user в authStore после редактирования
         },
         onError: (error: AxiosError<{ message?: string }>) => {
             const errorMessage =
@@ -54,11 +47,11 @@ const ProfilePage = () => {
     });
 
     const handleEdit = () => {
-        if (profile) {
+        if (user) {
             form.setFieldsValue({
-                firstname: profile.firstname,
-                lastname: profile.lastname,
-                surname: profile.surname || '',
+                firstname: user.firstname,
+                lastname: user.lastname,
+                surname: user.surname || '',
             });
         }
         setEditing(true);
@@ -73,23 +66,16 @@ const ProfilePage = () => {
         form.resetFields();
     };
 
-    /** Форматирует дату */
-    const formatDate = (dateStr: string): string =>
-        new Date(dateStr).toLocaleDateString('ru-RU', {
+    const formatDate = (dateStr: string): string => {
+        if (!dateStr) return '—';
+        return new Date(dateStr).toLocaleDateString('ru-RU', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
         });
+    };
 
-    if (isLoading) {
-        return (
-            <div style={{ textAlign: 'center', padding: 120 }}>
-                <Spin size="large" tip="Загрузка профиля..." />
-            </div>
-        );
-    }
-
-    if (!profile) return null;
+    if (!user) return null;
 
     return (
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
@@ -97,7 +83,6 @@ const ProfilePage = () => {
                 Профиль
             </Title>
 
-            {/* Основная информация */}
             <Card
                 title={
                     <Space>
@@ -163,19 +148,18 @@ const ProfilePage = () => {
                 ) : (
                     <Descriptions column={1} labelStyle={{ width: 150 }}>
                         <Descriptions.Item label="Фамилия">
-                            {profile.lastname}
+                            {user.lastname}
                         </Descriptions.Item>
                         <Descriptions.Item label="Имя">
-                            {profile.firstname}
+                            {user.firstname}
                         </Descriptions.Item>
                         <Descriptions.Item label="Отчество">
-                            {profile.surname || '—'}
+                            {user.surname || '—'}
                         </Descriptions.Item>
                     </Descriptions>
                 )}
             </Card>
 
-            {/* Email и аккаунт */}
             <Card
                 title={
                     <Space>
@@ -187,8 +171,8 @@ const ProfilePage = () => {
                 <Descriptions column={1} labelStyle={{ width: 150 }}>
                     <Descriptions.Item label="Email">
                         <Space>
-                            <Text>{profile.email}</Text>
-                            {profile.emailVerified ? (
+                            <Text>{user.email}</Text>
+                            {user.emailVerified ? (
                                 <Tag color="green">Подтверждён</Tag>
                             ) : (
                                 <Tag color="orange">Не подтверждён</Tag>
@@ -196,7 +180,7 @@ const ProfilePage = () => {
                         </Space>
                     </Descriptions.Item>
                     <Descriptions.Item label="Дата регистрации">
-                        {formatDate(profile.createdAt)}
+                        {formatDate(user.createdAt)}
                     </Descriptions.Item>
                 </Descriptions>
             </Card>

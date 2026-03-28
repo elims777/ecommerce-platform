@@ -175,6 +175,7 @@ services:
     ports:
       - "8081:8081"
     environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
@@ -182,6 +183,8 @@ services:
       LOGGING_FILE_NAME: ""
     depends_on:
       user-db:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - ecommerce-net
@@ -288,6 +291,7 @@ services:
       PRODUCT_SERVICE_URL: http://product-service:8083
       PAYMENT_SERVICE_URL: http://payment-service:8090
       LOGGING_FILE_NAME: ""
+      SECRET_JWT: ${SECRET_JWT}
     depends_on:
       order-db:
         condition: service_healthy

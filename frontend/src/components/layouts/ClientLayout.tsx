@@ -12,7 +12,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
-import { UserRole } from '@/types/auth';
+import { isAdmin } from '@/types/auth'
 import type { MenuProps } from 'antd';
 
 const { Content, Footer } = Layout;
@@ -79,7 +79,7 @@ const ClientLayout = () => {
             label: 'Профиль',
             onClick: () => navigate('/profile'),
         },
-        ...(user?.role === UserRole.ADMIN
+        ...(user && isAdmin(user)
             ? [
                 { type: 'divider' as const },
                 {
@@ -154,8 +154,8 @@ const ClientLayout = () => {
                         src="/logo.png"
                         alt="РФснаб"
                         style={{
-                            width: LOGO_SIZE * 0.55,
-                            height: LOGO_SIZE * 0.55,
+                            width: LOGO_SIZE * 1.2,
+                            height: LOGO_SIZE * 1.2,
                             objectFit: 'contain',
                             position: 'relative',
                             zIndex: 2,
@@ -182,7 +182,7 @@ const ClientLayout = () => {
                                 icon={<UserOutlined style={{ fontSize: 18 }} />}
                                 style={{ fontWeight: 500 }}
                             >
-                                {user?.firstName}
+                                {user?.firstname}
                             </Button>
                         </Dropdown>
                     ) : (

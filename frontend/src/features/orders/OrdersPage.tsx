@@ -10,23 +10,21 @@ import {
     Descriptions,
     Pagination,
 } from 'antd';
-import {
-    ShoppingOutlined,
-} from '@ant-design/icons';
+import { ShoppingOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { getMyOrders } from '@/api/orders';
+import { getMyOrders, getOrderById } from '@/api/orders';
 import {
     OrderStatusLabels,
     PaymentMethodLabels,
     DeliveryMethodLabels,
 } from '@/types/order';
-import type { OrderDto, OrderItemDto, OrderStatus } from '@/types/order';
+import type { OrderSummaryDto, OrderDto, OrderItemDto, OrderStatus } from '@/types/order';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Title, Text } = Typography;
 
-/** Форматирует цену в рубли */
+/** Форматирует цену */
 const formatPrice = (price: number): string =>
     new Intl.NumberFormat('ru-RU', {
         style: 'currency',
@@ -45,16 +43,20 @@ const formatDate = (dateStr: string): string =>
         minute: '2-digit',
     });
 
-/** Цвет тега по статусу заказа */
+/** Цвет тега по статусу */
 const getStatusColor = (status: OrderStatus): string => {
     const colors: Record<string, string> = {
-        NEW: 'blue',
-        AWAITING_CONFIRMATION: 'orange',
-        CONFIRMED: 'cyan',
-        IN_PROGRESS: 'processing',
+        CREATED: 'blue',
+        PENDING_PAYMENT: 'orange',
+        PAID: 'cyan',
+        PAYMENT_FAILED: 'red',
+        PROCESSING: 'processing',
         SHIPPED: 'purple',
+        IN_TRANSIT: 'geekblue',
         DELIVERED: 'green',
-        CANCELLED: 'red',
+        CANCELLED: 'default',
+        REFUNDED: 'magenta',
+        AWAITING_CONFIRMATION: 'gold',
     };
     return colors[status] || 'default';
 };
@@ -62,6 +64,12 @@ const getStatusColor = (status: OrderStatus): string => {
 const OrdersPage = () => {
     const navigate = useNavigate();
     const [currentPage, setCurrentPage] = useState(1);
+    const [expandedOrderDetails, setExpandedOrderDetails] = useState<
+        Record<string, OrderDto>
+    >({});
+    const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>(
+        {},
+    );
     const pageSize = 10;
 
     const {
@@ -73,15 +81,25 @@ const OrdersPage = () => {
         queryFn: () => getMyOrders(currentPage - 1, pageSize),
     });
 
-    // Колонки таблицы заказов
-    const columns: ColumnsType<OrderDto> = [
+    // Загрузка деталей заказа при раскрытии строки
+    const loadOrderDetails = async (orderId: string) => {
+        if (expandedOrderDetails[orderId]) return;
+        setLoadingDetails((prev) => ({ ...prev, [orderId]: true }));
+        try {
+            const order = await getOrderById(orderId);
+            setExpandedOrderDetails((prev) => ({ ...prev, [orderId]: order }));
+        } finally {
+            setLoadingDetails((prev) => ({ ...prev, [orderId]: false }));
+        }
+    };
+
+    // Колонки для списка заказов (OrderSummaryDto)
+    const columns: ColumnsType<OrderSummaryDto> = [
         {
             title: '№ заказа',
             dataIndex: 'orderNumber',
             key: 'orderNumber',
-            render: (orderNumber: string) => (
-                <Text strong>{orderNumber}</Text>
-            ),
+            render: (orderNumber: string) => <Text strong>{orderNumber}</Text>,
         },
         {
             title: 'Дата',
@@ -102,20 +120,10 @@ const OrdersPage = () => {
             ),
         },
         {
-            title: 'Оплата',
-            dataIndex: 'paymentMethod',
-            key: 'paymentMethod',
-            width: 200,
-            render: (method: string) =>
-                PaymentMethodLabels[method as keyof typeof PaymentMethodLabels] || method,
-        },
-        {
-            title: 'Доставка',
-            dataIndex: 'deliveryMethod',
-            key: 'deliveryMethod',
-            width: 180,
-            render: (method: string) =>
-                DeliveryMethodLabels[method as keyof typeof DeliveryMethodLabels] || method,
+            title: 'Позиций',
+            dataIndex: 'itemsCount',
+            key: 'itemsCount',
+            width: 100,
         },
         {
             title: 'Сумма',
@@ -130,15 +138,28 @@ const OrdersPage = () => {
         },
     ];
 
-    // Раскрываемые строки — детали заказа
-    const expandedRowRender = (order: OrderDto) => {
+    // Раскрытие строки — полные детали заказа
+    const expandedRowRender = (record: OrderSummaryDto) => {
+        const order = expandedOrderDetails[record.id];
+        const loading = loadingDetails[record.id];
+
+        if (loading) {
+            return (
+                <div style={{ textAlign: 'center', padding: 24 }}>
+                    <Spin />
+                </div>
+            );
+        }
+
+        if (!order) return null;
+
         const itemColumns: ColumnsType<OrderItemDto> = [
             {
                 title: 'Товар',
                 dataIndex: 'productName',
                 key: 'productName',
-                render: (name: string, record) => (
-                    <a onClick={() => navigate(`/products/${record.productId}`)}>
+                render: (name: string, item) => (
+                    <a onClick={() => navigate(`/products/${item.productId}`)}>
                         {name}
                     </a>
                 ),
@@ -158,12 +179,10 @@ const OrdersPage = () => {
             },
             {
                 title: 'Сумма',
-                dataIndex: 'totalPrice',
-                key: 'totalPrice',
+                dataIndex: 'subtotal',
+                key: 'subtotal',
                 width: 130,
-                render: (total: number) => (
-                    <Text strong>{formatPrice(total)}</Text>
-                ),
+                render: (subtotal: number) => <Text strong>{formatPrice(subtotal)}</Text>,
             },
         ];
 
@@ -172,14 +191,19 @@ const OrdersPage = () => {
                 <Table<OrderItemDto>
                     columns={itemColumns}
                     dataSource={order.items}
-                    rowKey="id"
+                    rowKey="productId"
                     pagination={false}
                     size="small"
                     style={{ marginBottom: 16 }}
                 />
 
-                {/* Адрес и комментарий */}
                 <Descriptions size="small" column={2}>
+                    <Descriptions.Item label="Способ оплаты">
+                        {PaymentMethodLabels[order.paymentMethod] || order.paymentMethod}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Способ доставки">
+                        {DeliveryMethodLabels[order.deliveryMethod] || order.deliveryMethod}
+                    </Descriptions.Item>
                     {order.deliveryAddress && (
                         <>
                             <Descriptions.Item label="Получатель">
@@ -203,6 +227,17 @@ const OrdersPage = () => {
                             </Descriptions.Item>
                         </>
                     )}
+                    {order.warehousePoint && (
+                        <Descriptions.Item label="Точка самовывоза" span={2}>
+                            {order.warehousePoint.name} — {order.warehousePoint.city},{' '}
+                            {order.warehousePoint.street}, д. {order.warehousePoint.building}
+                        </Descriptions.Item>
+                    )}
+                    {order.trackingNumber && (
+                        <Descriptions.Item label="Трекинг" span={2}>
+                            {order.trackingNumber}
+                        </Descriptions.Item>
+                    )}
                     {order.comment && (
                         <Descriptions.Item label="Комментарий" span={2}>
                             {order.comment}
@@ -216,7 +251,7 @@ const OrdersPage = () => {
     if (isLoading) {
         return (
             <div style={{ textAlign: 'center', padding: 120 }}>
-                <Spin size="large" tip="Загрузка заказов..." />
+                <Spin size="large" />
             </div>
         );
     }
@@ -251,7 +286,7 @@ const OrdersPage = () => {
             </Title>
 
             <Card>
-                <Table<OrderDto>
+                <Table<OrderSummaryDto>
                     columns={columns}
                     dataSource={ordersPage.content}
                     rowKey="id"
@@ -259,6 +294,11 @@ const OrdersPage = () => {
                     expandable={{
                         expandedRowRender,
                         expandRowByClick: true,
+                        onExpand: (expanded, record) => {
+                            if (expanded) {
+                                loadOrderDetails(record.id);
+                            }
+                        },
                     }}
                 />
 

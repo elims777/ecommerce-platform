@@ -6,9 +6,9 @@ import {
     UserOutlined,
 } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
 import type { RegisterRequest } from '@/types/auth';
 import type { AxiosError } from 'axios';
+import { register } from '@/api/auth';
 
 const { Title, Text } = Typography;
 
@@ -22,21 +22,20 @@ interface RegisterFormValues extends RegisterRequest {
 const RegisterPage = () => {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const register = useAuthStore((state) => state.register);
     const { message: messageApi } = App.useApp();
 
     const handleSubmit = async (values: RegisterFormValues) => {
         setLoading(true);
         try {
-            // confirmPassword не отправляется на бэкенд
-            const { confirmPassword: _, privacyPolicy: __, personalData: ___, ...request } = values;
+            const { confirmPassword: _, ...request } = values;
             await register(request);
-            messageApi.success('Регистрация прошла успешно!');
-            navigate('/', { replace: true });
+            messageApi.success('Регистрация прошла успешно! Проверьте почту для подтверждения аккаунта.');
+            navigate('/login', { replace: true });
         } catch (error) {
-            const axiosError = error as AxiosError<{ message?: string }>;
+            const axiosError = error as AxiosError<{ message?: string; error?: string }>;
             const errorMessage =
                 axiosError.response?.data?.message ||
+                axiosError.response?.data?.error ||
                 'Ошибка при регистрации. Попробуйте позже.';
             messageApi.error(errorMessage);
         } finally {
@@ -75,7 +74,7 @@ const RegisterPage = () => {
                     <Row gutter={12}>
                         <Col span={12}>
                             <Form.Item
-                                name="firstName"
+                                name="firstname"
                                 rules={[
                                     { required: true, message: 'Введите имя' },
                                     { min: 2, message: 'Минимум 2 символа' },
@@ -86,7 +85,7 @@ const RegisterPage = () => {
                         </Col>
                         <Col span={12}>
                             <Form.Item
-                                name="lastName"
+                                name="lastname"
                                 rules={[
                                     { required: true, message: 'Введите фамилию' },
                                     { min: 2, message: 'Минимум 2 символа' },
@@ -111,7 +110,7 @@ const RegisterPage = () => {
                         name="password"
                         rules={[
                             { required: true, message: 'Введите пароль' },
-                            { min: 6, message: 'Минимум 6 символов' },
+                            { min: 8, message: 'Минимум 8 символов' },
                         ]}
                     >
                         <Input.Password prefix={<LockOutlined />} placeholder="Пароль" />
@@ -185,8 +184,17 @@ const RegisterPage = () => {
                     </Form.Item>
                 </Form>
 
-                <Divider />
 
+                <Divider plain>или</Divider>
+
+                <Button
+                    block
+                    size="large"
+                    style={{ marginBottom: 16 }}
+                    onClick={() => window.location.href = '/auth/oauth2/register/yandex'}
+                >
+                    Зарегистрироваться через Яндекс
+                </Button>
                 <div style={{ textAlign: 'center' }}>
                     <Text>Уже есть аккаунт? </Text>
                     <Link to="/login">Войти</Link>

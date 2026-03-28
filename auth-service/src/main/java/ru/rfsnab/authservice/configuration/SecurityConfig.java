@@ -89,6 +89,7 @@ public class SecurityConfig {
                                 "/auth/**",
                                 "/profile",
                                 "/swagger-ui/**",
+                                "/verify-email",
                                 "/api-docs/**",
                                 "/swagger-ui.html").permitAll()  // Разрешаем главную страницу и auth pages
                         .anyRequest().authenticated()

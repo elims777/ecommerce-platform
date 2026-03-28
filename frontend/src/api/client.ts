@@ -1,4 +1,4 @@
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -7,6 +7,7 @@ const apiClient = axios.create({
     timeout: 15000,
     headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
     },
 });
 
@@ -22,7 +23,9 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error),
 );
 
-// Response interceptor — обрабатывает 401 (token expired) и делает refresh
+// Response interceptor — обрабатывает 401
+// НЕ делает автоматический redirect и НЕ чистит токены агрессивно.
+// Это ответственность authStore.
 apiClient.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
@@ -30,35 +33,43 @@ apiClient.interceptors.response.use(
             _retry?: boolean;
         };
 
-        // Если 401 и это не повторный запрос и не сам refresh-запрос
         if (
             error.response?.status === 401 &&
             !originalRequest._retry &&
-            !originalRequest.url?.includes('/auth/refresh')
+            !originalRequest.url?.includes('/auth/refresh') &&
+            !originalRequest.url?.includes('/auth/login')
         ) {
             originalRequest._retry = true;
 
-            try {
-                const refreshToken = localStorage.getItem('refreshToken');
-                if (!refreshToken) {
-                    throw new Error('No refresh token');
-                }
+            const refreshToken = localStorage.getItem('refreshToken');
+            if (!refreshToken) {
+                return Promise.reject(error);
+            }
 
+            try {
                 const { data } = await axios.post(
                     `${API_BASE_URL}/v1/auth/refresh`,
-                    { refreshToken },
+                    null,
+                    {
+                        params: { refreshToken },
+                        headers: { 'Accept': 'application/json' },
+                    },
                 );
 
-                localStorage.setItem('accessToken', data.accessToken);
-                localStorage.setItem('refreshToken', data.refreshToken);
+                const newAccessToken = data.access_token || data.accessToken;
+                const newRefreshToken = data.refresh_token || data.refreshToken;
 
-                originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+                if (newAccessToken) {
+                    localStorage.setItem('accessToken', newAccessToken);
+                }
+                if (newRefreshToken) {
+                    localStorage.setItem('refreshToken', newRefreshToken);
+                }
+
+                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
                 return apiClient(originalRequest);
             } catch {
-                // Refresh не удался — разлогиниваем
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                window.location.href = '/login';
+                // Refresh не удался — просто reject, authStore разберётся
                 return Promise.reject(error);
             }
         }

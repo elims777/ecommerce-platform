@@ -35,18 +35,15 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private final SecretKey signingKey;
 
     private static final List<String> PUBLIC_PATHS = List.of(
-            "/v1/auth/login",
-            "/v1/auth/refresh",
+            "/api/v1/auth/login",
+            "/api/v1/auth/refresh",
             "/api/v1/register",
             "/auth/",
             "/auth/login-form",
             "/auth/register",
             "/oauth2/",
             "/verify-email",
-            "/api/verification/",
-            "/",
-            "/api/v1/products",
-            "/api/v1/categories"
+            "/api/verification/"
     );
 
 

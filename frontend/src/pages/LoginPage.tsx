@@ -70,7 +70,7 @@ const LoginPage = () => {
                         name="password"
                         rules={[
                             { required: true, message: 'Введите пароль' },
-                            { min: 6, message: 'Минимум 6 символов' },
+                            { min: 8, message: 'Минимум 8 символов' },
                         ]}
                     >
                         <Input.Password prefix={<LockOutlined />} placeholder="Пароль" />
@@ -83,8 +83,17 @@ const LoginPage = () => {
                     </Form.Item>
                 </Form>
 
-                <Divider />
 
+                <Divider plain>или</Divider>
+
+                <Button
+                    block
+                    size="large"
+                    style={{ marginBottom: 16 }}
+                    onClick={() => window.location.href = '/oauth2/authorization/yandex'}
+                >
+                    Войти через Яндекс
+                </Button>
                 <div style={{ textAlign: 'center' }}>
                     <Text>Нет аккаунта? </Text>
                     <Link to="/register">Зарегистрироваться</Link>

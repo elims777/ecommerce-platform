@@ -1,16 +1,5 @@
 import apiClient from './client';
-
-/** Профиль пользователя — маппится на UserDto */
-export interface UserProfile {
-    id: number;
-    email: string;
-    firstname: string;
-    lastname: string;
-    surname: string | null;
-    emailVerified: boolean;
-    createdAt: string;
-    updatedAt: string;
-}
+import type { User } from '@/types/auth';
 
 /** Данные для обновления профиля */
 export interface UpdateProfileRequest {
@@ -19,30 +8,20 @@ export interface UpdateProfileRequest {
     surname?: string;
 }
 
-/** Получить профиль текущего пользователя */
-export const getProfile = async (): Promise<UserProfile> => {
-    const { data } = await apiClient.get<UserProfile>('/v1/users/me');
+/** Получить профиль текущего пользователя (через auth-service → user-service) */
+export const getProfile = async (): Promise<User> => {
+    const { data } = await apiClient.get<User>('/v1/auth/me');
     return data;
 };
 
-/** Обновить профиль */
+/** Обновить профиль (напрямую в user-service) */
 export const updateProfile = async (
     userId: number,
     request: UpdateProfileRequest,
-): Promise<UserProfile> => {
-    const { data } = await apiClient.put<UserProfile>(
+): Promise<User> => {
+    const { data } = await apiClient.put<User>(
         `/v1/users/${userId}`,
         request,
     );
     return data;
-};
-
-/** Сменить пароль */
-export const changePassword = async (
-    userId: number,
-    newPassword: string,
-): Promise<void> => {
-    await apiClient.put(`/v1/users/${userId}`, {
-        password: newPassword,
-    });
 };
