@@ -65,7 +65,9 @@ public class UserService {
                 .map(
                         userEntity -> {
                             userEntity.setEmail(user.getEmail());
-                            userEntity.setPassword(passwordEncoder.encode(user.getPassword()));
+                            if (user.getPassword() != null && !user.getPassword().isBlank()) {
+                                userEntity.setPassword(passwordEncoder.encode(user.getPassword()));
+                            }
                             userEntity.setFirstname(user.getFirstname());
                             userEntity.setLastname(user.getLastname());
                             userEntity.setSurname(user.getSurname());

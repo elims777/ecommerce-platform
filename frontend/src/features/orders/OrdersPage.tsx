@@ -19,6 +19,7 @@ import {
     PaymentMethodLabels,
     DeliveryMethodLabels,
 } from '@/types/order';
+import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
 import type { OrderSummaryDto, OrderDto, OrderItemDto, OrderStatus } from '@/types/order';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -44,7 +45,7 @@ const formatDate = (dateStr: string): string =>
     });
 
 /** Цвет тега по статусу */
-const getStatusColor = (status: OrderStatus): string => {
+const getStatusColor = (status: string): string => {
     const colors: Record<string, string> = {
         CREATED: 'blue',
         PENDING_PAYMENT: 'orange',
@@ -81,7 +82,6 @@ const OrdersPage = () => {
         queryFn: () => getMyOrders(currentPage - 1, pageSize),
     });
 
-    // Загрузка деталей заказа при раскрытии строки
     const loadOrderDetails = async (orderId: string) => {
         if (expandedOrderDetails[orderId]) return;
         setLoadingDetails((prev) => ({ ...prev, [orderId]: true }));
@@ -93,7 +93,6 @@ const OrdersPage = () => {
         }
     };
 
-    // Колонки для списка заказов (OrderSummaryDto)
     const columns: ColumnsType<OrderSummaryDto> = [
         {
             title: '№ заказа',
@@ -113,11 +112,11 @@ const OrdersPage = () => {
             dataIndex: 'status',
             key: 'status',
             width: 200,
-            render: (status: OrderStatus | { code: string; displayName: string }) => {
-                const code = typeof status === 'string' ? status : status.code;
+            render: (status: unknown) => {
+                const code = extractEnumCode(status);
                 return (
-                    <Tag color={getStatusColor(code as OrderStatus)}>
-                        {OrderStatusLabels[code as OrderStatus] || (typeof status === 'string' ? status : status.displayName)}
+                    <Tag color={getStatusColor(code)}>
+                        {OrderStatusLabels[code as OrderStatus] || extractEnumDisplayName(status, code)}
                     </Tag>
                 );
             },
@@ -141,7 +140,6 @@ const OrdersPage = () => {
         },
     ];
 
-    // Раскрытие строки — полные детали заказа
     const expandedRowRender = (record: OrderSummaryDto) => {
         const order = expandedOrderDetails[record.id];
         const loading = loadingDetails[record.id];
@@ -189,6 +187,9 @@ const OrdersPage = () => {
             },
         ];
 
+        const paymentCode = extractEnumCode(order.paymentMethod);
+        const deliveryCode = extractEnumCode(order.deliveryMethod);
+
         return (
             <div style={{ padding: '0 16px' }}>
                 <Table<OrderItemDto>
@@ -202,14 +203,12 @@ const OrdersPage = () => {
 
                 <Descriptions size="small" column={2}>
                     <Descriptions.Item label="Способ оплаты">
-                        {typeof order.paymentMethod === 'string'
-                            ? (PaymentMethodLabels[order.paymentMethod] || order.paymentMethod)
-                            : (order.paymentMethod as any).displayName}
+                        {PaymentMethodLabels[paymentCode as keyof typeof PaymentMethodLabels] ||
+                            extractEnumDisplayName(order.paymentMethod)}
                     </Descriptions.Item>
                     <Descriptions.Item label="Способ доставки">
-                        {typeof order.deliveryMethod === 'string'
-                            ? (DeliveryMethodLabels[order.deliveryMethod] || order.deliveryMethod)
-                            : (order.deliveryMethod as any).displayName}
+                        {DeliveryMethodLabels[deliveryCode as keyof typeof DeliveryMethodLabels] ||
+                            extractEnumDisplayName(order.deliveryMethod)}
                     </Descriptions.Item>
                     {order.deliveryAddress && (
                         <>

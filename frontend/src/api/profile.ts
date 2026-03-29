@@ -19,9 +19,11 @@ export const updateProfile = async (
     userId: number,
     request: UpdateProfileRequest,
 ): Promise<User> => {
+    // Сначала получаем текущие данные, чтобы не затереть email и другие поля
+    const current = await getProfile();
     const { data } = await apiClient.put<User>(
         `/v1/users/${userId}`,
-        request,
+        { ...current, ...request },
     );
     return data;
 };

@@ -9,6 +9,7 @@ import {
     Radio,
     Button,
     Typography,
+    Divider,
     Table,
     App,
     Steps,
@@ -21,9 +22,12 @@ import {
     CreditCardOutlined,
     CheckCircleOutlined,
 } from '@ant-design/icons';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cartStore';
+import { useAuthStore } from '@/store/authStore';
 import { createOrder } from '@/api/orders';
+import { getWarehousePoints } from '@/api/warehouse';
 import {
     DeliveryMethod,
     DeliveryMethodLabels,
@@ -38,6 +42,7 @@ import type { ColumnsType } from 'antd/es/table';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
+/** Форматирует цену */
 const formatPrice = (price: number): string =>
     new Intl.NumberFormat('ru-RU', {
         style: 'currency',
@@ -49,6 +54,7 @@ const formatPrice = (price: number): string =>
 interface CheckoutFormValues {
     paymentMethod: PaymentMethod;
     deliveryMethod: DeliveryMethod;
+    warehousePointId?: number;
     city?: string;
     street?: string;
     building?: string;
@@ -65,14 +71,35 @@ const CheckoutPage = () => {
     const [orderNumber, setOrderNumber] = useState<string | null>(null);
     const navigate = useNavigate();
     const { message: messageApi } = App.useApp();
-    const { items, totalAmount, isLoading, fetchCart, resetCart } = useCartStore();
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const user = useAuthStore((state) => state.user);
+    const { items, totalAmount, fetchCart, clearCart } = useCartStore();
 
     const deliveryMethod = Form.useWatch('deliveryMethod', form);
 
-    // Загружаем корзину с сервера
+    // Загружаем серверную корзину
     useEffect(() => {
-        fetchCart();
-    }, [fetchCart]);
+        if (isAuthenticated) {
+            fetchCart();
+        }
+    }, [isAuthenticated, fetchCart]);
+
+    // Автозаполнение ФИО получателя из профиля
+    useEffect(() => {
+        if (user) {
+            const fullName = [user.lastname, user.firstname, user.surname]
+                .filter(Boolean)
+                .join(' ');
+            form.setFieldValue('recipientName', fullName);
+        }
+    }, [user, form]);
+
+    // Загрузка точек самовывоза
+    const { data: warehousePoints = [], isLoading: warehouseLoading } = useQuery({
+        queryKey: ['warehousePoints'],
+        queryFn: getWarehousePoints,
+        staleTime: 5 * 60 * 1000,
+    });
 
     const handleSubmit = async (values: CheckoutFormValues) => {
         setLoading(true);
@@ -95,8 +122,12 @@ const CheckoutPage = () => {
                 };
             }
 
+            if (values.deliveryMethod === DeliveryMethod.PICKUP && values.warehousePointId) {
+                request.warehousePointId = values.warehousePointId;
+            }
+
             const order = await createOrder(request);
-            resetCart();
+            await clearCart();
             setOrderNumber(order.orderNumber);
         } catch (error) {
             const axiosError = error as AxiosError<{ message?: string }>;
@@ -153,14 +184,6 @@ const CheckoutPage = () => {
         );
     }
 
-    if (isLoading) {
-        return (
-            <div style={{ textAlign: 'center', padding: 120 }}>
-                <Spin size="large" />
-            </div>
-        );
-    }
-
     if (items.length === 0) {
         return (
             <Result
@@ -203,6 +226,7 @@ const CheckoutPage = () => {
             >
                 <Row gutter={24}>
                     <Col xs={24} lg={14}>
+                        {/* Способ доставки */}
                         <Card
                             title={
                                 <span>
@@ -213,7 +237,9 @@ const CheckoutPage = () => {
                         >
                             <Form.Item
                                 name="deliveryMethod"
-                                rules={[{ required: true, message: 'Выберите способ доставки' }]}
+                                rules={[
+                                    { required: true, message: 'Выберите способ доставки' },
+                                ]}
                             >
                                 <Radio.Group>
                                     {Object.entries(DeliveryMethodLabels).map(([key, label]) => (
@@ -224,14 +250,59 @@ const CheckoutPage = () => {
                                 </Radio.Group>
                             </Form.Item>
 
+                            {/* Точки самовывоза */}
+                            {deliveryMethod === DeliveryMethod.PICKUP && (
+                                <>
+                                    <Divider plain>Точка самовывоза</Divider>
+                                    {warehouseLoading ? (
+                                        <div style={{ textAlign: 'center', padding: 16 }}>
+                                            <Spin />
+                                        </div>
+                                    ) : warehousePoints.length > 0 ? (
+                                        <Form.Item
+                                            name="warehousePointId"
+                                            rules={[
+                                                { required: true, message: 'Выберите точку самовывоза' },
+                                            ]}
+                                        >
+                                            <Select
+                                                placeholder="Выберите точку самовывоза"
+                                                size="large"
+                                            >
+                                                {warehousePoints.map((point) => (
+                                                    <Select.Option key={point.id} value={point.id}>
+                                                        <div>
+                                                            <Text strong>{point.name}</Text>
+                                                            <br />
+                                                            <Text type="secondary">
+                                                                {point.city}, {point.street}, д. {point.building}
+                                                                {point.workingHours && ` | ${point.workingHours}`}
+                                                            </Text>
+                                                        </div>
+                                                    </Select.Option>
+                                                ))}
+                                            </Select>
+                                        </Form.Item>
+                                    ) : (
+                                        <Text type="secondary">
+                                            Нет доступных точек самовывоза. Выберите доставку.
+                                        </Text>
+                                    )}
+                                </>
+                            )}
+
+                            {/* Адрес доставки */}
                             {deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY && (
                                 <>
+                                    <Divider plain>Адрес доставки</Divider>
                                     <Row gutter={12}>
                                         <Col span={12}>
                                             <Form.Item
                                                 name="recipientName"
                                                 label="Получатель"
-                                                rules={[{ required: true, message: 'Укажите получателя' }]}
+                                                rules={[
+                                                    { required: true, message: 'Укажите получателя' },
+                                                ]}
                                             >
                                                 <Input placeholder="ФИО получателя" />
                                             </Form.Item>
@@ -240,7 +311,9 @@ const CheckoutPage = () => {
                                             <Form.Item
                                                 name="phone"
                                                 label="Телефон"
-                                                rules={[{ required: true, message: 'Укажите телефон' }]}
+                                                rules={[
+                                                    { required: true, message: 'Укажите телефон' },
+                                                ]}
                                             >
                                                 <Input placeholder="+7 (___) ___-__-__" />
                                             </Form.Item>
@@ -291,6 +364,7 @@ const CheckoutPage = () => {
                             )}
                         </Card>
 
+                        {/* Способ оплаты */}
                         <Card
                             title={
                                 <span>
@@ -313,6 +387,7 @@ const CheckoutPage = () => {
                             </Form.Item>
                         </Card>
 
+                        {/* Комментарий */}
                         <Card style={{ marginBottom: 16 }}>
                             <Form.Item name="comment" label="Комментарий к заказу">
                                 <TextArea
@@ -325,6 +400,7 @@ const CheckoutPage = () => {
                         </Card>
                     </Col>
 
+                    {/* Сводка заказа */}
                     <Col xs={24} lg={10}>
                         <Card title="Ваш заказ" style={{ position: 'sticky', top: 88 }}>
                             <Table<CartItemDto>
@@ -336,14 +412,14 @@ const CheckoutPage = () => {
                                 style={{ marginBottom: 16 }}
                             />
 
+                            <Divider />
+
                             <div
                                 style={{
                                     display: 'flex',
                                     justifyContent: 'space-between',
                                     alignItems: 'center',
                                     marginBottom: 16,
-                                    paddingTop: 16,
-                                    borderTop: '1px solid #f0f0f0',
                                 }}
                             >
                                 <Text style={{ fontSize: 16 }}>Итого:</Text>

@@ -26,6 +26,7 @@ import {
     PaymentMethodLabels,
     DeliveryMethodLabels,
 } from '@/types/order';
+import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
 import type { OrderSummaryDto, OrderDto, OrderItemDto } from '@/types/order';
 import type { Page } from '@/types/product';
 import type { ColumnsType } from 'antd/es/table';
@@ -52,7 +53,7 @@ const formatDate = (dateStr: string): string =>
     });
 
 /** Цвет тега по статусу */
-const getStatusColor = (status: OrderStatus): string => {
+const getStatusColor = (status: string): string => {
     const colors: Record<string, string> = {
         CREATED: 'blue',
         PENDING_PAYMENT: 'orange',
@@ -69,7 +70,7 @@ const getStatusColor = (status: OrderStatus): string => {
     return colors[status] || 'default';
 };
 
-/** Получить все заказы (админ) — GET /api/v1/orders */
+/** Получить все заказы (админ) */
 const getAdminOrders = async (
     page: number,
     size: number,
@@ -89,7 +90,7 @@ const getAdminOrders = async (
     return data;
 };
 
-/** Получить полный заказ — GET /api/v1/orders/{id} */
+/** Получить полный заказ */
 const getOrderDetails = async (id: string): Promise<OrderDto> => {
     const { data } = await apiClient.get<OrderDto>(`/v1/orders/${id}`);
     return data;
@@ -102,12 +103,8 @@ const AdminOrdersPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>();
     const [searchQuery, setSearchQuery] = useState('');
-    const [expandedDetails, setExpandedDetails] = useState<
-        Record<string, OrderDto>
-    >({});
-    const [loadingDetails, setLoadingDetails] = useState<
-        Record<string, boolean>
-    >({});
+    const [expandedDetails, setExpandedDetails] = useState<Record<string, OrderDto>>({});
+    const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
     const pageSize = 15;
 
     const {
@@ -119,7 +116,6 @@ const AdminOrdersPage = () => {
         queryFn: () => getAdminOrders(currentPage - 1, pageSize, statusFilter),
     });
 
-    // Загрузка деталей заказа
     const loadDetails = async (orderId: string) => {
         if (expandedDetails[orderId]) return;
         setLoadingDetails((prev) => ({ ...prev, [orderId]: true }));
@@ -133,7 +129,6 @@ const AdminOrdersPage = () => {
         }
     };
 
-    // Фильтрация по поиску на клиенте
     const filteredOrders = ordersPage?.content.filter((o) =>
         searchQuery
             ? o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -141,15 +136,10 @@ const AdminOrdersPage = () => {
             : true,
     );
 
-    // Опции для фильтра статусов
     const statusOptions = Object.entries(OrderStatusLabels).map(
-        ([key, label]) => ({
-            value: key,
-            label,
-        }),
+        ([key, label]) => ({ value: key, label }),
     );
 
-    // Колонки таблицы
     const columns: ColumnsType<OrderSummaryDto> = [
         {
             title: '№ заказа',
@@ -169,11 +159,14 @@ const AdminOrdersPage = () => {
             dataIndex: 'status',
             key: 'status',
             width: 200,
-            render: (status: OrderStatus) => (
-                <Tag color={getStatusColor(status)}>
-                    {OrderStatusLabels[status] || status}
-                </Tag>
-            ),
+            render: (status: unknown) => {
+                const code = extractEnumCode(status);
+                return (
+                    <Tag color={getStatusColor(code)}>
+                        {OrderStatusLabels[code as OrderStatus] || extractEnumDisplayName(status, code)}
+                    </Tag>
+                );
+            },
         },
         {
             title: 'Позиций',
@@ -201,7 +194,6 @@ const AdminOrdersPage = () => {
         },
     ];
 
-    // Раскрытие — полные детали заказа
     const expandedRowRender = (record: OrderSummaryDto) => {
         const order = expandedDetails[record.id];
         const loading = loadingDetails[record.id];
@@ -222,9 +214,7 @@ const AdminOrdersPage = () => {
                 dataIndex: 'productName',
                 key: 'productName',
                 render: (name: string, item) => (
-                    <a onClick={() => navigate(`/products/${item.productId}`)}>
-                        {name}
-                    </a>
+                    <a onClick={() => navigate(`/products/${item.productId}`)}>{name}</a>
                 ),
             },
             {
@@ -245,11 +235,12 @@ const AdminOrdersPage = () => {
                 dataIndex: 'subtotal',
                 key: 'subtotal',
                 width: 130,
-                render: (subtotal: number) => (
-                    <Text strong>{formatPrice(subtotal)}</Text>
-                ),
+                render: (subtotal: number) => <Text strong>{formatPrice(subtotal)}</Text>,
             },
         ];
+
+        const paymentCode = extractEnumCode(order.paymentMethod);
+        const deliveryCode = extractEnumCode(order.deliveryMethod);
 
         return (
             <div style={{ padding: '0 16px' }}>
@@ -263,10 +254,12 @@ const AdminOrdersPage = () => {
                 />
                 <Descriptions size="small" column={2}>
                     <Descriptions.Item label="Оплата">
-                        {PaymentMethodLabels[order.paymentMethod] || order.paymentMethod}
+                        {PaymentMethodLabels[paymentCode as keyof typeof PaymentMethodLabels] ||
+                            extractEnumDisplayName(order.paymentMethod)}
                     </Descriptions.Item>
                     <Descriptions.Item label="Доставка">
-                        {DeliveryMethodLabels[order.deliveryMethod] || order.deliveryMethod}
+                        {DeliveryMethodLabels[deliveryCode as keyof typeof DeliveryMethodLabels] ||
+                            extractEnumDisplayName(order.deliveryMethod)}
                     </Descriptions.Item>
                     {order.deliveryAddress && (
                         <>
