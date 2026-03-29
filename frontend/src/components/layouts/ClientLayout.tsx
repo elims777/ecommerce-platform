@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { Layout, Menu, Button, Badge, Dropdown } from 'antd';
 import {
     ShoppingCartOutlined,
@@ -14,6 +14,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { isAdmin } from '@/types/auth'
 import type { MenuProps } from 'antd';
+
 
 const { Content, Footer } = Layout;
 
@@ -45,9 +46,15 @@ const ClientLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { isAuthenticated, user, logout } = useAuthStore();
-    const totalItems = useCartStore((state) => state.getTotalItems)();
+    const totalItems = useCartStore((state) => state.totalItems);
     const prevIndexRef = useRef(getPageIndex(location.pathname));
+    const fetchCart = useCartStore((state) => state.fetchCart);
 
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchCart();
+        }
+    }, [isAuthenticated, fetchCart]);
     const handleLogout = async () => {
         await logout();
         navigate('/');

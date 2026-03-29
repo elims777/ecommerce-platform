@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
     Table,
     InputNumber,
@@ -7,24 +8,22 @@ import {
     Space,
     Card,
     Popconfirm,
-    Image,
+    Spin,
     App,
 } from 'antd';
 import {
     DeleteOutlined,
-    ShoppingOutlined,
     ClearOutlined,
     ArrowLeftOutlined,
     ShoppingCartOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cartStore';
-import type { CartItem } from '@/store/cartStore';
+import type { CartItemDto } from '@/api/cart';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Title, Text } = Typography;
 
-/** Форматирует цену в рубли */
 const formatPrice = (price: number): string =>
     new Intl.NumberFormat('ru-RU', {
         style: 'currency',
@@ -36,58 +35,58 @@ const formatPrice = (price: number): string =>
 const CartPage = () => {
     const navigate = useNavigate();
     const { message: messageApi } = App.useApp();
-    const { items, updateQuantity, removeItem, clearCart, getTotalPrice } =
-        useCartStore();
+    const {
+        items,
+        totalAmount,
+        isLoading,
+        fetchCart,
+        updateQuantity,
+        removeItem,
+        clearCart,
+    } = useCartStore();
 
-    const handleRemove = (item: CartItem) => {
-        removeItem(item.productId);
-        messageApi.success(`${item.name} удалён из корзины`);
+    useEffect(() => {
+        fetchCart();
+    }, [fetchCart]);
+
+    const handleRemove = async (item: CartItemDto) => {
+        try {
+            await removeItem(item.productId);
+            messageApi.success(`${item.productName} удалён из корзины`);
+        } catch {
+            messageApi.error('Ошибка при удалении товара');
+        }
     };
 
-    const handleClear = () => {
-        clearCart();
-        messageApi.success('Корзина очищена');
+    const handleUpdateQuantity = async (productId: number, quantity: number) => {
+        try {
+            await updateQuantity(productId, quantity);
+        } catch {
+            messageApi.error('Ошибка при обновлении количества');
+        }
     };
 
-    // Определение колонок таблицы
-    const columns: ColumnsType<CartItem> = [
+    const handleClear = async () => {
+        try {
+            await clearCart();
+            messageApi.success('Корзина очищена');
+        } catch {
+            messageApi.error('Ошибка при очистке корзины');
+        }
+    };
+
+    const columns: ColumnsType<CartItemDto> = [
         {
             title: 'Товар',
-            dataIndex: 'name',
-            key: 'name',
+            dataIndex: 'productName',
+            key: 'productName',
             render: (name: string, record) => (
-                <Space>
-                    {record.imageUrl ? (
-                        <Image
-                            src={record.imageUrl}
-                            alt={name}
-                            width={60}
-                            height={60}
-                            style={{ objectFit: 'contain', borderRadius: 4 }}
-                            preview={false}
-                        />
-                    ) : (
-                        <div
-                            style={{
-                                width: 60,
-                                height: 60,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                background: '#fafafa',
-                                borderRadius: 4,
-                            }}
-                        >
-                            <ShoppingOutlined style={{ fontSize: 24, color: '#d9d9d9' }} />
-                        </div>
-                    )}
-                    <Text
-                        style={{ cursor: 'pointer', color: '#1677ff' }}
-                        onClick={() => navigate(`/products/${record.productId}`)}
-                    >
-                        {name}
-                    </Text>
-                </Space>
+                <Text
+                    style={{ cursor: 'pointer', color: '#1677ff' }}
+                    onClick={() => navigate(`/products/${record.productId}`)}
+                >
+                    {name}
+                </Text>
             ),
         },
         {
@@ -95,29 +94,30 @@ const CartPage = () => {
             dataIndex: 'price',
             key: 'price',
             width: 150,
-            render: (price: number) => <Text>{formatPrice(price)}</Text>,
+            render: (price: number) => formatPrice(price),
         },
         {
             title: 'Количество',
             dataIndex: 'quantity',
             key: 'quantity',
-            width: 180,
+            width: 150,
             render: (quantity: number, record) => (
                 <InputNumber
                     min={1}
-                    max={record.maxStock}
                     value={quantity}
-                    onChange={(val) => updateQuantity(record.productId, val ?? 1)}
-                    addonAfter={record.unitOfMeasure || 'шт.'}
+                    onChange={(val) =>
+                        handleUpdateQuantity(record.productId, val ?? 1)
+                    }
                 />
             ),
         },
         {
             title: 'Сумма',
-            key: 'total',
+            dataIndex: 'subtotal',
+            key: 'subtotal',
             width: 150,
-            render: (_, record) => (
-                <Text strong>{formatPrice(record.price * record.quantity)}</Text>
+            render: (subtotal: number) => (
+                <Text strong>{formatPrice(subtotal)}</Text>
             ),
         },
         {
@@ -137,7 +137,14 @@ const CartPage = () => {
         },
     ];
 
-    // Пустая корзина
+    if (isLoading) {
+        return (
+            <div style={{ textAlign: 'center', padding: 120 }}>
+                <Spin size="large" />
+            </div>
+        );
+    }
+
     if (items.length === 0) {
         return (
             <Empty
@@ -178,7 +185,7 @@ const CartPage = () => {
                 </Popconfirm>
             </div>
 
-            <Table<CartItem>
+            <Table<CartItemDto>
                 columns={columns}
                 dataSource={items}
                 rowKey="productId"
@@ -186,7 +193,6 @@ const CartPage = () => {
                 style={{ marginBottom: 24 }}
             />
 
-            {/* Итого и кнопки */}
             <Card>
                 <div
                     style={{
@@ -195,10 +201,7 @@ const CartPage = () => {
                         alignItems: 'center',
                     }}
                 >
-                    <Button
-                        icon={<ArrowLeftOutlined />}
-                        onClick={() => navigate('/')}
-                    >
+                    <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/')}>
                         Продолжить покупки
                     </Button>
 
@@ -206,7 +209,7 @@ const CartPage = () => {
                         <div>
                             <Text type="secondary">Итого: </Text>
                             <Title level={3} style={{ display: 'inline', color: '#1677ff' }}>
-                                {formatPrice(getTotalPrice())}
+                                {formatPrice(totalAmount)}
                             </Title>
                         </div>
                         <Button

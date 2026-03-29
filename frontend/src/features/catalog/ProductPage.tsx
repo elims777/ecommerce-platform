@@ -67,27 +67,20 @@ const ProductPage = () => {
         enabled: !!id,
     });
 
-    const handleAddToCart = () => {
+    const handleAddToCart = async () => {
         if (!product) return;
-        const primaryImage = sortedImages.length > 0 ? sortedImages[0].fileUrl : null;
-        addItem(
-            {
-                productId: product.id,
-                name: product.name,
-                price: product.price,
-                imageUrl: primaryImage,
-                unitOfMeasure: product.unitOfMeasure,
-                maxStock: product.stockQuantity,
-            },
-            quantity,
-        );
-        messageApi.success(`${product?.name} (${quantity} шт.) добавлен в корзину`);
+        try {
+            await addItem(product.id, quantity);
+            messageApi.success(`${product.name} (${quantity} шт.) добавлен в корзину`);
+        } catch {
+            messageApi.error('Ошибка при добавлении в корзину');
+        }
     };
 
     if (isLoading) {
         return (
             <div style={{ textAlign: 'center', padding: 120 }}>
-                <Spin size="large" tip="Загрузка товара..." />
+                <Spin size="large" description="Загрузка товара..." />
             </div>
         );
     }
@@ -207,7 +200,7 @@ const ProductPage = () => {
 
                 {/* Правая колонка — информация о товаре */}
                 <Col xs={24} md={14}>
-                    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
                         {/* Название и категория */}
                         <div>
                             <Title level={2} style={{ marginBottom: 8 }}>
@@ -259,8 +252,10 @@ const ProductPage = () => {
                                     onChange={(val) => setQuantity(val ?? 1)}
                                     size="large"
                                     style={{ width: 120 }}
-                                    addonAfter={product.unitOfMeasure || 'шт.'}
                                 />
+                                <Text type="secondary" style={{ marginLeft: 8 }}>
+                                    {product.unitOfMeasure || 'шт.'}
+                                </Text>
                                 <Button
                                     type="primary"
                                     size="large"
@@ -296,7 +291,7 @@ const ProductPage = () => {
                                 </Descriptions.Item>
                             )}
                         </Descriptions>
-                    </Space>
+                    </div>
                 </Col>
             </Row>
 

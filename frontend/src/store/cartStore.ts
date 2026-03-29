@@ -1,116 +1,95 @@
 import { create } from 'zustand';
-
-/** Товар в корзине — минимальный набор данных для отображения */
-export interface CartItem {
-    productId: number;
-    name: string;
-    price: number;
-    quantity: number;
-    imageUrl: string | null;
-    unitOfMeasure: string | null;
-    maxStock: number;
-}
+import * as cartApi from '@/api/cart';
+import type { CartItemDto } from '@/api/cart';
 
 interface CartState {
-    items: CartItem[];
+    items: CartItemDto[];
+    totalItems: number;
+    totalAmount: number;
+    isLoading: boolean;
 
-    /** Добавить товар (если уже есть — увеличивает количество) */
-    addItem: (item: Omit<CartItem, 'quantity'>, quantity?: number) => void;
+    /** Загрузить корзину с сервера */
+    fetchCart: () => Promise<void>;
 
-    /** Обновить количество конкретного товара */
-    updateQuantity: (productId: number, quantity: number) => void;
+    /** Добавить товар в корзину */
+    addItem: (productId: number, quantity: number) => Promise<void>;
+
+    /** Обновить количество товара */
+    updateQuantity: (productId: number, quantity: number) => Promise<void>;
 
     /** Удалить товар из корзины */
-    removeItem: (productId: number) => void;
+    removeItem: (productId: number) => Promise<void>;
 
     /** Очистить корзину */
-    clearCart: () => void;
+    clearCart: () => Promise<void>;
 
-    /** Общее количество позиций */
-    getTotalItems: () => number;
-
-    /** Общая сумма */
-    getTotalPrice: () => number;
+    /** Сбросить состояние (при logout) */
+    resetCart: () => void;
 }
 
-/** Загрузка корзины из localStorage */
-const loadCart = (): CartItem[] => {
-    try {
-        const saved = localStorage.getItem('cart');
-        return saved ? JSON.parse(saved) : [];
-    } catch {
-        return [];
-    }
-};
+export const useCartStore = create<CartState>((set) => ({
+    items: [],
+    totalItems: 0,
+    totalAmount: 0,
+    isLoading: false,
 
-/** Сохранение корзины в localStorage */
-const saveCart = (items: CartItem[]) => {
-    localStorage.setItem('cart', JSON.stringify(items));
-};
+    fetchCart: async () => {
+        set({ isLoading: true });
+        try {
+            const cart = await cartApi.getCart();
+            set({
+                items: cart.items,
+                totalItems: cart.totalItems,
+                totalAmount: cart.totalAmount,
+                isLoading: false,
+            });
+        } catch {
+            set({ isLoading: false });
+        }
+    },
 
-export const useCartStore = create<CartState>((set, get) => ({
-    items: loadCart(),
-
-    addItem: (item, quantity = 1) => {
-        set((state) => {
-            const existingIndex = state.items.findIndex(
-                (i) => i.productId === item.productId,
-            );
-
-            let newItems: CartItem[];
-
-            if (existingIndex >= 0) {
-                // Товар уже в корзине — увеличиваем количество (не больше maxStock)
-                newItems = state.items.map((i, idx) =>
-                    idx === existingIndex
-                        ? {
-                            ...i,
-                            quantity: Math.min(i.quantity + quantity, i.maxStock),
-                        }
-                        : i,
-                );
-            } else {
-                // Новый товар
-                newItems = [...state.items, { ...item, quantity }];
-            }
-
-            saveCart(newItems);
-            return { items: newItems };
+    addItem: async (productId, quantity) => {
+        const cart = await cartApi.addToCart({ productId, quantity });
+        set({
+            items: cart.items,
+            totalItems: cart.totalItems,
+            totalAmount: cart.totalAmount,
         });
     },
 
-    updateQuantity: (productId, quantity) => {
-        set((state) => {
-            const newItems =
-                quantity <= 0
-                    ? state.items.filter((i) => i.productId !== productId)
-                    : state.items.map((i) =>
-                        i.productId === productId
-                            ? { ...i, quantity: Math.min(quantity, i.maxStock) }
-                            : i,
-                    );
+    updateQuantity: async (productId, quantity) => {
+        if (quantity <= 0) {
+            const cart = await cartApi.removeCartItem(productId);
+            set({
+                items: cart.items,
+                totalItems: cart.totalItems,
+                totalAmount: cart.totalAmount,
+            });
+        } else {
+            const cart = await cartApi.updateCartItem(productId, quantity);
+            set({
+                items: cart.items,
+                totalItems: cart.totalItems,
+                totalAmount: cart.totalAmount,
+            });
+        }
+    },
 
-            saveCart(newItems);
-            return { items: newItems };
+    removeItem: async (productId) => {
+        const cart = await cartApi.removeCartItem(productId);
+        set({
+            items: cart.items,
+            totalItems: cart.totalItems,
+            totalAmount: cart.totalAmount,
         });
     },
 
-    removeItem: (productId) => {
-        set((state) => {
-            const newItems = state.items.filter((i) => i.productId !== productId);
-            saveCart(newItems);
-            return { items: newItems };
-        });
+    clearCart: async () => {
+        await cartApi.clearCart();
+        set({ items: [], totalItems: 0, totalAmount: 0 });
     },
 
-    clearCart: () => {
-        localStorage.removeItem('cart');
-        set({ items: [] });
+    resetCart: () => {
+        set({ items: [], totalItems: 0, totalAmount: 0, isLoading: false });
     },
-
-    getTotalItems: () =>
-        get().items.reduce((sum, item) => sum + item.quantity, 0),
-
-    getTotalPrice: () =>
-        get().items.reduce((sum, item) => sum + item.price * item.quantity, 0),
 }));

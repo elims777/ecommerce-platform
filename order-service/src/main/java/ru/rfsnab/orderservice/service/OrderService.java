@@ -448,7 +448,7 @@ public class OrderService {
         for (CartItem item : items) {
             ProductDto product = products.get(item.getProductId());
 
-            if (product == null || !product.active()) {
+            if (product == null || !product.isActive()) {
                 throw new ProductNotFoundException(
                         "Товар недоступен: " + item.getProductId());
             }
@@ -468,7 +468,7 @@ public class OrderService {
         for (OrderItemDto item : items) {
             ProductDto product = products.get(item.productId());
 
-            if (product == null || !product.active()) {
+            if (product == null || !product.isActive()) {
                 throw new ProductNotFoundException(
                         "Товар недоступен: " + item.productId());
             }
@@ -491,7 +491,7 @@ public class OrderService {
         for (OrderItem item : items) {
             ProductDto product = products.get(item.getProductId());
 
-            if (product == null || !product.active()) {
+            if (product == null || !product.isActive()) {
                 insufficientItems.add(
                         String.format("Товар '%s' (ID: %d) больше недоступен",
                                 item.getProductName(), item.getProductId()));

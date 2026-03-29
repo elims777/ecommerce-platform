@@ -83,7 +83,7 @@ public class CartService {
     public Cart addItemToCart(Long userId, Long productId, int quantity){
         ProductDto product = productServiceClient.getProduct(productId);
 
-        if(!product.active()){
+        if(!product.isActive()){
             throw new ProductNotFoundException("Product is not available " + productId);
         }
 

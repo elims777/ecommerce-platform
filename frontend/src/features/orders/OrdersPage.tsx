@@ -113,11 +113,14 @@ const OrdersPage = () => {
             dataIndex: 'status',
             key: 'status',
             width: 200,
-            render: (status: OrderStatus) => (
-                <Tag color={getStatusColor(status)}>
-                    {OrderStatusLabels[status] || status}
-                </Tag>
-            ),
+            render: (status: OrderStatus | { code: string; displayName: string }) => {
+                const code = typeof status === 'string' ? status : status.code;
+                return (
+                    <Tag color={getStatusColor(code as OrderStatus)}>
+                        {OrderStatusLabels[code as OrderStatus] || (typeof status === 'string' ? status : status.displayName)}
+                    </Tag>
+                );
+            },
         },
         {
             title: 'Позиций',
@@ -199,10 +202,14 @@ const OrdersPage = () => {
 
                 <Descriptions size="small" column={2}>
                     <Descriptions.Item label="Способ оплаты">
-                        {PaymentMethodLabels[order.paymentMethod] || order.paymentMethod}
+                        {typeof order.paymentMethod === 'string'
+                            ? (PaymentMethodLabels[order.paymentMethod] || order.paymentMethod)
+                            : (order.paymentMethod as any).displayName}
                     </Descriptions.Item>
                     <Descriptions.Item label="Способ доставки">
-                        {DeliveryMethodLabels[order.deliveryMethod] || order.deliveryMethod}
+                        {typeof order.deliveryMethod === 'string'
+                            ? (DeliveryMethodLabels[order.deliveryMethod] || order.deliveryMethod)
+                            : (order.deliveryMethod as any).displayName}
                     </Descriptions.Item>
                     {order.deliveryAddress && (
                         <>
