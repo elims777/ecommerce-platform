@@ -23,13 +23,23 @@ public class ProductController {
     private final ProductService productService;
 
     /**
-     * Получить все товары с пагинацией
+     * Получить все активные товары с пагинацией
      */
     @GetMapping
     public ResponseEntity<Page<ProductResponse>> getAllProducts(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)Pageable pageable
             ){
         Page<Product> productsPage = productService.getProductsPage(pageable);
+        return ResponseEntity.ok(productsPage.map(ProductMapper::mapToResponse));
+    }
+
+    /**
+     * Получить все товары с пагинацией для админки
+     */
+    @GetMapping("/admin")
+    public ResponseEntity<Page<ProductResponse>> getAllProductsAdmin(
+            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        Page<Product> productsPage = productService.getAllProductsPage(pageable);
         return ResponseEntity.ok(productsPage.map(ProductMapper::mapToResponse));
     }
 

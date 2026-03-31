@@ -191,7 +191,7 @@ const RegisterPage = () => {
                     block
                     size="large"
                     style={{ marginBottom: 16 }}
-                    onClick={() => window.location.href = '/auth/oauth2/register/yandex'}
+                    onClick={() => window.location.href = 'http://localhost:8080/auth/oauth2/register/yandex'}
                 >
                     Зарегистрироваться через Яндекс
                 </Button>

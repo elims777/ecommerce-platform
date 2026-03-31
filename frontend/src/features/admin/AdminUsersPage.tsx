@@ -18,7 +18,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '@/api/client';
 import type { ColumnsType } from 'antd/es/table';
-import type { Page } from '@/types/product';
+
 
 const { Title, Text } = Typography;
 
@@ -45,32 +45,25 @@ const formatDate = (dateStr: string): string =>
     });
 
 /** Получить пользователей (админ) */
-const getUsers = async (
-    page: number,
-    size: number,
-): Promise<Page<UserRow>> => {
-    const { data } = await apiClient.get<Page<UserRow>>('/v1/users', {
-        params: { page, size, sort: 'createdAt,desc' },
-    });
+const getUsers = async (): Promise<UserRow[]> => {
+    const { data } = await apiClient.get<UserRow[]>('/v1/users/all');
     return data;
 };
 
 const AdminUsersPage = () => {
-    const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
-    const pageSize = 20;
 
     const {
-        data: usersPage,
+        data: users = [],
         isLoading,
         refetch,
     } = useQuery({
-        queryKey: ['adminUsers', currentPage],
-        queryFn: () => getUsers(currentPage - 1, pageSize),
+        queryKey: ['adminUsers'],
+        queryFn: getUsers,
     });
 
     // Фильтрация по поиску на клиенте
-    const filteredUsers = usersPage?.content.filter((u) =>
+    const filteredUsers = users.filter((u) =>
         searchQuery
             ? u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
             u.firstname.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -168,12 +161,8 @@ const AdminUsersPage = () => {
                     rowKey="id"
                     loading={isLoading}
                     pagination={{
-                        current: currentPage,
-                        total: usersPage?.totalElements || 0,
-                        pageSize,
-                        onChange: (page) => setCurrentPage(page),
+                        pageSize: 20,
                         showTotal: (total) => `Всего ${total} пользователей`,
-                        showSizeChanger: false,
                     }}
                     size="middle"
                     scroll={{ x: 800 }}

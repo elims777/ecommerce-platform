@@ -21,8 +21,8 @@ export interface ProductVideo {
 /** Характеристика товара */
 export interface ProductAttribute {
     id: number;
-    name: string;
-    value: string;
+    attributeName: string;
+    attributeValue: string;
 }
 
 /** Товар — полный ответ от product-service */

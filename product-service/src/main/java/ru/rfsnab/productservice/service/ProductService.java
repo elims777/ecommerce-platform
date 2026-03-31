@@ -161,6 +161,10 @@ public class ProductService {
         return productRepository.findByIsActiveTrue(pageable);
     }
 
+    public Page<Product> getAllProductsPage(Pageable pageable) {
+        return productRepository.findAll(pageable);
+    }
+
     /**
      * Пагинация товаров по категории
      */

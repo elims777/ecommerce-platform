@@ -311,8 +311,8 @@ const ProductPage = () => {
                     <Title level={4}>Характеристики</Title>
                     <Descriptions column={{ xs: 1, sm: 2 }} bordered size="small">
                         {product.attributes.map((attr) => (
-                            <Descriptions.Item label={attr.name} key={attr.id}>
-                                {attr.value}
+                            <Descriptions.Item label={attr.attributeName} key={attr.id}>
+                                {attr.attributeValue}
                             </Descriptions.Item>
                         ))}
                     </Descriptions>

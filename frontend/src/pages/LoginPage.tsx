@@ -90,7 +90,7 @@ const LoginPage = () => {
                     block
                     size="large"
                     style={{ marginBottom: 16 }}
-                    onClick={() => window.location.href = '/oauth2/authorization/yandex'}
+                    onClick={() => window.location.href = 'http://localhost:8080/oauth2/authorization/yandex'}
                 >
                     Войти через Яндекс
                 </Button>

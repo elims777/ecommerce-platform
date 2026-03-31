@@ -16,7 +16,6 @@ import CheckoutPage from '@/features/checkout/CheckoutPage';
 import OrdersPage from '@/features/orders/OrdersPage';
 import ProfilePage from '@/features/profile/ProfilePage';
 import DashboardPage from '@/features/admin/DashboardPage';
-import AdminProductsPage from '@/features/admin/AdminProductsPage';
 import AdminOrdersPage from '@/features/admin/AdminOrdersPage';
 import AdminUsersPage from '@/features/admin/AdminUsersPage';
 import IntegrationPage from '@/features/admin/IntegrationPage';
@@ -24,6 +23,8 @@ import AboutPage from '@/pages/AboutPage';
 import ContactsPage from '@/pages/ContactsPage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import PersonalDataPage from '@/pages/PersonalDataPage';
+import AdminCatalogPage from '@/features/admin/AdminCatalogPage';
+import AdminProductEditPage from "@/features/admin/AdminProductEditPage.tsx";
 
 // Клиент для TanStack Query — управляет кэшированием серверных данных
 const queryClient = new QueryClient({
@@ -95,13 +96,14 @@ const AppRoutes = () => {
         Только для пользователей с ролью ADMIN
       */}
         {/*<Route element={<ProtectedRoute adminOnly />}>*/}
-        <Route>
+        <Route element={<ProtectedRoute adminOnly />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={<DashboardPage />} />
-            <Route path="/admin/products" element={<AdminProductsPage />} />
             <Route path="/admin/orders" element={<AdminOrdersPage />} />
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/integration" element={<IntegrationPage />} />
+            <Route path="/admin/products" element={<AdminCatalogPage />} />
+            <Route path="/admin/products/:id/edit" element={<AdminProductEditPage />} />
           </Route>
         </Route>
       </Routes>
