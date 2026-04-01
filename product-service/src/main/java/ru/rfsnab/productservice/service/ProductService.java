@@ -14,6 +14,7 @@ import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -46,10 +47,9 @@ public class ProductService {
         product.setSlug(uniqSlug);
 
         if(product.getCategory() != null){
-            Category category = categoryRepository.findById(product.getCategory().getId())
-                    .orElseThrow(() -> new CategoryNotFoundException("Категория c id "+ product.getCategory().getId() +
-                            " не найдена: "));
-            product.setCategory(category);
+            product.setCategory(categoryRepository.findById(product.getCategory().getId())
+                    .orElseThrow(()-> new CategoryNotFoundException("Категория с id " + product.getCategory().getId() +
+                            " не найдена.")));
         }
 
         Product saved = productRepository.save(product);
@@ -78,7 +78,9 @@ public class ProductService {
 
         if (updatedProduct.getCategory() != null) {
             Category category = categoryRepository.findById(updatedProduct.getCategory().getId())
-                    .orElseThrow(() -> new CategoryNotFoundException(updatedProduct.getCategory().getId()));
+                    .orElseThrow(()->
+                            new CategoryNotFoundException("Категория с id " + updatedProduct.getCategory().getId() +
+                    " не найдена."));
             existing.setCategory(category);
         } else {
             existing.setCategory(null);
@@ -301,7 +303,7 @@ public class ProductService {
 
         if (categoryId != null) {
             Category category = categoryRepository.findById(categoryId)
-                    .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+                    .orElseThrow(()-> new CategoryNotFoundException("Категория с id " + categoryId + " не найдена."));
 
             // Валидация: категория должна быть leaf (без детей)
             if (categoryRepository.existsByParentId(categoryId)) {
@@ -345,6 +347,19 @@ public class ProductService {
             throw new ProductNotFoundException("Товар не найден с id="+id);
         }
         productRepository.deleteById(id);
+    }
+
+    @Transactional
+    public void batchUpdateCategory(List<Long> productIds, Long categoryId) {
+        Category category = categoryId != null
+                ? categoryRepository.findById(categoryId).orElseThrow(
+                        ()-> new CategoryNotFoundException("Категория с id " + categoryId + " не найдена."))
+                : null;
+
+        productRepository.findAllById(productIds).forEach(product -> {
+            product.setCategory(category);
+            product.setUpdatedAt(LocalDateTime.now());
+        });
     }
 
     public Product findByExternalId(String externalId) {

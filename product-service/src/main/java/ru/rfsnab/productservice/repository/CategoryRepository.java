@@ -26,4 +26,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     Optional<Category> findByExternalId(String externalId);
 
     List<Category> findByExternalIdIn(List<String> externalIds);
+
+    boolean existsById(Long categoryId);
 }

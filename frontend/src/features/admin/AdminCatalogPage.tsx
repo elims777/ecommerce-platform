@@ -12,6 +12,8 @@ import {
     Typography,
     Image,
     Popconfirm,
+    Popover,
+    TreeSelect,
     Modal,
     Form,
     Select,
@@ -26,7 +28,7 @@ import {
     ReloadOutlined,
     ShoppingOutlined,
     AppstoreOutlined,
-    DragOutlined,
+    FolderOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -50,7 +52,6 @@ const { TextArea } = Input;
 
 const ALPHABET = 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ'.split('');
 
-/** Форматирует цену */
 const formatPrice = (price: number): string =>
     new Intl.NumberFormat('ru-RU', {
         style: 'currency',
@@ -59,14 +60,12 @@ const formatPrice = (price: number): string =>
         maximumFractionDigits: 0,
     }).format(price);
 
-/** Получает URL главного изображения */
 const getPrimaryImageUrl = (product: Product): string | null => {
     if (!product.images || product.images.length === 0) return null;
     const primary = product.images.find((img) => img.isPrimary);
     return primary?.fileUrl ?? product.images[0].fileUrl;
 };
 
-/** Находит название категории в дереве */
 const findCatName = (tree: CategoryTree[], id: number): string => {
     for (const cat of tree) {
         if (cat.id === id) return cat.name;
@@ -76,26 +75,14 @@ const findCatName = (tree: CategoryTree[], id: number): string => {
     return '';
 };
 
-/** Рекурсивно строит дерево для Ant Design с поддержкой drop товаров */
-const mapToTreeData = (
-    categories: CategoryTree[],
-    dragOverCatId: number | null,
-): any[] =>
+/** Дерево для Ant Design Tree (drag-and-drop категорий) */
+const mapToTreeData = (categories: CategoryTree[]): any[] =>
     categories
         .sort((a, b) => a.displayOrder - b.displayOrder)
         .map((cat) => ({
             key: cat.id,
             title: (
-                <span
-                    style={{
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        background: dragOverCatId === cat.id ? '#e6f4ff' : 'transparent',
-                        border: dragOverCatId === cat.id ? '1px dashed #1677ff' : '1px solid transparent',
-                        transition: 'all 0.2s',
-                    }}
-                    data-category-id={cat.id}
-                >
+                <span>
           {cat.name}
                     {!cat.isActive && (
                         <Tag color="default" style={{ marginLeft: 4, fontSize: 10 }}>
@@ -104,10 +91,21 @@ const mapToTreeData = (
                     )}
         </span>
             ),
-            children: cat.children.length > 0 ? mapToTreeData(cat.children, dragOverCatId) : undefined,
+            children: cat.children.length > 0 ? mapToTreeData(cat.children) : undefined,
         }));
 
-/** Рекурсивно собирает плоский список для Select */
+/** Дерево для TreeSelect (выбор категории при перемещении товара) */
+const mapToTreeSelectData = (categories: CategoryTree[]): any[] =>
+    categories
+        .filter((c) => c.isActive)
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .map((cat) => ({
+            value: cat.id,
+            title: cat.name,
+            children: cat.children.length > 0 ? mapToTreeSelectData(cat.children) : undefined,
+        }));
+
+/** Плоский список для Select (модалка категории) */
 const flattenForSelect = (
     categories: CategoryTree[],
     excludeId?: number,
@@ -130,28 +128,35 @@ const AdminCatalogPage = () => {
     const { message: messageApi } = App.useApp();
     const queryClient = useQueryClient();
 
+    // Состояние
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
     const [searchQuery, setSearchQuery] = useState('');
     const [activeLetter, setActiveLetter] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [showAllProducts, setShowAllProducts] = useState(true);
-    const [dragOverCatId, setDragOverCatId] = useState<number | null>(null);
-    const [draggedProductId, setDraggedProductId] = useState<number | null>(null);
 
     // Модальное окно категории
     const [catModalOpen, setCatModalOpen] = useState(false);
     const [editingCatId, setEditingCatId] = useState<number | null>(null);
     const [catForm] = Form.useForm<CategoryRequest>();
 
+    // Перемещение одного товара
+    const [moveProductId, setMoveProductId] = useState<number | null>(null);
+
+    // Массовое выделение и перемещение
+    const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+    const [batchMoveOpen, setBatchMoveOpen] = useState(false);
+    const [batchTargetCategory, setBatchTargetCategory] = useState<number | null>(null);
+
     const pageSize = 20;
 
-    // Загрузка дерева категорий
+    // === Запросы ===
+
     const { data: categoryTree = [], isLoading: treeLoading } = useQuery({
         queryKey: ['adminCategoryTree'],
         queryFn: getCategoryTree,
     });
 
-    // Загрузка товаров
     const {
         data: productsPage,
         isLoading: productsLoading,
@@ -167,14 +172,12 @@ const AdminCatalogPage = () => {
             }),
     });
 
-    // Поиск товаров
     const { data: searchResults } = useQuery({
         queryKey: ['adminProductSearch', searchQuery],
         queryFn: () => searchProducts(searchQuery),
         enabled: searchQuery.length >= 2,
     });
 
-    // Определяем какие товары показывать
     const displayProducts = useMemo(() => {
         let items: Product[] = [];
         if (searchQuery.length >= 2 && searchResults) {
@@ -194,7 +197,8 @@ const AdminCatalogPage = () => {
         queryClient.invalidateQueries({ queryKey: ['categories'] });
     };
 
-    // === Мутация: перемещение категории (drag-and-drop дерева) ===
+    // === Мутации категорий ===
+
     const moveCategoryMutation = useMutation({
         mutationFn: ({ catId, newParentId }: { catId: number; newParentId: number }) =>
             setCategoryParent(catId, newParentId),
@@ -207,19 +211,6 @@ const AdminCatalogPage = () => {
         onError: () => messageApi.error('Ошибка при перемещении категории'),
     });
 
-    // === Мутация: перемещение товара в категорию (drag-and-drop) ===
-    const moveProductMutation = useMutation({
-        mutationFn: ({ productId, categoryId }: { productId: number; categoryId: number }) =>
-            changeProductCategory(productId, categoryId),
-        onSuccess: (_, variables) => {
-            const catName = findCatName(categoryTree, variables.categoryId);
-            messageApi.success(`Товар перемещён в «${catName}»`);
-            invalidateAll();
-        },
-        onError: () => messageApi.error('Ошибка при перемещении товара'),
-    });
-
-    // === Мутации категорий ===
     const createCatMutation = useMutation({
         mutationFn: createCategory,
         onSuccess: () => {
@@ -256,6 +247,37 @@ const AdminCatalogPage = () => {
     });
 
     // === Мутации товаров ===
+
+    const moveProductMutation = useMutation({
+        mutationFn: ({ productId, categoryId }: { productId: number; categoryId: number }) =>
+            changeProductCategory(productId, categoryId),
+        onSuccess: (_, variables) => {
+            const catName = findCatName(categoryTree, variables.categoryId);
+            messageApi.success(`Товар перемещён в «${catName}»`);
+            setMoveProductId(null);
+            invalidateAll();
+        },
+        onError: () => messageApi.error('Ошибка при перемещении товара'),
+    });
+
+    /** Массовое перемещение через batch endpoint */
+    const batchMoveMutation = useMutation({
+        mutationFn: async ({ productIds, categoryId }: { productIds: number[]; categoryId: number }) => {
+            await apiClient.put('/v1/products/batch/category', productIds, {
+                params: { categoryId },
+            });
+        },
+        onSuccess: (_, variables) => {
+            const catName = findCatName(categoryTree, variables.categoryId);
+            messageApi.success(`${variables.productIds.length} товаров перемещено в «${catName}»`);
+            setSelectedRowKeys([]);
+            setBatchMoveOpen(false);
+            setBatchTargetCategory(null);
+            invalidateAll();
+        },
+        onError: () => messageApi.error('Ошибка при массовом перемещении'),
+    });
+
     const toggleProductMutation = useMutation({
         mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
             await apiClient.put(`/v1/products/${id}/${isActive ? 'deactivate' : 'activate'}`);
@@ -285,6 +307,7 @@ const AdminCatalogPage = () => {
             setCurrentPage(1);
             setSearchQuery('');
             setActiveLetter(null);
+            setSelectedRowKeys([]);
         }
     };
 
@@ -294,12 +317,19 @@ const AdminCatalogPage = () => {
         setCurrentPage(1);
         setSearchQuery('');
         setActiveLetter(null);
+        setSelectedRowKeys([]);
     };
 
-    const handleAddCategory = (parentId?: number) => {
+    const handleAddCategory = () => {
         setEditingCatId(null);
         catForm.resetFields();
-        if (parentId) catForm.setFieldValue('parentId', parentId);
+        setCatModalOpen(true);
+    };
+
+    const handleAddSubcategory = (parentId: number) => {
+        setEditingCatId(null);
+        catForm.resetFields();
+        catForm.setFieldValue('parentId', parentId);
         setCatModalOpen(true);
     };
 
@@ -326,62 +356,30 @@ const AdminCatalogPage = () => {
         }
     };
 
-    // === Drag-and-drop дерева категорий ===
     const handleTreeDrop = (info: any) => {
         const dragId = Number(info.dragNode.key);
         const dropId = Number(info.node.key);
-
         if (dragId === dropId) return;
-
-        // dropToGap = true значит "между нодами", false = "внутрь ноды"
         if (!info.dropToGap) {
-            // Перемещаем внутрь dropId
             moveCategoryMutation.mutate({ catId: dragId, newParentId: dropId });
         }
-        // Перемещение между (reorder) пока не поддерживаем — нет API для displayOrder
     };
 
-    // === Drag-and-drop товара на категорию ===
-    const handleProductDragStart = (productId: number) => {
-        setDraggedProductId(productId);
+    const handleBatchMove = () => {
+        if (!batchTargetCategory || selectedRowKeys.length === 0) return;
+        batchMoveMutation.mutate({
+            productIds: selectedRowKeys.map(Number),
+            categoryId: batchTargetCategory,
+        });
     };
 
-    const handleTreeDragOver = (e: React.DragEvent, categoryId: number) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (draggedProductId) {
-            setDragOverCatId(categoryId);
-        }
-    };
-
-    const handleTreeDragLeave = () => {
-        setDragOverCatId(null);
-    };
-
-    const handleTreeDrop2 = (e: React.DragEvent, categoryId: number) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragOverCatId(null);
-        if (draggedProductId) {
-            moveProductMutation.mutate({ productId: draggedProductId, categoryId });
-            setDraggedProductId(null);
-        }
-    };
-
-    // Дерево для Ant Design
-    const treeData = mapToTreeData(categoryTree, dragOverCatId);
+    // Данные для UI
+    const treeData = mapToTreeData(categoryTree);
+    const treeSelectData = mapToTreeSelectData(categoryTree);
     const parentOptions = flattenForSelect(categoryTree, editingCatId || undefined);
 
     // Колонки таблицы товаров
     const columns: ColumnsType<Product> = [
-        {
-            title: '',
-            key: 'drag',
-            width: 30,
-            render: () => (
-                <DragOutlined style={{ cursor: 'grab', color: '#bbb' }} />
-            ),
-        },
         {
             title: '',
             key: 'image',
@@ -407,9 +405,52 @@ const AdminCatalogPage = () => {
             key: 'name',
             ellipsis: true,
             render: (name: string, record) => (
-                <a onClick={() => navigate(`/admin/products/${record.id}/edit`)}>
-                    {name}
-                </a>
+                <div>
+                    <a onClick={() => navigate(`/admin/products/${record.id}/edit`)}>
+                        {name}
+                    </a>
+                    {!record.isActive && (
+                        <Tag color="default" style={{ marginLeft: 4, fontSize: 10 }}>
+                            неактивен
+                        </Tag>
+                    )}
+                </div>
+            ),
+        },
+        {
+            title: 'Категория',
+            dataIndex: 'categoryName',
+            key: 'categoryName',
+            width: 160,
+            render: (catName: string | null, record) => (
+                <Popover
+                    trigger="click"
+                    open={moveProductId === record.id}
+                    onOpenChange={(open) => setMoveProductId(open ? record.id : null)}
+                    content={
+                        <div style={{ width: 250 }}>
+                            <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                                Переместить в категорию:
+                            </Text>
+                            <TreeSelect
+                                treeData={treeSelectData}
+                                style={{ width: '100%' }}
+                                placeholder="Выберите категорию"
+                                treeDefaultExpandAll
+                                onSelect={(value: number) => {
+                                    moveProductMutation.mutate({
+                                        productId: record.id,
+                                        categoryId: value,
+                                    });
+                                }}
+                            />
+                        </div>
+                    }
+                >
+                    <Button type="link" size="small" icon={<FolderOutlined />} style={{ padding: 0 }}>
+                        {catName || 'Без категории'}
+                    </Button>
+                </Popover>
             ),
         },
         {
@@ -467,6 +508,7 @@ const AdminCatalogPage = () => {
 
     return (
         <div>
+            {/* Заголовок */}
             <div
                 style={{
                     display: 'flex',
@@ -485,7 +527,7 @@ const AdminCatalogPage = () => {
                     >
                         Обновить
                     </Button>
-                    <Button icon={<PlusOutlined />} onClick={() => handleAddCategory()}>
+                    <Button icon={<PlusOutlined />} onClick={handleAddCategory}>
                         Категория
                     </Button>
                     <Button
@@ -511,6 +553,7 @@ const AdminCatalogPage = () => {
                             setActiveLetter(null);
                             setSelectedCategoryId(undefined);
                             setShowAllProducts(true);
+                            setSelectedRowKeys([]);
                         }
                     }}
                 />
@@ -531,7 +574,10 @@ const AdminCatalogPage = () => {
                             key={letter}
                             size="small"
                             type={activeLetter === letter ? 'primary' : 'default'}
-                            onClick={() => setActiveLetter(activeLetter === letter ? null : letter)}
+                            onClick={() => {
+                                setActiveLetter(activeLetter === letter ? null : letter);
+                                setSelectedRowKeys([]);
+                            }}
                             style={{ minWidth: 32, padding: '0 6px' }}
                         >
                             {letter}
@@ -539,6 +585,66 @@ const AdminCatalogPage = () => {
                     ))}
                 </div>
             </Card>
+
+            {/* Массовый toolbar */}
+            {selectedRowKeys.length > 0 && (
+                <Card
+                    size="small"
+                    style={{
+                        marginBottom: 12,
+                        borderRadius: 12,
+                        background: '#e6f4ff',
+                        border: '1px solid #91caff',
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <Text strong>Выбрано: {selectedRowKeys.length}</Text>
+
+                        <Popover
+                            trigger="click"
+                            open={batchMoveOpen}
+                            onOpenChange={setBatchMoveOpen}
+                            content={
+                                <div style={{ width: 280 }}>
+                                    <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                                        Переместить {selectedRowKeys.length} товаров в:
+                                    </Text>
+                                    <TreeSelect
+                                        treeData={treeSelectData}
+                                        style={{ width: '100%', marginBottom: 12 }}
+                                        placeholder="Выберите категорию"
+                                        treeDefaultExpandAll
+                                        value={batchTargetCategory}
+                                        onChange={setBatchTargetCategory}
+                                    />
+                                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                        <Button size="small" onClick={() => setBatchMoveOpen(false)}>
+                                            Отмена
+                                        </Button>
+                                        <Button
+                                            type="primary"
+                                            size="small"
+                                            disabled={!batchTargetCategory}
+                                            loading={batchMoveMutation.isPending}
+                                            onClick={handleBatchMove}
+                                        >
+                                            Переместить
+                                        </Button>
+                                    </div>
+                                </div>
+                            }
+                        >
+                            <Button type="primary" icon={<FolderOutlined />} size="small">
+                                Переместить в категорию
+                            </Button>
+                        </Popover>
+
+                        <Button size="small" onClick={() => setSelectedRowKeys([])}>
+                            Снять выделение
+                        </Button>
+                    </div>
+                </Card>
+            )}
 
             <Row gutter={16}>
                 {/* Левая колонка — категории */}
@@ -553,7 +659,7 @@ const AdminCatalogPage = () => {
                         style={{ borderRadius: 12 }}
                         extra={
                             <Text type="secondary" style={{ fontSize: 11 }}>
-                                Перетаскивайте для перемещения
+                                Перетаскивайте категории
                             </Text>
                         }
                     >
@@ -571,35 +677,16 @@ const AdminCatalogPage = () => {
                                 <Spin />
                             </div>
                         ) : (
-                            <div
-                                onDragOver={(e) => {
-                                    // Находим ближайший элемент с data-category-id
-                                    const target = (e.target as HTMLElement).closest('[data-category-id]');
-                                    if (target) {
-                                        const catId = Number(target.getAttribute('data-category-id'));
-                                        handleTreeDragOver(e, catId);
-                                    }
-                                }}
-                                onDragLeave={handleTreeDragLeave}
-                                onDrop={(e) => {
-                                    const target = (e.target as HTMLElement).closest('[data-category-id]');
-                                    if (target) {
-                                        const catId = Number(target.getAttribute('data-category-id'));
-                                        handleTreeDrop2(e, catId);
-                                    }
-                                }}
-                            >
-                                <Tree
-                                    treeData={treeData}
-                                    selectedKeys={selectedCategoryId ? [selectedCategoryId] : []}
-                                    onSelect={handleCategorySelect}
-                                    draggable
-                                    onDrop={handleTreeDrop}
-                                    defaultExpandAll
-                                    showLine
-                                    blockNode
-                                />
-                            </div>
+                            <Tree
+                                treeData={treeData}
+                                selectedKeys={selectedCategoryId ? [selectedCategoryId] : []}
+                                onSelect={handleCategorySelect}
+                                draggable
+                                onDrop={handleTreeDrop}
+                                defaultExpandAll
+                                showLine
+                                blockNode
+                            />
                         )}
 
                         {/* Действия с выбранной категорией */}
@@ -617,7 +704,7 @@ const AdminCatalogPage = () => {
                                 <Button
                                     size="small"
                                     icon={<PlusOutlined />}
-                                    onClick={() => handleAddCategory(selectedCategoryId)}
+                                    onClick={() => handleAddSubcategory(selectedCategoryId)}
                                 >
                                     Подкат.
                                 </Button>
@@ -657,29 +744,16 @@ const AdminCatalogPage = () => {
                         }
                         size="small"
                         style={{ borderRadius: 12 }}
-                        extra={
-                            draggedProductId && (
-                                <Tag color="blue">Перетащите товар на категорию слева</Tag>
-                            )
-                        }
                     >
                         <Table<Product>
                             columns={columns}
                             dataSource={displayProducts}
                             rowKey="id"
                             loading={productsLoading}
-                            onRow={(record) => ({
-                                draggable: true,
-                                onDragStart: () => handleProductDragStart(record.id),
-                                onDragEnd: () => {
-                                    setDraggedProductId(null);
-                                    setDragOverCatId(null);
-                                },
-                                style: {
-                                    cursor: 'grab',
-                                    opacity: draggedProductId === record.id ? 0.5 : 1,
-                                },
-                            })}
+                            rowSelection={{
+                                selectedRowKeys,
+                                onChange: setSelectedRowKeys,
+                            }}
                             pagination={
                                 searchQuery.length >= 2 || activeLetter
                                     ? { pageSize: 50 }
@@ -687,19 +761,22 @@ const AdminCatalogPage = () => {
                                         current: currentPage,
                                         total: productsPage?.totalElements || 0,
                                         pageSize,
-                                        onChange: (page) => setCurrentPage(page),
+                                        onChange: (page) => {
+                                            setCurrentPage(page);
+                                            setSelectedRowKeys([]);
+                                        },
                                         showTotal: (total) => `Всего ${total}`,
                                         showSizeChanger: false,
                                     }
                             }
                             size="small"
-                            scroll={{ x: 600 }}
+                            scroll={{ x: 700 }}
                         />
                     </Card>
                 </Col>
             </Row>
 
-            {/* Модальное окно категории */}
+            {/* Модальное окно создания/редактирования категории */}
             <Modal
                 title={editingCatId ? 'Редактировать категорию' : 'Новая категория'}
                 open={catModalOpen}

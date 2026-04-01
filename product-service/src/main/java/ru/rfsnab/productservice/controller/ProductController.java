@@ -170,4 +170,15 @@ public class ProductController {
         return ResponseEntity.ok(ProductMapper.mapToResponse(saved));
     }
 
+    /**
+     * Массовое перемещение товаров в категорию
+     */
+    @PutMapping("/batch/category")
+    public ResponseEntity<Void> batchUpdateCategory(
+            @RequestParam Long categoryId,
+            @RequestBody List<Long> productIds
+    ) {
+        productService.batchUpdateCategory(productIds, categoryId);
+        return ResponseEntity.ok().build();
+    }
 }
