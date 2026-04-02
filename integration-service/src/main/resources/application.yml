@@ -88,9 +88,9 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
-# ===== Logging =====
-logging:
-  level:
-    ru.rfsnab.integrationservice: INFO
-    org.springframework.web: WARN
-    org.hibernate.SQL: WARN
+## ===== Logging =====
+#logging:
+#  level:
+#    ru.rfsnab.integrationservice: INFO
+#    org.springframework.web: WARN
+#    org.hibernate.SQL: WARN

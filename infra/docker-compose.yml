@@ -325,7 +325,6 @@ services:
       # Внутренние сервисы
       PRODUCT_SERVICE_URL: http://product-service:8083
       ORDER_SERVICE_URL: http://order-service:8084
-      LOGGING_FILE_NAME: ""
     volumes:
       - integration_exchange_data:/app/1c-exchange
     depends_on:
