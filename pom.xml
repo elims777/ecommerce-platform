@@ -47,6 +47,7 @@
         <logback.version>1.5.25</logback.version>
         <jackson-bom.version>2.21.1</jackson-bom.version>
         <netty.version>4.1.132.Final</netty.version>
+        <tomcat.version>10.1.54</tomcat.version>
     </properties>
 
     <dependencyManagement>
