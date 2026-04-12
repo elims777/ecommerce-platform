@@ -1,15 +1,18 @@
 package ru.rfsnab.integrationservice.service.catalog;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.integrationservice.config.IntegrationProperties;
 import ru.rfsnab.integrationservice.model.ImageProcessingTask;
 import ru.rfsnab.integrationservice.model.ImageProcessingTask.TaskStatus;
@@ -25,25 +28,30 @@ import java.time.LocalDateTime;
 
 /**
  * Обработчик одной задачи обработки изображения.
- *
  * Pipeline: читаем файл с диска → resize (max 1200px) → конвертация в WebP (quality 80%)
  * → multipart POST в product-service /api/v1/products/external/{externalId}/images
  * → удаляем оригинал с диска.
- *
- * Thumbnailator используется для resize — быстрая и проверенная библиотека.
- * WebP-конвертация через ImageIO + webp-imageio (уже в зависимостях pom.xml).
+ * Используем RestTemplate вместо WebClient — Apache HttpClient резолвит DNS
+ * корректно в Docker окружении без проблем с кэшированием IP.
  */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class ImageProcessingWorker {
 
     private static final String UPLOAD_URI_TEMPLATE = "/api/v1/products/external/{externalId}/images";
     private static final String WEBP_FORMAT = "webp";
 
-    private final WebClient productServiceClient;
+    private final RestTemplate productServiceRestTemplate;
     private final IntegrationProperties properties;
     private final ImageProcessingTaskRepository taskRepository;
+
+    public ImageProcessingWorker(RestTemplate productServiceRestTemplate,
+                                 IntegrationProperties properties,
+                                 ImageProcessingTaskRepository taskRepository) {
+        this.productServiceRestTemplate = productServiceRestTemplate;
+        this.properties = properties;
+        this.taskRepository = taskRepository;
+    }
 
     /**
      * Обрабатывает одну задачу. Вызывается из пула потоков ImageProcessingPool.
@@ -80,7 +88,6 @@ public class ImageProcessingWorker {
 
     /**
      * Resize + конвертация в WebP.
-     *
      * Thumbnailator определяет формат автоматически, ресайзит с сохранением
      * пропорций (aspect ratio). keepAspectRatio(true) по умолчанию.
      * Максимальный размер по большей стороне — из конфигурации (default 1200px).
@@ -116,27 +123,31 @@ public class ImageProcessingWorker {
 
     /**
      * Отправляет WebP-файл в product-service как multipart/form-data.
-     * block() в virtual thread не блокирует platform thread.
+     * RestTemplate с Apache HttpClient корректно резолвит DNS в Docker.
      */
     private void uploadToProductService(String externalId, byte[] webpBytes, String fileName) {
-        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-        bodyBuilder.part("file", new ByteArrayResource(webpBytes) {
-                    @Override
-                    public String getFilename() {
-                        return fileName;
-                    }
-                })
-                .contentType(MediaType.valueOf("image/webp"));
+        String url = properties.getProductService().getUrl() + UPLOAD_URI_TEMPLATE;
+
+        // Формируем multipart/form-data запрос
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", new ByteArrayResource(webpBytes) {
+            @Override
+            public String getFilename() {
+                return fileName;
+            }
+        });
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 
         try {
-            productServiceClient.post()
-                    .uri(UPLOAD_URI_TEMPLATE, externalId)
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
-                    .retrieve()
-                    .toBodilessEntity()
-                    .block();
-        } catch (WebClientResponseException e) {
+            ResponseEntity<Void> response = productServiceRestTemplate.postForEntity(
+                    url, requestEntity, Void.class, externalId
+            );
+            log.debug("Картинка загружена: externalId={}, status={}", externalId, response.getStatusCode());
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
             throw new RuntimeException(
                     "Ошибка загрузки в product-service: HTTP " + e.getStatusCode()
                             + " — " + e.getResponseBodyAsString(), e);
@@ -189,7 +200,6 @@ public class ImageProcessingWorker {
         try {
             Files.deleteIfExists(sourceFile);
         } catch (IOException e) {
-            // Не критично — файл останется на диске, будет удалён при очистке
             log.warn("Не удалось удалить оригинал: {}", sourceFile, e);
         }
     }

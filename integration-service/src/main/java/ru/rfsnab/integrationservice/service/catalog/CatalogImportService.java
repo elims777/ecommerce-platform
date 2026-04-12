@@ -5,9 +5,11 @@ import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.integrationservice.config.IntegrationProperties;
 import ru.rfsnab.integrationservice.dto.BatchImportRequest;
 import ru.rfsnab.integrationservice.dto.BatchImportResponse;
@@ -15,11 +17,7 @@ import ru.rfsnab.integrationservice.dto.ImportResult;
 import ru.rfsnab.integrationservice.dto.ProductImportItemDto;
 import ru.rfsnab.integrationservice.model.ImportLog;
 import ru.rfsnab.integrationservice.model.ImportLog.ImportStatus;
-import ru.rfsnab.integrationservice.model.commerceml.CmlProduct;
-import ru.rfsnab.integrationservice.model.commerceml.CommerceInfo;
-import ru.rfsnab.integrationservice.model.commerceml.Offer;
-import ru.rfsnab.integrationservice.model.commerceml.OfferPrice;
-import ru.rfsnab.integrationservice.model.commerceml.TaxRate;
+import ru.rfsnab.integrationservice.model.commerceml.*;
 import ru.rfsnab.integrationservice.repository.ImportLogRepository;
 
 import java.math.BigDecimal;
@@ -27,11 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,7 +35,6 @@ import java.util.stream.Collectors;
 
 /**
  * Основной pipeline импорта каталога из 1С через CommerceML.
- *
  * Последовательность:
  * 1. Parse import.xml (товары) и offers.xml (цены + остатки)
  * 2. Merge данных по externalId
@@ -50,7 +43,6 @@ import java.util.stream.Collectors;
  * 5. Параллельная отправка в product-service через virtual threads + Semaphore
  * 6. Постановка задач на обработку изображений
  * 7. Логирование результата в import_log
- *
  * Virtual threads (Java 21) выбраны потому что задача I/O-bound:
  * каждый chunk — это HTTP-вызов с ожиданием ответа. Virtual threads
  * не блокируют platform threads при ожидании, позволяя эффективно
@@ -67,7 +59,7 @@ public class CatalogImportService {
     private static final String BATCH_IMPORT_URI = "/api/v1/products/import/batch";
 
     private final JAXBContext commerceMlJaxbContext;
-    private final WebClient productServiceClient;
+    private final RestTemplate productServiceRestTemplate;
     private final IntegrationProperties properties;
     private final ImportLogRepository importLogRepository;
     private final ImageProcessingPool imageProcessingPool;
@@ -213,7 +205,7 @@ public class CatalogImportService {
                 .externalId(product.getId())
                 .name(product.getName().trim())
                 .sku(product.getSku())
-                .shortDescription(product.getDescription())
+                .shortDescription(truncate(product.getDescription(), 1000))
                 .unitOfMeasure(extractUnitOfMeasure(product));
 
         if (offer != null) {
@@ -286,7 +278,6 @@ public class CatalogImportService {
 
     /**
      * Параллельная отправка chunk'ов в product-service.
-     *
      * Virtual threads + Semaphore: каждый chunk в отдельном virtual thread,
      * Semaphore ограничивает количество одновременных запросов.
      */
@@ -321,26 +312,21 @@ public class CatalogImportService {
      */
     private BatchImportResponse sendChunk(List<ProductImportItemDto> chunk) {
         BatchImportRequest request = new BatchImportRequest(chunk);
+        String url = properties.getProductService().getUrl() + BATCH_IMPORT_URI;
         try {
-            BatchImportResponse response = productServiceClient.post()
-                    .uri(BATCH_IMPORT_URI)
-                    .bodyValue(request)
-                    .retrieve()
-                    .bodyToMono(BatchImportResponse.class)
-                    .block();
-
-            if (response == null) {
+            ResponseEntity<BatchImportResponse> response = productServiceRestTemplate.postForEntity(
+                    url, request, BatchImportResponse.class
+            );
+            BatchImportResponse body = response.getBody();
+            if (body == null) {
                 return errorResponse(chunk.size(), "Пустой ответ от product-service");
             }
             log.debug("Chunk отправлен: created={}, updated={}, failed={}",
-                    response.getCreatedCount(), response.getUpdatedCount(), response.getFailedCount());
-            return response;
-
-        } catch (WebClientResponseException e) {
-            log.error("HTTP ошибка при отправке chunk: {} {}",
-                    e.getStatusCode(), e.getResponseBodyAsString());
-            return errorResponse(chunk.size(),
-                    "HTTP " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
+                    body.getCreatedCount(), body.getUpdatedCount(), body.getFailedCount());
+            return body;
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            log.error("HTTP ошибка при отправке chunk: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return errorResponse(chunk.size(), "HTTP " + e.getStatusCode() + ": " + e.getResponseBodyAsString());
         } catch (Exception e) {
             log.error("Ошибка при отправке chunk в product-service", e);
             return errorResponse(chunk.size(), e.getMessage());
@@ -448,5 +434,13 @@ public class CatalogImportService {
             chunks.add(list.subList(i, Math.min(i + chunkSize, list.size())));
         }
         return chunks;
+    }
+
+    /**
+     * Метод обрезки краткого описания до 1000 символов
+     */
+    private String truncate(String value, int maxLength) {
+        if (value == null) return null;
+        return value.length() > maxLength ? value.substring(0, maxLength) : value;
     }
 }

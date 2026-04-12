@@ -80,7 +80,7 @@ public class CommerceMLExchangeController {
 
         return switch (mode) {
             case "init" -> handleInit();
-            case "file" -> handleFile(exchangeType, filename, request);
+            case "file" -> handleFile(filename, request);
             case "import" -> handleImport(exchangeType, sessionCookie);
             case "query" -> handleQuery(exchangeType);
             case "success" -> handleSuccess(sessionCookie);
@@ -91,7 +91,6 @@ public class CommerceMLExchangeController {
     /**
      * A. Начало сеанса — авторизация.
      * 1С отправляет Basic auth, мы проверяем и возвращаем cookie.
-     *
      * Ответ (3 строки):
      * success
      * exchange_session
@@ -108,7 +107,7 @@ public class CommerceMLExchangeController {
         String body = "success\n" + cookieName + "\n" + sessionId.get();
 
         return ResponseEntity.ok()
-                .contentType(MediaType.TEXT_PLAIN)
+                .contentType(MediaType.valueOf("text/plain;charset=windows-1251"))
                 .header("Set-Cookie", cookieName + "=" + sessionId.get() + "; Path=/")
                 .body(body);
     }
@@ -116,7 +115,6 @@ public class CommerceMLExchangeController {
     /**
      * B. Запрос параметров от сайта.
      * Сообщаем 1С: поддержка zip, лимит размера файла.
-     *
      * Ответ (2 строки):
      * zip=no
      * file_limit={bytes}
@@ -132,7 +130,7 @@ public class CommerceMLExchangeController {
      * Для каталога: import.xml, offers.xml, import_files/...jpg
      * Для заказов: orders.xml (обновлённые статусы)
      */
-    private ResponseEntity<String> handleFile(ExchangeType exchangeType, String filename,
+    private ResponseEntity<String> handleFile(String filename,
                                               HttpServletRequest request) throws IOException {
         if (filename == null || filename.isBlank()) {
             return plainText("failure\nНе указано имя файла");
@@ -195,7 +193,7 @@ public class CommerceMLExchangeController {
 
     private ResponseEntity<String> plainText(String body) {
         return ResponseEntity.ok()
-                .contentType(MediaType.TEXT_PLAIN)
+                .contentType(MediaType.valueOf("text/plain;charset=windows-1251"))
                 .body(body);
     }
 }

@@ -167,6 +167,12 @@ spring:
               predicates:
                 - Path=/api/v1/warehouse-points/**
 
+          # === INTEGRATION-SERVICE (:8085) ===
+            - id: integration-1c
+              uri: http://localhost:8085
+              predicates:
+                - Path=/1c-exchange/**
+
 # JWT
 jwt:
   secret: "${SECRET_JWT}"

@@ -14,7 +14,7 @@ USER spring:spring
 COPY target/*.jar app.jar
 
 # JVM настройки для контейнера
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dnetworkaddress.cache.ttl=0"
 
 EXPOSE 8085
 
