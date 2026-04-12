@@ -366,4 +366,15 @@ public class ProductService {
         return productRepository.findByExternalId(externalId).orElseThrow(
                 ()-> new ProductNotFoundException("Товар с id= " + externalId + " не найден"));
     }
+
+    /**
+     * Массовая активация товаров
+     */
+    @Transactional
+    public void batchUpdateActive(List<Long> productIds, Boolean isActive) {
+        log.info("Массовое обновление isActive={} для {} товаров", isActive, productIds.size());
+        List<Product> products = productRepository.findAllById(productIds);
+        products.forEach(p -> p.setIsActive(isActive));
+        productRepository.saveAll(products);
+    }
 }

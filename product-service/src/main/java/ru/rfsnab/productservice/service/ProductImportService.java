@@ -112,7 +112,7 @@ public class ProductImportService {
             if(isNew){
                 product = new Product();
                 product.setExternalId(item.getExternalId());
-                product.setIsActive(true);
+                product.setIsActive(false);
                 product.setIsFeatured(false);
                 product.setStockQuantity(0);
                 product.setCategory(importCategory);

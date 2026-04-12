@@ -118,3 +118,10 @@ export const deleteAttribute = async (
 ): Promise<void> => {
     await apiClient.delete(`/v1/products/${productId}/attributes/${attributeId}`);
 };
+
+/** Массовая активация/деактивация товаров */
+export const batchUpdateActive = async (productIds: number[], isActive: boolean): Promise<void> => {
+    await apiClient.put('/v1/products/batch/active', productIds, {
+        params: { isActive },
+    });
+};

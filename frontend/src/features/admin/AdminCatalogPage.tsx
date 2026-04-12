@@ -19,6 +19,7 @@ import {
     Select,
     App,
     Spin,
+    Dropdown,
 } from 'antd';
 import {
     SearchOutlined,
@@ -41,7 +42,7 @@ import {
     getCategoryById,
     setCategoryParent,
 } from '@/api/adminCategories';
-import { changeProductCategory } from '@/api/adminProducts';
+import {batchUpdateActive, changeProductCategory} from '@/api/adminProducts';
 import apiClient from '@/api/client';
 import type { CategoryRequest } from '@/api/adminCategories';
 import type { Product, CategoryTree } from '@/types/product';
@@ -148,7 +149,7 @@ const AdminCatalogPage = () => {
     const [batchMoveOpen, setBatchMoveOpen] = useState(false);
     const [batchTargetCategory, setBatchTargetCategory] = useState<number | null>(null);
 
-    const pageSize = 20;
+    const [pageSize, setPageSize] = useState(20);
 
     // === Запросы ===
 
@@ -162,7 +163,7 @@ const AdminCatalogPage = () => {
         isLoading: productsLoading,
         refetch: refetchProducts,
     } = useQuery({
-        queryKey: ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId }],
+        queryKey: ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize }],
         queryFn: () =>
             getAdminProducts({
                 page: currentPage - 1,
@@ -276,6 +277,17 @@ const AdminCatalogPage = () => {
             invalidateAll();
         },
         onError: () => messageApi.error('Ошибка при массовом перемещении'),
+    });
+
+    const batchActivateMutation = useMutation({
+        mutationFn: (isActive: boolean) =>
+            batchUpdateActive(selectedRowKeys as number[], isActive),
+        onSuccess: (_, isActive) => {
+            messageApi.success(isActive ? 'Товары активированы' : 'Товары деактивированы');
+            setSelectedRowKeys([]);
+            invalidateAll();
+        },
+        onError: () => messageApi.error('Ошибка при обновлении'),
     });
 
     const toggleProductMutation = useMutation({
@@ -586,65 +598,7 @@ const AdminCatalogPage = () => {
                 </div>
             </Card>
 
-            {/* Массовый toolbar */}
-            {selectedRowKeys.length > 0 && (
-                <Card
-                    size="small"
-                    style={{
-                        marginBottom: 12,
-                        borderRadius: 12,
-                        background: '#e6f4ff',
-                        border: '1px solid #91caff',
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <Text strong>Выбрано: {selectedRowKeys.length}</Text>
 
-                        <Popover
-                            trigger="click"
-                            open={batchMoveOpen}
-                            onOpenChange={setBatchMoveOpen}
-                            content={
-                                <div style={{ width: 280 }}>
-                                    <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                                        Переместить {selectedRowKeys.length} товаров в:
-                                    </Text>
-                                    <TreeSelect
-                                        treeData={treeSelectData}
-                                        style={{ width: '100%', marginBottom: 12 }}
-                                        placeholder="Выберите категорию"
-                                        treeDefaultExpandAll
-                                        value={batchTargetCategory}
-                                        onChange={setBatchTargetCategory}
-                                    />
-                                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                                        <Button size="small" onClick={() => setBatchMoveOpen(false)}>
-                                            Отмена
-                                        </Button>
-                                        <Button
-                                            type="primary"
-                                            size="small"
-                                            disabled={!batchTargetCategory}
-                                            loading={batchMoveMutation.isPending}
-                                            onClick={handleBatchMove}
-                                        >
-                                            Переместить
-                                        </Button>
-                                    </div>
-                                </div>
-                            }
-                        >
-                            <Button type="primary" icon={<FolderOutlined />} size="small">
-                                Переместить в категорию
-                            </Button>
-                        </Popover>
-
-                        <Button size="small" onClick={() => setSelectedRowKeys([])}>
-                            Снять выделение
-                        </Button>
-                    </div>
-                </Card>
-            )}
 
             <Row gutter={16}>
                 {/* Левая колонка — категории */}
@@ -653,14 +607,47 @@ const AdminCatalogPage = () => {
                         title={
                             <span>
                 <AppstoreOutlined /> Категории
-              </span>
+            </span>
                         }
                         size="small"
                         style={{ borderRadius: 12 }}
                         extra={
-                            <Text type="secondary" style={{ fontSize: 11 }}>
-                                Перетаскивайте категории
-                            </Text>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                <Button
+                                    size="small"
+                                    icon={<PlusOutlined />}
+                                    disabled={!selectedCategoryId}
+                                    onClick={() => selectedCategoryId && handleAddSubcategory(selectedCategoryId)}
+                                >
+                                    Подкат.
+                                </Button>
+                                <Button
+                                    size="small"
+                                    icon={<EditOutlined />}
+                                    disabled={!selectedCategoryId}
+                                    onClick={() => selectedCategoryId && handleEditCategory(selectedCategoryId)}
+                                >
+                                    Изм.
+                                </Button>
+                                <Popconfirm
+                                    title="Удалить категорию?"
+                                    onConfirm={() => selectedCategoryId && deleteCatMutation.mutate(selectedCategoryId)}
+                                    okText="Да"
+                                    cancelText="Нет"
+                                    disabled={!selectedCategoryId}
+                                >
+                                    <Button size="small" danger icon={<DeleteOutlined />} disabled={!selectedCategoryId}>
+                                        Удал.
+                                    </Button>
+                                </Popconfirm>
+                                <Button
+                                    size="small"
+                                    icon={<PlusOutlined />}
+                                    onClick={handleAddCategory}
+                                >
+                                    + Кат.
+                                </Button>
+                            </div>
                         }
                     >
                         <Button
@@ -688,45 +675,6 @@ const AdminCatalogPage = () => {
                                 blockNode
                             />
                         )}
-
-                        {/* Действия с выбранной категорией */}
-                        {selectedCategoryId && (
-                            <div
-                                style={{
-                                    marginTop: 12,
-                                    paddingTop: 12,
-                                    borderTop: '1px solid #f0f0f0',
-                                    display: 'flex',
-                                    gap: 4,
-                                    flexWrap: 'wrap',
-                                }}
-                            >
-                                <Button
-                                    size="small"
-                                    icon={<PlusOutlined />}
-                                    onClick={() => handleAddSubcategory(selectedCategoryId)}
-                                >
-                                    Подкат.
-                                </Button>
-                                <Button
-                                    size="small"
-                                    icon={<EditOutlined />}
-                                    onClick={() => handleEditCategory(selectedCategoryId)}
-                                >
-                                    Изм.
-                                </Button>
-                                <Popconfirm
-                                    title="Удалить категорию?"
-                                    onConfirm={() => deleteCatMutation.mutate(selectedCategoryId)}
-                                    okText="Да"
-                                    cancelText="Нет"
-                                >
-                                    <Button size="small" danger icon={<DeleteOutlined />}>
-                                        Удал.
-                                    </Button>
-                                </Popconfirm>
-                            </div>
-                        )}
                     </Card>
                 </Col>
 
@@ -744,6 +692,46 @@ const AdminCatalogPage = () => {
                         }
                         size="small"
                         style={{ borderRadius: 12 }}
+                        extra={
+                            selectedRowKeys.length > 0 ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                        Выбрано: {selectedRowKeys.length}
+                                    </Text>
+                                    <Dropdown
+                                        menu={{
+                                            items: [
+                                                {
+                                                    key: 'activate',
+                                                    label: 'Активировать',
+                                                    onClick: () => batchActivateMutation.mutate(true),
+                                                },
+                                                {
+                                                    key: 'deactivate',
+                                                    label: 'Деактивировать',
+                                                    onClick: () => batchActivateMutation.mutate(false),
+                                                },
+                                                { type: 'divider' },
+                                                {
+                                                    key: 'move',
+                                                    label: 'Переместить в категорию',
+                                                    icon: <FolderOutlined />,
+                                                    onClick: () => setBatchMoveOpen(true),
+                                                },
+                                            ],
+                                        }}
+                                        trigger={['click']}
+                                    >
+                                        <Button type="primary" size="small">
+                                            Действия ▾
+                                        </Button>
+                                    </Dropdown>
+                                    <Button size="small" onClick={() => setSelectedRowKeys([])}>
+                                        Снять выделение
+                                    </Button>
+                                </div>
+                            ) : null
+                        }
                     >
                         <Table<Product>
                             columns={columns}
@@ -766,13 +754,56 @@ const AdminCatalogPage = () => {
                                             setSelectedRowKeys([]);
                                         },
                                         showTotal: (total) => `Всего ${total}`,
-                                        showSizeChanger: false,
+                                        showSizeChanger: true,
+                                        pageSizeOptions: ['10', '20', '50', '100'],
+                                        onShowSizeChange: (_: number, size: number) => {
+                                            setPageSize(size);
+                                            setCurrentPage(1);
+                                        },
                                     }
                             }
                             size="small"
                             scroll={{ x: 700 }}
                         />
                     </Card>
+
+                    <Popover
+                        trigger="click"
+                        open={batchMoveOpen}
+                        onOpenChange={setBatchMoveOpen}
+                        content={
+                            <div style={{ width: 280 }}>
+                                <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                                    Переместить {selectedRowKeys.length} товаров в:
+                                </Text>
+                                <TreeSelect
+                                    treeData={treeSelectData}
+                                    style={{ width: '100%', marginBottom: 12 }}
+                                    placeholder="Выберите категорию"
+                                    treeDefaultExpandAll
+                                    value={batchTargetCategory}
+                                    onChange={setBatchTargetCategory}
+                                />
+                                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                    <Button size="small" onClick={() => setBatchMoveOpen(false)}>
+                                        Отмена
+                                    </Button>
+                                    <Button
+                                        type="primary"
+                                        size="small"
+                                        disabled={!batchTargetCategory}
+                                        loading={batchMoveMutation.isPending}
+                                        onClick={handleBatchMove}
+                                    >
+                                        Переместить
+                                    </Button>
+                                </div>
+                            </div>
+                        }
+                    >
+                        <span />
+                    </Popover>
+
                 </Col>
             </Row>
 

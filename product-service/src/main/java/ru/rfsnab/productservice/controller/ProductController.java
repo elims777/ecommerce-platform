@@ -181,4 +181,16 @@ public class ProductController {
         productService.batchUpdateCategory(productIds, categoryId);
         return ResponseEntity.ok().build();
     }
+
+    /**
+     * Массовая активация/деактивация товаров
+     */
+    @PutMapping("/batch/active")
+    public ResponseEntity<Void> batchUpdateActive(
+            @RequestParam Boolean isActive,
+            @RequestBody List<Long> productIds
+    ) {
+        productService.batchUpdateActive(productIds, isActive);
+        return ResponseEntity.ok().build();
+    }
 }

@@ -2,6 +2,7 @@ package ru.rfsnab.productservice.mapper;
 
 import ru.rfsnab.productservice.dto.ProductRequest;
 import ru.rfsnab.productservice.dto.ProductResponse;
+import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
 
 public class ProductMapper {
@@ -20,6 +21,9 @@ public class ProductMapper {
                 .externalCode(productRequest.getExternalCode())
                 .unitOfMeasure(productRequest.getUnitOfMeasure())
                 .vatRate(productRequest.getVatRate())
+                .category(productRequest.getCategoryId() != null
+                        ? Category.builder().id(productRequest.getCategoryId()).build()
+                        : null)
                 .build();
     }
 

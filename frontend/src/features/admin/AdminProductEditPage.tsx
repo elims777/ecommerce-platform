@@ -92,7 +92,7 @@ const AdminProductEditPage = () => {
         staleTime: 5 * 60 * 1000,
     });
 
-    const categoryOptions = flattenCategories(categoryTree.filter((c) => c.isActive));
+    const categoryOptions = flattenCategories(categoryTree);
 
     // Инициализация формы при загрузке товара
     if (product && !form.isFieldsTouched()) {
