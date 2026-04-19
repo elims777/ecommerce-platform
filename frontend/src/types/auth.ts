@@ -11,6 +11,7 @@ export interface User {
     firstname: string;
     lastname: string;
     surname: string | null;
+    phone: string | null;
     emailVerified: boolean;
     roles: UserRole[];
     createdAt: string;
@@ -30,6 +31,7 @@ export interface RegisterRequest {
     firstname: string;
     lastname: string;
     surname?: string;
+    phone: string;
 }
 
 /** Ответ от auth-service при логине — маппится на AuthResponse */

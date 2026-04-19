@@ -13,6 +13,7 @@ public class RegistrationMapper {
                 .firstname(request.getFirstname())
                 .lastname(request.getLastname())
                 .surname(request.getSurname())
+                .phone(request.getPhone())
                 .build();
     }
 
@@ -23,6 +24,7 @@ public class RegistrationMapper {
                 .firstname(user.getFirstname())
                 .lastname(user.getLastname())
                 .surname(user.getSurname())
+                .phone(user.getPhone())
                 .roles(user.getRoles())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())

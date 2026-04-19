@@ -71,6 +71,7 @@ class UserControllerTest {
                 .firstname("Firstname")
                 .lastname("Lastname")
                 .surname("Surname")
+                .phone("+79998882221")
                 .emailVerified(false)
                 .roles(new HashSet<>(Set.of(roleUser)))
                 .build();
@@ -86,6 +87,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
+                "Phone",
                 true
         );
 
@@ -114,6 +116,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
+                "Phone",
                 true
         );
 
@@ -152,6 +155,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
+                "Phone",
                 true
         );
 
@@ -188,6 +192,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
+                "Phone",
                 true
         );
 

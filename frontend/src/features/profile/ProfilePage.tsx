@@ -52,6 +52,7 @@ const ProfilePage = () => {
                 firstname: user.firstname,
                 lastname: user.lastname,
                 surname: user.surname || '',
+                phone: user.phone || '',
             });
         }
         setEditing(true);
@@ -131,6 +132,17 @@ const ProfilePage = () => {
                             <Input placeholder="Отчество (необязательно)" />
                         </Form.Item>
 
+                        <Form.Item
+                            name="phone"
+                            label="Телефон"
+                            rules={[
+                                { required: true, message: 'Введите телефон' },
+                                { pattern: /^\+?[0-9]{11}$/, message: '11 цифр' },
+                            ]}
+                        >
+                            <Input placeholder="+79001234567" />
+                        </Form.Item>
+
                         <Space>
                             <Button
                                 type="primary"
@@ -155,6 +167,9 @@ const ProfilePage = () => {
                         </Descriptions.Item>
                         <Descriptions.Item label="Отчество">
                             {user.surname || '—'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Телефон">
+                            {user.phone || '—'}
                         </Descriptions.Item>
                     </Descriptions>
                 )}

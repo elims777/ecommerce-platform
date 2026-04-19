@@ -9,6 +9,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import type { RegisterRequest } from '@/types/auth';
 import type { AxiosError } from 'axios';
 import { register } from '@/api/auth';
+import { PhoneOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -95,6 +96,16 @@ const RegisterPage = () => {
                             </Form.Item>
                         </Col>
                     </Row>
+
+                    <Form.Item
+                        name="phone"
+                        rules={[
+                            { required: true, message: 'Введите телефон' },
+                            { pattern: /^\+?[0-9]{11}$/, message: 'Телефон должен содержать 11 цифр' },
+                        ]}
+                    >
+                        <Input prefix={<PhoneOutlined />} placeholder="+79001234567" />
+                    </Form.Item>
 
                     <Form.Item
                         name="email"

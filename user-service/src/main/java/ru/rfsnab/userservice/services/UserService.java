@@ -71,6 +71,7 @@ public class UserService {
                             userEntity.setFirstname(user.getFirstname());
                             userEntity.setLastname(user.getLastname());
                             userEntity.setSurname(user.getSurname());
+                            userEntity.setPhone(user.getPhone());
                             userEntity.setRoles(user.getRoles());
                             return userRepository.save(userEntity);
                         }

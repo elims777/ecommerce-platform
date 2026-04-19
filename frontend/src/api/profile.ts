@@ -6,6 +6,7 @@ export interface UpdateProfileRequest {
     firstname: string;
     lastname: string;
     surname?: string;
+    phone?: string;
 }
 
 /** Получить профиль текущего пользователя (через auth-service → user-service) */

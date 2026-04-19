@@ -51,6 +51,9 @@ public class UserController {
         }
     }
 
+    /**
+     * Регистрация пользователей
+     */
     @PostMapping("/signup")
     public ResponseEntity<RegAuthResponse> registerUser(@Valid @RequestBody RegistrationRequest userDto){
         if(userService.findUserByEmail(userDto.getEmail()).isPresent()){
