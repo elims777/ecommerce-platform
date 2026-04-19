@@ -33,7 +33,6 @@ import java.util.List;
 @Slf4j
 public class OrderExportService {
 
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATETIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     private final PendingOrderRepository repository;
@@ -104,6 +103,16 @@ public class OrderExportService {
                 doc.setDate(createdAt.substring(0,10)); //yyyy-MM-dd
             }
 
+            doc.setOperation("Заказ товара");
+            doc.setRate("1");
+            // Время
+            if (json.has("createdAt") && !json.get("createdAt").isNull()) {
+                String createdAt = json.get("createdAt").asText();
+                if (createdAt.length() > 10) {
+                    doc.setTime(createdAt.substring(11, 19)); // HH:mm:ss
+                }
+            }
+
             //Комментарий
             if(json.has("comment") && !json.get("comment").isNull()){
                 doc.setComment(json.get("comment").asText());
@@ -159,6 +168,8 @@ public class OrderExportService {
                 product.setName(item.get("productName").asText());
                 product.setQuantity(item.get("quantity").asText());
                 product.setPricePerUnit(item.get("price").asText());
+                product.setCatalogId(getTextOrNull(item, "externalId")); // тот же externalId
+                product.setBaseUnit("шт");
 
                 // Сумма = цена * количество
                 BigDecimal price = new BigDecimal(item.get("price").asText());

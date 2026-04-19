@@ -29,4 +29,10 @@ public class CmlOrderProduct {
 
     @XmlElement(name = "Сумма")
     private String subtotal;
+
+    @XmlElement(name = "ИдКаталога")
+    private String catalogId;
+
+    @XmlElement(name = "БазоваяЕдиница")
+    private String baseUnit;
 }

@@ -43,6 +43,15 @@ public class CmlDocument {
     @XmlElement(name = "Роль")
     private String role;
 
+    @XmlElement(name = "ХозОперация")
+    private String operation;
+
+    @XmlElement(name = "Курс")
+    private String rate;
+
+    @XmlElement(name = "Время")
+    private String time;
+
     @XmlElementWrapper(name = "Контрагенты")
     @XmlElement(name = "Контрагент")
     private List<CmlContragent> contragents = new ArrayList<>();

@@ -97,6 +97,7 @@ public class OrderService {
         order.setTotalAmount(totalAmount);
 
         order = orderRepository.save(order);
+        orderRepository.flush();
         log.info("Заказ создан: {} для пользователя {}", order.getOrderNumber(), userId);
 
         // 5. Очищаем корзину

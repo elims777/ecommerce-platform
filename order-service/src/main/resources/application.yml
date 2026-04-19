@@ -11,6 +11,10 @@ spring:
     password: secret
     driver-class-name: org.postgresql.Driver
 
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
   jpa:
     hibernate:
       ddl-auto: validate
