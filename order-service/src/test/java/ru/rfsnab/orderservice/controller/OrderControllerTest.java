@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -43,6 +44,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -167,12 +169,13 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — возвращает страницу с заказами")
         void shouldReturnPageOfOrders() throws Exception {
             Order order = buildDeliveryOrder();
-            Page<Order> page = new PageImpl<>(List.of(order));
+            Page<Order> page = new PageImpl<>(List.of(order), PageRequest.of(0, 20), 0);
             when(orderService.getUserOrders(eq(USER_ID), any(Pageable.class)))
                     .thenReturn(page);
 
             mockMvc.perform(get("/api/v1/orders")
                             .with(jwtUser()))
+                    .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content", hasSize(1)))
                     .andExpect(jsonPath("$.content[0].orderNumber").value("ABC-00001"))
@@ -183,7 +186,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — пустой список")
         void shouldReturnEmptyPage() throws Exception {
             when(orderService.getUserOrders(eq(USER_ID), any(Pageable.class)))
-                    .thenReturn(Page.empty());
+                    .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
 
             mockMvc.perform(get("/api/v1/orders")
                             .with(jwtUser()))
