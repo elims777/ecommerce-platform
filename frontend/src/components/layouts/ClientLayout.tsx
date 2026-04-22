@@ -40,7 +40,7 @@ const getPageIndex = (pathname: string): number => {
 };
 
 const HEADER_HEIGHT = 80;
-const LOGO_SIZE = 120;
+const LOGO_SIZE = 140;
 
 const ClientLayout = () => {
     const navigate = useNavigate();
@@ -126,7 +126,7 @@ const ClientLayout = () => {
                 }}
             >
                 {/* Левая навигация */}
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: 60 }}>
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: 70 }}>
                     <Menu
                         mode="horizontal"
                         selectedKeys={[location.pathname]}
@@ -145,6 +145,8 @@ const ClientLayout = () => {
                 <div
                     className="glass-sphere"
                     onClick={() => navigate('/')}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.08)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)')}
                     style={{
                         position: 'absolute',
                         left: '50%',
@@ -155,14 +157,20 @@ const ClientLayout = () => {
                         height: LOGO_SIZE,
                         marginTop: LOGO_SIZE * 0.25,
                         cursor: 'pointer',
+                        background: '#fff',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        transition: 'transform 0.2s ease-out',
+                        willChange: 'transform',
+                        backfaceVisibility: 'hidden' as const,
                     }}
                 >
                     <img
                         src="/logo.png"
                         alt="РФснаб"
                         style={{
-                            width: LOGO_SIZE * 1.2,
-                            height: LOGO_SIZE * 1.2,
+                            width: LOGO_SIZE,
+                            height: LOGO_SIZE,
                             objectFit: 'contain',
                             position: 'relative',
                             zIndex: 2,
@@ -172,7 +180,7 @@ const ClientLayout = () => {
                 </div>
 
                 {/* Правая навигация */}
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 60, gap: 8 }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 100, gap: 8 }}>
                     <Badge count={totalItems} size="small">
                         <Button
                             type="text"

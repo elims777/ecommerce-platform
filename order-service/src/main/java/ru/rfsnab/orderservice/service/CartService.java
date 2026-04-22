@@ -94,8 +94,6 @@ public class CartService {
         int currentQuantity = currentCart.getOrDefault(productId, 0);
         int newQuantity = currentQuantity + quantity;
 
-        validateStock(product, newQuantity);
-
         cartRedisRepository.addItem(userId,productId,newQuantity);
         log.debug("Товар {} добавлен в корзину пользователя {}, количество: {}",
                 productId, userId, newQuantity);
@@ -115,7 +113,6 @@ public class CartService {
     public Cart updateItemQuantity(Long userId, Long productId, int quantity){
         if(quantity>0){
             ProductDto product = productServiceClient.getProduct(productId);
-            validateStock(product, quantity);
         }
         cartRedisRepository.updateItemQuantity(userId,productId,quantity);
         return getCart(userId);
