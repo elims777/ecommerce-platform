@@ -166,6 +166,17 @@ spring:
               uri: http://localhost:8084
               predicates:
                 - Path=/api/v1/warehouse-points/**
+            - id: order-recipients
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/v1/recipients/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 15
+                    redis-rate-limiter.burstCapacity: 25
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
           # === INTEGRATION-SERVICE (:8085) ===
             - id: integration-1c

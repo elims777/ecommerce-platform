@@ -69,7 +69,7 @@ public class ProductController {
             @PathVariable Long categoryId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
             ){
-        Page<Product> products = productService.getProductsByCategory(categoryId, pageable);
+        Page<Product> products = productService.getProductsByCategoryPage(categoryId, pageable);
         return ResponseEntity.ok(products.map(ProductMapper::mapToResponse));
     }
 

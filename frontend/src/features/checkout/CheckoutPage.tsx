@@ -15,19 +15,30 @@ import {
     Steps,
     Result,
     Spin,
+    Space,
 } from 'antd';
 import {
     ShoppingOutlined,
     EnvironmentOutlined,
     CreditCardOutlined,
     CheckCircleOutlined,
+    PlusOutlined,
+    UserOutlined,
 } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { createOrder } from '@/api/orders';
 import { getWarehousePoints } from '@/api/warehouse';
+import {
+    getRecipients,
+    getRecipientAddresses,
+    createRecipient,
+    createRecipientAddress,
+    type RecipientDto,
+    type RecipientAddressDto,
+} from '@/api/recipients';
 import {
     DeliveryMethod,
     DeliveryMethodLabels,
@@ -42,7 +53,6 @@ import type { ColumnsType } from 'antd/es/table';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-/** Форматирует цену */
 const formatPrice = (price: number): string =>
     new Intl.NumberFormat('ru-RU', {
         style: 'currency',
@@ -55,14 +65,16 @@ interface CheckoutFormValues {
     paymentMethod: PaymentMethod;
     deliveryMethod: DeliveryMethod;
     warehousePointId?: number;
-    city?: string;
-    street?: string;
-    building?: string;
-    apartment?: string;
-    postalCode?: string;
-    phone?: string;
-    recipientName?: string;
     comment?: string;
+    // Поля нового получателя (показываются только в режиме ручного ввода)
+    newRecipientName?: string;
+    newRecipientPhone?: string;
+    newAddressLabel?: string;
+    newCity?: string;
+    newStreet?: string;
+    newBuilding?: string;
+    newApartment?: string;
+    newPostalCode?: string;
 }
 
 const CheckoutPage = () => {
@@ -74,25 +86,73 @@ const CheckoutPage = () => {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const user = useAuthStore((state) => state.user);
     const { items, totalAmount, fetchCart, clearCart } = useCartStore();
+    const queryClient = useQueryClient();
 
     const deliveryMethod = Form.useWatch('deliveryMethod', form);
 
-    // Загружаем серверную корзину
+    // Выбранный получатель и адрес
+    const [selectedRecipient, setSelectedRecipient] = useState<RecipientDto | null>(null);
+    const [selectedAddress, setSelectedAddress] = useState<RecipientAddressDto | null>(null);
+    // Режим ручного ввода нового получателя/адреса
+    const [manualInput, setManualInput] = useState(false);
+
     useEffect(() => {
-        if (isAuthenticated) {
-            fetchCart();
-        }
+        if (isAuthenticated) fetchCart();
     }, [isAuthenticated, fetchCart]);
 
-    // Автозаполнение ФИО получателя из профиля
+    // Список получателей
+    const { data: recipients = [], isLoading: recipientsLoading } = useQuery({
+        queryKey: ['recipients'],
+        queryFn: getRecipients,
+        enabled: isAuthenticated,
+    });
+
+    // Адреса выбранного получателя
+    const { data: addresses = [], isLoading: addressesLoading } = useQuery({
+        queryKey: ['recipientAddresses', selectedRecipient?.id],
+        queryFn: () => getRecipientAddresses(selectedRecipient!.id),
+        enabled: !!selectedRecipient,
+    });
+
+    // Автовыбор получателя по умолчанию при загрузке
     useEffect(() => {
-        if (user) {
-            const fullName = [user.lastname, user.firstname, user.surname]
-                .filter(Boolean)
-                .join(' ');
-            form.setFieldValue('recipientName', fullName);
+        if (recipients.length === 0) {
+            // Нет получателей — сразу показываем форму ввода
+            setManualInput(true);
+            // Автозаполняем имя из профиля
+            if (user) {
+                const fullName = [user.lastname, user.firstname, user.surname]
+                    .filter(Boolean)
+                    .join(' ');
+                form.setFieldValue('newRecipientName', fullName);
+            }
+        } else {
+            const defaultRecipient = recipients.find((r) => r.isDefault) ?? recipients[0];
+            setSelectedRecipient(defaultRecipient);
         }
-    }, [user, form]);
+    }, [recipients, user, form]);
+
+    // Автовыбор адреса по умолчанию при смене получателя
+    useEffect(() => {
+        setSelectedAddress(null);
+        if (addresses.length > 0) {
+            const defaultAddr = addresses.find((a) => a.isDefault) ?? addresses[0];
+            setSelectedAddress(defaultAddr);
+        }
+    }, [addresses]);
+
+    // Мутации для создания нового получателя и адреса
+    const createRecipientMutation = useMutation({
+        mutationFn: createRecipient,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recipients'] }),
+    });
+
+    const createAddressMutation = useMutation({
+        mutationFn: ({ recipientId, data }: { recipientId: number; data: Parameters<typeof createRecipientAddress>[1] }) =>
+            createRecipientAddress(recipientId, data),
+        onSuccess: (_, { recipientId }) =>
+            queryClient.invalidateQueries({ queryKey: ['recipientAddresses', recipientId] }),
+    });
 
     // Загрузка точек самовывоза
     const { data: warehousePoints = [], isLoading: warehouseLoading } = useQuery({
@@ -111,15 +171,49 @@ const CheckoutPage = () => {
             };
 
             if (values.deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY) {
-                request.deliveryAddress = {
-                    city: values.city!,
-                    street: values.street!,
-                    building: values.building!,
-                    apartment: values.apartment,
-                    postalCode: values.postalCode,
-                    phone: values.phone!,
-                    recipientName: values.recipientName!,
-                };
+                if (manualInput) {
+                    // Режим ручного ввода — сначала создаём получателя и адрес
+                    const newRecipient = await createRecipientMutation.mutateAsync({
+                        name: values.newRecipientName!,
+                        phone: values.newRecipientPhone!,
+                    });
+                    await createAddressMutation.mutateAsync({
+                        recipientId: newRecipient.id,
+                        data: {
+                            label: values.newAddressLabel || 'Основной',
+                            city: values.newCity!,
+                            street: values.newStreet!,
+                            building: values.newBuilding!,
+                            apartment: values.newApartment,
+                            postalCode: values.newPostalCode,
+                        },
+                    });
+                    request.deliveryAddress = {
+                        city: values.newCity!,
+                        street: values.newStreet!,
+                        building: values.newBuilding!,
+                        apartment: values.newApartment,
+                        postalCode: values.newPostalCode,
+                        phone: values.newRecipientPhone!,
+                        recipientName: values.newRecipientName!,
+                    };
+                } else {
+                    // Режим выбора из существующих
+                    if (!selectedRecipient || !selectedAddress) {
+                        messageApi.error('Выберите получателя и адрес доставки');
+                        setLoading(false);
+                        return;
+                    }
+                    request.deliveryAddress = {
+                        city: selectedAddress.city,
+                        street: selectedAddress.street,
+                        building: selectedAddress.building,
+                        apartment: selectedAddress.apartment,
+                        postalCode: selectedAddress.postalCode,
+                        phone: selectedRecipient.phone,
+                        recipientName: selectedRecipient.name,
+                    };
+                }
             }
 
             if (values.deliveryMethod === DeliveryMethod.PICKUP && values.warehousePointId) {
@@ -132,8 +226,7 @@ const CheckoutPage = () => {
         } catch (error) {
             const axiosError = error as AxiosError<{ message?: string }>;
             const errorMessage =
-                axiosError.response?.data?.message ||
-                'Ошибка при оформлении заказа. Попробуйте позже.';
+                axiosError.response?.data?.message || 'Ошибка при оформлении заказа. Попробуйте позже.';
             messageApi.error(errorMessage);
         } finally {
             setLoading(false);
@@ -141,17 +234,8 @@ const CheckoutPage = () => {
     };
 
     const columns: ColumnsType<CartItemDto> = [
-        {
-            title: 'Товар',
-            dataIndex: 'productName',
-            key: 'productName',
-        },
-        {
-            title: 'Кол-во',
-            dataIndex: 'quantity',
-            key: 'quantity',
-            width: 80,
-        },
+        { title: 'Товар', dataIndex: 'productName', key: 'productName' },
+        { title: 'Кол-во', dataIndex: 'quantity', key: 'quantity', width: 80 },
         {
             title: 'Сумма',
             dataIndex: 'subtotal',
@@ -169,11 +253,7 @@ const CheckoutPage = () => {
                 title="Заказ успешно оформлен!"
                 subTitle={`Номер заказа: ${orderNumber}`}
                 extra={[
-                    <Button
-                        type="primary"
-                        key="orders"
-                        onClick={() => navigate('/orders')}
-                    >
+                    <Button type="primary" key="orders" onClick={() => navigate('/orders')}>
                         Мои заказы
                     </Button>,
                     <Button key="catalog" onClick={() => navigate('/')}>
@@ -198,6 +278,203 @@ const CheckoutPage = () => {
             />
         );
     }
+
+    // Секция выбора/ввода получателя и адреса (только при SUPPLIER_DELIVERY)
+    const renderRecipientSection = () => {
+        if (deliveryMethod !== DeliveryMethod.SUPPLIER_DELIVERY) return null;
+
+        return (
+            <>
+                {/* @ts-ignore */}
+                <Divider orientation="left" plain>
+                    Получатель и адрес доставки
+                </Divider>
+
+                {recipientsLoading ? (
+                    <div style={{ textAlign: 'center', padding: 16 }}>
+                        <Spin />
+                    </div>
+                ) : !manualInput ? (
+                    // Режим выбора из существующих
+                    <>
+                        <Form.Item label="Получатель">
+                            <Select
+                                value={selectedRecipient?.id}
+                                onChange={(id) => {
+                                    const r = recipients.find((r) => r.id === id) ?? null;
+                                    setSelectedRecipient(r);
+                                    setSelectedAddress(null);
+                                }}
+                                placeholder="Выберите получателя"
+                                suffixIcon={<UserOutlined />}
+                                size="large"
+                            >
+                                {recipients.map((r) => (
+                                    <Select.Option key={r.id} value={r.id}>
+                                        <Space>
+                                            <Text strong>{r.name}</Text>
+                                            <Text type="secondary">{r.phone}</Text>
+                                            {r.isDefault && (
+                                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                                    (по умолчанию)
+                                                </Text>
+                                            )}
+                                        </Space>
+                                    </Select.Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+
+                        {selectedRecipient && (
+                            <Form.Item label="Адрес доставки">
+                                {addressesLoading ? (
+                                    <Spin size="small" />
+                                ) : addresses.length === 0 ? (
+                                    <Text type="secondary">
+                                        У этого получателя нет сохранённых адресов.{' '}
+                                        <Button
+                                            type="link"
+                                            style={{ padding: 0 }}
+                                            onClick={() => setManualInput(true)}
+                                        >
+                                            Добавить адрес
+                                        </Button>
+                                    </Text>
+                                ) : (
+                                    <Select
+                                        value={selectedAddress?.id}
+                                        onChange={(id) => {
+                                            const a = addresses.find((a) => a.id === id) ?? null;
+                                            setSelectedAddress(a);
+                                        }}
+                                        placeholder="Выберите адрес"
+                                        suffixIcon={<EnvironmentOutlined />}
+                                        size="large"
+                                    >
+                                        {addresses.map((a) => (
+                                            <Select.Option key={a.id} value={a.id}>
+                                                <Space>
+                                                    <Text strong>{a.label}</Text>
+                                                    <Text type="secondary">
+                                                        {a.city}, {a.street}, д. {a.building}
+                                                        {a.apartment ? `, кв. ${a.apartment}` : ''}
+                                                    </Text>
+                                                </Space>
+                                            </Select.Option>
+                                        ))}
+                                    </Select>
+                                )}
+                            </Form.Item>
+                        )}
+
+                        <Button
+                            type="dashed"
+                            icon={<PlusOutlined />}
+                            onClick={() => setManualInput(true)}
+                            block
+                        >
+                            Новый получатель и адрес
+                        </Button>
+                    </>
+                ) : (
+                    // Режим ручного ввода нового получателя
+                    <>
+                        <Row gutter={12}>
+                            <Col span={12}>
+                                <Form.Item
+                                    name="newRecipientName"
+                                    label="ФИО получателя"
+                                    rules={[{ required: true, message: 'Укажите получателя' }]}
+                                >
+                                    <Input placeholder="Иванов Иван Иванович" />
+                                </Form.Item>
+                            </Col>
+                            <Col span={12}>
+                                <Form.Item
+                                    name="newRecipientPhone"
+                                    label="Телефон"
+                                    rules={[
+                                        { required: true, message: 'Укажите телефон' },
+                                        {
+                                            pattern: /^\+?[0-9]{11}$/,
+                                            message: 'Введите 11 цифр',
+                                        },
+                                    ]}
+                                >
+                                    <Input placeholder="+79001234567" />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+
+                        <Row gutter={12}>
+                            <Col span={8}>
+                                <Form.Item name="newAddressLabel" label="Название адреса">
+                                    <Input placeholder="Офис, склад, дом..." />
+                                </Form.Item>
+                            </Col>
+                            <Col span={10}>
+                                <Form.Item
+                                    name="newCity"
+                                    label="Город"
+                                    rules={[{ required: true, message: 'Укажите город' }]}
+                                >
+                                    <Input placeholder="Москва" />
+                                </Form.Item>
+                            </Col>
+                            <Col span={6}>
+                                <Form.Item name="newPostalCode" label="Индекс">
+                                    <Input placeholder="101000" />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+
+                        <Row gutter={12}>
+                            <Col span={12}>
+                                <Form.Item
+                                    name="newStreet"
+                                    label="Улица"
+                                    rules={[{ required: true, message: 'Укажите улицу' }]}
+                                >
+                                    <Input placeholder="ул. Примерная" />
+                                </Form.Item>
+                            </Col>
+                            <Col span={6}>
+                                <Form.Item
+                                    name="newBuilding"
+                                    label="Дом"
+                                    rules={[{ required: true, message: 'Укажите дом' }]}
+                                >
+                                    <Input placeholder="12" />
+                                </Form.Item>
+                            </Col>
+                            <Col span={6}>
+                                <Form.Item name="newApartment" label="Квартира/офис">
+                                    <Input placeholder="45" />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+
+                        {/* Кнопка "назад" только если есть сохранённые получатели */}
+                        {recipients.length > 0 && (
+                            <Button
+                                type="link"
+                                style={{ padding: 0, marginBottom: 8 }}
+                                onClick={() => {
+                                    setManualInput(false);
+                                    form.resetFields([
+                                        'newRecipientName', 'newRecipientPhone', 'newAddressLabel',
+                                        'newCity', 'newStreet', 'newBuilding', 'newApartment', 'newPostalCode',
+                                    ]);
+                                }}
+                            >
+                                ← Выбрать из сохранённых
+                            </Button>
+                        )}
+                    </>
+                )}
+            </>
+        );
+    };
 
     return (
         <div>
@@ -230,18 +507,21 @@ const CheckoutPage = () => {
                         <Card
                             title={
                                 <span>
-                  <EnvironmentOutlined /> Способ доставки
-                </span>
+                                    <EnvironmentOutlined /> Способ доставки
+                                </span>
                             }
                             style={{ marginBottom: 16 }}
                         >
                             <Form.Item
                                 name="deliveryMethod"
-                                rules={[
-                                    { required: true, message: 'Выберите способ доставки' },
-                                ]}
+                                rules={[{ required: true, message: 'Выберите способ доставки' }]}
                             >
-                                <Radio.Group>
+                                <Radio.Group
+                                    onChange={() => {
+                                        // Сбрасываем состояние при смене способа доставки
+                                        setManualInput(recipients.length === 0);
+                                    }}
+                                >
                                     {Object.entries(DeliveryMethodLabels).map(([key, label]) => (
                                         <Radio.Button key={key} value={key}>
                                             {label}
@@ -253,7 +533,10 @@ const CheckoutPage = () => {
                             {/* Точки самовывоза */}
                             {deliveryMethod === DeliveryMethod.PICKUP && (
                                 <>
-                                    <Divider plain>Точка самовывоза</Divider>
+                                    {/* @ts-ignore */}
+                                    <Divider orientation="left" plain>
+                                        Точка самовывоза
+                                    </Divider>
                                     {warehouseLoading ? (
                                         <div style={{ textAlign: 'center', padding: 16 }}>
                                             <Spin />
@@ -261,14 +544,9 @@ const CheckoutPage = () => {
                                     ) : warehousePoints.length > 0 ? (
                                         <Form.Item
                                             name="warehousePointId"
-                                            rules={[
-                                                { required: true, message: 'Выберите точку самовывоза' },
-                                            ]}
+                                            rules={[{ required: true, message: 'Выберите точку самовывоза' }]}
                                         >
-                                            <Select
-                                                placeholder="Выберите точку самовывоза"
-                                                size="large"
-                                            >
+                                            <Select placeholder="Выберите точку самовывоза" size="large">
                                                 {warehousePoints.map((point) => (
                                                     <Select.Option key={point.id} value={point.id}>
                                                         <div>
@@ -291,85 +569,16 @@ const CheckoutPage = () => {
                                 </>
                             )}
 
-                            {/* Адрес доставки */}
-                            {deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY && (
-                                <>
-                                    <Divider plain>Адрес доставки</Divider>
-                                    <Row gutter={12}>
-                                        <Col span={12}>
-                                            <Form.Item
-                                                name="recipientName"
-                                                label="Получатель"
-                                                rules={[
-                                                    { required: true, message: 'Укажите получателя' },
-                                                ]}
-                                            >
-                                                <Input placeholder="ФИО получателя" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col span={12}>
-                                            <Form.Item
-                                                name="phone"
-                                                label="Телефон"
-                                                rules={[
-                                                    { required: true, message: 'Укажите телефон' },
-                                                ]}
-                                            >
-                                                <Input placeholder="+7 (___) ___-__-__" />
-                                            </Form.Item>
-                                        </Col>
-                                    </Row>
-                                    <Row gutter={12}>
-                                        <Col span={12}>
-                                            <Form.Item
-                                                name="city"
-                                                label="Город"
-                                                rules={[{ required: true, message: 'Укажите город' }]}
-                                            >
-                                                <Input placeholder="Москва" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col span={12}>
-                                            <Form.Item name="postalCode" label="Индекс">
-                                                <Input placeholder="101000" />
-                                            </Form.Item>
-                                        </Col>
-                                    </Row>
-                                    <Row gutter={12}>
-                                        <Col span={12}>
-                                            <Form.Item
-                                                name="street"
-                                                label="Улица"
-                                                rules={[{ required: true, message: 'Укажите улицу' }]}
-                                            >
-                                                <Input placeholder="ул. Примерная" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col span={6}>
-                                            <Form.Item
-                                                name="building"
-                                                label="Дом"
-                                                rules={[{ required: true, message: 'Укажите дом' }]}
-                                            >
-                                                <Input placeholder="12" />
-                                            </Form.Item>
-                                        </Col>
-                                        <Col span={6}>
-                                            <Form.Item name="apartment" label="Квартира/офис">
-                                                <Input placeholder="45" />
-                                            </Form.Item>
-                                        </Col>
-                                    </Row>
-                                </>
-                            )}
+                            {/* Секция получателя и адреса */}
+                            {renderRecipientSection()}
                         </Card>
 
                         {/* Способ оплаты */}
                         <Card
                             title={
                                 <span>
-                  <CreditCardOutlined /> Способ оплаты
-                </span>
+                                    <CreditCardOutlined /> Способ оплаты
+                                </span>
                             }
                             style={{ marginBottom: 16 }}
                         >

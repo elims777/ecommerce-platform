@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -20,9 +21,9 @@ import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.service.OrderService;
 import ru.rfsnab.orderservice.service.WarehousePointService;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
 /**
  * REST контроллер для управления заказами.
@@ -57,8 +58,14 @@ public class OrderController {
             Authentication authentication,
             @PageableDefault(size = 20, sort = "createdAt")
             @Parameter(hidden = true) Pageable pageable) {
-        Page<OrderSummaryDto> page = orderService.getUserOrders(getCurrentUserId(authentication), pageable)
-                .map(OrderMapper::toSummaryDto);
+//        Page<OrderSummaryDto> page = orderService.getUserOrders(getCurrentUserId(authentication), pageable)
+//                .map(OrderMapper::toSummaryDto);
+//        return ResponseEntity.ok(page);
+        Page<Order> orders = orderService.getUserOrders(getCurrentUserId(authentication), pageable);
+        List<OrderSummaryDto> content = orders.getContent().stream()
+                .map(OrderMapper::toSummaryDto)
+                .toList();
+        Page<OrderSummaryDto> page = new PageImpl<>(content, pageable, orders.getTotalElements());
         return ResponseEntity.ok(page);
     }
 
