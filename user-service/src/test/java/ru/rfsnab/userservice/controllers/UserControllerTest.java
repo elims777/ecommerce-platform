@@ -87,7 +87,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
-                "Phone",
+                "79991234567",
                 true
         );
 
@@ -116,7 +116,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
-                "Phone",
+                "79991234567",
                 true
         );
 
@@ -155,7 +155,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
-                "Phone",
+                "79991234567",
                 true
         );
 
@@ -192,7 +192,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
-                "Phone",
+                "79991234567",
                 true
         );
 
