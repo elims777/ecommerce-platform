@@ -10,6 +10,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -20,7 +21,7 @@ import java.util.List;
 
 /**
  * Базовый класс для интеграционных тестов gateway-service.
- * Поднимает Redis (Testcontainers) и WireMock (имитация downstream сервисов).
+ * Поднимает Redis (Testcontainers или использует localhost в CI) и WireMock (имитация downstream сервисов).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @SuppressWarnings("resource")
@@ -28,13 +29,22 @@ import java.util.List;
 public class BaseIntegrationTest {
     private static final String JWT_SECRET = "test-secret-key-for-testing-must-be-at-least-256-bits-long-for-hs256";
     protected static WireMockServer wireMock;
-    protected static final GenericContainer<?> redis;
+    protected static GenericContainer<?> redis;
+    private static boolean useLocalRedis = false;
 
     static {
-        // Redis
-        redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
-                .withExposedPorts(6379);
-        redis.start();
+        // Проверяем доступность Docker
+        try {
+            DockerClientFactory.instance().client();
+            // Docker доступен — используем Testcontainers
+            redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+                    .withExposedPorts(6379);
+            redis.start();
+        } catch (Exception e) {
+            // Docker недоступен — используем localhost (CI environment)
+            System.out.println("Docker not available, using localhost Redis (CI mode)");
+            useLocalRedis = true;
+        }
 
         // WireMock — фиксированный порт
         wireMock = new WireMockServer(WireMockConfiguration.wireMockConfig().port(19999));
@@ -47,8 +57,13 @@ public class BaseIntegrationTest {
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         // Redis
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+        if (useLocalRedis) {
+            registry.add("spring.data.redis.host", () -> "localhost");
+            registry.add("spring.data.redis.port", () -> 6379);
+        } else {
+            registry.add("spring.data.redis.host", redis::getHost);
+            registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+        }
     }
 
     /**
