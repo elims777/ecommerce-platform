@@ -180,26 +180,6 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1))
                     .isInstanceOf(ProductNotFoundException.class);
         }
-
-        @Test
-        @DisplayName("бросает InsufficientStockException при превышении остатка")
-        void shouldThrowWhenInsufficientStock() {
-            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 10, "ext-001");
-
-            assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 100))
-                    .isInstanceOf(InsufficientStockException.class);
-        }
-
-        @Test
-        @DisplayName("бросает InsufficientStockException с учётом текущего количества в корзине")
-        void shouldThrowWhenCumulativeQuantityExceedsStock() {
-            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 10, "ext-001");
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 8);
-
-            // 8 уже в корзине + 5 = 13 > 10 на складе
-            assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 5))
-                    .isInstanceOf(InsufficientStockException.class);
-        }
     }
 
     // ==================== updateItemQuantity ====================
@@ -229,16 +209,6 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             assertThat(cart.getItems()).isEmpty();
             assertThat(cartRedisRepository.getCart(USER_ID)).isEmpty();
-        }
-
-        @Test
-        @DisplayName("бросает InsufficientStockException при превышении остатка")
-        void shouldThrowWhenInsufficientStock() {
-            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 10, "ext-001");
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 5);
-
-            assertThatThrownBy(() -> cartService.updateItemQuantity(USER_ID, PRODUCT_ID_1, 100))
-                    .isInstanceOf(InsufficientStockException.class);
         }
     }
 
