@@ -40,12 +40,26 @@ const queryClient = new QueryClient({
   },
 });
 
-// Тема Ant Design — основные цвета, скруглённость, шрифты
 const antTheme = {
   token: {
-    colorPrimary: '#1677ff',
+    colorPrimary: '#C0272D',
+    colorLink: '#1E3A5F',
+    colorSuccess: '#1A6B3A',
     borderRadius: 6,
-    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamily: "'Golos Text', system-ui, sans-serif",
+    fontSize: 14,
+    colorBgBase: 'oklch(0.987 0.004 40)',
+  },
+  components: {
+    Button: {
+      borderRadius: 6,
+      fontWeight: 500,
+    },
+    Menu: {
+      itemSelectedColor: '#C0272D',
+      itemSelectedBg: 'oklch(0.96 0.018 28)',
+      itemActiveBg: 'oklch(0.96 0.018 28)',
+    },
   },
 };
 

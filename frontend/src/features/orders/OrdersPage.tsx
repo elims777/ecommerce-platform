@@ -1,83 +1,60 @@
 import { useState } from 'react';
-import {
-    Table,
-    Tag,
-    Typography,
-    Button,
-    Card,
-    Spin,
-    Empty,
-    Descriptions,
-    Pagination,
-} from 'antd';
+import { Table, Spin, Pagination } from 'antd';
 import { ShoppingOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { getMyOrders, getOrderById } from '@/api/orders';
-import {
-    OrderStatusLabels,
-    PaymentMethodLabels,
-    DeliveryMethodLabels,
-} from '@/types/order';
+import { OrderStatusLabels, PaymentMethodLabels, DeliveryMethodLabels } from '@/types/order';
 import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
 import type { OrderSummaryDto, OrderDto, OrderItemDto, OrderStatus } from '@/types/order';
 import type { ColumnsType } from 'antd/es/table';
 
-const { Title, Text } = Typography;
-
-/** Форматирует цену */
 const formatPrice = (price: number): string =>
-    new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    }).format(price);
+    new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(price);
 
-/** Форматирует дату */
 const formatDate = (dateStr: string): string =>
-    new Date(dateStr).toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
+    new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-/** Цвет тега по статусу */
-const getStatusColor = (status: string): string => {
-    const colors: Record<string, string> = {
-        CREATED: 'blue',
-        PENDING_PAYMENT: 'orange',
-        PAID: 'cyan',
-        PAYMENT_FAILED: 'red',
-        PROCESSING: 'processing',
-        SHIPPED: 'purple',
-        IN_TRANSIT: 'geekblue',
-        DELIVERED: 'green',
-        CANCELLED: 'default',
-        REFUNDED: 'magenta',
-        AWAITING_CONFIRMATION: 'gold',
+const StatusBadge = ({ status }: { status: string }) => {
+    const cfg: Record<string, { bg: string; color: string }> = {
+        DRAFT: { bg: 'var(--surface-3)', color: 'var(--ink-2)' },
+        CREATED: { bg: 'var(--surface-3)', color: 'var(--ink-2)' },
+        AWAITING_CONFIRMATION: { bg: 'var(--warn-tint)', color: 'var(--warn)' },
+        PENDING_PAYMENT: { bg: 'var(--warn-tint)', color: 'var(--warn)' },
+        CONFIRMED: { bg: 'var(--navy-tint)', color: 'var(--brand-navy)' },
+        PROCESSING: { bg: 'var(--navy-tint)', color: 'var(--brand-navy)' },
+        INVOICE_SENT: { bg: 'var(--navy-tint)', color: 'var(--brand-navy)' },
+        PAID: { bg: 'var(--navy-tint)', color: 'var(--brand-navy)' },
+        SHIPPED: { bg: 'var(--warn-tint)', color: 'var(--warn)' },
+        IN_TRANSIT: { bg: 'var(--warn-tint)', color: 'var(--warn)' },
+        DELIVERED: { bg: 'var(--brand-green-soft)', color: 'var(--brand-green)' },
+        COMPLETED: { bg: 'var(--brand-green-soft)', color: 'var(--brand-green)' },
+        CANCELLED: { bg: 'var(--red-tint)', color: 'var(--brand-red)' },
+        REFUNDED: { bg: 'var(--red-tint)', color: 'var(--brand-red)' },
+        PAYMENT_FAILED: { bg: 'var(--red-tint)', color: 'var(--brand-red)' },
     };
-    return colors[status] || 'default';
+    const { bg, color } = cfg[status] || { bg: 'var(--surface-3)', color: 'var(--ink-2)' };
+    return (
+        <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            height: 22, padding: '0 8px', borderRadius: 11,
+            fontSize: 12, fontWeight: 500,
+            background: bg, color,
+        }}>
+            <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', flexShrink: 0 }} />
+            {OrderStatusLabels[status as OrderStatus] || status}
+        </span>
+    );
 };
 
 const OrdersPage = () => {
     const navigate = useNavigate();
     const [currentPage, setCurrentPage] = useState(1);
-    const [expandedOrderDetails, setExpandedOrderDetails] = useState<
-        Record<string, OrderDto>
-    >({});
-    const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>(
-        {},
-    );
+    const [expandedOrderDetails, setExpandedOrderDetails] = useState<Record<string, OrderDto>>({});
+    const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
     const pageSize = 10;
 
-    const {
-        data: ordersPage,
-        isLoading,
-        isError,
-    } = useQuery({
+    const { data: ordersPage, isLoading, isError } = useQuery({
         queryKey: ['myOrders', currentPage],
         queryFn: () => getMyOrders(currentPage - 1, pageSize),
     });
@@ -98,14 +75,16 @@ const OrdersPage = () => {
             title: '№ заказа',
             dataIndex: 'orderNumber',
             key: 'orderNumber',
-            render: (orderNumber: string) => <Text strong>{orderNumber}</Text>,
+            render: (orderNumber: string) => (
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: 'var(--ink-1)' }}>{orderNumber}</span>
+            ),
         },
         {
             title: 'Дата',
             dataIndex: 'createdAt',
             key: 'createdAt',
             width: 180,
-            render: (date: string) => formatDate(date),
+            render: (date: string) => <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>{formatDate(date)}</span>,
         },
         {
             title: 'Статус',
@@ -114,11 +93,7 @@ const OrdersPage = () => {
             width: 200,
             render: (status: unknown) => {
                 const code = extractEnumCode(status);
-                return (
-                    <Tag color={getStatusColor(code)}>
-                        {OrderStatusLabels[code as OrderStatus] || extractEnumDisplayName(status, code)}
-                    </Tag>
-                );
+                return <StatusBadge status={code} />;
             },
         },
         {
@@ -126,16 +101,17 @@ const OrdersPage = () => {
             dataIndex: 'itemsCount',
             key: 'itemsCount',
             width: 100,
+            render: (n: number) => <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>{n}</span>,
         },
         {
             title: 'Сумма',
             dataIndex: 'totalAmount',
             key: 'totalAmount',
-            width: 150,
+            width: 160,
             render: (amount: number) => (
-                <Text strong style={{ color: '#1677ff' }}>
+                <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 15, color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}>
                     {formatPrice(amount)}
-                </Text>
+                </span>
             ),
         },
     ];
@@ -144,14 +120,7 @@ const OrdersPage = () => {
         const order = expandedOrderDetails[record.id];
         const loading = loadingDetails[record.id];
 
-        if (loading) {
-            return (
-                <div style={{ textAlign: 'center', padding: 24 }}>
-                    <Spin />
-                </div>
-            );
-        }
-
+        if (loading) return <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>;
         if (!order) return null;
 
         const itemColumns: ColumnsType<OrderItemDto> = [
@@ -160,9 +129,7 @@ const OrdersPage = () => {
                 dataIndex: 'productName',
                 key: 'productName',
                 render: (name: string, item) => (
-                    <a onClick={() => navigate(`/products/${item.productId}`)}>
-                        {name}
-                    </a>
+                    <span onClick={() => navigate(`/products/${item.productId}`)} style={{ color: 'var(--brand-navy)', cursor: 'pointer', fontWeight: 500 }}>{name}</span>
                 ),
             },
             {
@@ -170,7 +137,7 @@ const OrdersPage = () => {
                 dataIndex: 'price',
                 key: 'price',
                 width: 130,
-                render: (price: number) => formatPrice(price),
+                render: (price: number) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(price)}</span>,
             },
             {
                 title: 'Кол-во',
@@ -183,7 +150,7 @@ const OrdersPage = () => {
                 dataIndex: 'subtotal',
                 key: 'subtotal',
                 width: 130,
-                render: (subtotal: number) => <Text strong>{formatPrice(subtotal)}</Text>,
+                render: (subtotal: number) => <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{formatPrice(subtotal)}</span>,
             },
         ];
 
@@ -191,7 +158,7 @@ const OrdersPage = () => {
         const deliveryCode = extractEnumCode(order.deliveryMethod);
 
         return (
-            <div style={{ padding: '0 16px' }}>
+            <div style={{ padding: '12px 16px', background: 'var(--surface-2)', borderRadius: 6 }}>
                 <Table<OrderItemDto>
                     columns={itemColumns}
                     dataSource={order.items}
@@ -200,98 +167,89 @@ const OrdersPage = () => {
                     size="small"
                     style={{ marginBottom: 16 }}
                 />
-
-                <Descriptions size="small" column={2}>
-                    <Descriptions.Item label="Способ оплаты">
-                        {PaymentMethodLabels[paymentCode as keyof typeof PaymentMethodLabels] ||
-                            extractEnumDisplayName(order.paymentMethod)}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Способ доставки">
-                        {DeliveryMethodLabels[deliveryCode as keyof typeof DeliveryMethodLabels] ||
-                            extractEnumDisplayName(order.deliveryMethod)}
-                    </Descriptions.Item>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 24px', fontSize: 13 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <span style={{ color: 'var(--ink-3)' }}>Оплата:</span>
+                        <span style={{ fontWeight: 500 }}>{PaymentMethodLabels[paymentCode as keyof typeof PaymentMethodLabels] || extractEnumDisplayName(order.paymentMethod)}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <span style={{ color: 'var(--ink-3)' }}>Доставка:</span>
+                        <span style={{ fontWeight: 500 }}>{DeliveryMethodLabels[deliveryCode as keyof typeof DeliveryMethodLabels] || extractEnumDisplayName(order.deliveryMethod)}</span>
+                    </div>
                     {order.deliveryAddress && (
                         <>
-                            <Descriptions.Item label="Получатель">
-                                {order.deliveryAddress.recipientName}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Телефон">
-                                {order.deliveryAddress.phone}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Адрес" span={2}>
-                                {[
-                                    order.deliveryAddress.postalCode,
-                                    order.deliveryAddress.city,
-                                    order.deliveryAddress.street,
-                                    `д. ${order.deliveryAddress.building}`,
-                                    order.deliveryAddress.apartment
-                                        ? `кв. ${order.deliveryAddress.apartment}`
-                                        : null,
-                                ]
-                                    .filter(Boolean)
-                                    .join(', ')}
-                            </Descriptions.Item>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <span style={{ color: 'var(--ink-3)' }}>Получатель:</span>
+                                <span style={{ fontWeight: 500 }}>{order.deliveryAddress.recipientName}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <span style={{ color: 'var(--ink-3)' }}>Телефон:</span>
+                                <span style={{ fontWeight: 500 }}>{order.deliveryAddress.phone}</span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, gridColumn: 'span 2' }}>
+                                <span style={{ color: 'var(--ink-3)' }}>Адрес:</span>
+                                <span style={{ fontWeight: 500 }}>
+                                    {[order.deliveryAddress.postalCode, order.deliveryAddress.city, order.deliveryAddress.street, `д. ${order.deliveryAddress.building}`, order.deliveryAddress.apartment ? `кв. ${order.deliveryAddress.apartment}` : null].filter(Boolean).join(', ')}
+                                </span>
+                            </div>
                         </>
                     )}
                     {order.warehousePoint && (
-                        <Descriptions.Item label="Точка самовывоза" span={2}>
-                            {order.warehousePoint.name} — {order.warehousePoint.city},{' '}
-                            {order.warehousePoint.street}, д. {order.warehousePoint.building}
-                        </Descriptions.Item>
+                        <div style={{ display: 'flex', gap: 8, gridColumn: 'span 2' }}>
+                            <span style={{ color: 'var(--ink-3)' }}>Самовывоз:</span>
+                            <span style={{ fontWeight: 500 }}>{order.warehousePoint.name} — {order.warehousePoint.city}, {order.warehousePoint.street}, д. {order.warehousePoint.building}</span>
+                        </div>
                     )}
                     {order.trackingNumber && (
-                        <Descriptions.Item label="Трекинг" span={2}>
-                            {order.trackingNumber}
-                        </Descriptions.Item>
+                        <div style={{ display: 'flex', gap: 8, gridColumn: 'span 2' }}>
+                            <span style={{ color: 'var(--ink-3)' }}>Трекинг:</span>
+                            <span style={{ fontWeight: 500, fontFamily: 'var(--font-mono)' }}>{order.trackingNumber}</span>
+                        </div>
                     )}
                     {order.comment && (
-                        <Descriptions.Item label="Комментарий" span={2}>
-                            {order.comment}
-                        </Descriptions.Item>
+                        <div style={{ display: 'flex', gap: 8, gridColumn: 'span 2' }}>
+                            <span style={{ color: 'var(--ink-3)' }}>Комментарий:</span>
+                            <span>{order.comment}</span>
+                        </div>
                     )}
-                </Descriptions>
+                </div>
             </div>
         );
     };
 
-    if (isLoading) {
-        return (
-            <div style={{ textAlign: 'center', padding: 120 }}>
-                <Spin size="large" />
-            </div>
-        );
-    }
+    if (isLoading) return <div style={{ textAlign: 'center', padding: 120 }}><Spin size="large" /></div>;
 
     if (isError) {
         return (
-            <Empty
-                description="Не удалось загрузить заказы"
-                style={{ padding: 120 }}
-            />
+            <div style={{ textAlign: 'center', padding: '80px 0' }}>
+                <div style={{ fontFamily: 'var(--font-head)', fontSize: 18, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>Не удалось загрузить заказы</div>
+            </div>
         );
     }
 
     if (!ordersPage || ordersPage.empty) {
         return (
-            <Empty
-                image={<ShoppingOutlined style={{ fontSize: 80, color: '#d9d9d9' }} />}
-                description="У вас пока нет заказов"
-                style={{ padding: 120 }}
-            >
-                <Button type="primary" onClick={() => navigate('/')}>
+            <div style={{ textAlign: 'center', padding: '80px 0' }}>
+                <ShoppingOutlined style={{ fontSize: 64, color: 'var(--ink-4)', display: 'block', margin: '0 auto 16px' }} />
+                <div style={{ fontFamily: 'var(--font-head)', fontSize: 20, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>У вас пока нет заказов</div>
+                <div style={{ fontSize: 14, color: 'var(--ink-3)', marginBottom: 24 }}>Добавьте товары в корзину и оформите первый заказ</div>
+                <button
+                    onClick={() => navigate('/')}
+                    style={{ display: 'inline-flex', alignItems: 'center', height: 40, padding: '0 20px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                >
                     Перейти в каталог
-                </Button>
-            </Empty>
+                </button>
+            </div>
         );
     }
 
     return (
-        <div>
-            <Title level={2} style={{ marginBottom: 24 }}>
+        <div style={{ paddingTop: 20, paddingBottom: 60 }}>
+            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', marginBottom: 24 }}>
                 Мои заказы
-            </Title>
+            </h1>
 
-            <Card>
+            <div style={{ border: '1px solid var(--line-1)', borderRadius: 8, background: 'var(--surface)', overflow: 'hidden' }}>
                 <Table<OrderSummaryDto>
                     columns={columns}
                     dataSource={ordersPage.content}
@@ -300,26 +258,22 @@ const OrdersPage = () => {
                     expandable={{
                         expandedRowRender,
                         expandRowByClick: true,
-                        onExpand: (expanded, record) => {
-                            if (expanded) {
-                                loadOrderDetails(record.id);
-                            }
-                        },
+                        onExpand: (expanded, record) => { if (expanded) loadOrderDetails(record.id); },
                     }}
                 />
+            </div>
 
-                {ordersPage.totalPages > 1 && (
-                    <div style={{ textAlign: 'center', marginTop: 24 }}>
-                        <Pagination
-                            current={currentPage}
-                            total={ordersPage.totalElements}
-                            pageSize={pageSize}
-                            onChange={setCurrentPage}
-                            showTotal={(total) => `Всего ${total} заказов`}
-                        />
-                    </div>
-                )}
-            </Card>
+            {ordersPage.totalPages > 1 && (
+                <div style={{ textAlign: 'center', marginTop: 24 }}>
+                    <Pagination
+                        current={currentPage}
+                        total={ordersPage.totalElements}
+                        pageSize={pageSize}
+                        onChange={setCurrentPage}
+                        showTotal={(total) => `Всего ${total} заказов`}
+                    />
+                </div>
+            )}
         </div>
     );
 };

@@ -1,28 +1,18 @@
 import { useState } from 'react';
-import { Typography } from 'antd';
 import { RightOutlined } from '@ant-design/icons';
 import type { CategoryTree } from '@/types/product';
-
-const { Text } = Typography;
 
 interface CategoryNodeProps {
     category: CategoryTree;
     selectedId?: number;
     onSelect: (id: number) => void;
     depth?: number;
-    defaultExpanded?: boolean;
 }
 
-const CategoryNode = ({
-                          category,
-                          selectedId,
-                          onSelect,
-                          depth = 0,
-                          defaultExpanded = false,
-                      }: CategoryNodeProps) => {
+const CategoryNode = ({ category, selectedId, onSelect, depth = 0 }: CategoryNodeProps) => {
     const hasChildren = category.children.filter((c) => c.isActive).length > 0;
     const isSelected = selectedId === category.id;
-    const [expanded, setExpanded] = useState(defaultExpanded);
+    const [expanded, setExpanded] = useState(false);
 
     const activeChildren = category.children
         .filter((c) => c.isActive)
@@ -40,27 +30,21 @@ const CategoryNode = ({
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 6,
-                    padding: `6px 12px 6px ${12 + depth * 16}px`,
+                    gap: 8,
+                    padding: `9px 14px 9px ${depth > 0 ? 40 : 11}px`,
                     cursor: 'pointer',
-                    borderLeft: isSelected ? '3px solid #1677ff' : '3px solid transparent',
-                    background: isSelected ? '#e6f4ff' : 'transparent',
-                    borderRadius: '0 6px 6px 0',
-                    transition: 'background 0.15s, border-color 0.15s',
+                    borderLeft: isSelected ? '3px solid var(--brand-red)' : '3px solid transparent',
+                    background: isSelected ? 'var(--red-tint)' : 'transparent',
+                    transition: 'background 0.12s, border-color 0.12s',
                     userSelect: 'none',
                 }}
                 onMouseEnter={(e) => {
-                    if (!isSelected) {
-                        e.currentTarget.style.background = '#f5f5f5';
-                    }
+                    if (!isSelected) e.currentTarget.style.background = 'var(--surface-3)';
                 }}
                 onMouseLeave={(e) => {
-                    if (!isSelected) {
-                        e.currentTarget.style.background = 'transparent';
-                    }
+                    if (!isSelected) e.currentTarget.style.background = 'transparent';
                 }}
             >
-                {/* Стрелка — занимает фиксированное место даже для листьев */}
                 <span
                     style={{
                         width: 14,
@@ -69,7 +53,7 @@ const CategoryNode = ({
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0,
-                        color: hasChildren ? '#8c8c8c' : 'transparent',
+                        color: hasChildren ? 'var(--ink-3)' : 'transparent',
                         transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
                         transition: 'transform 0.2s ease-out',
                         fontSize: 10,
@@ -77,26 +61,26 @@ const CategoryNode = ({
                 >
                     <RightOutlined />
                 </span>
-
-                <Text
+                <span
                     style={{
-                        fontSize: depth === 0 ? 14 : 13,
-                        fontWeight: depth === 0 ? 600 : 400,
-                        color: isSelected ? '#1677ff' : '#262626',
-                        lineHeight: '1.4',
+                        fontSize: depth === 0 ? 13.5 : 13,
+                        fontWeight: isSelected ? 600 : depth === 0 ? 500 : 400,
+                        color: isSelected ? 'var(--brand-red)' : 'var(--ink-1)',
+                        lineHeight: 1.4,
                         flex: 1,
+                        fontFamily: 'var(--font-body)',
                     }}
                 >
                     {category.name}
-                </Text>
+                </span>
             </div>
 
-            {/* Дочерние узлы — анимация через max-height */}
             <div
                 style={{
                     maxHeight: expanded ? 2000 : 0,
                     overflow: 'hidden',
                     transition: 'max-height 0.25s ease-out',
+                    background: expanded ? 'var(--surface-2)' : 'transparent',
                 }}
             >
                 {activeChildren.map((child) => (
@@ -106,7 +90,6 @@ const CategoryNode = ({
                         selectedId={selectedId}
                         onSelect={onSelect}
                         depth={depth + 1}
-                        defaultExpanded={false}
                     />
                 ))}
             </div>
@@ -134,7 +117,6 @@ const CategoryTreeMenu = ({ categories, selectedId, onSelect }: CategoryTreeProp
                     selectedId={selectedId}
                     onSelect={onSelect}
                     depth={0}
-                    defaultExpanded={false}
                 />
             ))}
         </div>

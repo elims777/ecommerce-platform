@@ -12,13 +12,11 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
-import { isAdmin } from '@/types/auth'
+import { isAdmin } from '@/types/auth';
 import type { MenuProps } from 'antd';
 
+const { Content } = Layout;
 
-const { Content, Footer } = Layout;
-
-/** Порядок страниц — определяет направление анимации */
 const PAGE_ORDER = [
     '/about',
     '/contacts',
@@ -39,8 +37,7 @@ const getPageIndex = (pathname: string): number => {
     return idx >= 0 ? idx : 5;
 };
 
-const HEADER_HEIGHT = 80;
-const LOGO_SIZE = 140;
+const HEADER_HEIGHT = 64;
 
 const ClientLayout = () => {
     const navigate = useNavigate();
@@ -55,24 +52,21 @@ const ClientLayout = () => {
             fetchCart();
         }
     }, [isAuthenticated, fetchCart]);
+
     const handleLogout = async () => {
         await logout();
         navigate('/');
     };
 
-    // Определяем направление анимации
     const currentIndex = getPageIndex(location.pathname);
-    const direction = currentIndex > prevIndexRef.current ? 1 : -1;
     prevIndexRef.current = currentIndex;
 
-    // Левая навигация
     const leftNavItems: MenuProps['items'] = [
         { key: '/', label: 'Каталог' },
         { key: '/about', label: 'О нас' },
         { key: '/contacts', label: 'Контакты' },
     ];
 
-    // Dropdown-меню пользователя
     const userMenuItems: MenuProps['items'] = [
         {
             key: 'orders',
@@ -107,8 +101,7 @@ const ClientLayout = () => {
     ];
 
     return (
-        <Layout style={{ minHeight: '100vh' }}>
-            {/* Хэдер */}
+        <Layout style={{ minHeight: '100vh', background: 'var(--bg)' }}>
             <header
                 style={{
                     position: 'fixed',
@@ -117,16 +110,45 @@ const ClientLayout = () => {
                     right: 0,
                     zIndex: 1000,
                     height: HEADER_HEIGHT,
-                    background: '#fff',
-                    boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)',
+                    background: 'var(--surface)',
+                    borderBottom: '1px solid var(--line-1)',
+                    boxShadow: 'var(--shadow-1)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    padding: '0 32px',
+                    padding: '0 40px',
                 }}
             >
-                {/* Левая навигация */}
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: 70 }}>
+                <div
+                    onClick={() => navigate('/')}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                    }}
+                >
+                    <img
+                        src="/logo.png"
+                        alt="РФснаб"
+                        style={{ height: 36, width: 'auto', objectFit: 'contain' }}
+                    />
+                    <span
+                        style={{
+                            fontFamily: 'var(--font-display)',
+                            fontWeight: 700,
+                            fontSize: 18,
+                            color: 'var(--brand-ink)',
+                            letterSpacing: '-0.01em',
+                            lineHeight: 1,
+                        }}
+                    >
+                        РФснаб
+                    </span>
+                </div>
+
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
                     <Menu
                         mode="horizontal"
                         selectedKeys={[location.pathname]}
@@ -135,52 +157,14 @@ const ClientLayout = () => {
                         style={{
                             border: 'none',
                             background: 'transparent',
+                            fontFamily: 'var(--font-body)',
                             fontWeight: 500,
                             fontSize: 15,
                         }}
                     />
                 </div>
 
-                {/* Логотип-медальон по центру */}
-                <div
-                    className="glass-sphere"
-                    onClick={() => navigate('/')}
-                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.08)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)')}
-                    style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        zIndex: 1001,
-                        width: LOGO_SIZE,
-                        height: LOGO_SIZE,
-                        marginTop: LOGO_SIZE * 0.25,
-                        cursor: 'pointer',
-                        background: '#fff',
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        transition: 'transform 0.2s ease-out',
-                        willChange: 'transform',
-                        backfaceVisibility: 'hidden' as const,
-                    }}
-                >
-                    <img
-                        src="/logo.png"
-                        alt="РФснаб"
-                        style={{
-                            width: LOGO_SIZE,
-                            height: LOGO_SIZE,
-                            objectFit: 'contain',
-                            position: 'relative',
-                            zIndex: 2,
-                            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))',
-                        }}
-                    />
-                </div>
-
-                {/* Правая навигация */}
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 100, gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     <Badge count={totalItems} size="small">
                         <Button
                             type="text"
@@ -205,7 +189,7 @@ const ClientLayout = () => {
                             type="primary"
                             icon={<LoginOutlined />}
                             onClick={() => navigate('/login')}
-                            style={{ borderRadius: 20, fontWeight: 500 }}
+                            style={{ borderRadius: 6, fontWeight: 500 }}
                         >
                             Войти
                         </Button>
@@ -213,31 +197,66 @@ const ClientLayout = () => {
                 </div>
             </header>
 
-            {/* Spacer — чтобы контент не залезал под fixed-хэдер + место для выступающего логотипа */}
-            <div style={{ height: HEADER_HEIGHT + LOGO_SIZE * 0.25 + 10 }} />
+            <div style={{ height: HEADER_HEIGHT }} />
 
-            {/* Основное содержимое с анимацией перехода */}
             <Content style={{ maxWidth: 1440, margin: '0 auto', width: '100%', padding: '0 48px', overflow: 'hidden' }}>
                 <AnimatePresence mode="wait" initial={false}>
                     <motion.div
                         key={location.pathname}
-                        initial={{ x: direction * 300, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: direction * -300, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.2, ease: [0.25, 0, 0, 1] }}
                     >
                         <Outlet />
                     </motion.div>
                 </AnimatePresence>
             </Content>
 
-            <Footer style={{ textAlign: 'center', background: '#f5f5f5', marginTop: 40 }}>
-                <div>
-                    <a href="/privacy-policy" style={{ marginRight: 16 }}>Политика конфиденциальности</a>
-                    <a href="/personal-data">Обработка персональных данных</a>
+            <footer
+                style={{
+                    background: 'var(--brand-navy)',
+                    color: '#fff',
+                    padding: '32px 48px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: 40,
+                }}
+            >
+                <span
+                    style={{
+                        fontFamily: 'var(--font-body)',
+                        fontWeight: 400,
+                        fontSize: 13,
+                        color: 'rgba(255,255,255,.7)',
+                    }}
+                >
+                    ООО «МСВ» — Комплексное снабжение © {new Date().getFullYear()}
+                </span>
+                <div style={{ display: 'flex', gap: 24 }}>
+                    {[
+                        { href: '/privacy-policy', label: 'Политика конфиденциальности' },
+                        { href: '/personal-data', label: 'Обработка персональных данных' },
+                    ].map(({ href, label }) => (
+                        <a
+                            key={href}
+                            href={href}
+                            style={{
+                                fontSize: 13,
+                                color: 'rgba(255,255,255,.6)',
+                                textDecoration: 'none',
+                                fontFamily: 'var(--font-body)',
+                                transition: 'color 0.15s ease-out',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,.9)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,.6)')}
+                        >
+                            {label}
+                        </a>
+                    ))}
                 </div>
-                <div style={{ marginTop: 8 }}>ООО «МСВ» — Комплексное снабжение © {new Date().getFullYear()}</div>
-            </Footer>
+            </footer>
         </Layout>
     );
 };
