@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import ProtectedRoute from '@/auth/ProtectedRoute';
 import ClientLayout from '@/components/layouts/ClientLayout';
+import AuthLayout from '@/components/layouts/AuthLayout';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import LoginPage from '@/pages/LoginPage';
 import CatalogPage from '@/features/catalog/CatalogPage';
@@ -86,15 +87,18 @@ const AppRoutes = () => {
         Клиентская часть — ClientLayout (header + footer)
         Публичные маршруты: каталог, товар, о нас, контакты
       */}
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
+
         <Route element={<ClientLayout />}>
           <Route path="/" element={<CatalogPage />} />
           <Route path="/products/:id" element={<ProductPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/contacts" element={<ContactsPage />} />
-          <Route path="/login" element={<LoginPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
           <Route path="/personal-data" element={<PersonalDataPage />} />
-          <Route path="/register" element={<RegisterPage />} />
 
           {/* Защищённые клиентские маршруты — требуют авторизации */}
           <Route element={<ProtectedRoute />}>

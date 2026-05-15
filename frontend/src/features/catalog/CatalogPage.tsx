@@ -229,7 +229,7 @@ const CatalogPage = () => {
 
                     {productsPage && !productsPage.empty && !productsLoading && (
                         <>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
                                 {productsPage.content.map((product) => (
                                     <ProductCard
                                         key={product.id}
