@@ -29,15 +29,11 @@ const PersonalDataPage = lazy(() => import('@/pages/PersonalDataPage'));
 const AdminCatalogPage = lazy(() => import('@/features/admin/AdminCatalogPage'));
 const AdminProductEditPage = lazy(() => import('@/features/admin/AdminProductEditPage'));
 
-// Клиент для TanStack Query — управляет кэшированием серверных данных
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Не перезапрашивать при фокусе окна — для B2B не нужна такая агрессивность
       refetchOnWindowFocus: false,
-      // Повторять неудачные запросы 1 раз
       retry: 1,
-      // Данные считаются свежими 30 секунд
       staleTime: 30 * 1000,
     },
   },
@@ -90,85 +86,73 @@ const antTheme = {
 const AppRoutes = () => {
   const { isLoading, restoreSession } = useAuthStore();
 
-  // При первой загрузке приложения — пытаемся восстановить сессию из токена
   useEffect(() => {
     restoreSession();
   }, [restoreSession]);
 
-  // Пока сессия восстанавливается — спиннер на весь экран
   if (isLoading) {
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-          <Spin size="large" tip="Загрузка..." />
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Spin size="large" tip="Загрузка..." />
+      </div>
     );
   }
 
   return (
-      <Suspense fallback={
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-          <Spin size="large" />
-        </div>
-      }>
-        <Routes>
-          {/*
-        Клиентская часть — ClientLayout (header + footer)
-        Публичные маршруты: каталог, товар, о нас, контакты
-      */}
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
+    <Suspense fallback={
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <Spin size="large" />
+      </div>
+    }>
+      <Routes>
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+        </Route>
 
-          <Route element={<ClientLayout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/catalog" element={<CatalogPage />} />
-            <Route path="/products/:id" element={<ProductPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contacts" element={<ContactsPage />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-            <Route path="/personal-data" element={<PersonalDataPage />} />
+        <Route element={<ClientLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/catalog" element={<CatalogPage />} />
+          <Route path="/products/:id" element={<ProductPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contacts" element={<ContactsPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="/personal-data" element={<PersonalDataPage />} />
 
-            {/* Защищённые клиентские маршруты — требуют авторизации */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/orders" element={<OrdersPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-            </Route>
+          <Route element={<ProtectedRoute />}>
+            <Route path="/cart" element={<CartPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
+        </Route>
 
-          {/*
-        Админка — AdminLayout (sidebar + header)
-        Только для пользователей с ролью ADMIN
-      */}
-          {/*<Route element={<ProtectedRoute adminOnly />}>*/}
-          <Route element={<ProtectedRoute adminOnly />}>
-            <Route element={<AdminLayout />}>
-              <Route path="/admin" element={<DashboardPage />} />
-              <Route path="/admin/orders" element={<AdminOrdersPage />} />
-              <Route path="/admin/users" element={<AdminUsersPage />} />
-              <Route path="/admin/integration" element={<IntegrationPage />} />
-              <Route path="/admin/products" element={<AdminCatalogPage />} />
-              <Route path="/admin/products/:id/edit" element={<AdminProductEditPage />} />
-            </Route>
+        <Route element={<ProtectedRoute adminOnly />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<DashboardPage />} />
+            <Route path="/admin/orders" element={<AdminOrdersPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route path="/admin/integration" element={<IntegrationPage />} />
+            <Route path="/admin/products" element={<AdminCatalogPage />} />
+            <Route path="/admin/products/:id/edit" element={<AdminProductEditPage />} />
           </Route>
-        </Routes>
-      </Suspense>
+        </Route>
+      </Routes>
+    </Suspense>
   );
 };
 
 const App = () => {
   return (
-      <QueryClientProvider client={queryClient}>
-        <ConfigProvider locale={ruRU} theme={antTheme}>
-          <AntApp>
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
-          </AntApp>
-        </ConfigProvider>
-      </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <ConfigProvider locale={ruRU} theme={antTheme}>
+        <AntApp>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </AntApp>
+      </ConfigProvider>
+    </QueryClientProvider>
   );
 };
 
