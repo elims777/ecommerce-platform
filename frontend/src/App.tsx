@@ -8,6 +8,7 @@ import ProtectedRoute from '@/auth/ProtectedRoute';
 import ClientLayout from '@/components/layouts/ClientLayout';
 import AuthLayout from '@/components/layouts/AuthLayout';
 import AdminLayout from '@/components/layouts/AdminLayout';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const HomePage = lazy(() => import('@/pages/HomePage'));
@@ -99,46 +100,48 @@ const AppRoutes = () => {
   }
 
   return (
-    <Suspense fallback={
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <Spin size="large" />
-      </div>
-    }>
-      <Routes>
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Route>
-
-        <Route element={<ClientLayout />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/catalog" element={<CatalogPage />} />
-          <Route path="/products/:id" element={<ProductPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/contacts" element={<ContactsPage />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-          <Route path="/personal-data" element={<PersonalDataPage />} />
-
-          <Route element={<ProtectedRoute />}>
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
+    <ErrorBoundary>
+      <Suspense fallback={
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+          <Spin size="large" />
+        </div>
+      }>
+        <Routes>
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
           </Route>
-        </Route>
 
-        <Route element={<ProtectedRoute adminOnly />}>
-          <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<DashboardPage />} />
-            <Route path="/admin/orders" element={<AdminOrdersPage />} />
-            <Route path="/admin/users" element={<AdminUsersPage />} />
-            <Route path="/admin/integration" element={<IntegrationPage />} />
-            <Route path="/admin/products" element={<AdminCatalogPage />} />
-            <Route path="/admin/products/:id/edit" element={<AdminProductEditPage />} />
+          <Route element={<ClientLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/catalog" element={<CatalogPage />} />
+            <Route path="/products/:id" element={<ProductPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contacts" element={<ContactsPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/personal-data" element={<PersonalDataPage />} />
+
+            <Route element={<ProtectedRoute />}>
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
-    </Suspense>
+
+          <Route element={<ProtectedRoute adminOnly />}>
+            <Route element={<AdminLayout />}>
+              <Route path="/admin" element={<DashboardPage />} />
+              <Route path="/admin/orders" element={<AdminOrdersPage />} />
+              <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/integration" element={<IntegrationPage />} />
+              <Route path="/admin/products" element={<AdminCatalogPage />} />
+              <Route path="/admin/products/:id/edit" element={<AdminProductEditPage />} />
+            </Route>
+          </Route>
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 };
 
