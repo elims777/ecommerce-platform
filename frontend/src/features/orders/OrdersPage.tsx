@@ -238,12 +238,29 @@ const OrdersPage = () => {
     if (!ordersPage || ordersPage.empty) {
         return (
             <div style={{ textAlign: 'center', padding: '80px 0' }}>
-                <ShoppingOutlined style={{ fontSize: 64, color: 'var(--ink-4)', display: 'block', margin: '0 auto 16px' }} />
-                <div style={{ fontFamily: 'var(--font-head)', fontSize: 20, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>У вас пока нет заказов</div>
-                <div style={{ fontSize: 14, color: 'var(--ink-3)', marginBottom: 24 }}>Добавьте товары в корзину и оформите первый заказ</div>
+                <div style={{
+                    width: 72, height: 72, borderRadius: '50%', background: 'var(--surface-2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 20px',
+                }}>
+                    <ShoppingOutlined style={{ fontSize: 32, color: 'var(--ink-3)' }} />
+                </div>
+                <div style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>
+                    Заказов пока нет
+                </div>
+                <div style={{ fontSize: 14, color: 'var(--ink-3)', maxWidth: 360, margin: '0 auto 8px' }}>
+                    После оформления заказа он появится здесь. Можно отслеживать статус, скачивать документы и повторять заказы.
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--ink-4)', marginBottom: 24 }}>
+                    Работаем по 44-ФЗ и 223-ФЗ, участвуем в тендерах.
+                </div>
                 <button
-                    onClick={() => navigate('/')}
-                    style={{ display: 'inline-flex', alignItems: 'center', height: 40, padding: '0 20px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                    onClick={() => navigate('/catalog')}
+                    style={{
+                        height: 44, padding: '0 28px', background: 'var(--brand-red)', color: '#fff',
+                        border: 'none', borderRadius: 6, fontSize: 15, fontWeight: 500,
+                        cursor: 'pointer', fontFamily: 'var(--font-body)',
+                    }}
                 >
                     Перейти в каталог
                 </button>
