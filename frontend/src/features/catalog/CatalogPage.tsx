@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Input, Pagination, Spin, Empty, App } from 'antd';
+import { Input, Pagination, Spin, Empty, App, Skeleton } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -200,8 +200,15 @@ const CatalogPage = () => {
                     )}
 
                     {productsLoading && (
-                        <div style={{ textAlign: 'center', padding: 80 }}>
-                            <Spin size="large" />
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, padding: '16px 0' }}>
+                            {Array.from({ length: 12 }).map((_, i) => (
+                                <div key={i} style={{ background: '#fff', borderRadius: 10, padding: 16, border: '1px solid var(--line-1)' }}>
+                                    <Skeleton.Image active style={{ width: '100%', height: 180, borderRadius: 6 }} />
+                                    <div style={{ marginTop: 12 }}>
+                                        <Skeleton active paragraph={{ rows: 2 }} title={{ width: '60%' }} />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     )}
 
