@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Spin, Image, App } from 'antd';
+import { Spin, Image, App, Skeleton } from 'antd';
 import { ShoppingCartOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -47,8 +47,14 @@ const ProductPage = () => {
 
     if (isLoading) {
         return (
-            <div style={{ textAlign: 'center', padding: 120 }}>
-                <Spin size="large" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 280px', gap: 32, padding: '24px 0' }}>
+                <Skeleton.Image active style={{ width: '100%', height: 340, borderRadius: 8 }} />
+                <div>
+                    <Skeleton active paragraph={{ rows: 6 }} title={{ width: '80%' }} />
+                </div>
+                <div style={{ background: '#fff', borderRadius: 10, padding: 20, border: '1px solid var(--line-1)', height: 280 }}>
+                    <Skeleton active paragraph={{ rows: 4 }} />
+                </div>
             </div>
         );
     }
