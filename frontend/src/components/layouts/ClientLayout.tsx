@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { Badge, Dropdown } from 'antd';
+import { Dropdown } from 'antd';
+import { company } from '@/config/company';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
@@ -13,7 +14,7 @@ const MAIN_H = 76;
 const CAT_H = 46;
 const HEADER_TOTAL = TOPBAR_H + MAIN_H + CAT_H;
 
-const PAGE_ORDER = ['/about', '/contacts', '/', '/cart', '/orders', '/profile', '/privacy-policy', '/personal-data'];
+const PAGE_ORDER = ['/about', '/contacts', '/', '/catalog', '/cart', '/orders', '/profile', '/privacy-policy', '/personal-data'];
 const getPageIndex = (pathname: string): number => {
     if (pathname.startsWith('/products/')) return 2.5;
     if (pathname.startsWith('/checkout')) return 4.5;
@@ -72,13 +73,7 @@ const DownloadIcon = () => (
     </svg>
 );
 
-const TriMark = ({ size = 28 }: { size?: number }) => (
-    <svg width={size} height={size * 0.95} viewBox="0 0 40 38">
-        <polygon points="20,2 20,28 4,32" fill="#C0272D"/>
-        <polygon points="20,2 20,28 36,32" fill="#1E3A5F"/>
-        <polygon points="4,32 36,32 20,28" fill="#1A6B3A"/>
-    </svg>
-);
+
 
 const HeaderAction = ({ icon, label, count, highlight, onClick }: { icon: React.ReactNode; label: string; count?: number; highlight?: boolean; onClick?: () => void }) => (
     <button onClick={onClick} style={{
@@ -167,7 +162,7 @@ const ClientLayout = () => {
                     display: 'flex', alignItems: 'center', padding: '0 40px', gap: 20,
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <PinIcon /> г. Москва, ул. Промышленная, 27с4
+                        <PinIcon /> {company.address.full}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <TruckIcon /> Доставка по РФ
@@ -180,7 +175,7 @@ const ClientLayout = () => {
                     </a>
                     <span style={{ opacity: 0.35 }}>·</span>
                     <a style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#fff', cursor: 'pointer', textDecoration: 'none' }}>
-                        <PhoneIcon /> +7 (495) 120-77-30
+                        <PhoneIcon /> {company.phone.free}
                     </a>
                 </div>
 
@@ -190,12 +185,8 @@ const ClientLayout = () => {
                     height: MAIN_H, display: 'flex', alignItems: 'center',
                     padding: '0 40px', gap: 28,
                 }}>
-                    <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flexShrink: 0 }}>
-                        <TriMark size={34} />
-                        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: 'var(--brand-ink)', letterSpacing: '-0.02em' }}>РФснаб</span>
-                            <span style={{ fontSize: 9, color: 'var(--ink-3)', marginTop: 3, letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 500 }}>комплексное снабжение</span>
-                        </div>
+                    <div onClick={() => navigate('/')} style={{ cursor: 'pointer', flexShrink: 0 }}>
+                        <img src="/logo.png" alt="РФснаб" style={{ height: 52, display: 'block' }} />
                     </div>
 
                     {/* Search */}
@@ -213,15 +204,22 @@ const ClientLayout = () => {
                             }}
                             onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--brand-navy)'; }}
                             onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--line-2)'; }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && searchQuery.trim()) {
+                                    navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
+                                }
+                            }}
                         />
                         <span style={{ position: 'absolute', left: 14, top: 13, color: 'var(--ink-3)' }}>
                             <SearchIcon />
                         </span>
-                        <button style={{
-                            position: 'absolute', right: 4, top: 4, height: 36, padding: '0 18px',
-                            background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6,
-                            fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
-                        }}
+                        <button
+                            onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
+                            style={{
+                                position: 'absolute', right: 4, top: 4, height: 36, padding: '0 18px',
+                                background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6,
+                                fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                            }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
                         >
@@ -272,7 +270,7 @@ const ClientLayout = () => {
                     padding: '0 40px', gap: 0,
                 }}>
                     <button
-                        onClick={() => navigate('/')}
+                        onClick={() => navigate('/catalog')}
                         style={{
                             display: 'inline-flex', alignItems: 'center', gap: 8,
                             height: 36, padding: '0 14px', marginRight: 8,
@@ -322,22 +320,18 @@ const ClientLayout = () => {
                 <div style={{ maxWidth: 1360, margin: '0 auto' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr', gap: 40, marginBottom: 32 }}>
                         <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                                <TriMark size={28} />
-                                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: '#fff', letterSpacing: '-0.02em' }}>РФснаб</span>
-                                    <span style={{ fontSize: 8, color: 'rgba(255,255,255,.4)', marginTop: 3, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 500 }}>комплексное снабжение</span>
-                                </div>
+                            <div style={{ marginBottom: 16 }}>
+                                <img src="/logo.png" alt="РФснаб" style={{ height: 44, display: 'block' }} />
                             </div>
                             <p style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', lineHeight: 1.6 }}>
-                                Комплексное снабжение предприятий и организаций. Работаем с 2008 года, более 18 000 клиентов в 84 регионах России.
+                                Комплексное снабжение предприятий и организаций. Работаем с {company.founded} года.
                             </p>
                         </div>
                         {[
                             ['Каталог', ['Противопожарное оборудование', 'СИЗ и спецодежда', 'Инструмент', 'Электротехника', 'Все категории →']],
                             ['Компания', ['О нас', 'Реквизиты', 'Сертификаты', 'Поставщикам', 'Вакансии']],
                             ['Покупателям', ['Доставка', 'Оплата и договор', 'Возврат', 'Госзакупки 44-ФЗ', 'Тендеры']],
-                            ['Контакты', ['+7 (495) 120-77-30', 'sales@rfsnab.ru', 'Пн–Пт 8:00–19:00', 'Москва · СПб · Казань']],
+                            ['Контакты', [company.phone.free, company.email.sales, company.workHours, company.address.city]],
                         ].map(([heading, items]) => (
                             <div key={heading as string}>
                                 <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 14 }}>{heading}</div>
@@ -356,7 +350,7 @@ const ClientLayout = () => {
                         paddingTop: 20, borderTop: '1px solid rgba(255,255,255,.1)',
                         display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(255,255,255,.45)',
                     }}>
-                        <span>© 2008–{new Date().getFullYear()} ООО «РФснаб» · ИНН 7710123456</span>
+                        <span>© {company.founded}–{new Date().getFullYear()} {company.legalName} · ИНН {company.inn}</span>
                         <span style={{ display: 'flex', gap: 18 }}>
                             <a href="/privacy-policy" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.12s' }}
                                 onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.8)'; }}

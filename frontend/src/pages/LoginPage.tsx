@@ -17,16 +17,8 @@ const BrandPanel = () => (
             <polygon points="40,260 320,260 180,220" fill="#1A6B3A" />
         </svg>
 
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
-            <svg width="32" height="30" viewBox="0 0 40 38">
-                <polygon points="20,2 20,28 4,32" fill="#C0272D" />
-                <polygon points="20,2 20,28 36,32" fill="#1E3A5F" />
-                <polygon points="4,32 36,32 20,28" fill="#1A6B3A" />
-            </svg>
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#fff', letterSpacing: '-0.02em' }}>РФснаб</span>
-                <span style={{ fontSize: 9, color: 'rgba(255,255,255,.55)', marginTop: 3, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 500 }}>комплексное снабжение</span>
-            </div>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+            <img src="/logo.png" alt="РФснаб" style={{ height: 56, display: 'block', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,.3))' }} />
         </div>
 
         <div style={{ marginTop: 'auto', position: 'relative', zIndex: 1 }}>

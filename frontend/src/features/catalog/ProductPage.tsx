@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Spin, Image, App, Skeleton } from 'antd';
+import { Image, App, Skeleton } from 'antd';
 import { ShoppingCartOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';

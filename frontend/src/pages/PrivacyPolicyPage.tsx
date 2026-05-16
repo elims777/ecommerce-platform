@@ -1,4 +1,5 @@
 import { Typography, Card } from 'antd';
+import { company } from '@/config/company';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -15,8 +16,8 @@ const PrivacyPolicyPage = () => {
                 <Title level={4}>1. Общие положения</Title>
                 <Paragraph>
                     Настоящая Политика конфиденциальности (далее — Политика) определяет порядок обработки
-                    и защиты персональных данных пользователей (далее — Пользователь) веб-сайта rfsnab.ru
-                    (далее — Сайт), принадлежащего ООО «МСВ» (ИНН 1101059443, ОГРН 1161101055620,
+                    и защиты персональных данных пользователей (далее — Пользователь) веб-сайта {company.domain}
+                    (далее — Сайт), принадлежащего {company.legalName} (ИНН {company.inn}, ОГРН {company.ogrn},
                     далее — Оператор).
                 </Paragraph>
                 <Paragraph>
@@ -99,7 +100,7 @@ const PrivacyPolicyPage = () => {
                     Пользователь вправе: получать информацию об обработке своих персональных данных;
                     требовать уточнения, блокирования или уничтожения своих персональных данных;
                     отозвать согласие на обработку персональных данных, направив запрос на
-                    электронную почту <Text strong>msvkomi@mail.ru</Text>.
+                    электронную почту <Text strong>{company.email.support}</Text>.
                 </Paragraph>
 
                 <Title level={4}>9. Файлы cookie</Title>
@@ -119,9 +120,9 @@ const PrivacyPolicyPage = () => {
                 <Title level={4}>11. Контактная информация</Title>
                 <Paragraph>
                     По вопросам, связанным с обработкой персональных данных, Пользователь может
-                    обратиться к Оператору: ООО «МСВ», электронная почта:{' '}
-                    <Text strong>msvkomi@mail.ru</Text>, телефон:{' '}
-                    <Text strong>8 (800) 201-78-01</Text>.
+                    обратиться к Оператору: {company.legalName}, электронная почта:{' '}
+                    <Text strong>{company.email.support}</Text>, телефон:{' '}
+                    <Text strong>{company.phone.free}</Text>.
                 </Paragraph>
             </Card>
         </div>

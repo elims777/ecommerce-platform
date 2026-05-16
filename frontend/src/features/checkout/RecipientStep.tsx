@@ -38,7 +38,7 @@ const RecipientStep = ({
 
     return (
         <>
-            <Divider orientation="left" plain>
+            <Divider titlePlacement="left" plain>
                 Получатель и адрес доставки
             </Divider>
 
