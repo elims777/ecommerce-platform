@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ConfigProvider, App as AntApp, Spin } from 'antd';
 import ruRU from 'antd/locale/ru_RU';
@@ -8,24 +8,26 @@ import ProtectedRoute from '@/auth/ProtectedRoute';
 import ClientLayout from '@/components/layouts/ClientLayout';
 import AuthLayout from '@/components/layouts/AuthLayout';
 import AdminLayout from '@/components/layouts/AdminLayout';
-import LoginPage from '@/pages/LoginPage';
-import CatalogPage from '@/features/catalog/CatalogPage';
-import ProductPage from '@/features/catalog/ProductPage';
-import RegisterPage from '@/pages/RegisterPage';
-import CartPage from '@/features/cart/CartPage';
-import CheckoutPage from '@/features/checkout/CheckoutPage';
-import OrdersPage from '@/features/orders/OrdersPage';
-import ProfilePage from '@/features/profile/ProfilePage';
-import DashboardPage from '@/features/admin/DashboardPage';
-import AdminOrdersPage from '@/features/admin/AdminOrdersPage';
-import AdminUsersPage from '@/features/admin/AdminUsersPage';
-import IntegrationPage from '@/features/admin/IntegrationPage';
-import AboutPage from '@/pages/AboutPage';
-import ContactsPage from '@/pages/ContactsPage';
-import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
-import PersonalDataPage from '@/pages/PersonalDataPage';
-import AdminCatalogPage from '@/features/admin/AdminCatalogPage';
-import AdminProductEditPage from "@/features/admin/AdminProductEditPage.tsx";
+
+const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const HomePage = lazy(() => import('@/pages/HomePage'));
+const CatalogPage = lazy(() => import('@/features/catalog/CatalogPage'));
+const ProductPage = lazy(() => import('@/features/catalog/ProductPage'));
+const RegisterPage = lazy(() => import('@/pages/RegisterPage'));
+const CartPage = lazy(() => import('@/features/cart/CartPage'));
+const CheckoutPage = lazy(() => import('@/features/checkout/CheckoutPage'));
+const OrdersPage = lazy(() => import('@/features/orders/OrdersPage'));
+const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'));
+const DashboardPage = lazy(() => import('@/features/admin/DashboardPage'));
+const AdminOrdersPage = lazy(() => import('@/features/admin/AdminOrdersPage'));
+const AdminUsersPage = lazy(() => import('@/features/admin/AdminUsersPage'));
+const IntegrationPage = lazy(() => import('@/features/admin/IntegrationPage'));
+const AboutPage = lazy(() => import('@/pages/AboutPage'));
+const ContactsPage = lazy(() => import('@/pages/ContactsPage'));
+const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
+const PersonalDataPage = lazy(() => import('@/pages/PersonalDataPage'));
+const AdminCatalogPage = lazy(() => import('@/features/admin/AdminCatalogPage'));
+const AdminProductEditPage = lazy(() => import('@/features/admin/AdminProductEditPage'));
 
 // Клиент для TanStack Query — управляет кэшированием серверных данных
 const queryClient = new QueryClient({
@@ -49,7 +51,14 @@ const antTheme = {
     borderRadius: 6,
     fontFamily: "'Golos Text', system-ui, sans-serif",
     fontSize: 14,
-    colorBgBase: 'oklch(0.987 0.004 40)',
+    colorBgBase: '#ffffff',
+    colorBgContainer: '#ffffff',
+    colorBgLayout: '#f7f5f3',
+    colorText: '#1A1A1A',
+    colorTextSecondary: '#6b6560',
+    colorTextTertiary: '#9a958f',
+    colorBorder: '#e0dbd5',
+    colorBorderSecondary: '#ede8e3',
   },
   components: {
     Button: {
@@ -58,8 +67,22 @@ const antTheme = {
     },
     Menu: {
       itemSelectedColor: '#C0272D',
-      itemSelectedBg: 'oklch(0.96 0.018 28)',
-      itemActiveBg: 'oklch(0.96 0.018 28)',
+      itemSelectedBg: '#fdf2f2',
+      itemActiveBg: '#fdf2f2',
+      itemBg: 'transparent',
+    },
+    Card: {
+      colorBgContainer: '#ffffff',
+    },
+    Table: {
+      colorBgContainer: '#ffffff',
+      headerBg: '#f7f5f3',
+    },
+    Select: {
+      colorBgContainer: '#ffffff',
+    },
+    Input: {
+      colorBgContainer: '#ffffff',
     },
   },
 };
@@ -82,49 +105,56 @@ const AppRoutes = () => {
   }
 
   return (
-      <Routes>
-        {/*
+      <Suspense fallback={
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+          <Spin size="large" />
+        </div>
+      }>
+        <Routes>
+          {/*
         Клиентская часть — ClientLayout (header + footer)
         Публичные маршруты: каталог, товар, о нас, контакты
       */}
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Route>
-
-        <Route element={<ClientLayout />}>
-          <Route path="/" element={<CatalogPage />} />
-          <Route path="/products/:id" element={<ProductPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/contacts" element={<ContactsPage />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-          <Route path="/personal-data" element={<PersonalDataPage />} />
-
-          {/* Защищённые клиентские маршруты — требуют авторизации */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/cart" element={<CartPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
           </Route>
-        </Route>
 
-        {/*
+          <Route element={<ClientLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/catalog" element={<CatalogPage />} />
+            <Route path="/products/:id" element={<ProductPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contacts" element={<ContactsPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/personal-data" element={<PersonalDataPage />} />
+
+            {/* Защищённые клиентские маршруты — требуют авторизации */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+            </Route>
+          </Route>
+
+          {/*
         Админка — AdminLayout (sidebar + header)
         Только для пользователей с ролью ADMIN
       */}
-        {/*<Route element={<ProtectedRoute adminOnly />}>*/}
-        <Route element={<ProtectedRoute adminOnly />}>
-          <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<DashboardPage />} />
-            <Route path="/admin/orders" element={<AdminOrdersPage />} />
-            <Route path="/admin/users" element={<AdminUsersPage />} />
-            <Route path="/admin/integration" element={<IntegrationPage />} />
-            <Route path="/admin/products" element={<AdminCatalogPage />} />
-            <Route path="/admin/products/:id/edit" element={<AdminProductEditPage />} />
+          {/*<Route element={<ProtectedRoute adminOnly />}>*/}
+          <Route element={<ProtectedRoute adminOnly />}>
+            <Route element={<AdminLayout />}>
+              <Route path="/admin" element={<DashboardPage />} />
+              <Route path="/admin/orders" element={<AdminOrdersPage />} />
+              <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/integration" element={<IntegrationPage />} />
+              <Route path="/admin/products" element={<AdminCatalogPage />} />
+              <Route path="/admin/products/:id/edit" element={<AdminProductEditPage />} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
+        </Routes>
+      </Suspense>
   );
 };
 
