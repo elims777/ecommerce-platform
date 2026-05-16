@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Table, Spin, Pagination } from 'antd';
+import { Table, Skeleton, Pagination } from 'antd';
 import { ShoppingOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -217,7 +217,15 @@ const OrdersPage = () => {
         );
     };
 
-    if (isLoading) return <div style={{ textAlign: 'center', padding: 120 }}><Spin size="large" /></div>;
+    if (isLoading) return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '24px 0' }}>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} style={{ background: '#fff', borderRadius: 10, padding: 20, border: '1px solid var(--line-1)' }}>
+            <Skeleton active paragraph={{ rows: 2 }} title={{ width: '40%' }} />
+          </div>
+        ))}
+      </div>
+    );
 
     if (isError) {
         return (
