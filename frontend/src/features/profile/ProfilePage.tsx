@@ -12,12 +12,14 @@ const ProfilePage = () => {
     const [form] = Form.useForm<UpdateProfileRequest>();
     const { message: messageApi } = App.useApp();
     const user = useAuthStore((state) => state.user);
+    const restoreSession = useAuthStore((state) => state.restoreSession);
 
     const updateMutation = useMutation({
         mutationFn: (values: UpdateProfileRequest) => updateProfile(user!.id, values),
-        onSuccess: () => {
+        onSuccess: async () => {
             messageApi.success('Профиль обновлён');
             setEditing(false);
+            await restoreSession();
         },
         onError: (error: AxiosError<{ message?: string }>) => {
             const errorMessage = error.response?.data?.message || 'Ошибка при обновлении профиля';
