@@ -38,7 +38,6 @@ const RecipientStep = ({
 
     return (
         <>
-            {/* @ts-ignore */}
             <Divider orientation="left" plain>
                 Получатель и адрес доставки
             </Divider>

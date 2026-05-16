@@ -37,7 +37,6 @@ const DeliveryStep = ({
 
         {deliveryMethod === DeliveryMethod.PICKUP && (
             <>
-                {/* @ts-ignore */}
                 <Divider orientation="left" plain>
                     Точка самовывоза
                 </Divider>
