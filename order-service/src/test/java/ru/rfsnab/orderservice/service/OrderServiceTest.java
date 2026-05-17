@@ -117,7 +117,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, "Тестовый заказ");
+                    buildAddressDto(), null, null, null, "Тестовый заказ");
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
 
@@ -146,19 +146,21 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         }
 
         @Test
-        @DisplayName("создаёт заказ с самовывозом")
+        @DisplayName("создаёт заказ с самовывозом, сохраняет pickup recipient")
         void shouldCreatePickupOrder() {
             addItemsToCart();
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CASH_ON_DELIVERY, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), null);
+                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
 
             assertThat(order.getDeliveryMethod()).isEqualTo(DeliveryMethod.PICKUP);
             assertThat(order.getWarehousePointId()).isEqualTo(savedWarehousePoint.getId());
             assertThat(order.getDeliveryAddress()).isNull();
+            assertThat(order.getPickupRecipientName()).isEqualTo("Петров Петр");
+            assertThat(order.getPickupRecipientPhone()).isEqualTo("+79001112233");
         }
 
         @Test
@@ -166,7 +168,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         void shouldThrowWhenCartEmpty() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), null);
+                    null, savedWarehousePoint.getId(), null, null, null);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
                     .isInstanceOf(CartEmptyException.class);
@@ -189,7 +191,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), null);
+                    null, savedWarehousePoint.getId(), null, null, null);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
                     .isInstanceOf(InsufficientStockException.class)
@@ -203,7 +205,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, null, null);
+                    null, null, null, null, null);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
                     .isInstanceOf(InvalidOrderStateException.class)
@@ -217,7 +219,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    null, null, null);
+                    null, null, null, null, null);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
                     .isInstanceOf(InvalidOrderStateException.class)
@@ -231,7 +233,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, "Тест externalId");
+                    buildAddressDto(), null, null, null, "Тест externalId");
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
 
@@ -360,6 +362,49 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         }
     }
 
+    // ==================== confirmOrder ====================
+
+    @Nested
+    @DisplayName("confirmOrder")
+    class ConfirmOrderTests {
+
+        @Test
+        @DisplayName("CREATED → PROCESSING при подтверждении клиентом")
+        void shouldConfirmOrder() {
+            Order order = createTestOrder();
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
+
+            order = orderService.confirmOrder(order.getId(), USER_ID);
+
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.PROCESSING);
+
+            Order fromDb = orderRepository.findById(order.getId()).orElseThrow();
+            assertThat(fromDb.getStatus()).isEqualTo(OrderStatus.PROCESSING);
+        }
+
+        @Test
+        @DisplayName("выбрасывает исключение при попытке подтвердить чужой заказ")
+        void shouldThrowWhenWrongUser() {
+            Order order = createTestOrder();
+
+            UUID orderId = order.getId();
+            assertThatThrownBy(() -> orderService.confirmOrder(orderId, 999L))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("Нет доступа");
+        }
+
+        @Test
+        @DisplayName("выбрасывает исключение при повторном подтверждении (не CREATED)")
+        void shouldThrowWhenAlreadyConfirmed() {
+            Order order = createTestOrder();
+            orderService.confirmOrder(order.getId(), USER_ID);
+
+            UUID orderId = order.getId();
+            assertThatThrownBy(() -> orderService.confirmOrder(orderId, USER_ID))
+                    .isInstanceOf(InvalidOrderStateException.class);
+        }
+    }
+
     // ==================== Статусные переходы ====================
 
     @Nested
@@ -367,22 +412,72 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
     class StatusTransitionTests {
 
         @Test
-        @DisplayName("полный happy path: CREATED → PENDING_PAYMENT → PAID → PROCESSING")
-        void shouldFollowHappyPath() {
+        @DisplayName("B2C happy path: CREATED → PROCESSING → PENDING_PAYMENT → PAID → SHIPPED → IN_TRANSIT → DELIVERED")
+        void shouldFollowB2CHappyPath() {
             Order order = createTestOrder();
             assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
+
+            order = orderService.confirmOrder(order.getId(), USER_ID);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.PROCESSING);
 
             order = orderService.initiatePayment(order.getId(), USER_ID);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
 
             order = orderService.confirmPayment(order.getId());
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
+
+            order = orderService.updateStatus(order.getId(), OrderStatus.SHIPPED);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.SHIPPED);
+
+            order = orderService.updateStatus(order.getId(), OrderStatus.IN_TRANSIT);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.IN_TRANSIT);
+
+            order = orderService.updateStatus(order.getId(), OrderStatus.DELIVERED);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.DELIVERED);
+        }
+
+        @Test
+        @DisplayName("B2B prepayment path: CREATED → PROCESSING → INVOICE_SENT → PENDING_PAYMENT → PAID")
+        void shouldFollowB2BPrepaymentPath() {
+            Order order = createTestOrder();
+
+            order = orderService.confirmOrder(order.getId(), USER_ID);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.PROCESSING);
+
+            order = orderService.updateStatus(order.getId(), OrderStatus.INVOICE_SENT);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.INVOICE_SENT);
+
+            order = orderService.updateStatus(order.getId(), OrderStatus.PENDING_PAYMENT);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
+
+            order = orderService.confirmPayment(order.getId());
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
+        }
+
+        @Test
+        @DisplayName("B2B postpayment path: PROCESSING → INVOICE_SENT → AWAITING_CONFIRMATION → SHIPPED → DELIVERED → PAID")
+        void shouldFollowB2BPostpaymentPath() {
+            Order order = createTestOrder();
+            orderService.confirmOrder(order.getId(), USER_ID);
+
+            order = orderService.updateStatus(order.getId(), OrderStatus.INVOICE_SENT);
+            order = orderService.updateStatus(order.getId(), OrderStatus.AWAITING_CONFIRMATION);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.AWAITING_CONFIRMATION);
+
+            order = orderService.updateStatus(order.getId(), OrderStatus.SHIPPED);
+            order = orderService.updateStatus(order.getId(), OrderStatus.IN_TRANSIT);
+            order = orderService.updateStatus(order.getId(), OrderStatus.DELIVERED);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.DELIVERED);
+
+            order = orderService.updateStatus(order.getId(), OrderStatus.PAID);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
         }
 
         @Test
         @DisplayName("PENDING_PAYMENT → PAYMENT_FAILED → PENDING_PAYMENT (повтор оплаты)")
         void shouldAllowRetryAfterPaymentFailure() {
             Order order = createTestOrder();
+            orderService.confirmOrder(order.getId(), USER_ID);
             orderService.initiatePayment(order.getId(), USER_ID);
 
             order = orderService.failPayment(order.getId());
@@ -393,19 +488,43 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         }
 
         @Test
-        @DisplayName("отмена в допустимых статусах")
-        void shouldCancelInAllowedStatuses() {
+        @DisplayName("клиент может отменить заказ в статусе CREATED")
+        void shouldCancelCreatedOrder() {
             Order order = createTestOrder();
             order = orderService.cancelOrder(order.getId(), USER_ID);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         }
 
         @Test
+        @DisplayName("клиент может отменить заказ в статусе PROCESSING")
+        void shouldCancelProcessingOrder() {
+            Order order = createTestOrder();
+            orderService.confirmOrder(order.getId(), USER_ID);
+            order = orderService.cancelOrder(order.getId(), USER_ID);
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        }
+
+        @Test
+        @DisplayName("клиент не может отменить заказ в статусе AWAITING_CONFIRMATION")
+        void shouldNotCancelAwaitingConfirmationOrder() {
+            Order order = createTestOrder();
+            orderService.confirmOrder(order.getId(), USER_ID);
+            orderService.updateStatus(order.getId(), OrderStatus.INVOICE_SENT);
+            orderService.updateStatus(order.getId(), OrderStatus.AWAITING_CONFIRMATION);
+
+            UUID orderId = order.getId();
+            assertThatThrownBy(() -> orderService.cancelOrder(orderId, USER_ID))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("нельзя отменить");
+        }
+
+        @Test
         @DisplayName("недопустимый переход: DELIVERED → CANCELLED")
         void shouldRejectInvalidTransition() {
             Order order = createTestOrder();
-
-            orderService.initiatePayment(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID);
+            orderService.updateStatus(order.getId(), OrderStatus.INVOICE_SENT);
+            orderService.updateStatus(order.getId(), OrderStatus.PENDING_PAYMENT);
             orderService.confirmPayment(order.getId());
             orderService.updateStatus(order.getId(), OrderStatus.SHIPPED);
             orderService.updateStatus(order.getId(), OrderStatus.IN_TRANSIT);
@@ -478,7 +597,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), null);
+                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
 
@@ -519,7 +638,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, "Тест 1С export");
+                    buildAddressDto(), null, null, null, "Тест 1С export");
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
 
@@ -563,7 +682,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
         CreateOrderRequest request = new CreateOrderRequest(
                 PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                buildAddressDto(), null, "Тест");
+                buildAddressDto(), null, null, null, "Тест");
 
         return orderService.createOrder(USER_ID, USER_EMAIL, request);
     }

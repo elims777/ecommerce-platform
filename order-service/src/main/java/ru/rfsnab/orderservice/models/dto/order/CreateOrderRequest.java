@@ -7,6 +7,8 @@ import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
 /**
  * DTO для создания заказа из корзины.
  * Товары берутся из корзины пользователя.
+ * Для PICKUP: warehousePointId + pickupRecipientName + pickupRecipientPhone обязательны.
+ * Для DELIVERY: deliveryAddress обязателен.
  */
 public record CreateOrderRequest(
         @NotNull(message = "Способ оплаты обязателен")
@@ -18,6 +20,10 @@ public record CreateOrderRequest(
         AddressDto deliveryAddress,
 
         Long warehousePointId,
+
+        String pickupRecipientName,
+
+        String pickupRecipientPhone,
 
         String comment
 ) implements HasDeliveryInfo {

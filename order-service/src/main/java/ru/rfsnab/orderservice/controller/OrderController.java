@@ -88,6 +88,15 @@ public class OrderController {
         return ResponseEntity.ok(enrichAndMap(order));
     }
 
+    @PostMapping("/{orderId}/confirm")
+    @Operation(summary = "Подтвердить заказ (CREATED → PROCESSING, отправляет в 1С)")
+    public ResponseEntity<OrderDto> confirmOrder(
+            Authentication authentication,
+            @PathVariable UUID orderId) {
+        Order order = orderService.confirmOrder(orderId, getCurrentUserId(authentication));
+        return ResponseEntity.ok(enrichAndMap(order));
+    }
+
     @PostMapping("/{orderId}/cancel")
     @Operation(summary = "Отменить заказ")
     public ResponseEntity<OrderDto> cancelOrder(

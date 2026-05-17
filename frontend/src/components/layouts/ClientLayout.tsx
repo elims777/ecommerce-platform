@@ -185,8 +185,20 @@ const ClientLayout = () => {
                     height: MAIN_H, display: 'flex', alignItems: 'center',
                     padding: '0 40px', gap: 28,
                 }}>
-                    <div onClick={() => navigate('/')} style={{ cursor: 'pointer', flexShrink: 0 }}>
+                    <div onClick={() => navigate('/')} style={{ cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
                         <img src="/logo.png" alt="РФснаб" style={{ height: 52, display: 'block' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <span style={{
+                                fontFamily: 'var(--font-display)',
+                                fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em',
+                                color: 'var(--brand-navy)', lineHeight: 1.1,
+                            }}>РФснаб</span>
+                            <span style={{
+                                fontFamily: 'var(--font-body)',
+                                fontSize: 11, fontWeight: 400, letterSpacing: '0.04em',
+                                color: 'var(--ink-3)', lineHeight: 1.2, textTransform: 'uppercase',
+                            }}>комплексное снабжение</span>
+                        </div>
                     </div>
 
                     {/* Search */}

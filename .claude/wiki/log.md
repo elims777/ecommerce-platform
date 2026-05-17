@@ -1,5 +1,40 @@
 # Session Log
 
+## 2026-05-17
+- Finalized order-service business logic: discussed B2B/B2C flows, CREATED as technical status, confirmOrder sends to 1С
+- OrderStatus.java: added INVOICE_SENT, renamed PROCESSING→"В работе", AWAITING_CONFIRMATION→"Ожидает подтверждения оплаты"
+- OrderService: rewrote ALLOWED_TRANSITIONS (11 transitions), CANCELLABLE_STATUSES (client-only: CREATED/PROCESSING/INVOICE_SENT/PENDING_PAYMENT/PAYMENT_FAILED), removed 1С Kafka from createOrder, removed auto PAID→PROCESSING from confirmPayment, added confirmOrder method
+- OrderController: added POST /api/v1/orders/{orderId}/confirm endpoint
+- CreateOrderRequest + Order entity: added pickupRecipientName/pickupRecipientPhone for PICKUP orders
+- OrderMapper: maps pickup recipient fields
+- Order1CKafkaProducer: uses pickup fields when deliveryAddress is null
+- Flyway V20260517120000: adds pickup_recipient columns + updates status CHECK constraint with INVOICE_SENT
+- EmailService: added sendInvoiceSentEmail, sendAwaitingConfirmationEmail
+- OrderHandler: INVOICE_SENT and AWAITING_CONFIRMATION now send specific emails instead of generic status-change email
+- ClientLayout: added wordmark next to logo — "РФснаб" (Unbounded bold, navy) + "комплексное снабжение" (small uppercase, gray)
+- plan-order-service-refactor.md: fully updated with finalized business logic, B2B/B2C flows, status table with 1С mapping, future B2B/B2C entity separation task noted
+
+## 2026-05-16 (evening)
+- Centralized company config: created frontend/src/config/company.ts with all company data (ООО «МСВ», INN, OGRN, phones, email, address, hours, description)
+- Replaced all hardcoded company data in ClientLayout, AboutPage, ContactsPage, PersonalDataPage, PrivacyPolicyPage, LoginPage with company.ts references
+- React.lazy + Suspense code splitting for all 19 page/feature routes in App.tsx
+- Skeleton loaders: CatalogPage (4-col grid, 12 cards), ProductPage (3-col layout), OrdersPage (list), CartPage (2-col grid)
+- Optimistic UI in cartStore: addItem/updateQuantity/removeItem update UI immediately with rollback on error
+- Improved empty states: CartPage and OrdersPage now teach the interface with B2B-specific copy (44-ФЗ, payment by invoice)
+- CheckoutPage split: 657-line monolith → DeliveryStep, RecipientStep, PaymentStep, SummaryStep (~344 lines remaining)
+- ErrorBoundary class component added, wraps all routes in App.tsx
+- ProfilePage: calls restoreSession() after profile save so header username updates immediately
+- Build fixes: antd 6 Divider orientation→titlePlacement, missing phone field in JWT user fallback, unused imports
+
+## 2026-05-15 (continued — gap fixes)
+- AuthLayout created: /login and /register moved out of ClientLayout into separate AuthLayout (no header/footer)
+- LoginPage: removed `margin: '0 -48px'` hack, added Юр/Физ account type toggle, "Забыли пароль?" link, 152-ФЗ security notice, inline TriMark SVG logo
+- RegisterPage: removed `margin: '0 -48px'` hack (now uses minHeight: 100vh correctly)
+- ClientLayout: full 3-level header — TopBar (36px navy, address+phone+links) + Main (76px, TriMark logo+wordmark, search input, cart/favorites/user actions) + Categories bar (46px, red catalog button + nav links + availability count). Footer: 5-column grid (#1A1A1A background), columns: brand+description, catalog, company, buyers, contacts
+- index.css: added full `.rf-*` utility classes (rf-btn, rf-btn-primary/secondary/ghost/quiet/sm/lg, rf-badge, rf-badge-success/warn/red/navy/neutral/dot, rf-card, rf-input, rf-label, rf-mono, rf-tabular)
+- ProductCard: price color fixed (brand-red → ink-1 per design reference), added favorite heart button, SKU line, isFeatured "Хит" badge, removed AntD Badge.Ribbon
+- CatalogPage: grid changed 3→4 columns per design reference
+
 ## 2026-05-15
 - Full frontend redesign applied from design-reference (tokens.css + screens-*.jsx)
 - CSS design tokens added to index.css: OKLCH warm neutrals, brand-red, brand-navy, Geologica/Golos Text/Unbounded fonts

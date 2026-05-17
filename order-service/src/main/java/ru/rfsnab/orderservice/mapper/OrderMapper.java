@@ -85,6 +85,8 @@ public class OrderMapper {
 
         if (request.deliveryMethod() == DeliveryMethod.PICKUP) {
             order.setWarehousePointId(request.warehousePointId());
+            order.setPickupRecipientName(request.pickupRecipientName());
+            order.setPickupRecipientPhone(request.pickupRecipientPhone());
         } else {
             order.setDeliveryAddress(
                     AddressMapper.mapToDeliveryAddress(request.deliveryAddress()));
