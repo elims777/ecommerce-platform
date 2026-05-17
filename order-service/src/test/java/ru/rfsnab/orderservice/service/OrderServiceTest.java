@@ -287,7 +287,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         @DisplayName("выбрасывает исключение при обновлении не в статусе CREATED")
         void shouldThrowWhenNotCreatedStatus() {
             Order order = createTestOrder();
-            orderService.initiatePayment(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID);
 
             UpdateOrderRequest request = UpdateOrderRequest.builder()
                     .paymentMethod(PaymentMethod.CARD)
