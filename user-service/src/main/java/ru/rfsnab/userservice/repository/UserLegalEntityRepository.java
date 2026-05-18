@@ -15,4 +15,5 @@ public interface UserLegalEntityRepository extends JpaRepository<UserLegalEntity
     List<UserLegalEntity> findAllByUserIdAndLinkStatus(Long userId, LinkStatus status);
     Optional<UserLegalEntity> findByLinkToken(String token);
     boolean existsByUserIdAndLegalEntityId(Long userId, Long legalEntityId);
+    Optional<UserLegalEntity> findByUserIdAndLegalEntityId(Long userId, Long legalEntityId);
 }

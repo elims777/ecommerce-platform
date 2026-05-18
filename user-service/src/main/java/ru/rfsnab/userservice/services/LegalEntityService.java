@@ -2,6 +2,7 @@ package ru.rfsnab.userservice.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +10,7 @@ import ru.rfsnab.userservice.exceptions.LegalEntityAlreadyExistsException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotFoundException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotVerifiedException;
 import ru.rfsnab.userservice.models.*;
+import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthResponse;
 import ru.rfsnab.userservice.models.dto.legal.RegisterLegalEntityRequest;
 import ru.rfsnab.userservice.models.dto.legal.SaveBankAccountRequest;
 import ru.rfsnab.userservice.models.dto.legal.SaveLegalEntityAddressRequest;
@@ -264,5 +266,32 @@ public class LegalEntityService {
     @Transactional(readOnly = true)
     public List<LegalEntityAddress> getAddresses(Long legalEntityId) {
         return addressRepository.findAllByLegalEntityId(legalEntityId);
+    }
+
+    @Transactional(readOnly = true)
+    public LegalEntityAuthResponse authenticate(String login, String password) {
+        LegalEntity entity = login.matches("\\d{10}|\\d{12}")
+                ? legalEntityRepository.findByInn(login)
+                        .orElseThrow(() -> new LegalEntityNotFoundException("Юрлицо не найдено"))
+                : legalEntityRepository.findByEmail(login)
+                        .orElseThrow(() -> new LegalEntityNotFoundException("Юрлицо не найдено"));
+
+        if (!passwordEncoder.matches(password, entity.getPassword())) {
+            throw new BadCredentialsException("Неверный логин или пароль");
+        }
+        if (entity.getVerificationStatus() != VerificationStatus.VERIFIED) {
+            throw new LegalEntityNotVerifiedException("Юрлицо не прошло верификацию");
+        }
+
+        return new LegalEntityAuthResponse(entity.getId(), entity.getEmail(),
+                entity.getInn(), entity.getFullName());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isLinkConfirmed(Long userId, Long legalEntityId) {
+        return userLegalEntityRepository
+                .findByUserIdAndLegalEntityId(userId, legalEntityId)
+                .map(link -> link.getLinkStatus() == LinkStatus.CONFIRMED)
+                .orElse(false);
     }
 }

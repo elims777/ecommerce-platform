@@ -7,9 +7,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.userservice.mappers.LegalEntityMapper;
 import ru.rfsnab.userservice.models.dto.legal.*;
+import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthRequest;
+import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthResponse;
 import ru.rfsnab.userservice.services.LegalEntityService;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Контроллер для управления юридическими лицами: регистрация, подтверждение email,
@@ -85,5 +88,19 @@ public class LegalEntityController {
     public ResponseEntity<Void> deleteBankAccount(@PathVariable Long id, @PathVariable Long accountId) {
         legalEntityService.deleteBankAccount(id, accountId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/authenticate")
+    public ResponseEntity<LegalEntityAuthResponse> authenticate(
+            @RequestBody LegalEntityAuthRequest request) {
+        return ResponseEntity.ok(legalEntityService.authenticate(request.login(), request.password()));
+    }
+
+    @GetMapping("/link-status/{userId}/{legalEntityId}")
+    public ResponseEntity<Map<String, Boolean>> getLinkStatus(
+            @PathVariable Long userId,
+            @PathVariable Long legalEntityId) {
+        boolean confirmed = legalEntityService.isLinkConfirmed(userId, legalEntityId);
+        return ResponseEntity.ok(Map.of("confirmed", confirmed));
     }
 }
