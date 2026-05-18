@@ -20,6 +20,7 @@ app:
   kafka:
     topic:
       user-events: user-events
+      legal-entity-events: legal-entity-events
 
 springdoc:
   api-docs:

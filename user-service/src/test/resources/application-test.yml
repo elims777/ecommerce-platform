@@ -19,6 +19,12 @@ spring:
   flyway:
     enabled: false
 
+app:
+  kafka:
+    topic:
+      user-events: user-events
+      legal-entity-events: legal-entity-events
+
 # JWT configuration для тестов
 jwt:
   secret: test-secret-key-for-testing-must-be-at-least-256-bits-long-for-hs256
