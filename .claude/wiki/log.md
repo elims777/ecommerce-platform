@@ -1,5 +1,36 @@
 # Session Log
 
+## 2026-05-18
+- Plan B brainstormed and designed: auth-service B2B login/switch-context, gateway headers, product-service wholesalePrice, integration-service dual price, notification-service legal-entity-events
+- Key decisions: JWT unified structure (sub=id, clientType=B2C|B2B), switch-context one-directional (user→legal, reverse requires re-auth), "Оптовая"→price (B2B), "Розничная"→wholesalePrice (B2C)
+- Fix identified: LegalEntityEvent missing token field — added to plan as Task 1
+- Spec: docs/superpowers/specs/2026-05-18-plan-b-auth-product-notification.md
+- Plan: docs/superpowers/plans/2026-05-18-plan-b-auth-product-notification.md (8 tasks)
+- architecture.md updated with full project structure (all services, packages, files)
+- Implemented Plan A (user-service B2B legal entity support) — 11 tasks, all tests green (71 total)
+- Task 1: Flyway migration V20260517180000 — 4 tables (legal_entities, user_legal_entities, legal_entity_bank_accounts, legal_entity_addresses)
+- Task 2: VerificationStatus, LinkStatus enums + LegalEntityEvent Kafka record
+- Task 3: JPA entities — LegalEntity, LegalEntityBankAccount, LegalEntityAddress, UserLegalEntity, UserLegalEntityId
+- Task 4: 4 repositories (LegalEntityRepository, BankAccountRepository, AddressRepository, UserLegalEntityRepository)
+- Task 5: DTOs (RegisterLegalEntityRequest, LegalEntityDto, BankAccountDto, etc.) + LegalEntityMapper
+- Task 6: LegalEntityKafkaProducerService + separate KafkaTemplate<String, LegalEntityEvent> bean + topic config
+- Task 7: 3 exceptions (NotFound, AlreadyExists, NotVerified) + handlers in GlobalExceptionHandler + existsByEmail in UserRepository
+- Task 8: LegalEntityService (TDD) — 7 unit tests passing
+- Task 9: 3 REST controllers (LegalEntityController, LegalEntityAdminController, UserLegalEntityController)
+- Task 10: LegalEntityControllerTest — 5 HTTP tests passing
+- Task 11: Full build — 71 tests, 0 failures, BUILD SUCCESS
+- Branch: feature/order-service-refactor — ready to merge into master
+- Next: Plan B in new branch (auth-service login/register for legal entities + product-service wholesalePrice)
+
+## 2026-05-17 (evening)
+- Completed order-service refactor: all 11 steps done, tests green, committed
+- Fixed test: shouldThrowWhenNotCreatedStatus — initiatePayment → confirmOrder (status machine change)
+- Brainstormed and designed B2B/B2C client separation — full design doc approved
+- Spec: `docs/superpowers/specs/2026-05-17-b2b-b2c-separation-design.md`
+- Plan A (user-service): `docs/superpowers/plans/2026-05-17-b2b-legal-entity-user-service.md`
+- Wiki: created index.md, plan-b2b-legal-entity.md
+- Next: implement Plan A — user-service B2B legal entity support (11 tasks)
+
 ## 2026-05-17
 - Finalized order-service business logic: discussed B2B/B2C flows, CREATED as technical status, confirmOrder sends to 1С
 - OrderStatus.java: added INVOICE_SENT, renamed PROCESSING→"В работе", AWAITING_CONFIRMATION→"Ожидает подтверждения оплаты"
