@@ -10,5 +10,6 @@ public record LegalEntityEvent(
         String legalEntityEmail,
         String targetEmail,
         String rejectionReason,
-        LocalDateTime timestamp
+        LocalDateTime timestamp,
+        String token         // emailConfirmToken or linkToken; null when not applicable
 ) {}

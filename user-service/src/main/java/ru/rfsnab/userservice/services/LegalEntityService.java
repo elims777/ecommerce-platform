@@ -75,7 +75,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_REGISTERED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), entity.getEmail(),
-                null, LocalDateTime.now()
+                null, LocalDateTime.now(), confirmToken
         ));
 
         log.info("Legal entity registered: inn={}, id={}", entity.getInn(), entity.getId());
@@ -95,7 +95,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_EMAIL_CONFIRMED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), "manager@rfsnab.ru",
-                null, LocalDateTime.now()
+                null, LocalDateTime.now(), null
         ));
 
         log.info("Legal entity email confirmed: id={}", entity.getId());
@@ -113,7 +113,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_VERIFIED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), entity.getEmail(),
-                null, LocalDateTime.now()
+                null, LocalDateTime.now(), null
         ));
 
         log.info("Legal entity verified: id={} by {}", id, managerEmail);
@@ -132,7 +132,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_REJECTED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), entity.getEmail(),
-                reason, LocalDateTime.now()
+                reason, LocalDateTime.now(), null
         ));
 
         log.info("Legal entity rejected: id={} by {}, reason: {}", id, managerEmail, reason);
@@ -166,7 +166,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_LINK_REQUESTED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), entity.getEmail(),
-                user.getFirstname() + " " + user.getLastname(), LocalDateTime.now()
+                user.getFirstname() + " " + user.getLastname(), LocalDateTime.now(), linkToken
         ));
 
         log.info("Link requested: userId={} → legalEntityId={}", userId, entity.getId());
@@ -189,7 +189,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_LINK_CONFIRMED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), user.getEmail(),
-                null, LocalDateTime.now()
+                null, LocalDateTime.now(), null
         ));
 
         log.info("Link confirmed: userId={} → legalEntityId={}", user.getId(), entity.getId());
