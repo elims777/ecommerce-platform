@@ -130,6 +130,9 @@ public class ProductImportService {
             if(item.getPrice() != null){
                 product.setPrice(item.getPrice());
             }
+            if(item.getWholesalePrice() != null){
+                product.setWholesalePrice(item.getWholesalePrice());
+            }
             if(item.getStockQuantity() != null){
                 product.setStockQuantity(item.getStockQuantity());
             }
