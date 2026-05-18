@@ -159,7 +159,7 @@ class CommerceMLParsingTest {
         void shouldParsePriceTypes() throws JAXBException {
             CommerceInfo info = unmarshal("commerceml/offers.xml");
 
-            assertThat(info.getOffersPackage().getPriceTypes()).hasSize(1);
+            assertThat(info.getOffersPackage().getPriceTypes()).hasSize(2);
             PriceType priceType = info.getOffersPackage().getPriceTypes().getFirst();
             assertThat(priceType.getName()).isEqualTo("Оптовая");
             assertThat(priceType.getCurrency()).isEqualTo("RUB");
@@ -174,7 +174,7 @@ class CommerceMLParsingTest {
             assertThat(offer.getId()).isEqualTo("ext-001");
             assertThat(offer.getQuantity()).isEqualTo("1000");
 
-            assertThat(offer.getPrices()).hasSize(1);
+            assertThat(offer.getPrices()).hasSize(2);
             OfferPrice price = offer.getPrices().getFirst();
             assertThat(price.getPricePerUnit()).isEqualTo("250.50");
             assertThat(price.getCurrency()).isEqualTo("RUB");

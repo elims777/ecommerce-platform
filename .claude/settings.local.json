@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\Max\\\\java\\\\my-application\\\\ecommerce-platform\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(find D:\\\\\\\\Max\\\\\\\\java\\\\\\\\my-application\\\\\\\\ecommerce-platform -name \"*Controller.java\" -type f)",
+      "Bash(dir /s /b *dto*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/api/v1/products?page=0)",
+      "Bash(size=5 2>&1)",
+      "Bash(curl -s http://localhost:8080/api/v1/categories/tree)",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"http://localhost:8080/api/v1/products?page=0&size=5\")",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"http://localhost:8080/api/v1/categories/tree\")",
+      "PowerShell(head *)",
+      "PowerShell(для всех запросов*)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:9000/v1/auth/login\" -Method POST -ContentType \"application/json\" -Body '{\"email\":\"test@test.com\",\"password\":\"test\"}' -ErrorAction SilentlyContinue | Select-Object StatusCode, Content)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:8080/api/v1/products?page=0&size=3\" -ErrorAction SilentlyContinue; Write-Host \"Status: $\\($r.StatusCode\\)\"; Write-Host \\($r.Content | ConvertFrom-Json | ConvertTo-Json -Depth 2\\))",
+      "PowerShell($r = Invoke-WebRequest -Uri \"http://localhost:8080/api/v1/categories/tree\" -ErrorAction SilentlyContinue; Write-Host \"Status: $\\($r.StatusCode\\)\"; $r.Content | ConvertFrom-Json | ConvertTo-Json -Depth 3)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/antd/package.json'\\).version\\)\")",
+      "Bash(node -e \"const d = require\\('./node_modules/antd/es/divider'\\); console.log\\(Object.keys\\(d\\)\\)\")"
+    ]
+  },
+  "enabledPlugins": {
+    "claude-mem@thedotmack": true
+  }
+}
