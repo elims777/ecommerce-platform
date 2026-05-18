@@ -52,11 +52,15 @@ app:
     topic:
       user-events: user-events
       order-events: order-events
+      legal-entity-events: legal-entity-events
 
   # Email
   email:
     from: "${MAIL_USER}"
     verification-url: http://localhost:9000/verify-email
+    manager: ${MANAGER_EMAIL:manager@rfsnab.ru}
+    legal-entity-confirm-url: ${LEGAL_CONFIRM_URL:http://localhost:8081/api/v1/legal-entities/confirm-email}
+    legal-entity-link-confirm-url: ${LEGAL_LINK_CONFIRM_URL:http://localhost:8081/api/v1/legal-entities/confirm-link}
 
 
 logging:

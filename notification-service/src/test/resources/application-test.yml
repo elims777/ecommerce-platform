@@ -47,10 +47,15 @@ app:
   kafka:
     topic:
       user-events: user-events
+      order-events: order-events
+      legal-entity-events: legal-entity-events
 
   email:
     from: test@example.com
     verification-url: http://localhost:9000/verify-email
+    manager: manager@rfsnab.ru
+    legal-entity-confirm-url: http://localhost:8081/api/v1/legal-entities/confirm-email
+    legal-entity-link-confirm-url: http://localhost:8081/api/v1/legal-entities/confirm-link
 
 # === Logging ===
 logging:
