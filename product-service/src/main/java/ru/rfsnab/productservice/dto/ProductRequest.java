@@ -27,6 +27,9 @@ public class ProductRequest {
     @DecimalMin(value = "0.0", message = "Цена не может быть отрицательной")
     private BigDecimal price;
 
+    @DecimalMin(value = "0.0", message = "Оптовая цена не может быть отрицательной")
+    private BigDecimal wholesalePrice;
+
     @Min(value = 0, message = "Количество не может быть отрицательным")
     @Builder.Default
     private Integer stockQuantity = 0;

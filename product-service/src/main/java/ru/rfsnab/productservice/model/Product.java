@@ -38,6 +38,9 @@ public class Product {
     @Column(precision = 10, scale = 2)
     private BigDecimal price;
 
+    @Column(name = "wholesale_price", precision = 10, scale = 2)
+    private BigDecimal wholesalePrice;
+
     @Column(nullable = false)
     @Builder.Default
     private Integer stockQuantity = 0;
