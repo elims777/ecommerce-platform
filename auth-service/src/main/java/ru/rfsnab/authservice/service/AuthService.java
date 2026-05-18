@@ -13,8 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.authservice.models.dto.AuthResponse;
+import ru.rfsnab.authservice.models.dto.LegalAuthRequest;
+import ru.rfsnab.authservice.models.dto.LegalEntityAuthResponse;
+import ru.rfsnab.authservice.models.dto.LegalEntityDto;
 import ru.rfsnab.authservice.models.dto.RoleEntity;
 import ru.rfsnab.authservice.models.dto.SimpleAuthRequest;
+import ru.rfsnab.authservice.models.dto.SwitchContextRequest;
 import ru.rfsnab.authservice.models.dto.UserDtoResponse;
 import ru.rfsnab.authservice.utils.JWTService;
 import ru.rfsnab.authservice.utils.RoleExtractor;
@@ -180,6 +184,55 @@ public class AuthService {
         } catch (HttpClientErrorException e) {
             log.error("Ошибка при обращении к user-service: {}", e.getMessage());
             throw new RuntimeException("Ошибка аутентификации. Попробуйте позже");
+        }
+    }
+
+    public AuthResponse authenticateLegalEntity(LegalAuthRequest request) {
+        String url = userServiceUrl + "/api/v1/legal-entities/authenticate";
+        try {
+            ResponseEntity<LegalEntityAuthResponse> response = restTemplate.postForEntity(
+                    url, request, LegalEntityAuthResponse.class);
+            LegalEntityAuthResponse legal = response.getBody();
+            if (legal == null) throw new BadCredentialsException("Не удалось получить данные юрлица");
+
+            String accessToken = jwtService.generateToken(legal.id(), legal.email(), "B2B");
+            String refreshToken = jwtService.generateRefreshToken(legal.id(), legal.email(), "B2B");
+            log.info("B2B login: legalEntityId={}, email={}", legal.id(), legal.email());
+            return new AuthResponse(accessToken, refreshToken, "Bearer");
+        } catch (HttpClientErrorException.Forbidden e) {
+            throw new BadCredentialsException("Юрлицо не прошло верификацию");
+        } catch (HttpClientErrorException.NotFound e) {
+            throw new BadCredentialsException("Юрлицо не найдено");
+        } catch (HttpClientErrorException e) {
+            log.error("Ошибка обращения к user-service: {}", e.getMessage());
+            throw new RuntimeException("Ошибка аутентификации. Попробуйте позже");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public AuthResponse switchContext(String bearerToken, SwitchContextRequest request) {
+        Long userId = jwtService.extractUserId(bearerToken);
+
+        String linkStatusUrl = userServiceUrl + "/api/v1/legal-entities/link-status/"
+                + userId + "/" + request.legalEntityId();
+        try {
+            ResponseEntity<Map> linkResp = restTemplate.getForEntity(linkStatusUrl, Map.class);
+            Boolean confirmed = linkResp.getBody() != null
+                    && Boolean.TRUE.equals(linkResp.getBody().get("confirmed"));
+            if (!confirmed) throw new org.springframework.security.access.AccessDeniedException("Нет подтверждённой связи");
+
+            String legalUrl = userServiceUrl + "/api/v1/legal-entities/" + request.legalEntityId();
+            ResponseEntity<LegalEntityDto> legalResp = restTemplate.getForEntity(legalUrl, LegalEntityDto.class);
+            LegalEntityDto legal = legalResp.getBody();
+            if (legal == null) throw new RuntimeException("Не удалось получить данные юрлица");
+
+            String accessToken = jwtService.generateToken(request.legalEntityId(), legal.getEmail(), "B2B");
+            String refreshToken = jwtService.generateRefreshToken(request.legalEntityId(), legal.getEmail(), "B2B");
+            log.info("Switch context: userId={} -> legalEntityId={}", userId, request.legalEntityId());
+            return new AuthResponse(accessToken, refreshToken, "Bearer");
+        } catch (HttpClientErrorException e) {
+            log.error("Ошибка switch-context: {}", e.getMessage());
+            throw new RuntimeException("Ошибка переключения контекста");
         }
     }
 

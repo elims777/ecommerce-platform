@@ -37,6 +37,7 @@ public class JWTService {
                 .subject(String.valueOf(userId))
                 .claim("email", email)
                 .claim("roles", roles)
+                .claim("clientType", "B2C")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis()+jwtProperties.getExpirationMs()))
                 .signWith(getSignedKey())
@@ -51,10 +52,39 @@ public class JWTService {
                 .subject(String.valueOf(userId))
                 .claim("email", email)
                 .claim("roles", roles)
+                .claim("clientType", "B2C")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis()+jwtProperties.getRefreshExpirationMs()))
                 .signWith(getSignedKey())
                 .compact();
+    }
+
+    public String generateToken(Long id, String email, String clientType) {
+        return Jwts.builder()
+                .subject(String.valueOf(id))
+                .claim("email", email)
+                .claim("clientType", clientType)
+                .claim("roles", List.of("ROLE_USER"))
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + jwtProperties.getExpirationMs()))
+                .signWith(getSignedKey())
+                .compact();
+    }
+
+    public String generateRefreshToken(Long id, String email, String clientType) {
+        return Jwts.builder()
+                .subject(String.valueOf(id))
+                .claim("email", email)
+                .claim("clientType", clientType)
+                .claim("roles", List.of("ROLE_USER"))
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpirationMs()))
+                .signWith(getSignedKey())
+                .compact();
+    }
+
+    public String extractClientType(String token) {
+        return extractClaims(token).get("clientType", String.class);
     }
 
     /**
