@@ -49,3 +49,4 @@ frontend/.vite/
 .claude/settings.local.json
 LLM-wiki.md
 *.txt
+docs/superpowers/
