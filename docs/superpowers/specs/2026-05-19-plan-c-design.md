@@ -1,7 +1,7 @@
 # Plan C — B2B Order Snapshot + Frontend Context Switcher
 
 **Date:** 2026-05-19
-**Branch:** feature/plan-c-b2b-frontend (new, off feature/order-service-refactor)
+**Branch:** feature/b2b-frontend (new, off feature/order-service-refactor)
 **Depends on:** Plan A (user-service legal entities), Plan B (JWT clientType, gateway headers, wholesalePrice)
 
 ---
@@ -11,7 +11,7 @@
 Plan C completes the B2B/B2C separation by:
 1. Persisting B2B customer identity snapshot in orders (so 1C export carries legal entity data)
 2. Wiring `clientType` from JWT into the frontend state and UI
-3. Adding a context switcher to the header (B2C ↔ B2B)
+3. Adding a context switcher to the header (B2C ↔ B2B) — B2C→B2B without password, B2B→B2C requires personal password
 4. Showing correct price (wholesale vs retail) based on active context
 5. Adding a Legal Entity dashboard section in ProfilePage
 
@@ -20,16 +20,16 @@ Plan C completes the B2B/B2C separation by:
 ## Section 1 — order-service: B2B Snapshot Fields
 
 ### Problem
-`Order` entity has `userId` but no B2B identity snapshot. When a B2B customer places an order, 1C export (`Order1CKafkaProducer`) needs `companyName`, `inn`, `ogrn`. These must be captured at order creation time (snapshot pattern — same as `productName`/`price` in `OrderItem`).
+`Order` entity has `userId` (Long, not nullable). For B2B orders, `userId` stores `legalEntityId` — same field, same JWT `sub` semantics (Plan B: `sub=legalEntityId` when `clientType=B2B`). No schema change needed for the ID field.
+
+B2B snapshot needed for 1C export: `companyName`, `inn`. Email is already captured in the existing `customer_email` column (same field serves both B2C and B2B customers).
 
 ### Flyway migration: `V20260519000000__add_b2b_snapshot_to_orders.sql`
 ```sql
 ALTER TABLE orders
     ADD COLUMN IF NOT EXISTS customer_type VARCHAR(10) NOT NULL DEFAULT 'B2C',
     ADD COLUMN IF NOT EXISTS company_name  VARCHAR(255),
-    ADD COLUMN IF NOT EXISTS inn           VARCHAR(12),
-    ADD COLUMN IF NOT EXISTS kpp           VARCHAR(9),
-    ADD COLUMN IF NOT EXISTS ogrn          VARCHAR(15);
+    ADD COLUMN IF NOT EXISTS inn           VARCHAR(12);
 
 ALTER TABLE orders
     ADD CONSTRAINT orders_customer_type_check
@@ -46,38 +46,48 @@ private String companyName;
 
 @Column(name = "inn", length = 12)
 private String inn;
-
-@Column(name = "kpp", length = 9)
-private String kpp;
-
-@Column(name = "ogrn", length = 15)
-private String ogrn;
 ```
 
+`customer_email` already exists — no change needed. For B2B orders it stores the legal entity email.
+
 ### CreateOrderRequest — extended
-Add `clientType`, `companyName`, `inn`, `kpp`, `ogrn` fields. All optional — required only when `clientType = B2B`. Validation: if `clientType == B2B` then `companyName` and `inn` must be non-null (`@AssertTrue` at record level or service-level check).
+Add `companyName` and `inn` fields (both optional at DTO level). Service-level validation: if `clientType == B2B` then `companyName` and `inn` must be non-null.
+
+`clientType` is NOT in the request body — it comes from the `X-Client-Type` header (gateway-forwarded).
 
 ### OrderController — read headers
-`OrderController.createOrder()` reads `X-Client-Type` and `X-User-Id` headers forwarded by gateway (already configured in Plan B). If `X-Client-Type = B2B`, passes B2B snapshot fields into `CreateOrderRequest` or enriches the `Order` directly in service.
+`OrderController.createOrder()` reads:
+- `X-Client-Type` → `clientType` (String: "B2C" or "B2B")
+- `X-User-Id` → `userId` (Long — for B2B this is `legalEntityId`, same field)
 
-**Chosen approach:** controller extracts `clientType` from header and passes it to service. Service reads B2B fields from request. This keeps the service testable without HTTP context.
+Both headers are already forwarded by gateway (Plan B). Controller passes them to service.
+
+**Chosen approach:** controller extracts headers, passes `clientType` and `userId` to service. Service handles snapshot logic. Keeps service testable without HTTP context.
 
 ### OrderService — populate snapshot
 ```java
-order.setCustomerType(clientType);
-if ("B2B".equals(clientType)) {
-    order.setCompanyName(request.companyName());
-    order.setInn(request.inn());
-    order.setKpp(request.kpp());
-    order.setOgrn(request.ogrn());
+public Order createOrder(Long userId, String customerEmail, String clientType, CreateOrderRequest request) {
+    // ...
+    order.setCustomerType(clientType);
+    if ("B2B".equals(clientType)) {
+        // companyName and inn must be non-null for B2B — validated here
+        if (request.companyName() == null || request.inn() == null) {
+            throw new InvalidOrderStateException("B2B order requires companyName and inn");
+        }
+        order.setCompanyName(request.companyName());
+        order.setInn(request.inn());
+    }
+    // ...
 }
 ```
 
+`order.setUserId(userId)` — for B2B this stores legalEntityId. No change to field name.
+
 ### OrderDto — expose snapshot fields
-Add `customerType`, `companyName`, `inn`, `kpp`, `ogrn` to `OrderDto`. `OrderMapper` maps them.
+Add `customerType`, `companyName`, `inn` to `OrderDto`. `OrderMapper` maps them.
 
 ### Order1CKafkaProducer — use snapshot
-`Order1CExportEvent` already exists. Add B2B fields to the event record so 1C receives full legal entity identity.
+`Order1CExportEvent` already exists. Add `customerType`, `companyName`, `inn` fields to the event record so 1C can find the legal entity by INN.
 
 ---
 
@@ -86,26 +96,48 @@ Add `customerType`, `companyName`, `inn`, `kpp`, `ogrn` to `OrderDto`. `OrderMap
 ### Problem
 JWT already contains `clientType` (Plan B), but `User` type and `authStore` ignore it. `decodeJwtPayload` is already present in `authStore.ts`.
 
+### JWT structure (Plan B)
+```
+sub = userId (B2C) | legalEntityId (B2B)   ← same field, different value
+clientType = "B2C" | "B2B"
+email = user or legal entity email
+```
+
 ### Changes to `frontend/src/types/auth.ts`
 ```typescript
 export type ClientType = 'B2C' | 'B2B';
 
 export interface User {
-    // ... existing fields ...
-    clientType: ClientType;          // new — from JWT claim
-    companyName?: string | null;     // new — present when B2B
-    legalEntityId?: number | null;   // new — present when B2B
+    // existing fields unchanged
+    id: number;           // userId for B2C, legalEntityId for B2B — from JWT sub
+    email: string;
+    firstname: string;
+    lastname: string;
+    surname: string | null;
+    phone: string | null;
+    emailVerified: boolean;
+    roles: UserRole[];
+    createdAt: string;
+    updatedAt: string;
+    // new fields
+    clientType: ClientType;
+    companyName?: string | null;   // present when B2B
 }
 ```
 
+No separate `legalEntityId` field — `id` already carries it when `clientType === 'B2B'`.
+
 ### Changes to `authStore.ts`
-- `login()` — auth-service already returns `clientType` in JWT; extract from `tokens.user` (auth-service `AuthResponse` must include it — see Section 5)
-- `restoreSession()` — when falling back to JWT payload decoding, extract `clientType`, `legalEntityId` from claims
-- Add `switchContext(targetType: ClientType): Promise<void>` action that calls `POST /v1/auth/switch-context` and replaces tokens + user in store
+- `login()` — extract `clientType`, `companyName` from `tokens.user` (auth-service `AuthResponse` must include them — see Section 6)
+- `restoreSession()` — when falling back to JWT payload decoding, extract `clientType`, `companyName` from claims
+- Add `switchContext(targetType: ClientType, password?: string): Promise<void>` action
 
 ```typescript
-switchContext: async (targetType) => {
-    const { data } = await apiClient.post<AuthTokens>('/v1/auth/switch-context', { targetType });
+switchContext: async (targetType, password) => {
+    const { data } = await apiClient.post<AuthTokens>('/v1/auth/switch-context', {
+        targetType,
+        ...(password ? { password } : {}),
+    });
     localStorage.setItem('accessToken', data.access_token);
     localStorage.setItem('refreshToken', data.refresh_token);
     set({ user: data.user, isAuthenticated: true });
@@ -117,56 +149,57 @@ switchContext: async (targetType) => {
 ## Section 3 — Frontend: Context Switcher in Header
 
 ### Placement
-In `ClientLayout.tsx`, inside the authenticated user section (currently a `Dropdown` with `userMenuItems`). Add a **pill toggle** above the dropdown button showing `B2C | B2B`.
+In `ClientLayout.tsx`, inside the authenticated user section. Add a **pill toggle** `Физлицо | Организация` rendered to the left of the user dropdown button.
 
-### Behavior
-- Pill is visible only when `isAuthenticated && user.legalEntityId != null`
-- Active segment highlighted with `var(--brand-red)` background
-- Clicking the inactive segment calls `authStore.switchContext(target)`
-  - Optimistic UI: update `user.clientType` immediately, revert on error
-  - Show brief loading state on the pill during the request
-- After switch: cart is re-fetched (clientType affects pricing), page does not reload
+### Visibility
+Pill is visible only when `isAuthenticated && user.companyName != null` (meaning a verified legal entity is linked — populated from auth response).
 
-### Switch B2C → B2B
-Calls `POST /v1/auth/switch-context` with `{ targetType: 'B2B' }`. Auth-service already implemented this in Plan B (uses linked legal entity from user-service). Returns new JWT with `clientType=B2B`, `sub=legalEntityId`.
+If no legal entity linked: pill is hidden. Add "Подключить организацию" item to `userMenuItems` dropdown → navigates to `/profile#organization`.
 
-### Switch B2B → B2C
-Same endpoint with `{ targetType: 'B2C' }`. Returns JWT with `clientType=B2C`, `sub=userId`. **No password re-entry required** (this is the same session — the user already authenticated as B2C originally).
+### Switch B2C → B2B (no password)
+- Optimistic: set `user.clientType = 'B2B'` immediately in store
+- Call `authStore.switchContext('B2B')` (no password)
+- On success: replace tokens and user in store, re-fetch cart
+- On error: revert `clientType` to 'B2C', show error message
+- Auth-service validates that the physical user has a verified linked legal entity
 
-> **Note:** Plan B spec says "legal→user requires password". Re-evaluate: if the physical user's session is still tracked server-side (refresh token), a B2B→B2C switch within the same session should not require password. Auth-service implementation determines this — if it already works without password, use it. If it requires password, add a modal prompt.
+### Switch B2B → B2C (password required)
+- Show a small modal: "Введите пароль от личного аккаунта"
+- On submit: call `authStore.switchContext('B2C', password)`
+- Auth-service validates the physical user's password before issuing B2C JWT
+- On success: replace tokens, store updated, re-fetch cart
+- On error: show "Неверный пароль"
 
-### No legal entity linked yet
-If `user.legalEntityId == null`, the pill is hidden. Instead, add a "Подключить организацию" link in `userMenuItems` dropdown that navigates to `/profile#legal-entity`.
+**Rationale:** User controls legal entity data, not vice versa. Switching back to personal account requires proving personal identity — password acts as confirmation.
+
+### After any switch
+- Cart re-fetched (prices depend on clientType)
+- Page does not reload — reactive store update propagates to all components
 
 ---
 
 ## Section 4 — Frontend: Price Display by clientType
 
-### Problem
-`product-service` returns both `price` (wholesale/B2B) and `wholesalePrice` (retail/B2C) in `ProductResponse`. Frontend currently always shows `price`.
-
 ### Correct mapping (from Plan B spec)
-| Field in DB | 1C source | Shown to |
+| DB field | 1C source | Shown to |
 |---|---|---|
 | `price` | "Оптовая" | B2B customers |
-| `wholesalePrice` | "Розничная" | B2C customers |
+| `wholesalePrice` | "Розничная" | B2C customers + unauthenticated |
 
 ### Implementation
-Add `useDisplayPrice(product)` hook or inline helper in `ProductCard.tsx`, `ProductPage.tsx`, `CartPage.tsx`, `CheckoutPage.tsx`, `SummaryStep.tsx`:
+Single hook `useDisplayPrice` in `frontend/src/utils/priceUtils.ts`:
 
 ```typescript
-const useDisplayPrice = (product: { price: number; wholesalePrice?: number | null }) => {
+export const useDisplayPrice = (product: { price: number; wholesalePrice?: number | null }): number => {
     const clientType = useAuthStore((s) => s.user?.clientType ?? 'B2C');
     return clientType === 'B2B' ? product.price : (product.wholesalePrice ?? product.price);
 };
 ```
 
-Unauthenticated users see `wholesalePrice` (retail price, same as B2C).
+Use in: `ProductCard.tsx`, `ProductPage.tsx`, `CartPage.tsx`, `SummaryStep.tsx`.
 
-### Order total
-`OrderService.createOrder` in backend uses `product.price()` (from `ProductDto`) for B2B and needs to use `wholesalePrice` for B2C. Currently it always uses `product.price()`.
-
-**Backend fix needed:** `ProductDto` in order-service must include `wholesalePrice`. `addItemsFromCart` and `addItemsFromDto` must pick price by `clientType` header. `OrderItem.price` stores the snapshot price (already correct field).
+### Backend: price selection in order-service
+`ProductDto` in order-service must add `wholesalePrice` field (currently missing). `addItemsFromCart` and `addItemsFromDto` select price by `clientType`:
 
 ```java
 BigDecimal snapshotPrice = "B2B".equals(clientType)
@@ -174,74 +207,86 @@ BigDecimal snapshotPrice = "B2B".equals(clientType)
     : (product.wholesalePrice() != null ? product.wholesalePrice() : product.price());
 ```
 
+`OrderItem.price` stores the snapshot — field already exists, just needs correct value.
+
 ---
 
 ## Section 5 — Frontend: Legal Entity Section in ProfilePage
 
-### New route: `/profile` (existing) — add B2B tab/section
+`ProfilePage` currently has sections "Личные данные" and "Аккаунт". Add third section: **"Организация"**.
 
-`ProfilePage` currently has two sections: "Личные данные" and "Аккаунт". Add a third section: **"Организация"**.
+### State 1 — no legal entity linked (`user.companyName == null`)
+- Empty state: "Работаете от юридического лица? Подключите организацию."
+- CTA: "Подать заявку" → inline registration form
 
-### States of the "Организация" section
-1. **No legal entity linked** (`user.legalEntityId == null`):
-   - Show empty state: "Работаете от юридического лица? Подключите организацию."
-   - CTA button: "Подать заявку" → modal/inline form
+### State 2 — linked, pending verification
+- API call: `GET /api/v1/legal-entities/link-status/{userId}` → status field
+- Show: company name, INN, status badge "На проверке"
+- Context switcher pill in header hidden (not verified yet)
 
-2. **Legal entity linked, pending verification** (`legalEntityId != null`, status = `PENDING` or `UNVERIFIED`):
-   - Show company name, INN
-   - Status badge: "На проверке"
-   - No switch context pill in header yet (can't use B2B until verified)
+### State 3 — verified
+- Show: companyName, INN, email
+- Context switcher pill in header active
 
-3. **Legal entity verified** (`status = VERIFIED`):
-   - Show: companyName, INN, KPP, OGRN, email, bank accounts
-   - Context switcher pill in header becomes active
+### Registration form (inline, shown in State 1)
+Fields: `companyName` (required), `inn` (required), `email` (required — legal entity contact email), `password` (required — sets B2B login password).
+Calls: `POST /api/v1/legal-entities/register` (Plan A, already implemented).
+On success: `restoreSession()` to refresh user data.
 
-### Registration form (inline in ProfilePage)
-Fields: `companyName`, `inn`, `kpp` (optional), `ogrn` (optional), `email` (legal entity email), `password`.
-Calls: `POST /api/v1/legal-entities/register` (already implemented in Plan A via user-service/gateway).
-On success: refetch user session to get updated `legalEntityId`.
-
-### API calls needed
-- `GET /api/v1/legal-entities/{id}` — get legal entity details (already exists, Plan A)
-- `GET /api/v1/legal-entities/link-status/{userId}` — check link status (already exists, Plan A)
-- `POST /api/v1/legal-entities/register` — already exists
-
-New file: `frontend/src/api/legalEntity.ts`
+### New API file: `frontend/src/api/legalEntity.ts`
+```typescript
+getLinkStatus(userId): GET /api/v1/legal-entities/link-status/{userId}
+getLegalEntity(id): GET /api/v1/legal-entities/{id}
+registerLegalEntity(request): POST /api/v1/legal-entities/register
+```
 
 ---
 
-## Section 6 — auth-service: Ensure AuthResponse includes clientType and legalEntityId
+## Section 6 — auth-service: Verify AuthResponse
 
-Plan B implemented `switch-context` and B2B login. Verify that `AuthResponse` DTO (auth-service) includes:
+Plan B implemented `switch-context` and B2B login. Verify that `AuthResponse` DTO includes:
 - `clientType: String` — "B2C" or "B2B"
-- `legalEntityId: Long` (nullable) — present when B2B
+- `companyName: String` (nullable) — present for B2B, null for B2C
 
-If missing, add to `AuthResponse` and populate in `JwtTokenService` / login handlers. Frontend depends on this to populate `User.clientType` and `User.legalEntityId` without JWT decoding on every load.
+If missing, add to `AuthResponse` and populate in login/switch-context handlers. Frontend relies on these fields to avoid JWT decoding on every page load.
+
+`legalEntityId` does NOT need to be a separate field in `AuthResponse` — it's already in `sub` (JWT). Frontend reads it as `user.id` when `clientType === 'B2B'`.
 
 ---
 
 ## Section 7 — CheckoutPage: B2B fields
 
-When `user.clientType == 'B2B'`, `CheckoutPage` sends B2B snapshot fields in `CreateOrderRequest`:
-- `companyName`, `inn`, `kpp`, `ogrn` — taken from `user` store (already populated from auth response)
-- No extra user input required — snapshot is automatic
+When `user.clientType === 'B2B'`, `CheckoutPage` automatically adds B2B snapshot to `CreateOrderRequest`:
+```typescript
+const b2bFields = user.clientType === 'B2B'
+    ? { companyName: user.companyName, inn: /* from legalEntity API or user store */ }
+    : {};
+await createOrder({ ...deliveryFields, ...b2bFields });
+```
 
 `SummaryStep` shows company name and INN in order summary when B2B.
+
+**INN in store:** `inn` needs to be available on the frontend without extra API calls. Two options:
+- Include `inn` in `AuthResponse` + `User` type (preferred — symmetric with `companyName`)
+- Fetch from `GET /api/v1/legal-entities/{id}` on checkout
+
+**Decision:** Add `inn` to `AuthResponse` and `User` type (same as `companyName`). One extra field, zero extra API calls.
 
 ---
 
 ## Section 8 — Data Flow Summary
 
 ```
-Login (B2B) → JWT { sub=legalEntityId, clientType=B2B, companyName, inn }
+B2C Login  → JWT { sub=userId, clientType=B2C }
+B2B Login  → JWT { sub=legalEntityId, clientType=B2B, companyName, inn }
                 ↓
-authStore.user { clientType:'B2B', legalEntityId, companyName, inn }
+authStore.user { id=userId|legalEntityId, clientType, companyName?, inn? }
                 ↓
-Header pill shows B2B active
-ProductCard/Page shows price (wholesale)
-CheckoutPage sends { clientType:'B2B', companyName, inn, ... }
-OrderService creates Order { customerType:'B2B', companyName, inn, ... }
-Order1CKafkaProducer sends event with B2B identity to 1C
+Header: pill "Физлицо | Организация" (if companyName != null)
+Products: useDisplayPrice → price (B2B) or wholesalePrice (B2C)
+Checkout: CreateOrderRequest { ..., companyName, inn } when B2B
+OrderService: Order { customerType=B2B, userId=legalEntityId, companyName, inn }
+Order1CKafkaProducer → event with companyName + inn for 1C lookup
 ```
 
 ---
@@ -249,28 +294,30 @@ Order1CKafkaProducer sends event with B2B identity to 1C
 ## Section 9 — Testing
 
 ### Backend (order-service)
-- `OrderServiceTest`: `createOrder_B2B_snapshotsCompanyData` — verify `customerType`, `companyName`, `inn` set
-- `OrderServiceTest`: `createOrder_B2C_noSnapshotFields` — verify B2B fields null for B2C orders
-- `OrderServiceTest`: `createOrder_B2B_usesWholesalePrice` / `createOrder_B2C_usesRetailPrice`
-- `OrderControllerTest`: header `X-Client-Type: B2B` flows into order entity
+- `createOrder_B2B_snapshotsCompanyData` — verify `customerType=B2B`, `companyName`, `inn` set correctly
+- `createOrder_B2C_noSnapshotFields` — verify `companyName` and `inn` null, `customerType=B2C`
+- `createOrder_B2B_usesWholesalePrice` — verify `OrderItem.price` = `product.price()` for B2B
+- `createOrder_B2C_usesRetailPrice` — verify `OrderItem.price` = `product.wholesalePrice()` for B2C
+- `createOrder_B2B_missingInn_throws` — verify exception when B2B without inn/companyName
+- `OrderControllerTest`: `X-Client-Type: B2B` header flows into order entity
 
 ### Frontend
-- Manual: login as B2B → pill shows B2B active → prices show wholesale
-- Manual: switch to B2C → pill updates → prices show retail
-- Manual: checkout as B2B → order summary shows company name
+- Manual: B2B login → pill shows "Организация" active, prices show wholesale
+- Manual: switch to B2C (with password modal) → pill switches, prices show retail
+- Manual: checkout as B2B → summary shows company name + INN
 
 ---
 
 ## Section 10 — Implementation Order
 
-1. **order-service backend** — Flyway migration + entity fields + service + mapper + DTO + controller header extraction + ProductDto wholesalePrice + price selection logic
-2. **auth-service** — verify/add clientType + legalEntityId to AuthResponse
-3. **frontend authStore + types** — add clientType, legalEntityId, companyName to User; add switchContext action
-4. **frontend header** — context switcher pill in ClientLayout
-5. **frontend price display** — useDisplayPrice in ProductCard, ProductPage, CartPage, CheckoutPage, SummaryStep
-6. **frontend ProfilePage** — Организация section (view + registration form)
-7. **frontend CheckoutPage** — send B2B snapshot fields in CreateOrderRequest
-8. **Tests** — order-service unit tests
+1. **order-service** — Flyway migration + entity fields (`customerType`, `companyName`, `inn`) + `ProductDto` add `wholesalePrice` + `OrderService` price selection + snapshot logic + `OrderDto` + `OrderMapper` + `Order1CExportEvent` fields + unit tests
+2. **auth-service** — verify/add `clientType`, `companyName`, `inn` to `AuthResponse`; verify `switch-context` handles password param for B2B→B2C
+3. **frontend types + authStore** — add `clientType`, `companyName`, `inn` to `User`; `switchContext(targetType, password?)` action
+4. **frontend ClientLayout** — context switcher pill with B2B→B2C password modal
+5. **frontend price display** — `useDisplayPrice` hook + apply in ProductCard, ProductPage, CartPage, SummaryStep
+6. **frontend ProfilePage** — "Организация" section (3 states + registration form) + `legalEntity.ts` API
+7. **frontend CheckoutPage** — send `companyName`/`inn` in `CreateOrderRequest` when B2B; SummaryStep shows them
+8. **Tests** — order-service unit tests (already listed above)
 
 ---
 
