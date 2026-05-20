@@ -247,6 +247,99 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .findFirst().orElseThrow();
             assertThat(item2.getExternalId()).isEqualTo("ext-002");
         }
+
+        @Test
+        @DisplayName("B2B: снапшот компании — customerType, companyName, inn")
+        void createOrder_B2B_snapshotsCompanyData() {
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, null, "ООО Ромашка", "1234567890");
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2B", request);
+
+            assertThat(order.getCustomerType()).isEqualTo(ru.rfsnab.orderservice.models.entity.enums.CustomerType.B2B);
+            assertThat(order.getCompanyName()).isEqualTo("ООО Ромашка");
+            assertThat(order.getInn()).isEqualTo("1234567890");
+        }
+
+        @Test
+        @DisplayName("B2C: поля компании не заполняются — customerType B2C, companyName null, inn null")
+        void createOrder_B2C_noSnapshotFields() {
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, null, null, null);
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
+
+            assertThat(order.getCustomerType()).isEqualTo(ru.rfsnab.orderservice.models.entity.enums.CustomerType.B2C);
+            assertThat(order.getCompanyName()).isNull();
+            assertThat(order.getInn()).isNull();
+        }
+
+        @Test
+        @DisplayName("B2B: использует оптовую цену (price), не розничную (wholesalePrice)")
+        void createOrder_B2B_usesWholesalePrice() {
+            Long productId = 10L;
+            ProductDto product = new ProductDto(productId, "Товар B2B", new BigDecimal("1000.00"),
+                    new BigDecimal("800.00"), 100, true, "ext-010");
+
+            when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
+            when(productServiceClient.getProduct(productId)).thenReturn(product);
+
+            cartService.addItemToCart(USER_ID, productId, 2);
+
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, null, "ООО Тест", "9876543210");
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2B", request);
+
+            assertThat(order.getItems()).hasSize(1);
+            OrderItem item = order.getItems().get(0);
+            assertThat(item.getPrice()).isEqualByComparingTo("1000.00");
+            assertThat(order.getTotalAmount()).isEqualByComparingTo("2000.00");
+        }
+
+        @Test
+        @DisplayName("B2C: использует розничную цену (wholesalePrice), не оптовую (price)")
+        void createOrder_B2C_usesRetailPrice() {
+            Long productId = 11L;
+            ProductDto product = new ProductDto(productId, "Товар B2C", new BigDecimal("1000.00"),
+                    new BigDecimal("800.00"), 100, true, "ext-011");
+
+            when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
+            when(productServiceClient.getProduct(productId)).thenReturn(product);
+
+            cartService.addItemToCart(USER_ID, productId, 2);
+
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, null, null, null);
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
+
+            assertThat(order.getItems()).hasSize(1);
+            OrderItem item = order.getItems().get(0);
+            assertThat(item.getPrice()).isEqualByComparingTo("800.00");
+            assertThat(order.getTotalAmount()).isEqualByComparingTo("1600.00");
+        }
+
+        @Test
+        @DisplayName("B2B без inn: выбрасывает InvalidOrderStateException")
+        void createOrder_B2B_missingInn_throws() {
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, null, "ООО Ромашка", null);
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2B", request))
+                    .isInstanceOf(InvalidOrderStateException.class);
+        }
     }
 
     // ==================== updateOrder ====================
