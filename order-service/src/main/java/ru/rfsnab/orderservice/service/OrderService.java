@@ -30,9 +30,10 @@ import java.util.stream.Collectors;
 /**
  * Сервис управления заказами.
  *
- * B2B: CREATED → PROCESSING → INVOICE_SENT → PENDING_PAYMENT → PAID → SHIPPED → IN_TRANSIT → DELIVERED
- * B2B постоплата: CREATED → PROCESSING → INVOICE_SENT → AWAITING_CONFIRMATION → SHIPPED → IN_TRANSIT → DELIVERED → PAID
- * B2C: CREATED → PROCESSING → PENDING_PAYMENT → PAID → SHIPPED → IN_TRANSIT → DELIVERED
+ * B2B предоплата 100%: CREATED → PROCESSING → INVOICE_SENT → PENDING_PAYMENT → PAID → SHIPPED → IN_TRANSIT → DELIVERED → COMPLETED
+ * B2B предоплата 30%: CREATED → PROCESSING → INVOICE_SENT → PENDING_PAYMENT → PARTIALLY_PAID → SHIPPED → IN_TRANSIT → DELIVERED → PENDING_PAYMENT → PAID → COMPLETED
+ * B2B постоплата: CREATED → PROCESSING → INVOICE_SENT → AWAITING_CONFIRMATION → SHIPPED → IN_TRANSIT → DELIVERED → PENDING_PAYMENT → PAID → COMPLETED
+ * B2C: CREATED → PROCESSING → PENDING_PAYMENT → PAID → SHIPPED → IN_TRANSIT → DELIVERED → COMPLETED
  *
  * CREATED — технический статус (клиент заполняет форму, в 1С не отправляется).
  * Отправка в 1С происходит только при confirmOrder (CREATED → PROCESSING).
@@ -57,14 +58,16 @@ public class OrderService {
         t.put(OrderStatus.CREATED,               Set.of(OrderStatus.PROCESSING, OrderStatus.CANCELLED));
         t.put(OrderStatus.PROCESSING,            Set.of(OrderStatus.INVOICE_SENT, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
         t.put(OrderStatus.INVOICE_SENT,          Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.AWAITING_CONFIRMATION, OrderStatus.CANCELLED));
-        t.put(OrderStatus.PENDING_PAYMENT,       Set.of(OrderStatus.PAID, OrderStatus.PAYMENT_FAILED, OrderStatus.CANCELLED));
+        t.put(OrderStatus.PENDING_PAYMENT,       Set.of(OrderStatus.PAID, OrderStatus.PARTIALLY_PAID, OrderStatus.PAYMENT_FAILED, OrderStatus.CANCELLED));
         t.put(OrderStatus.PAYMENT_FAILED,        Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
         t.put(OrderStatus.AWAITING_CONFIRMATION, Set.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED));
         t.put(OrderStatus.PAID,                  Set.of(OrderStatus.SHIPPED));
-        t.put(OrderStatus.SHIPPED,               Set.of(OrderStatus.IN_TRANSIT));
+        t.put(OrderStatus.PARTIALLY_PAID,        Set.of(OrderStatus.SHIPPED, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
+        t.put(OrderStatus.SHIPPED,               Set.of(OrderStatus.IN_TRANSIT, OrderStatus.DELIVERED));
         t.put(OrderStatus.IN_TRANSIT,            Set.of(OrderStatus.DELIVERED));
-        t.put(OrderStatus.DELIVERED,             Set.of(OrderStatus.PAID));
+        t.put(OrderStatus.DELIVERED,             Set.of(OrderStatus.PAID, OrderStatus.PENDING_PAYMENT, OrderStatus.COMPLETED));
         t.put(OrderStatus.CANCELLED,             Set.of(OrderStatus.REFUNDED));
+        t.put(OrderStatus.REFUNDED,              Set.of(OrderStatus.COMPLETED));
         ALLOWED_TRANSITIONS = java.util.Collections.unmodifiableMap(t);
     }
 

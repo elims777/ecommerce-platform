@@ -21,7 +21,9 @@ public enum OrderStatus {
     IN_TRANSIT("В пути"),
     DELIVERED("Доставлен"),
     CANCELLED("Отменён"),
-    REFUNDED("Возврат средств");
+    REFUNDED("Возврат средств"),
+    PARTIALLY_PAID("Оплачен частично"),
+    COMPLETED("Завершён");
 
     private final String displayName;
 
