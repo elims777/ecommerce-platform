@@ -83,8 +83,44 @@ public class JWTService {
                 .compact();
     }
 
+    public String generateToken(Long id, String email, String clientType,
+                                String companyName, String inn) {
+        var builder = Jwts.builder()
+                .subject(String.valueOf(id))
+                .claim("email", email)
+                .claim("clientType", clientType)
+                .claim("roles", List.of("ROLE_USER"))
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + jwtProperties.getExpirationMs()));
+        if (companyName != null) builder.claim("companyName", companyName);
+        if (inn != null) builder.claim("inn", inn);
+        return builder.signWith(getSignedKey()).compact();
+    }
+
+    public String generateRefreshToken(Long id, String email, String clientType,
+                                       String companyName, String inn) {
+        var builder = Jwts.builder()
+                .subject(String.valueOf(id))
+                .claim("email", email)
+                .claim("clientType", clientType)
+                .claim("roles", List.of("ROLE_USER"))
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpirationMs()));
+        if (companyName != null) builder.claim("companyName", companyName);
+        if (inn != null) builder.claim("inn", inn);
+        return builder.signWith(getSignedKey()).compact();
+    }
+
     public String extractClientType(String token) {
         return extractClaims(token).get("clientType", String.class);
+    }
+
+    public String extractCompanyName(String token) {
+        return extractClaims(token).get("companyName", String.class);
+    }
+
+    public String extractInn(String token) {
+        return extractClaims(token).get("inn", String.class);
     }
 
     /**

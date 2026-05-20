@@ -66,7 +66,12 @@ public class AuthService {
 
             log.info("Успешная аутентификация пользователя: {}", user.getEmail());
 
-            return new AuthResponse(accessToken,refreshToken, "Bearer");
+            return AuthResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .tokenType("Bearer")
+                    .clientType("B2C")
+                    .build();
         } catch (HttpClientErrorException.Unauthorized | HttpClientErrorException.Forbidden e) {
             log.warn("Неудачная попытка входа: {}", authRequest.getEmail());
             throw new BadCredentialsException("Неверный email или пароль");
@@ -91,7 +96,12 @@ public class AuthService {
         String newRefreshToken = jwtService.generateRefreshToken(userId, email, roles);
         log.info("Refresh token обновлён для пользователя: {}", email);
 
-        return new AuthResponse(accessToken, newRefreshToken,"Bearer");
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(newRefreshToken)
+                .tokenType("Bearer")
+                .clientType("B2C")
+                .build();
     }
 
     /**
@@ -116,6 +126,9 @@ public class AuthService {
         result.put("token_type", "Bearer");
         result.put("expires_in", 3600);
         result.put("user", user);
+        result.put("clientType", "B2C");
+        result.put("companyName", null);
+        result.put("inn", null);
 
         return result;
     }
@@ -195,10 +208,17 @@ public class AuthService {
             LegalEntityAuthResponse legal = response.getBody();
             if (legal == null) throw new BadCredentialsException("Не удалось получить данные юрлица");
 
-            String accessToken = jwtService.generateToken(legal.id(), legal.email(), "B2B");
-            String refreshToken = jwtService.generateRefreshToken(legal.id(), legal.email(), "B2B");
+            String accessToken = jwtService.generateToken(legal.id(), legal.email(), "B2B", legal.companyName(), legal.inn());
+            String refreshToken = jwtService.generateRefreshToken(legal.id(), legal.email(), "B2B", legal.companyName(), legal.inn());
             log.info("B2B login: legalEntityId={}, email={}", legal.id(), legal.email());
-            return new AuthResponse(accessToken, refreshToken, "Bearer");
+            return AuthResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .tokenType("Bearer")
+                    .clientType("B2B")
+                    .companyName(legal.companyName())
+                    .inn(legal.inn())
+                    .build();
         } catch (HttpClientErrorException.Forbidden e) {
             throw new BadCredentialsException("Юрлицо не прошло верификацию");
         } catch (HttpClientErrorException.NotFound e) {
@@ -211,28 +231,46 @@ public class AuthService {
 
     @SuppressWarnings("unchecked")
     public AuthResponse switchContext(String bearerToken, SwitchContextRequest request) {
-        Long userId = jwtService.extractUserId(bearerToken);
+        if ("B2B".equals(request.targetType())) {
+            // B2C → B2B: no password required, find linked legal entity
+            Long userId = jwtService.extractUserId(bearerToken);
+            String linkUrl = userServiceUrl + "/api/v1/legal-entities/link-status/" + userId;
+            ResponseEntity<Map> linkResp = restTemplate.getForEntity(linkUrl, Map.class);
+            if (linkResp.getBody() == null || !Boolean.TRUE.equals(linkResp.getBody().get("confirmed"))) {
+                throw new org.springframework.security.access.AccessDeniedException("Нет подтверждённой связи с юрлицом");
+            }
+            Long legalEntityId = ((Number) linkResp.getBody().get("legalEntityId")).longValue();
 
-        String linkStatusUrl = userServiceUrl + "/api/v1/legal-entities/link-status/"
-                + userId + "/" + request.legalEntityId();
-        try {
-            ResponseEntity<Map> linkResp = restTemplate.getForEntity(linkStatusUrl, Map.class);
-            Boolean confirmed = linkResp.getBody() != null
-                    && Boolean.TRUE.equals(linkResp.getBody().get("confirmed"));
-            if (!confirmed) throw new org.springframework.security.access.AccessDeniedException("Нет подтверждённой связи");
-
-            String legalUrl = userServiceUrl + "/api/v1/legal-entities/" + request.legalEntityId();
-            ResponseEntity<LegalEntityDto> legalResp = restTemplate.getForEntity(legalUrl, LegalEntityDto.class);
-            LegalEntityDto legal = legalResp.getBody();
+            String legalUrl = userServiceUrl + "/api/v1/legal-entities/" + legalEntityId;
+            LegalEntityDto legal = restTemplate.getForEntity(legalUrl, LegalEntityDto.class).getBody();
             if (legal == null) throw new RuntimeException("Не удалось получить данные юрлица");
 
-            String accessToken = jwtService.generateToken(request.legalEntityId(), legal.getEmail(), "B2B");
-            String refreshToken = jwtService.generateRefreshToken(request.legalEntityId(), legal.getEmail(), "B2B");
-            log.info("Switch context: userId={} -> legalEntityId={}", userId, request.legalEntityId());
-            return new AuthResponse(accessToken, refreshToken, "Bearer");
-        } catch (HttpClientErrorException e) {
-            log.error("Ошибка switch-context: {}", e.getMessage());
-            throw new RuntimeException("Ошибка переключения контекста");
+            String accessToken = jwtService.generateToken(legalEntityId, legal.getEmail(), "B2B", legal.getFullName(), legal.getInn());
+            String refreshToken = jwtService.generateRefreshToken(legalEntityId, legal.getEmail(), "B2B", legal.getFullName(), legal.getInn());
+            log.info("Switch context B2C→B2B: userId={} -> legalEntityId={}", userId, legalEntityId);
+
+            return AuthResponse.builder()
+                    .accessToken(accessToken).refreshToken(refreshToken).tokenType("Bearer")
+                    .clientType("B2B").companyName(legal.getFullName()).inn(legal.getInn())
+                    .build();
+
+        } else {
+            // B2B → B2C: password required
+            if (request.password() == null || request.password().isBlank()) {
+                throw new BadCredentialsException("Для переключения на личный аккаунт требуется пароль");
+            }
+            String email = jwtService.extractEmail(bearerToken);
+            UserDtoResponse user = authenticateUser(new SimpleAuthRequest(email, request.password()));
+
+            List<String> roles = roleExtractor.extractRoles(user);
+            String accessToken = jwtService.generateToken(user.getId(), user.getEmail(), roles);
+            String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), roles);
+            log.info("Switch context B2B→B2C: legalEmail={} -> userId={}", email, user.getId());
+
+            return AuthResponse.builder()
+                    .accessToken(accessToken).refreshToken(refreshToken).tokenType("Bearer")
+                    .clientType("B2C")
+                    .build();
         }
     }
 
