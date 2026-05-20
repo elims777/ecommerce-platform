@@ -1,5 +1,40 @@
 # Session Log
 
+## 2026-05-20 (Plan C)
+- Flyway V20260519000000: колонки customer_type, company_name, inn в orders
+- order-service: B2B snapshot в createOrder, заголовок X-Client-Type, выбор цены (B2B→price, B2C→wholesalePrice)
+- auth-service: AuthResponse обогащён clientType/companyName/inn, switchContext переписан (B2C→B2B без пароля, B2B→B2C с паролем)
+- frontend: ClientType в User, authStore.switchContext(), хук useDisplayPrice
+- frontend: пилюля переключения контекста в header с модалкой пароля
+- frontend: секция Организация в ProfilePage (3 состояния + форма регистрации)
+- frontend: CheckoutPage отправляет B2B поля, SummaryStep показывает компанию и ИНН
+
+## 2026-05-19
+- Design update: replaced SVG-triangle watermark with real logo assets (logo-light.png, logo-dark.png, logo-v2.png)
+- LoginPage: logo-light.png as top logo + watermark (opacity 0.14, h=360) on dark brand panel
+- ClientLayout header: logo-dark.png (was logo.png)
+- ClientLayout footer: logo-light.png + wordmark "РФснаб / комплексное снабжение" on dark background
+- HomePage hero: logo-light.png watermark (opacity 0.12, h=280) replacing SVG triangle
+- All 3 new logo files copied to frontend/public/
+- Plan C brainstormed, spec written: docs/superpowers/specs/2026-05-19-plan-c-design.md
+- Plan C implementation plan written: docs/superpowers/plans/2026-05-19-plan-c-b2b-frontend.md (11 tasks)
+- Key architecture: customer_type+company_name+inn snapshot in orders; switch-context B2C→B2B no password, B2B→B2C with password; userId reused for legalEntityId in B2B JWT; useDisplayPrice hook for price by clientType
+- Decision: docs committed to ecommerce-platform repo (not Obsidian) — to revisit
+- Next session: execute Plan C via subagent-driven approach, starting with Task 1 (Flyway migration)
+
+## 2026-05-18 (evening — manual testing)
+- Rebuilt user-service Docker image with Plan B SecurityConfig changes
+- Gateway restarted in IntelliJ to apply JwtAuthenticationFilter + application.yml changes
+- Bugs found and fixed:
+  - LegalEntityBankAccount/LegalEntityAddress: `primary` field missing `@Column(name = "is_primary")` — PostgreSQL reserved word conflict
+  - SecurityConfig: missing public paths for `/api/v1/legal-entities/authenticate`, `/api/v1/legal-entities/link-status/**`, GET `/{id}` (needed for internal auth-service calls)
+  - JwtAuthenticationFilter: missing `/api/v1/legal-entities/authenticate` in PUBLIC_PATHS
+- Full B2B flow verified end-to-end:
+  - Legal entity registration via gateway → 200 OK
+  - B2B login (`/api/v1/auth/login/legal`) → JWT with clientType=B2B
+  - Products with B2B token → wholesalePrice field present (null until 1C import)
+  - switch-context B2C→B2B → new JWT with clientType=B2B
+
 ## 2026-05-18
 - Plan B brainstormed and designed: auth-service B2B login/switch-context, gateway headers, product-service wholesalePrice, integration-service dual price, notification-service legal-entity-events
 - Key decisions: JWT unified structure (sub=id, clientType=B2C|B2B), switch-context one-directional (user→legal, reverse requires re-auth), "Оптовая"→price (B2B), "Розничная"→wholesalePrice (B2C)

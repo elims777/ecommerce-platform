@@ -41,11 +41,37 @@ Flyway migration: `V20260517120000__add_invoice_sent_and_pickup_recipient.sql`.
 Fixed: removed automatic PAID → PROCESSING from `confirmPayment()`.
 Method now stops at PAID only. PROCESSING is reached only via `confirmOrder()`.
 
+## Backend — B2B/B2C (Plan B) ✅ Resolved (2026-05-18 evening)
+
+Bugs found during manual end-to-end testing after Plan B implementation:
+
+### ✅ Bug 1: PostgreSQL reserved word `primary` in JPA entities
+`LegalEntityBankAccount` and `LegalEntityAddress`: field `primary` mapped to column named `primary` — PostgreSQL reserved word, causes `ERROR: column does not exist`.
+Fixed: added `@Column(name = "is_primary")` to both entities.
+Files: `models/LegalEntityBankAccount.java`, `models/LegalEntityAddress.java`.
+
+### ✅ Bug 2: SecurityConfig missing internal-call public paths
+auth-service calls user-service internally (no JWT) for `link-status` and GET `/{id}` during switch-context.
+These paths required authentication — caused 401 → 500 in auth-service.
+Fixed: added `permitAll()` for `/api/v1/legal-entities/authenticate`, `/api/v1/legal-entities/link-status/**`, and GET `/api/v1/legal-entities/*`.
+File: `configuration/SecurityConfig.java`.
+
+### ✅ Bug 3: Gateway JWT filter missing authenticate path
+`/api/v1/legal-entities/authenticate` not in PUBLIC_PATHS — gateway rejected unauthenticated B2B login.
+Fixed: added path to `PUBLIC_PATHS` list in `JwtAuthenticationFilter`.
+File: `gateway-service/.../JwtAuthenticationFilter.java`.
+
 ## Backend — Remaining / Future
 
-### Future: B2B/B2C entity separation
-B2B & B2C clients should be separate entity types in user-service.
-Enables: different pricing, promotions, payment conditions per client type.
-Scope: user-service (new entity), auth-service (token claims), product-service (prices),
-order-service (validate client type on transitions).
-Not yet scheduled.
+### ✅ Plan C: order-service B2B snapshot + frontend — DONE (2026-05-20)
+- Flyway V20260519000000: customer_type, company_name, inn в orders
+- order-service: B2B snapshot, X-Client-Type header, выбор цены
+- auth-service: AuthResponse + switchContext B2C↔B2B
+- frontend: useDisplayPrice, ContextSwitcher, ProfilePage Организация, CheckoutPage B2B
+- Task 5: auth-service — AuthResponse, SwitchContextRequest, JWTService (B2B claims), AuthService.switchContext rework
+- Task 6: Frontend types (User+Product) + authStore (clientType/companyName/inn + switchContext action)
+- Task 7: useDisplayPrice hook + ProductCard + ProductPage price display
+- Task 8: ContextSwitcher pill in ClientLayout + B2B→B2C password modal
+- Task 9: legalEntity.ts API + OrganizationSection in ProfilePage (3 states)
+- Task 10: CheckoutPage B2B fields + SummaryStep company display
+- Task 11: Wiki update

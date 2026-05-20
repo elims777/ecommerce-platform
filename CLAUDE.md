@@ -5,14 +5,14 @@ Java 21, Spring Boot 3.5.x, Spring Cloud 2025.0.x, Maven монорепо.
 Микросервисы общаются через Kafka и REST. Gateway маршрутизирует всё под `/api`.
 
 | Сервис | Порт | Назначение |
-|---|---|---|
+|---|------|---|
 | gateway-service | 8080 | Spring Cloud Gateway, JWT-фильтр, Redis rate limiting |
 | auth-service | 9000 | JWT + Yandex OAuth2 |
 | user-service | 8081 | Пользователи |
 | product-service | 8083 | Товары, Yandex S3, WebP |
-| order-service | — | Корзина (Redis), заказы, получатели |
-| integration-service | — | 1С Fresh УНФ, CommerceML 2.08 |
-| notification-service | — | Email через Kafka |
+| order-service | 8084 | Корзина (Redis), заказы, получатели |
+| integration-service | 8085 | 1С Fresh УНФ, CommerceML 2.08 |
+| notification-service | 8082 | Email через Kafka |
 
 ## БД и инфра
 - Все сервисы: `user=user`, `password=secret` (psql: `-U user`)
@@ -65,6 +65,7 @@ Java 21, Spring Boot 3.5.x, Spring Cloud 2025.0.x, Maven монорепо.
 - Один memorable визуальный элемент на экран
 
 ## Тестирование
+- После написания тестов, отдавать тестирование пользователю для экономии токенов, пользователь после тестов присылает результат тестирования, или ошибки или сообщение об успешных тестах
 - Integration tests: Testcontainers (PostgreSQL, Kafka, Redis)
 - Gateway: WireMock + Testcontainers Redis
 - Код должен быть testable — DI, без static методов
@@ -77,6 +78,7 @@ Java 21, Spring Boot 3.5.x, Spring Cloud 2025.0.x, Maven монорепо.
 - Возвращать entity из контроллера — только DTO
 - Не добавлять соавторство при коммитах
 - Не добавлять md файлы и вики .claude в репозиторий
+- Коммит-сообщения: на русском, кратко (до 72 символов)
 
 
 ## Wiki — long-term memory
@@ -87,7 +89,7 @@ Wiki lives in `.claude/wiki/`. Read `index.md` + `log.md` (last 5 entries) at se
 
 ## Auto-start
 
-Read `.claude/wiki/log.md` (last 5 entries) and `.claude/wiki/index.md` at session start. Report: "Context loaded. Last session: [date]. Issues: [critical only]"
+Read `.claude/wiki/log.md` (last 2 entries) and `.claude/wiki/index.md` at session start. Report: "Context loaded. Last session: [date]. Issues: [critical only]"
 
 ## Output style
 No preamble. Tool result first. No explanations of actions.
