@@ -69,6 +69,8 @@ export interface CreateOrderRequest {
     deliveryAddress?: AddressDto;
     warehousePointId?: number;
     comment?: string;
+    companyName?: string;
+    inn?: string;
 }
 
 /** Позиция заказа */

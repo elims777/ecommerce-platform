@@ -139,6 +139,10 @@ const CheckoutPage = () => {
                 paymentMethod: values.paymentMethod,
                 deliveryMethod: values.deliveryMethod,
                 comment: values.comment,
+                ...(user?.clientType === 'B2B' ? {
+                    companyName: user.companyName ?? undefined,
+                    inn: user.inn ?? undefined,
+                } : {}),
             };
 
             if (values.deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY) {

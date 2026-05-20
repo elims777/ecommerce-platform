@@ -1,6 +1,7 @@
 import { Button, Typography, Divider, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { CartItemDto } from '@/api/cart';
+import { useAuthStore } from '@/store/authStore';
 
 const { Title, Text } = Typography;
 
@@ -30,8 +31,17 @@ interface SummaryStepProps {
     loading: boolean;
 }
 
-const SummaryStep = ({ items, totalAmount, loading }: SummaryStepProps) => (
+const SummaryStep = ({ items, totalAmount, loading }: SummaryStepProps) => {
+    const user = useAuthStore((s) => s.user);
+    return (
     <>
+        {user?.clientType === 'B2B' && user.companyName && (
+            <div style={{ marginBottom: 16, padding: 12, background: 'var(--surface-2)', borderRadius: 6, border: '1px solid var(--line-1)' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Покупатель</div>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>{user.companyName}</div>
+                {user.inn && <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>ИНН: {user.inn}</div>}
+            </div>
+        )}
         <Table<CartItemDto>
             columns={columns}
             dataSource={items}
@@ -67,6 +77,7 @@ const SummaryStep = ({ items, totalAmount, loading }: SummaryStepProps) => (
             Подтвердить заказ
         </Button>
     </>
-);
+    );
+};
 
 export default SummaryStep;
