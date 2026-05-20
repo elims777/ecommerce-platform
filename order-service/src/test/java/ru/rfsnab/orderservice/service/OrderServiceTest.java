@@ -72,10 +72,10 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
     private static final ProductDto PRODUCT_1 = new ProductDto(
             PRODUCT_ID_1, "Доска обрезная 50x150", new BigDecimal("1500.00"),
-            100, true, "ext-001");
+            null, 100, true, "ext-001");
     private static final ProductDto PRODUCT_2 = new ProductDto(
             PRODUCT_ID_2, "Брус 100x100", new BigDecimal("1000.00"),
-            50, true, "ext-002");
+            null, 50, true, "ext-002");
 
     private final ObjectMapper jsonMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule());
@@ -117,9 +117,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, "Тестовый заказ");
+                    buildAddressDto(), null, null, null, "Тестовый заказ", null, null);
 
-            Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
             assertThat(order.getId()).isNotNull();
             assertThat(order.getOrderNumber()).isNotBlank();
@@ -152,9 +152,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CASH_ON_DELIVERY, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null);
+                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null, null, null);
 
-            Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
             assertThat(order.getDeliveryMethod()).isEqualTo(DeliveryMethod.PICKUP);
             assertThat(order.getWarehousePointId()).isEqualTo(savedWarehousePoint.getId());
@@ -168,9 +168,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         void shouldThrowWhenCartEmpty() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), null, null, null);
+                    null, savedWarehousePoint.getId(), null, null, null, null, null);
 
-            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
                     .isInstanceOf(CartEmptyException.class);
         }
 
@@ -183,17 +183,17 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(
                     PRODUCT_ID_1, new ProductDto(
                             PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"),
-                            1, true, "ext-001"),
+                            null, 1, true, "ext-001"),
                     PRODUCT_ID_2, new ProductDto(
                             PRODUCT_ID_2, "Брус", new BigDecimal("1000.00"),
-                            100, true, "ext-002")
+                            null, 100, true, "ext-002")
             ));
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), null, null, null);
+                    null, savedWarehousePoint.getId(), null, null, null, null, null);
 
-            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
                     .isInstanceOf(InsufficientStockException.class)
                     .hasMessageContaining("Доска");
         }
@@ -205,9 +205,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, null, null, null, null);
+                    null, null, null, null, null, null, null);
 
-            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessageContaining("точку получения");
         }
@@ -219,9 +219,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    null, null, null, null, null);
+                    null, null, null, null, null, null, null);
 
-            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, request))
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessageContaining("адрес");
         }
@@ -233,9 +233,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, "Тест externalId");
+                    buildAddressDto(), null, null, null, "Тест externalId", null, null);
 
-            Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
             OrderItem item1 = order.getItems().stream()
                     .filter(i -> i.getProductId().equals(PRODUCT_ID_1))
@@ -350,10 +350,10 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(
                     PRODUCT_ID_1, new ProductDto(
                             PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"),
-                            0, true, "ext-001"),
+                            null, 0, true, "ext-001"),
                     PRODUCT_ID_2, new ProductDto(
                             PRODUCT_ID_2, "Брус", new BigDecimal("1000.00"),
-                            100, true, "ext-002")
+                            null, 100, true, "ext-002")
             ));
 
             assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL))
@@ -597,9 +597,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null);
+                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null, null, null);
 
-            Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
             List<OrderEvent> events = consumeEvents("order-events", 10);
 
@@ -638,9 +638,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, "Тест 1С export");
+                    buildAddressDto(), null, null, null, "Тест 1С export", null, null);
 
-            Order order = orderService.createOrder(USER_ID, USER_EMAIL, request);
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
             // order из createOrder() — items загружены внутри @Transactional сервиса
             assertThat(order.getItems()).isNotEmpty();
@@ -682,9 +682,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
         CreateOrderRequest request = new CreateOrderRequest(
                 PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                buildAddressDto(), null, null, null, "Тест");
+                buildAddressDto(), null, null, null, "Тест", null, null);
 
-        return orderService.createOrder(USER_ID, USER_EMAIL, request);
+        return orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
     }
 
     private AddressDto buildAddressDto() {

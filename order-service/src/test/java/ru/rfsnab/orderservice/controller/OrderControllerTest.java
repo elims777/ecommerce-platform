@@ -86,7 +86,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("201 Created — заказ успешно создан (DELIVERY)")
         void shouldCreateDeliveryOrder() throws Exception {
             Order order = buildDeliveryOrder();
-            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class)))
+            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class)))
                     .thenReturn(order);
 
             String json = """
@@ -113,7 +113,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.status.code").value("CREATED"))
                     .andExpect(jsonPath("$.deliveryAddress.city").value("Сыктывкар"));
 
-            verify(orderService).createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class));
+            verify(orderService).createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class));
         }
 
         @Test
@@ -121,7 +121,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         void shouldCreatePickupOrder() throws Exception {
             Order order = buildPickupOrder();
             WarehousePoint point = buildWarehousePoint();
-            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class)))
+            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class)))
                     .thenReturn(order);
             when(warehousePointService.getActivePoint(1L)).thenReturn(point);
 

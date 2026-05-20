@@ -223,6 +223,7 @@ public class OrderService {
                 .warehousePointId(sourceOrder.getWarehousePointId())
                 .deliveryAddress(copyDeliveryAddress(sourceOrder.getDeliveryAddress()))
                 .customerEmail(customerEmail)
+                .customerType(sourceOrder.getCustomerType())
                 .comment(sourceOrder.getComment())
                 .build();
 
