@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { User } from '@/types/auth';
+import type { User, ClientType } from '@/types/auth';
 import * as authApi from '@/api/auth';
 import type { LoginRequest } from '@/types/auth';
 
@@ -11,6 +11,7 @@ interface AuthState {
     login: (request: LoginRequest) => Promise<void>;
     logout: () => Promise<void>;
     restoreSession: () => Promise<void>;
+    switchContext: (targetType: ClientType, password?: string) => Promise<void>;
 }
 
 /**
@@ -113,6 +114,9 @@ export const useAuthStore = create<AuthState>((set) => ({
                         roles: ((payload.roles as string[]) || []).map((name, idx) => ({ id: idx, name })),
                         createdAt: '',
                         updatedAt: '',
+                        clientType: (payload.clientType as ClientType) ?? 'B2C',
+                        companyName: (payload.companyName as string) ?? null,
+                        inn: (payload.inn as string) ?? null,
                     },
                     isAuthenticated: true,
                     isLoading: false,
@@ -123,5 +127,12 @@ export const useAuthStore = create<AuthState>((set) => ({
                 set({ user: null, isAuthenticated: false, isLoading: false });
             }
         }
+    },
+
+    switchContext: async (targetType, password) => {
+        const tokens = await authApi.switchContext(targetType, password);
+        localStorage.setItem('accessToken', tokens.access_token);
+        localStorage.setItem('refreshToken', tokens.refresh_token);
+        set({ user: tokens.user });
     },
 }));

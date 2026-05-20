@@ -33,6 +33,7 @@ export interface Product {
     description: string | null;
     shortDescription: string | null;
     price: number;
+    wholesalePrice: number | null;
     stockQuantity: number;
     categoryId: number | null;
     categoryName: string | null;
