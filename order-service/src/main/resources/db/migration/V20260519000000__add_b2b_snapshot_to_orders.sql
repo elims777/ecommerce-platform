@@ -4,5 +4,8 @@ ALTER TABLE orders
     ADD COLUMN IF NOT EXISTS inn           VARCHAR(12);
 
 ALTER TABLE orders
+    DROP CONSTRAINT IF EXISTS orders_customer_type_check;
+
+ALTER TABLE orders
     ADD CONSTRAINT orders_customer_type_check
     CHECK (customer_type IN ('B2C', 'B2B'));
