@@ -25,6 +25,10 @@ public record CreateOrderRequest(
 
         String pickupRecipientPhone,
 
-        String comment
+        String comment,
+
+        // B2B snapshot — required when clientType=B2B, validated in service
+        String companyName,
+        String inn
 ) implements HasDeliveryInfo {
 }

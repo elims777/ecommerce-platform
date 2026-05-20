@@ -20,6 +20,9 @@ public record Order1CExportEvent(
         // Покупатель
         Long userId,
         String customerEmail,
+        String customerType,
+        String companyName,
+        String inn,
         String recipientName,
         String recipientPhone,
 

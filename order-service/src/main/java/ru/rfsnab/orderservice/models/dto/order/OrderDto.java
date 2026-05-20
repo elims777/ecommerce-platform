@@ -26,6 +26,9 @@ public record OrderDto(
         String trackingNumber,
         String customerEmail,
         String comment,
+        String customerType,
+        String companyName,
+        String inn,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
