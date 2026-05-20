@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Dropdown } from 'antd';
 import { company } from '@/config/company';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { isAdmin } from '@/types/auth';
+import type { ClientType } from '@/types/auth';
 import type { MenuProps } from 'antd';
-import { useEffect } from 'react';
 
 const TOPBAR_H = 36;
 const MAIN_H = 76;
@@ -98,6 +98,99 @@ const HeaderAction = ({ icon, label, count, highlight, onClick }: { icon: React.
     </button>
 );
 
+const ContextSwitcher = () => {
+    const { user, switchContext } = useAuthStore();
+    const fetchCart = useCartStore((s) => s.fetchCart);
+    const [loading, setLoading] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+
+    if (!user?.companyName) return null;
+
+    const handleSwitch = async (target: ClientType) => {
+        if (target === user.clientType) return;
+        if (target === 'B2C') { setShowPasswordModal(true); return; }
+        setLoading(true);
+        try {
+            await switchContext('B2B');
+            await fetchCart();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePasswordSubmit = async () => {
+        if (!password) return;
+        setLoading(true);
+        setError('');
+        try {
+            await switchContext('B2C', password);
+            await fetchCart();
+            setShowPasswordModal(false);
+            setPassword('');
+        } catch {
+            setError('Неверный пароль');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const active = user.clientType;
+
+    return (
+        <>
+            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--line-2)', borderRadius: 6, overflow: 'hidden', opacity: loading ? 0.6 : 1 }}>
+                {(['B2C', 'B2B'] as const).map((type) => (
+                    <button key={type} onClick={() => handleSwitch(type)} disabled={loading} style={{
+                        padding: '4px 10px', fontSize: 12, fontWeight: 600, border: 'none',
+                        cursor: loading ? 'default' : 'pointer', fontFamily: 'var(--font-body)',
+                        background: active === type ? 'var(--brand-red)' : 'transparent',
+                        color: active === type ? '#fff' : 'var(--ink-2)',
+                        transition: 'background 0.15s, color 0.15s',
+                    }}>
+                        {type === 'B2C' ? 'Физлицо' : 'Организация'}
+                    </button>
+                ))}
+            </div>
+
+            {showPasswordModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+                    onClick={() => { setShowPasswordModal(false); setPassword(''); setError(''); }}>
+                    <div style={{ background: '#fff', borderRadius: 10, padding: 28, width: 360 }}
+                        onClick={(e) => e.stopPropagation()}>
+                        <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 8 }}>Переключение на личный аккаунт</div>
+                        <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 16 }}>Введите пароль от личного аккаунта</div>
+                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handlePasswordSubmit(); }}
+                            placeholder="Пароль" autoFocus
+                            style={{
+                                width: '100%', height: 40, padding: '0 12px',
+                                border: `1px solid ${error ? 'var(--brand-red)' : 'var(--line-2)'}`,
+                                borderRadius: 6, fontSize: 14, fontFamily: 'var(--font-body)',
+                                outline: 'none', boxSizing: 'border-box', marginBottom: error ? 6 : 16,
+                            }} />
+                        {error && <div style={{ fontSize: 12, color: 'var(--brand-red)', marginBottom: 12 }}>{error}</div>}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={handlePasswordSubmit} disabled={loading || !password} style={{
+                                flex: 1, height: 38, background: 'var(--brand-red)', color: '#fff',
+                                border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 500,
+                                cursor: loading || !password ? 'default' : 'pointer', fontFamily: 'var(--font-body)',
+                                opacity: !password ? 0.6 : 1,
+                            }}>{loading ? 'Проверка...' : 'Войти'}</button>
+                            <button onClick={() => { setShowPasswordModal(false); setPassword(''); setError(''); }} style={{
+                                height: 38, padding: '0 16px', border: '1px solid var(--line-2)',
+                                background: 'transparent', borderRadius: 6, fontSize: 14,
+                                cursor: 'pointer', fontFamily: 'var(--font-body)', color: 'var(--ink-2)',
+                            }}>Отмена</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+};
+
 const ClientLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -122,6 +215,10 @@ const ClientLayout = () => {
     const userMenuItems: MenuProps['items'] = [
         { key: 'orders', label: 'Мои заказы', onClick: () => navigate('/orders') },
         { key: 'profile', label: 'Профиль', onClick: () => navigate('/profile') },
+        ...(user && !user.companyName ? [
+            { type: 'divider' as const },
+            { key: 'connect-org', label: 'Подключить организацию', onClick: () => navigate('/profile') },
+        ] : []),
         ...(user && isAdmin(user) ? [
             { type: 'divider' as const },
             { key: 'admin', label: 'Админ-панель', onClick: () => navigate('/admin') },
@@ -186,7 +283,7 @@ const ClientLayout = () => {
                     padding: '0 40px', gap: 28,
                 }}>
                     <div onClick={() => navigate('/')} style={{ cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <img src="/logo.png" alt="РФснаб" style={{ height: 52, display: 'block' }} />
+                        <img src="/logo-dark.png" alt="РФснаб" style={{ height: 52, display: 'block' }} />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             <span style={{
                                 fontFamily: 'var(--font-display)',
@@ -245,16 +342,19 @@ const ClientLayout = () => {
                         <HeaderAction icon={<CartIcon />} label="Корзина" count={totalItems} highlight onClick={() => navigate('/cart')} />
                         <div style={{ width: 1, height: 28, background: 'var(--line-1)', margin: '0 4px' }} />
                         {isAuthenticated ? (
-                            <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
-                                <button style={{
-                                    display: 'flex', alignItems: 'center', gap: 6,
-                                    background: 'transparent', border: '1px solid var(--line-2)',
-                                    borderRadius: 6, padding: '6px 12px', cursor: 'pointer',
-                                    fontSize: 13.5, fontWeight: 500, color: 'var(--ink-1)', fontFamily: 'var(--font-body)',
-                                }}>
-                                    <UserIcon /> {user?.firstname}
-                                </button>
-                            </Dropdown>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <ContextSwitcher />
+                                <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
+                                    <button style={{
+                                        display: 'flex', alignItems: 'center', gap: 6,
+                                        background: 'transparent', border: '1px solid var(--line-2)',
+                                        borderRadius: 6, padding: '6px 12px', cursor: 'pointer',
+                                        fontSize: 13.5, fontWeight: 500, color: 'var(--ink-1)', fontFamily: 'var(--font-body)',
+                                    }}>
+                                        <UserIcon /> {user?.clientType === 'B2B' ? user.companyName : user?.firstname}
+                                    </button>
+                                </Dropdown>
+                            </div>
                         ) : (
                             <button
                                 onClick={() => navigate('/login')}
@@ -332,8 +432,12 @@ const ClientLayout = () => {
                 <div style={{ maxWidth: 1360, margin: '0 auto' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr', gap: 40, marginBottom: 32 }}>
                         <div>
-                            <div style={{ marginBottom: 16 }}>
-                                <img src="/logo.png" alt="РФснаб" style={{ height: 44, display: 'block' }} />
+                            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <img src="/logo-light.png" alt="РФснаб" style={{ height: 44, display: 'block' }} />
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>РФснаб</span>
+                                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 400, letterSpacing: '0.04em', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase' }}>комплексное снабжение</span>
+                                </div>
                             </div>
                             <p style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', lineHeight: 1.6 }}>
                                 Комплексное снабжение предприятий и организаций. Работаем с {company.founded} года.
