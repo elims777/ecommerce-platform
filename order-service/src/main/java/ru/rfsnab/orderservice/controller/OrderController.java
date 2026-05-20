@@ -43,10 +43,12 @@ public class OrderController {
     @Operation(summary = "Создать заказ из корзины")
     public ResponseEntity<OrderDto> createOrder(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @Valid @RequestBody CreateOrderRequest request) {
         Order order = orderService.createOrder(
                 getCurrentUserId(authentication),
                 getCurrentUserEmail(authentication),
+                clientType,
                 request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(enrichAndMap(order));

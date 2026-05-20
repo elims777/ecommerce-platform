@@ -1,11 +1,13 @@
 package ru.rfsnab.orderservice.kafka;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import ru.rfsnab.orderservice.models.dto.event.Order1CExportEvent;
 import ru.rfsnab.orderservice.models.entity.DeliveryAddress;
 import ru.rfsnab.orderservice.models.entity.Order;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 
 import java.util.List;
 
@@ -13,6 +15,7 @@ import java.util.List;
  * Отправка полного заказа в Kafka для выгрузки в 1С.
  * Топик "order-1c-export" — отдельный от "order-events" (уведомления).
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class Order1CKafkaProducer {
@@ -28,12 +31,17 @@ public class Order1CKafkaProducer {
         DeliveryAddress address = order.getDeliveryAddress();
         boolean isPickup = address == null;
 
+        log.info("Sending order to 1C: orderId={}", order.getId());
+
         Order1CExportEvent event = Order1CExportEvent.builder()
                 .orderId(order.getId())
                 .orderNumber(order.getOrderNumber())
                 .createdAt(order.getCreatedAt())
                 .userId(order.getUserId())
                 .customerEmail(order.getCustomerEmail())
+                .customerType(order.getCustomerType() != null ? order.getCustomerType().name() : CustomerType.B2C.name())
+                .companyName(order.getCompanyName())
+                .inn(order.getInn())
                 .recipientName(isPickup ? order.getPickupRecipientName() : address.getRecipientName())
                 .recipientPhone(isPickup ? order.getPickupRecipientPhone() : address.getPhone())
                 .deliveryMethod(order.getDeliveryMethod().name())
@@ -52,11 +60,10 @@ public class Order1CKafkaProducer {
         kafkaTemplate.send(topics.getOrder1cExport(), order.getId().toString(), event)
                 .whenComplete((result, ex) -> {
             if (ex == null) {
-                System.out.println(">>> SUCCESS: sent to " + topics.getOrder1cExport()
-                        + " offset=" + result.getRecordMetadata().offset());
+                log.info("Order sent to 1C: orderId={}, topic={}, offset={}",
+                        order.getId(), topics.getOrder1cExport(), result.getRecordMetadata().offset());
             } else {
-                System.out.println(">>> FAILED: " + ex.getMessage());
-                ex.printStackTrace();
+                log.error("Failed to send order to 1C: orderId={}", order.getId(), ex);
             }
         });
     }

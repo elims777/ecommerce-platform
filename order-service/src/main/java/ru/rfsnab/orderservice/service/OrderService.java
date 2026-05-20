@@ -17,6 +17,7 @@ import ru.rfsnab.orderservice.models.dto.order.OrderItemDto;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.entity.*;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.repository.OrderRepository;
@@ -87,7 +88,7 @@ public class OrderService {
      * 6. Отправляем Kafka event
      */
     @Transactional
-    public Order createOrder(Long userId, String customerEmail, CreateOrderRequest request) {
+    public Order createOrder(Long userId, String customerEmail, String clientType, CreateOrderRequest request) {
         // 1. Получаем корзину
         Cart cart = cartService.getCart(userId);
         if (cart.getItems().isEmpty()) {
@@ -99,11 +100,20 @@ public class OrderService {
         validateDeliveryInfo(request);
 
         // 3. Создаём заказ — базовые поля через маппер
-        Order order = OrderMapper.toEntity(userId,customerEmail, request);
+        Order order = OrderMapper.toEntity(userId, customerEmail, clientType, request);
         order.setOrderNumber(generateOrderNumber(userId));
 
+        // B2B validation: companyName and inn are required
+        if (CustomerType.B2B == order.getCustomerType()) {
+            if (request.companyName() == null || request.inn() == null) {
+                throw new InvalidOrderStateException("B2B order requires companyName and inn");
+            }
+            order.setCompanyName(request.companyName());
+            order.setInn(request.inn());
+        }
+
         // 4. Обогащаем items данными из product-service
-        BigDecimal totalAmount = addItemsFromCart(order, cart.getItems(), products);
+        BigDecimal totalAmount = addItemsFromCart(order, cart.getItems(), products, clientType);
         order.setTotalAmount(totalAmount);
 
         order = orderRepository.save(order);
@@ -399,24 +409,27 @@ public class OrderService {
      * @return totalAmount заказа
      */
     private BigDecimal addItemsFromCart(Order order, List<CartItem> cartItems,
-                                        Map<Long, ProductDto> products) {
+                                        Map<Long, ProductDto> products, String clientType) {
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (CartItem cartItem : cartItems) {
             ProductDto product = products.get(cartItem.getProductId());
+
+            BigDecimal snapshotPrice = CustomerType.B2B.name().equals(clientType)
+                    ? product.price()
+                    : (product.wholesalePrice() != null ? product.wholesalePrice() : product.price());
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
                     .productId(cartItem.getProductId())
                     .productName(product.name())
                     .quantity(cartItem.getQuantity())
-                    .price(product.price())
+                    .price(snapshotPrice)
                     .externalId(product.externalId())
                     .build();
 
             order.getItems().add(orderItem);
-            totalAmount = totalAmount.add(
-                    product.price().multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+            totalAmount = totalAmount.add(snapshotPrice.multiply(BigDecimal.valueOf(cartItem.getQuantity())));
         }
 
         return totalAmount;

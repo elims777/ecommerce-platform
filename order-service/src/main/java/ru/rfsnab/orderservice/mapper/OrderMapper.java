@@ -5,6 +5,7 @@ import ru.rfsnab.orderservice.models.dto.order.OrderDto;
 import ru.rfsnab.orderservice.models.dto.order.OrderSummaryDto;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 
@@ -76,7 +77,7 @@ public class OrderMapper {
      * @param customerEmail email пользователя из JWT
      * @param request данные для создания заказа
      */
-    public static Order toEntity(Long userId, String customerEmail,CreateOrderRequest request) {
+    public static Order toEntity(Long userId, String customerEmail, String clientType, CreateOrderRequest request) {
         Order order = Order.builder()
                 .userId(userId)
                 .status(OrderStatus.CREATED)
@@ -84,6 +85,7 @@ public class OrderMapper {
                 .deliveryMethod(request.deliveryMethod())
                 .customerEmail(customerEmail)
                 .comment(request.comment())
+                .customerType(clientType != null ? CustomerType.valueOf(clientType) : CustomerType.B2C)
                 .build();
 
         if (request.deliveryMethod() == DeliveryMethod.PICKUP) {
