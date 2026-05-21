@@ -75,3 +75,4 @@ app:
     topics:
       order-events: order-events
       order-1c-export: order-1c-export
+      payment-processed: payment.processed
