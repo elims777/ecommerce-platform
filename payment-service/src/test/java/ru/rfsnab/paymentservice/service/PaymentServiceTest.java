@@ -39,9 +39,9 @@ class PaymentServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(tochkaProperties.getCustomerCode()).thenReturn("CUST001");
-        when(tochkaProperties.getRedirectUrl()).thenReturn("https://rfsnab.ru/payment/success");
-        when(tochkaProperties.getFailRedirectUrl()).thenReturn("https://rfsnab.ru/payment/fail");
+        lenient().when(tochkaProperties.getCustomerCode()).thenReturn("CUST001");
+        lenient().when(tochkaProperties.getRedirectUrl()).thenReturn("https://rfsnab.ru/payment/success");
+        lenient().when(tochkaProperties.getFailRedirectUrl()).thenReturn("https://rfsnab.ru/payment/fail");
         paymentService = new PaymentService(paymentRepository, tochkaApiClient, kafkaProducer, tochkaProperties);
     }
 
