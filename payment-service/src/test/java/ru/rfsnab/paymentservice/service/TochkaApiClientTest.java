@@ -23,9 +23,8 @@ class TochkaApiClientTest {
     @Mock WebClient webClient;
     @Mock WebClient.RequestBodyUriSpec requestBodyUriSpec;
     @Mock WebClient.RequestBodySpec requestBodySpec;
+    @Mock WebClient.RequestHeadersSpec<?> requestHeadersSpec;
     @Mock WebClient.ResponseSpec responseSpec;
-    @Mock WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
-    @Mock WebClient.RequestHeadersSpec requestHeadersSpec;
 
     TochkaApiClient client;
 
@@ -47,8 +46,8 @@ class TochkaApiClientTest {
 
         when(webClient.post()).thenReturn(requestBodyUriSpec);
         when(requestBodyUriSpec.uri("/payments")).thenReturn(requestBodySpec);
-        when(requestBodySpec.bodyValue(any())).thenReturn(requestBodySpec);
-        when(requestBodySpec.retrieve()).thenReturn(responseSpec);
+        when(requestBodySpec.bodyValue(any())).thenReturn(requestHeadersSpec);
+        when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
         when(responseSpec.bodyToMono(TochkaCreateResponse.class)).thenReturn(Mono.just(expected));
 
         TochkaCreateResponse result = client.createPayment(request);
