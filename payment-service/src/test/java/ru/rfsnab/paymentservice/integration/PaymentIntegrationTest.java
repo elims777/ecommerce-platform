@@ -24,7 +24,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -81,8 +81,8 @@ class PaymentIntegrationTest {
     @Test
     void createPayment_callsTochkaAndSavesPayment() throws Exception {
         UUID orderId = UUID.randomUUID();
-        wireMock.stubFor(post(urlEqualTo("/payments"))
-                .willReturn(okJson("{\"operationId\":\"op-111\",\"paymentLink\":\"https://pay.link/abc\"}")));
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/payments"))
+                .willReturn(WireMock.okJson("{\"operationId\":\"op-111\",\"paymentLink\":\"https://pay.link/abc\"}")));
 
         mockMvc.perform(post("/api/v1/payments")
                         .header("X-Internal-Token", "test-secret")
@@ -131,7 +131,7 @@ class PaymentIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.paymentLink").value("https://existing.link"));
 
-        wireMock.verify(0, postRequestedFor(urlEqualTo("/payments")));
+        wireMock.verify(0, WireMock.postRequestedFor(WireMock.urlEqualTo("/payments")));
     }
 
     @Test
@@ -148,8 +148,8 @@ class PaymentIntegrationTest {
                 .build();
         paymentRepository.save(payment);
 
-        wireMock.stubFor(get(urlEqualTo("/payments/op-222"))
-                .willReturn(okJson("{\"operationId\":\"op-222\",\"status\":\"APPROVED\",\"amount\":2000}")));
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/payments/op-222"))
+                .willReturn(WireMock.okJson("{\"operationId\":\"op-222\",\"status\":\"APPROVED\",\"amount\":2000}")));
 
         mockMvc.perform(get("/api/v1/payments/{orderId}/status", orderId)
                         .header("X-Internal-Token", "test-secret"))
@@ -188,8 +188,8 @@ class PaymentIntegrationTest {
                 .build();
         paymentRepository.save(payment);
 
-        wireMock.stubFor(post(urlEqualTo("/payments/op-333/refund"))
-                .willReturn(ok()));
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/payments/op-333/refund"))
+                .willReturn(WireMock.ok()));
 
         mockMvc.perform(post("/api/v1/payments/{orderId}/refund", orderId)
                         .header("X-Internal-Token", "test-secret"))
