@@ -109,11 +109,34 @@ public class OrderController {
     }
 
     @PostMapping("/{orderId}/pay")
-    @Operation(summary = "Инициировать оплату заказа")
-    public ResponseEntity<OrderDto> initiatePayment(
+    @Operation(summary = "Инициировать онлайн оплату — возвращает ссылку на страницу Точки")
+    public ResponseEntity<Map<String, String>> initiatePayment(
             Authentication authentication,
             @PathVariable UUID orderId) {
-        Order order = orderService.initiatePayment(orderId, getCurrentUserId(authentication));
+        String paymentLink = orderService.payByCard(orderId, getCurrentUserId(authentication));
+        return ResponseEntity.ok(Map.of("paymentLink", paymentLink));
+    }
+
+    @GetMapping("/{orderId}/pay/status")
+    @Operation(summary = "Получить статус платежа (вызывается фронтом при возврате с redirectUrl)")
+    public ResponseEntity<Map<String, String>> getPaymentStatus(
+            Authentication authentication,
+            @PathVariable UUID orderId) {
+        String status = orderService.getPaymentStatus(orderId, getCurrentUserId(authentication));
+        return ResponseEntity.ok(Map.of("status", status));
+    }
+
+    @PostMapping("/{orderId}/pay/cash")
+    @Operation(summary = "Зафиксировать оплату наличными (менеджер)")
+    public ResponseEntity<OrderDto> payCash(@PathVariable UUID orderId) {
+        Order order = orderService.payCash(orderId);
+        return ResponseEntity.ok(enrichAndMap(order));
+    }
+
+    @PostMapping("/{orderId}/refund")
+    @Operation(summary = "Инициировать возврат (менеджер)")
+    public ResponseEntity<OrderDto> refund(@PathVariable UUID orderId) {
+        Order order = orderService.refund(orderId);
         return ResponseEntity.ok(enrichAndMap(order));
     }
 

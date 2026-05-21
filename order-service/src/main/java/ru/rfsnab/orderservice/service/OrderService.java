@@ -21,6 +21,7 @@ import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.repository.OrderRepository;
+import ru.rfsnab.orderservice.service.client.PaymentServiceClient;
 import ru.rfsnab.orderservice.service.client.ProductServiceClient;
 
 import java.math.BigDecimal;
@@ -47,6 +48,7 @@ public class OrderService {
     private final CartService cartService;
     private final WarehousePointService warehousePointService;
     private final ProductServiceClient productServiceClient;
+    private final PaymentServiceClient paymentServiceClient;
     private final OrderKafkaProducer kafkaProducer;
     private final Order1CKafkaProducer order1CKafkaProducer;
 
@@ -380,6 +382,39 @@ public class OrderService {
         log.info("Заказ отменён: {}", order.getOrderNumber());
         kafkaProducer.sendOrderCancelled(order);
 
+        return order;
+    }
+
+    @Transactional
+    public String payByCard(UUID orderId, Long userId) {
+        Order order = getOrderByIdAndUser(orderId, userId);
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new InvalidOrderStateException("Order must be in PENDING_PAYMENT status to pay");
+        }
+        var response = paymentServiceClient.createPayment(order);
+        log.info("Payment initiated: orderId={}, paymentLink={}", orderId, response.paymentLink());
+        return response.paymentLink();
+    }
+
+    public String getPaymentStatus(UUID orderId, Long userId) {
+        getOrderByIdAndUser(orderId, userId);
+        var response = paymentServiceClient.getPaymentStatus(orderId);
+        return response.status();
+    }
+
+    @Transactional
+    public Order payCash(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+        paymentServiceClient.recordCashPayment(orderId, order.getTotalAmount());
+        return order;
+    }
+
+    @Transactional
+    public Order refund(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+        paymentServiceClient.refundPayment(orderId);
         return order;
     }
 
