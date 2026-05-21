@@ -25,7 +25,8 @@ public class KafkaListenerService {
     @KafkaListener(
             topics = {"${app.kafka.topic.user-events}",
                       "${app.kafka.topic.order-events}",
-                      "${app.kafka.topic.legal-entity-events}"},
+                      "${app.kafka.topic.legal-entity-events}",
+                      "${app.kafka.topic.payment-events}"},
             groupId = "${spring.kafka.consumer.group-id}"
     )
     public void onMessage(ConsumerRecord<String, String> record){

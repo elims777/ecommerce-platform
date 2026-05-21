@@ -53,6 +53,7 @@ app:
       user-events: user-events
       order-events: order-events
       legal-entity-events: legal-entity-events
+      payment-events: payment.processed
 
   # Email
   email:

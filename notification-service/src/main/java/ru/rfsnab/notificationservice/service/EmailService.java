@@ -276,6 +276,27 @@ public class EmailService {
         mailSender.send(msgToUser);
     }
 
+    public void sendPaymentApprovedEmail(String to, BigDecimal amount, String paymentMode) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Оплата прошла успешно — РФСнаб");
+        message.setText(String.format(
+                "Ваш платёж на сумму %.2f ₽ успешно принят (способ: %s).\n\nСпасибо за заказ!\n\nС уважением,\nКоманда РФСнаб",
+                amount, paymentMode
+        ));
+        mailSender.send(message);
+    }
+
+    public void sendPaymentFailedEmail(String to) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Ошибка оплаты — РФСнаб");
+        message.setText("К сожалению, ваш платёж не прошёл.\n\nПожалуйста, попробуйте снова или обратитесь в поддержку.\n\nС уважением,\nКоманда РФСнаб");
+        mailSender.send(message);
+    }
+
     /**
      * Уведомление о смене статуса заказа
      */
