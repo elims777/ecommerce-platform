@@ -82,7 +82,7 @@ class PaymentIntegrationTest {
     void createPayment_callsTochkaAndSavesPayment() throws Exception {
         UUID orderId = UUID.randomUUID();
         wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/payments"))
-                .willReturn(WireMock.okJson("{\"operationId\":\"op-111\",\"paymentLink\":\"https://pay.link/abc\"}")));
+                .willReturn(WireMock.okJson("{\"Data\":{\"operationId\":\"op-111\",\"paymentLink\":\"https://pay.link/abc\"}}")));
 
         mockMvc.perform(post("/api/v1/payments")
                         .header("X-Internal-Token", "test-secret")
@@ -92,7 +92,8 @@ class PaymentIntegrationTest {
                               "orderId": "%s",
                               "amount": 1500.00,
                               "orderNumber": "ORD-00001",
-                              "customerEmail": "user@test.com"
+                              "customerEmail": "user@test.com",
+                              "paymentMode": "CARD"
                             }
                             """.formatted(orderId)))
                 .andExpect(status().isCreated())
@@ -127,7 +128,7 @@ class PaymentIntegrationTest {
         mockMvc.perform(post("/api/v1/payments")
                         .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"orderId\":\"%s\",\"amount\":1000,\"orderNumber\":\"ORD-1\"}".formatted(orderId)))
+                        .content("{\"orderId\":\"%s\",\"amount\":1000,\"orderNumber\":\"ORD-1\",\"paymentMode\":\"CARD\"}".formatted(orderId)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.paymentLink").value("https://existing.link"));
 
@@ -149,7 +150,7 @@ class PaymentIntegrationTest {
         paymentRepository.save(payment);
 
         wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/payments/op-222"))
-                .willReturn(WireMock.okJson("{\"operationId\":\"op-222\",\"status\":\"APPROVED\",\"amount\":2000}")));
+                .willReturn(WireMock.okJson("{\"Data\":{\"Operation\":[{\"operationId\":\"op-222\",\"status\":\"APPROVED\",\"amount\":2000}]}}")));
 
         mockMvc.perform(get("/api/v1/payments/{orderId}/status", orderId)
                         .header("X-Internal-Token", "test-secret"))
@@ -175,6 +176,35 @@ class PaymentIntegrationTest {
     }
 
     @Test
+    void createPayment_sbp_savesPaymentWithSbpMode() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/payments"))
+                .willReturn(WireMock.okJson("{\"Data\":{\"operationId\":\"op-sbp\",\"paymentLink\":\"https://pay.link/sbp\"}}")));
+
+        mockMvc.perform(post("/api/v1/payments")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "orderId": "%s",
+                              "amount": 2500.00,
+                              "orderNumber": "ORD-00002",
+                              "customerEmail": "user@test.com",
+                              "paymentMode": "SBP"
+                            }
+                            """.formatted(orderId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.paymentLink").value("https://pay.link/sbp"))
+                .andExpect(jsonPath("$.status").value("PENDING"));
+
+        Payment saved = paymentRepository.findByOrderId(orderId).orElseThrow();
+        assertThat(saved.getPaymentMode()).isEqualTo(PaymentMode.SBP);
+
+        wireMock.verify(WireMock.postRequestedFor(WireMock.urlEqualTo("/payments"))
+                .withRequestBody(WireMock.containing("\"sbp\"")));
+    }
+
+    @Test
     void refundPayment_callsTochkaAndSetsRefunded() throws Exception {
         UUID orderId = UUID.randomUUID();
         Payment payment = Payment.builder()
@@ -196,5 +226,64 @@ class PaymentIntegrationTest {
                 .andExpect(status().isOk());
 
         assertThat(paymentRepository.findByOrderId(orderId).get().getStatus()).isEqualTo(PaymentStatus.REFUNDED);
+    }
+
+    @Test
+    void createPayment_invalidMode_returns400() throws Exception {
+        UUID orderId = UUID.randomUUID();
+
+        mockMvc.perform(post("/api/v1/payments")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "orderId": "%s",
+                              "amount": 1500.00,
+                              "orderNumber": "ORD-BAD",
+                              "paymentMode": "CASH_ON_DELIVERY"
+                            }
+                            """.formatted(orderId)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createPayment_nullCustomerEmail_succeeds() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/payments"))
+                .willReturn(WireMock.okJson(
+                        "{\"Data\":{\"operationId\":\"op-noemail\",\"paymentLink\":\"https://pay.link/noemail\"}}")));
+
+        mockMvc.perform(post("/api/v1/payments")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "orderId": "%s",
+                              "amount": 1000.00,
+                              "orderNumber": "ORD-NOEMAIL",
+                              "paymentMode": "CARD"
+                            }
+                            """.formatted(orderId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.paymentLink").value("https://pay.link/noemail"));
+    }
+
+    @Test
+    void refundPayment_notApproved_returns500() throws Exception {
+        UUID orderId = UUID.randomUUID();
+        Payment pendingPayment = Payment.builder()
+                .orderId(orderId)
+                .operationId("op-pending")
+                .paymentLink("https://pay.link/pending")
+                .amount(BigDecimal.valueOf(1000))
+                .status(PaymentStatus.PENDING)
+                .paymentMode(PaymentMode.CARD)
+                .createdAt(LocalDateTime.now())
+                .build();
+        paymentRepository.save(pendingPayment);
+
+        mockMvc.perform(post("/api/v1/payments/{orderId}/refund", orderId)
+                        .header("X-Internal-Token", "test-secret"))
+                .andExpect(status().is5xxServerError());
     }
 }
