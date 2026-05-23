@@ -16,6 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.orderservice.mapper.OrderMapper;
 import ru.rfsnab.orderservice.models.dto.order.*;
+import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.service.OrderService;
@@ -109,16 +110,15 @@ public class OrderController {
     }
 
     @PostMapping("/{orderId}/pay")
-    @Operation(summary = "Инициировать онлайн оплату — возвращает ссылку на страницу Точки")
-    public ResponseEntity<Map<String, String>> initiatePayment(
+    @Operation(summary = "Инициировать оплату — роутится по paymentMethod заказа (CARD/SBP/CASH_ON_DELIVERY)")
+    public ResponseEntity<PaymentInitiationResponse> pay(
             Authentication authentication,
             @PathVariable UUID orderId) {
-        String paymentLink = orderService.payByCard(orderId, getCurrentUserId(authentication));
-        return ResponseEntity.ok(Map.of("paymentLink", paymentLink));
+        return ResponseEntity.ok(orderService.pay(orderId, getCurrentUserId(authentication)));
     }
 
     @GetMapping("/{orderId}/pay/status")
-    @Operation(summary = "Получить статус платежа (вызывается фронтом при возврате с redirectUrl)")
+    @Operation(summary = "Получить статус платежа (фронт вызывает при возврате с redirectUrl)")
     public ResponseEntity<Map<String, String>> getPaymentStatus(
             Authentication authentication,
             @PathVariable UUID orderId) {
@@ -126,10 +126,10 @@ public class OrderController {
         return ResponseEntity.ok(Map.of("status", status));
     }
 
-    @PostMapping("/{orderId}/pay/cash")
-    @Operation(summary = "Зафиксировать оплату наличными (менеджер)")
-    public ResponseEntity<OrderDto> payCash(@PathVariable UUID orderId) {
-        Order order = orderService.payCash(orderId);
+    @PostMapping("/{orderId}/pay/cash/confirm")
+    @Operation(summary = "Зафиксировать получение наличных при доставке (менеджер)")
+    public ResponseEntity<OrderDto> confirmCashPayment(@PathVariable UUID orderId) {
+        Order order = orderService.confirmCashPayment(orderId);
         return ResponseEntity.ok(enrichAndMap(order));
     }
 

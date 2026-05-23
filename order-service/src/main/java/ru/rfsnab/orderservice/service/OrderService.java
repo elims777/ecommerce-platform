@@ -15,11 +15,14 @@ import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.HasDeliveryInfo;
 import ru.rfsnab.orderservice.models.dto.order.OrderItemDto;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
+import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
+import ru.rfsnab.orderservice.models.dto.payment.PaymentLinkResponse;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.entity.*;
 import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
+import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
 import ru.rfsnab.orderservice.repository.OrderRepository;
 import ru.rfsnab.orderservice.service.client.PaymentServiceClient;
 import ru.rfsnab.orderservice.service.client.ProductServiceClient;
@@ -57,7 +60,7 @@ public class OrderService {
 
     static {
         Map<OrderStatus, Set<OrderStatus>> t = new java.util.EnumMap<>(OrderStatus.class);
-        t.put(OrderStatus.CREATED,               Set.of(OrderStatus.PROCESSING, OrderStatus.CANCELLED));
+        t.put(OrderStatus.CREATED,               Set.of(OrderStatus.PROCESSING, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
         t.put(OrderStatus.PROCESSING,            Set.of(OrderStatus.INVOICE_SENT, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
         t.put(OrderStatus.INVOICE_SENT,          Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.AWAITING_CONFIRMATION, OrderStatus.CANCELLED));
         t.put(OrderStatus.PENDING_PAYMENT,       Set.of(OrderStatus.PAID, OrderStatus.PARTIALLY_PAID, OrderStatus.PAYMENT_FAILED, OrderStatus.CANCELLED));
@@ -80,6 +83,19 @@ public class OrderService {
             OrderStatus.INVOICE_SENT,
             OrderStatus.PENDING_PAYMENT,
             OrderStatus.PAYMENT_FAILED
+    );
+
+    private static final Set<OrderStatus> PAYABLE_STATUSES_B2C = Set.of(
+            OrderStatus.PROCESSING,
+            OrderStatus.PENDING_PAYMENT,
+            OrderStatus.PAYMENT_FAILED
+    );
+
+    private static final Set<OrderStatus> PAYABLE_STATUSES_B2B = Set.of(
+            OrderStatus.INVOICE_SENT,
+            OrderStatus.PENDING_PAYMENT,
+            OrderStatus.PAYMENT_FAILED,
+            OrderStatus.DELIVERED
     );
 
     /**
@@ -386,14 +402,14 @@ public class OrderService {
     }
 
     @Transactional
-    public String payByCard(UUID orderId, Long userId) {
-        Order order = getOrderByIdAndUser(orderId, userId);
-        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
-            throw new InvalidOrderStateException("Order must be in PENDING_PAYMENT status to pay");
-        }
-        var response = paymentServiceClient.createPayment(order);
-        log.info("Payment initiated: orderId={}, paymentLink={}", orderId, response.paymentLink());
-        return response.paymentLink();
+    public PaymentInitiationResponse pay(UUID orderId, Long userId) {
+        Order order = getOrderAndValidateOwner(orderId, userId);
+        validatePayable(order);
+
+        return switch (order.getPaymentMethod()) {
+            case CARD, SBP -> initiateOnlinePayment(order);
+            case CASH_ON_DELIVERY -> recordCashOnDeliveryIntent(order);
+        };
     }
 
     public String getPaymentStatus(UUID orderId, Long userId) {
@@ -403,19 +419,70 @@ public class OrderService {
     }
 
     @Transactional
-    public Order payCash(UUID orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+    public Order confirmCashPayment(UUID orderId) {
+        Order order = getOrder(orderId);
+        if (order.getPaymentMethod() != PaymentMethod.CASH_ON_DELIVERY) {
+            throw new InvalidOrderStateException("Заказ не является cash-on-delivery");
+        }
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new InvalidOrderStateException(
+                    "Фиксация наличных возможна только в статусе PENDING_PAYMENT");
+        }
         paymentServiceClient.recordCashPayment(orderId, order.getTotalAmount());
+        changeStatus(order, OrderStatus.PAID);
+        order = orderRepository.save(order);
+        kafkaProducer.sendOrderPaid(order);
+        log.info("Cash payment confirmed for order: {}", order.getOrderNumber());
         return order;
     }
 
     @Transactional
     public Order refund(UUID orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Order not found: " + orderId));
+        Order order = getOrder(orderId);
+        if (order.getStatus() != OrderStatus.PAID && order.getStatus() != OrderStatus.CANCELLED) {
+            throw new InvalidOrderStateException(
+                    "Возврат возможен только для оплаченных или отменённых заказов");
+        }
         paymentServiceClient.refundPayment(orderId);
+        changeStatus(order, OrderStatus.REFUNDED);
+        order = orderRepository.save(order);
+        kafkaProducer.sendOrderStatusChanged(order);
+        log.info("Refund initiated for order: {}", order.getOrderNumber());
         return order;
+    }
+
+    private PaymentInitiationResponse initiateOnlinePayment(Order order) {
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            changeStatus(order, OrderStatus.PENDING_PAYMENT);
+            order = orderRepository.save(order);
+            kafkaProducer.sendOrderStatusChanged(order);
+        }
+        PaymentLinkResponse resp = paymentServiceClient.createPayment(order);
+        log.info("Online payment initiated: orderId={}, mode={}, link={}",
+                order.getId(), order.getPaymentMethod(), resp.paymentLink());
+        return new PaymentInitiationResponse(resp.paymentLink(), order.getPaymentMethod(), order.getStatus());
+    }
+
+    private PaymentInitiationResponse recordCashOnDeliveryIntent(Order order) {
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            changeStatus(order, OrderStatus.PENDING_PAYMENT);
+            order = orderRepository.save(order);
+            kafkaProducer.sendOrderStatusChanged(order);
+        }
+        log.info("Cash-on-delivery intent recorded for order: {}", order.getOrderNumber());
+        return new PaymentInitiationResponse(null, PaymentMethod.CASH_ON_DELIVERY, order.getStatus());
+    }
+
+    private void validatePayable(Order order) {
+        boolean isB2B = order.getCustomerType() == CustomerType.B2B;
+        Set<OrderStatus> allowed = isB2B ? PAYABLE_STATUSES_B2B : PAYABLE_STATUSES_B2C;
+        if (!allowed.contains(order.getStatus())) {
+            throw new InvalidOrderStateException(
+                    "Оплата невозможна в статусе " + order.getStatus().getDisplayName());
+        }
+        if (order.getPaymentMethod() == null) {
+            throw new InvalidOrderStateException("Способ оплаты не задан");
+        }
     }
 
     // ==================== Private methods ====================
