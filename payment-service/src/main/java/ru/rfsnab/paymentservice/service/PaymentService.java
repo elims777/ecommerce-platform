@@ -41,30 +41,32 @@ public class PaymentService {
     private PaymentResponse doCreatePayment(CreatePaymentRequest request) {
         String orderId = request.orderId().toString();
         var tochkaRequest = new TochkaCreateRequest(
-                tochkaProperties.getCustomerCode(),
-                request.amount(),
-                "Заказ #" + request.orderNumber(),
-                List.of("card", "sbp"),
-                tochkaProperties.getRedirectUrl() + "?orderId=" + orderId,
-                tochkaProperties.getFailRedirectUrl() + "?orderId=" + orderId,
-                orderId
+                new TochkaCreateRequest.Data(
+                        tochkaProperties.getCustomerCode(),
+                        request.amount(),
+                        "Заказ #" + request.orderNumber(),
+                        "SBP".equals(request.paymentMode()) ? List.of("sbp") : List.of("card"),
+                        tochkaProperties.getRedirectUrl() + "?orderId=" + orderId,
+                        tochkaProperties.getFailRedirectUrl() + "?orderId=" + orderId,
+                        orderId
+                )
         );
 
         TochkaCreateResponse tochkaResponse = tochkaApiClient.createPayment(tochkaRequest);
 
         Payment payment = Payment.builder()
                 .orderId(request.orderId())
-                .operationId(tochkaResponse.operationId())
-                .paymentLink(tochkaResponse.paymentLink())
+                .operationId(tochkaResponse.data().operationId())
+                .paymentLink(tochkaResponse.data().paymentLink())
                 .amount(request.amount())
                 .status(PaymentStatus.PENDING)
-                .paymentMode(PaymentMode.CARD)
+                .paymentMode("SBP".equals(request.paymentMode()) ? PaymentMode.SBP : PaymentMode.CARD)
                 .customerEmail(request.customerEmail())
                 .createdAt(LocalDateTime.now())
                 .build();
 
         paymentRepository.save(payment);
-        log.info("Payment created: orderId={}, operationId={}", request.orderId(), tochkaResponse.operationId());
+        log.info("Payment created: orderId={}, operationId={}", request.orderId(), tochkaResponse.data().operationId());
 
         return new PaymentResponse(payment.getOrderId(), payment.getPaymentLink(),
                 payment.getOperationId(), payment.getStatus());
@@ -98,8 +100,12 @@ public class PaymentService {
     @Transactional
     public void refundPayment(UUID orderId) {
         Payment payment = findByOrderId(orderId);
+        if (payment.getStatus() != PaymentStatus.APPROVED) {
+            throw new IllegalStateException(
+                    "Refund only allowed for APPROVED payments, current: " + payment.getStatus());
+        }
         tochkaApiClient.refundPayment(payment.getOperationId(),
-                new TochkaRefundRequest(payment.getAmount()));
+                new TochkaRefundRequest(new TochkaRefundRequest.Data(payment.getAmount())));
 
         payment.setStatus(PaymentStatus.REFUNDED);
         payment.setUpdatedAt(LocalDateTime.now());
@@ -110,7 +116,9 @@ public class PaymentService {
 
     public void updateStatusFromTochka(Payment payment) {
         TochkaStatusResponse tochkaStatus = tochkaApiClient.getPaymentStatus(payment.getOperationId());
-        PaymentStatus mapped = mapTochkaStatus(tochkaStatus.status());
+        var operations = tochkaStatus.data() != null ? tochkaStatus.data().operation() : null;
+        if (operations == null || operations.isEmpty()) return;
+        PaymentStatus mapped = mapTochkaStatus(operations.get(0).status());
 
         if (mapped == null) {
             return;
