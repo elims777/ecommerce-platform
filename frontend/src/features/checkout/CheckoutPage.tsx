@@ -8,6 +8,8 @@ import {
     Typography,
     App,
     Steps,
+    Modal,
+    QRCode,
     Result,
 } from 'antd';
 import {
@@ -20,7 +22,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
-import { createOrder } from '@/api/orders';
+import { createOrder, confirmOrder, initiatePayment } from '@/api/orders';
 import { getWarehousePoints } from '@/api/warehouse';
 import {
     getRecipients,
@@ -61,7 +63,7 @@ interface CheckoutFormValues {
 const CheckoutPage = () => {
     const [form] = Form.useForm<CheckoutFormValues>();
     const [loading, setLoading] = useState(false);
-    const [orderNumber, setOrderNumber] = useState<string | null>(null);
+    const [sbpModal, setSbpModal] = useState<{ orderNumber: string; paymentLink: string } | null>(null);
     const navigate = useNavigate();
     const { message: messageApi } = App.useApp();
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -195,7 +197,31 @@ const CheckoutPage = () => {
 
             const order = await createOrder(request);
             await clearCart();
-            setOrderNumber(order.orderNumber);
+            messageApi.success('Заказ успешно оформлен!');
+
+            const isB2C = user?.clientType !== 'B2B';
+
+            if (!isB2C) {
+                navigate('/orders');
+                return;
+            }
+
+            // B2C: confirmOrder обязателен перед оплатой (отправляет в 1С, меняет статус CREATED → PROCESSING)
+            await confirmOrder(order.id);
+
+            if (values.paymentMethod === PaymentMethod.CARD || values.paymentMethod === PaymentMethod.SBP) {
+                const resp = await initiatePayment(order.id);
+                if (values.paymentMethod === PaymentMethod.CARD && resp.paymentLink) {
+                    window.location.href = resp.paymentLink;
+                    return;
+                }
+                if (values.paymentMethod === PaymentMethod.SBP && resp.paymentLink) {
+                    setSbpModal({ orderNumber: order.orderNumber, paymentLink: resp.paymentLink });
+                    return;
+                }
+            }
+
+            navigate('/orders');
         } catch (error) {
             const axiosError = error as AxiosError<{ message?: string }>;
             const errorMessage =
@@ -225,25 +251,6 @@ const CheckoutPage = () => {
         ]);
     };
 
-    if (orderNumber) {
-        return (
-            <Result
-                status="success"
-                icon={<CheckCircleOutlined />}
-                title="Заказ успешно оформлен!"
-                subTitle={`Номер заказа: ${orderNumber}`}
-                extra={[
-                    <Button type="primary" key="orders" onClick={() => navigate('/orders')}>
-                        Мои заказы
-                    </Button>,
-                    <Button key="catalog" onClick={() => navigate('/')}>
-                        Вернуться в каталог
-                    </Button>,
-                ]}
-            />
-        );
-    }
-
     if (items.length === 0) {
         return (
             <Result
@@ -261,6 +268,31 @@ const CheckoutPage = () => {
 
     return (
         <div>
+            <Modal
+                open={!!sbpModal}
+                onCancel={() => { setSbpModal(null); navigate('/orders'); }}
+                footer={[
+                    <Button key="link" onClick={() => { window.location.href = sbpModal!.paymentLink; }}>
+                        Открыть ссылку СБП
+                    </Button>,
+                    <Button key="orders" type="primary" onClick={() => { setSbpModal(null); navigate('/orders'); }}>
+                        Мои заказы
+                    </Button>,
+                ]}
+                title={`Оплата заказа ${sbpModal?.orderNumber}`}
+                centered
+            >
+                <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                    <div style={{ marginBottom: 16, fontSize: 14, color: 'rgba(0,0,0,0.45)' }}>
+                        Отсканируйте QR-кодом в банковском приложении
+                    </div>
+                    {sbpModal && <QRCode value={sbpModal.paymentLink} size={220} />}
+                    <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(0,0,0,0.35)' }}>
+                        Сумма уже указана — вводить вручную не нужно
+                    </div>
+                </div>
+            </Modal>
+
             <Title level={2} style={{ marginBottom: 24 }}>
                 Оформление заказа
             </Title>

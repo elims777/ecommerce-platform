@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Table, Skeleton, Pagination, Spin } from 'antd';
-import { ShoppingOutlined } from '@ant-design/icons';
+import { Table, Skeleton, Pagination, Spin, Button, message, Modal, QRCode } from 'antd';
+import { ShoppingOutlined, CreditCardOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { getMyOrders, getOrderById } from '@/api/orders';
-import { OrderStatusLabels, PaymentMethodLabels, DeliveryMethodLabels } from '@/types/order';
+import { getMyOrders, getOrderById, initiatePayment } from '@/api/orders';
+import { OrderStatusLabels, PaymentMethodLabels, DeliveryMethodLabels, PaymentMethod } from '@/types/order';
 import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
 import type { OrderSummaryDto, OrderDto, OrderItemDto, OrderStatus } from '@/types/order';
 import type { ColumnsType } from 'antd/es/table';
@@ -52,12 +52,41 @@ const OrdersPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [expandedOrderDetails, setExpandedOrderDetails] = useState<Record<string, OrderDto>>({});
     const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
+    const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+    const [sbpModal, setSbpModal] = useState<{ orderNumber: string; paymentLink: string } | null>(null);
     const pageSize = 10;
 
     const { data: ordersPage, isLoading, isError } = useQuery({
         queryKey: ['myOrders', currentPage],
         queryFn: () => getMyOrders(currentPage - 1, pageSize),
     });
+
+    const handlePayCard = async (orderId: string) => {
+        setPayingOrderId(orderId);
+        try {
+            const { paymentLink } = await initiatePayment(orderId);
+            if (paymentLink) {
+                window.location.href = paymentLink;
+            }
+        } catch {
+            message.error('Не удалось инициировать оплату. Попробуйте позже.');
+            setPayingOrderId(null);
+        }
+    };
+
+    const handlePaySbp = async (orderId: string, orderNumber: string) => {
+        setPayingOrderId(orderId);
+        try {
+            const { paymentLink } = await initiatePayment(orderId);
+            if (paymentLink) {
+                setSbpModal({ orderNumber, paymentLink });
+            }
+        } catch {
+            message.error('Не удалось получить QR для оплаты. Попробуйте позже.');
+        } finally {
+            setPayingOrderId(null);
+        }
+    };
 
     const loadOrderDetails = async (orderId: string) => {
         if (expandedOrderDetails[orderId]) return;
@@ -213,6 +242,29 @@ const OrdersPage = () => {
                         </div>
                     )}
                 </div>
+                {(extractEnumCode(order.status) === 'CREATED' || extractEnumCode(order.status) === 'PENDING_PAYMENT') && (
+                    <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+                        {extractEnumCode(order.paymentMethod) === PaymentMethod.CARD && (
+                            <Button
+                                type="primary"
+                                icon={<CreditCardOutlined />}
+                                loading={payingOrderId === order.id}
+                                onClick={() => handlePayCard(order.id)}
+                            >
+                                Оплатить картой
+                            </Button>
+                        )}
+                        {extractEnumCode(order.paymentMethod) === PaymentMethod.SBP && (
+                            <Button
+                                type="primary"
+                                loading={payingOrderId === order.id}
+                                onClick={() => handlePaySbp(order.id, order.orderNumber)}
+                            >
+                                Оплатить по СБП
+                            </Button>
+                        )}
+                    </div>
+                )}
             </div>
         );
     };
@@ -270,6 +322,30 @@ const OrdersPage = () => {
 
     return (
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
+            <Modal
+                open={!!sbpModal}
+                onCancel={() => setSbpModal(null)}
+                footer={[
+                    <Button key="link" onClick={() => { window.location.href = sbpModal!.paymentLink; }}>
+                        Открыть ссылку СБП
+                    </Button>,
+                    <Button key="close" type="primary" onClick={() => setSbpModal(null)}>
+                        Закрыть
+                    </Button>,
+                ]}
+                title={`Оплата заказа ${sbpModal?.orderNumber}`}
+                centered
+            >
+                <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                    <div style={{ marginBottom: 16, fontSize: 14, color: 'rgba(0,0,0,0.45)' }}>
+                        Отсканируйте QR-кодом в банковском приложении
+                    </div>
+                    {sbpModal && <QRCode value={sbpModal.paymentLink} size={220} />}
+                    <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(0,0,0,0.35)' }}>
+                        Сумма уже указана — вводить вручную не нужно
+                    </div>
+                </div>
+            </Modal>
             <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', marginBottom: 24 }}>
                 Мои заказы
             </h1>
