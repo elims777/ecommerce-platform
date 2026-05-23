@@ -8,9 +8,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.orderservice.exception.ServiceUnavailableException;
+import ru.rfsnab.orderservice.models.dto.payment.CreatePaymentClientRequest;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentLinkResponse;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentStatusResponse;
 import ru.rfsnab.orderservice.models.entity.Order;
+import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -33,13 +35,11 @@ public class PaymentServiceClient {
     }
 
     public PaymentLinkResponse createPayment(Order order) {
+        if (order.getPaymentMethod() == PaymentMethod.CASH_ON_DELIVERY) {
+            throw new IllegalStateException("createPayment must not be called for CASH_ON_DELIVERY");
+        }
         try {
-            var body = Map.of(
-                    "orderId", order.getId().toString(),
-                    "amount", order.getTotalAmount(),
-                    "orderNumber", order.getOrderNumber(),
-                    "customerEmail", order.getCustomerEmail() != null ? order.getCustomerEmail() : ""
-            );
+            var body = CreatePaymentClientRequest.from(order);
             return restTemplate.exchange(
                     paymentServiceUrl + "/api/v1/payments",
                     HttpMethod.POST,
