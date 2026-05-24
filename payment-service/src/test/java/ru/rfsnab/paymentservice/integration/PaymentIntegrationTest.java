@@ -81,8 +81,8 @@ class PaymentIntegrationTest {
     @Test
     void createPayment_callsTochkaAndSavesPayment() throws Exception {
         UUID orderId = UUID.randomUUID();
-        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/payments"))
-                .willReturn(WireMock.okJson("{\"Data\":{\"operationId\":\"op-111\",\"paymentLink\":\"https://pay.link/abc\"}}")));
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/acquiring/v1.0/payments"))
+                .willReturn(WireMock.okJson("{\"Data\":{\"operationId\":\"op-111\",\"paymentUrl\":\"https://pay.link/abc\"}}")));
 
         mockMvc.perform(post("/api/v1/payments")
                         .header("X-Internal-Token", "test-secret")
@@ -132,7 +132,7 @@ class PaymentIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.paymentLink").value("https://existing.link"));
 
-        wireMock.verify(0, WireMock.postRequestedFor(WireMock.urlEqualTo("/payments")));
+        wireMock.verify(0, WireMock.postRequestedFor(WireMock.urlEqualTo("/acquiring/v1.0/payments")));
     }
 
     @Test
@@ -149,7 +149,7 @@ class PaymentIntegrationTest {
                 .build();
         paymentRepository.save(payment);
 
-        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/payments/op-222"))
+        wireMock.stubFor(WireMock.get(WireMock.urlEqualTo("/acquiring/v1.0/payments/op-222"))
                 .willReturn(WireMock.okJson("{\"Data\":{\"Operation\":[{\"operationId\":\"op-222\",\"status\":\"APPROVED\",\"amount\":2000}]}}")));
 
         mockMvc.perform(get("/api/v1/payments/{orderId}/status", orderId)
@@ -178,8 +178,8 @@ class PaymentIntegrationTest {
     @Test
     void createPayment_sbp_savesPaymentWithSbpMode() throws Exception {
         UUID orderId = UUID.randomUUID();
-        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/payments"))
-                .willReturn(WireMock.okJson("{\"Data\":{\"operationId\":\"op-sbp\",\"paymentLink\":\"https://pay.link/sbp\"}}")));
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/acquiring/v1.0/payments"))
+                .willReturn(WireMock.okJson("{\"Data\":{\"operationId\":\"op-sbp\",\"paymentUrl\":\"https://pay.link/sbp\"}}")));
 
         mockMvc.perform(post("/api/v1/payments")
                         .header("X-Internal-Token", "test-secret")
@@ -200,7 +200,7 @@ class PaymentIntegrationTest {
         Payment saved = paymentRepository.findByOrderId(orderId).orElseThrow();
         assertThat(saved.getPaymentMode()).isEqualTo(PaymentMode.SBP);
 
-        wireMock.verify(WireMock.postRequestedFor(WireMock.urlEqualTo("/payments"))
+        wireMock.verify(WireMock.postRequestedFor(WireMock.urlEqualTo("/acquiring/v1.0/payments"))
                 .withRequestBody(WireMock.containing("\"sbp\"")));
     }
 
@@ -218,7 +218,7 @@ class PaymentIntegrationTest {
                 .build();
         paymentRepository.save(payment);
 
-        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/payments/op-333/refund"))
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/acquiring/v1.0/payments/op-333/refund"))
                 .willReturn(WireMock.ok()));
 
         mockMvc.perform(post("/api/v1/payments/{orderId}/refund", orderId)
@@ -249,9 +249,9 @@ class PaymentIntegrationTest {
     @Test
     void createPayment_nullCustomerEmail_succeeds() throws Exception {
         UUID orderId = UUID.randomUUID();
-        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/payments"))
+        wireMock.stubFor(WireMock.post(WireMock.urlEqualTo("/acquiring/v1.0/payments"))
                 .willReturn(WireMock.okJson(
-                        "{\"Data\":{\"operationId\":\"op-noemail\",\"paymentLink\":\"https://pay.link/noemail\"}}")));
+                        "{\"Data\":{\"operationId\":\"op-noemail\",\"paymentUrl\":\"https://pay.link/noemail\"}}")));
 
         mockMvc.perform(post("/api/v1/payments")
                         .header("X-Internal-Token", "test-secret")

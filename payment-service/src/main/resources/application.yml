@@ -6,7 +6,7 @@ spring:
     name: payment-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5437/payment_db
+    url: jdbc:postgresql://localhost:5438/payment_db
     username: user
     password: secret
     driver-class-name: org.postgresql.Driver
@@ -34,11 +34,12 @@ spring:
       write-dates-as-timestamps: false
 
 tochka:
-  base-url: https://enter.tochka.com/sandbox/v2/acquiring/v1.0
-  token: ${TOCHKA_TOKEN}
+  base-url: https://enter.tochka.com/sandbox/v2
+  token: ${TOCHKA_TOKEN:sandbox.jwt.token}
   customer-code: ${TOCHKA_CUSTOMER_CODE}
-  redirect-url: ${TOCHKA_REDIRECT_URL:http://localhost:3000/payment/success}
-  fail-redirect-url: ${TOCHKA_FAIL_REDIRECT_URL:http://localhost:3000/payment/fail}
+  merchant-id: ${TOCHKA_MERCHANT_ID}
+  redirect-url: ${TOCHKA_REDIRECT_URL}
+  fail-redirect-url: ${TOCHKA_FAIL_REDIRECT_URL}
 
 internal:
   secret: ${INTERNAL_SECRET}

@@ -13,6 +13,7 @@ public class TochkaProperties {
     private String baseUrl;
     private String token;
     private String customerCode;
+    private String merchantId;
     private String redirectUrl;
     private String failRedirectUrl;
 }

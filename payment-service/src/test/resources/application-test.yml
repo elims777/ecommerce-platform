@@ -14,6 +14,7 @@ tochka:
   base-url: http://localhost:${wiremock.server.port:0}
   token: test-token
   customer-code: CUST-TEST
+  merchant-id: MERCH-TEST
   redirect-url: http://localhost:3000/payment/success
   fail-redirect-url: http://localhost:3000/payment/fail
 

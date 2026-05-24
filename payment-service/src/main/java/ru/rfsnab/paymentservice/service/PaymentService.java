@@ -46,6 +46,7 @@ public class PaymentService {
                         request.amount(),
                         "Заказ #" + request.orderNumber(),
                         "SBP".equals(request.paymentMode()) ? List.of("sbp") : List.of("card"),
+                        tochkaProperties.getMerchantId(),
                         tochkaProperties.getRedirectUrl() + "?orderId=" + orderId,
                         tochkaProperties.getFailRedirectUrl() + "?orderId=" + orderId,
                         orderId
@@ -57,7 +58,7 @@ public class PaymentService {
         Payment payment = Payment.builder()
                 .orderId(request.orderId())
                 .operationId(tochkaResponse.data().operationId())
-                .paymentLink(tochkaResponse.data().paymentLink())
+                .paymentLink(tochkaResponse.data().paymentUrl())
                 .amount(request.amount())
                 .status(PaymentStatus.PENDING)
                 .paymentMode("SBP".equals(request.paymentMode()) ? PaymentMode.SBP : PaymentMode.CARD)

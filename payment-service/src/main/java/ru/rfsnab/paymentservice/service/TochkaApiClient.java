@@ -19,7 +19,7 @@ public class TochkaApiClient {
     public TochkaCreateResponse createPayment(TochkaCreateRequest request) {
         try {
             return tochkaWebClient.post()
-                    .uri("/payments")
+                    .uri("/acquiring/v1.0/payments")
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(TochkaCreateResponse.class)
@@ -36,7 +36,7 @@ public class TochkaApiClient {
     public TochkaStatusResponse getPaymentStatus(String operationId) {
         try {
             return tochkaWebClient.get()
-                    .uri("/payments/{operationId}", operationId)
+                    .uri("/acquiring/v1.0/payments/{operationId}", operationId)
                     .retrieve()
                     .bodyToMono(TochkaStatusResponse.class)
                     .block();
@@ -49,7 +49,7 @@ public class TochkaApiClient {
     public void refundPayment(String operationId, TochkaRefundRequest request) {
         try {
             tochkaWebClient.post()
-                    .uri("/payments/{operationId}/refund", operationId)
+                    .uri("/acquiring/v1.0/payments/{operationId}/refund", operationId)
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(Void.class)
