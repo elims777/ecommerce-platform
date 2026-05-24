@@ -7,4 +7,4 @@ spring:
     bootstrap-servers: kafka:29092
 
 tochka:
-  base-url: https://enter.tochka.com/uapi/acquiring/v1.0
+  base-url: ${TOCHKA_BASE_URL:https://enter.tochka.com/sandbox/v2}
