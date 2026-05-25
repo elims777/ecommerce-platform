@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -84,6 +86,10 @@ public class UserController {
 
         if (!passwordEncoder.matches(authRequest.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Неверный email или пароль");
+        }
+
+        if (!user.isActive()) {
+            throw new DisabledException("Аккаунт заблокирован");
         }
 
         return ResponseEntity.ok(UserMapper.mapToUserDto(user));
