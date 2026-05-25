@@ -142,7 +142,7 @@ public class UserController {
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<UserDto> changeRole(
             @PathVariable Long id,
-            @RequestBody ChangeRoleRequest request) {
+            @Valid @RequestBody ChangeRoleRequest request) {
         return ResponseEntity.ok(UserMapper.mapToUserDto(userService.changeRole(id, request.role())));
     }
 
@@ -150,7 +150,7 @@ public class UserController {
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<UserDto> changeStatus(
             @PathVariable Long id,
-            @RequestBody ChangeStatusRequest request) {
+            @Valid @RequestBody ChangeStatusRequest request) {
         return ResponseEntity.ok(UserMapper.mapToUserDto(userService.setActive(id, request.active())));
     }
 
@@ -158,7 +158,7 @@ public class UserController {
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<UserDto> updateUserAdmin(
             @PathVariable Long id,
-            @RequestBody UpdateUserAdminRequest request) {
+            @Valid @RequestBody UpdateUserAdminRequest request) {
         return ResponseEntity.ok(UserMapper.mapToUserDto(
             userService.updateUserAdmin(id, request.firstname(), request.lastname(), request.phone())));
     }

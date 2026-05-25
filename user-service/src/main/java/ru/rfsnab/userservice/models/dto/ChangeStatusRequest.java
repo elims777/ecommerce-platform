@@ -1,3 +1,5 @@
 package ru.rfsnab.userservice.models.dto;
 
-public record ChangeStatusRequest(boolean active) {}
+import jakarta.validation.constraints.NotNull;
+
+public record ChangeStatusRequest(@NotNull Boolean active) {}
