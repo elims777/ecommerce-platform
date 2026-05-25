@@ -32,11 +32,25 @@ spring:
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@ipKeyResolver}"
 
-            # Register — строгий лимит
+            # Register B2C — строгий лимит
             - id: auth-register
               uri: http://localhost:9000
               predicates:
                 - Path=/api/v1/register
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 3
+                    redis-rate-limiter.burstCapacity: 5
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
+            # Register legal entity (proxy через auth-service -> user-service)
+            - id: auth-register-legal
+              uri: http://localhost:9000
+              predicates:
+                - Path=/api/v1/register/legal
                 - Method=POST
               filters:
                 - name: RequestRateLimiter
@@ -103,6 +117,32 @@ spring:
                   args:
                     redis-rate-limiter.replenishRate: 15
                     redis-rate-limiter.burstCapacity: 25
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
+            # Legal entities (user-service)
+            - id: legal-entities-api
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/v1/legal-entities/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 15
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
+            # Legal entity admin (user-service)
+            - id: legal-entities-admin-api
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/v1/admin/legal-entities/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 15
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@ipKeyResolver}"
 
