@@ -4,5 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 
 public record TochkaRefundRequest(
-        @JsonProperty("amount") BigDecimal amount
-) {}
+        @JsonProperty("Data") Data data
+) {
+    public record Data(
+            @JsonProperty("amount") BigDecimal amount
+    ) {}
+}

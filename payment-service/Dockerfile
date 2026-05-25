@@ -1,10 +1,16 @@
-FROM maven:3.9-eclipse-temurin-21-alpine AS builder
-WORKDIR /build
-COPY pom.xml .
-COPY src ./src
-RUN mvn package -DskipTests
-
 FROM eclipse-temurin:21-jre-alpine
+
 WORKDIR /app
-COPY --from=builder /build/target/*.jar app.jar
-ENTRYPOINT ["java", "-jar", "app.jar"]
+
+RUN addgroup -S spring && adduser -S spring -G spring
+RUN mkdir -p /app/logs && chown spring:spring /app/logs
+
+USER spring:spring
+
+COPY target/*.jar app.jar
+
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+EXPOSE 8090
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
