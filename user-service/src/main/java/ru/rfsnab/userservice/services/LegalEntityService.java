@@ -294,4 +294,19 @@ public class LegalEntityService {
                 .map(link -> link.getLinkStatus() == LinkStatus.CONFIRMED)
                 .orElse(false);
     }
+
+    @Transactional(readOnly = true)
+    public List<UserLegalEntity> getAllLinksForUser(Long userId) {
+        return userLegalEntityRepository.findAllByUserId(userId);
+    }
+
+    @Transactional
+    public void detachFromUser(Long legalEntityId, Long userId) {
+        UserLegalEntity link = userLegalEntityRepository
+                .findByUserIdAndLegalEntityId(userId, legalEntityId)
+                .orElseThrow(() -> new LegalEntityNotFoundException(
+                        "Связь пользователя " + userId + " с юрлицом " + legalEntityId + " не найдена"));
+        userLegalEntityRepository.delete(link);
+        log.info("Legal entity {} detached from user {} by admin", legalEntityId, userId);
+    }
 }

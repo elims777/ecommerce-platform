@@ -29,6 +29,14 @@ public class LegalEntityAdminController {
                         .map(LegalEntityMapper::toDto).toList());
     }
 
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<List<LegalEntityDto>> getByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(
+                legalEntityService.getAllLinksForUser(userId).stream()
+                        .map(link -> LegalEntityMapper.toDto(link.getLegalEntity()))
+                        .toList());
+    }
+
     @PostMapping("/{id}/verify")
     public ResponseEntity<LegalEntityDto> verify(
             @PathVariable Long id,
@@ -43,5 +51,13 @@ public class LegalEntityAdminController {
             @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(LegalEntityMapper.toDto(
                 legalEntityService.reject(id, managerEmail, body.get("reason"))));
+    }
+
+    @DeleteMapping("/{id}/users/{userId}")
+    public ResponseEntity<Void> detachFromUser(
+            @PathVariable Long id,
+            @PathVariable Long userId) {
+        legalEntityService.detachFromUser(id, userId);
+        return ResponseEntity.noContent().build();
     }
 }

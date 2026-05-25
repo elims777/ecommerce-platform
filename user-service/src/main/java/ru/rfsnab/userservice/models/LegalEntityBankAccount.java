@@ -35,7 +35,7 @@ public class LegalEntityBankAccount {
     @Column(nullable = false, length = 20)
     private String settlementAccount;
 
-    @Column(nullable = false)
+    @Column(name = "is_primary", nullable = false)
     @Builder.Default
     private boolean primary = false;
 

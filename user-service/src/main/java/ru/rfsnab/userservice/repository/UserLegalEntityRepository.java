@@ -13,6 +13,7 @@ import java.util.Optional;
  */
 public interface UserLegalEntityRepository extends JpaRepository<UserLegalEntity, UserLegalEntityId> {
     List<UserLegalEntity> findAllByUserIdAndLinkStatus(Long userId, LinkStatus status);
+    List<UserLegalEntity> findAllByUserId(Long userId);
     Optional<UserLegalEntity> findByLinkToken(String token);
     boolean existsByUserIdAndLegalEntityId(Long userId, Long legalEntityId);
     Optional<UserLegalEntity> findByUserIdAndLegalEntityId(Long userId, Long legalEntityId);

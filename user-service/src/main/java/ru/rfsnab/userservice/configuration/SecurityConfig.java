@@ -41,9 +41,17 @@ public class SecurityConfig {
                                 "/v1/users/oauth2-login",
                                 "/actuator/health",
                                 "/v1/users/*/verify",
+                                "/api/v1/legal-entities/register",
+                                "/api/v1/legal-entities/confirm-email",
+                                "/api/v1/legal-entities/authenticate",
+                                "/api/v1/legal-entities/link-status/**",
+                                "/v1/legal-entities/authenticate",
                                 "/swagger-ui/**",
                                 "/api-docs/**",
                                 "/swagger-ui.html"
+                        ).permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/api/v1/legal-entities/*"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
