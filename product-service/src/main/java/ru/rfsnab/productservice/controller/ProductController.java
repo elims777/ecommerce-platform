@@ -193,4 +193,13 @@ public class ProductController {
         productService.batchUpdateActive(productIds, isActive);
         return ResponseEntity.ok().build();
     }
+
+    /**
+     * Массовое удаление товаров
+     */
+    @DeleteMapping("/batch")
+    public ResponseEntity<Void> batchDelete(@RequestBody List<Long> productIds) {
+        productService.batchDelete(productIds);
+        return ResponseEntity.noContent().build();
+    }
 }

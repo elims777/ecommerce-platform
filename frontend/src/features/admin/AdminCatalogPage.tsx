@@ -42,7 +42,7 @@ import {
     getCategoryById,
     setCategoryParent,
 } from '@/api/adminCategories';
-import {batchUpdateActive, changeProductCategory} from '@/api/adminProducts';
+import { batchUpdateActive, changeProductCategory, bulkDeleteProducts } from '@/api/adminProducts';
 import apiClient from '@/api/client';
 import type { CategoryRequest } from '@/api/adminCategories';
 import type { Product, CategoryTree } from '@/types/product';
@@ -288,6 +288,16 @@ const AdminCatalogPage = () => {
             invalidateAll();
         },
         onError: () => messageApi.error('Ошибка при обновлении'),
+    });
+
+    const batchDeleteMutation = useMutation({
+        mutationFn: () => bulkDeleteProducts(selectedRowKeys as number[]),
+        onSuccess: () => {
+            messageApi.success(`${selectedRowKeys.length} товаров удалено`);
+            setSelectedRowKeys([]);
+            invalidateAll();
+        },
+        onError: () => messageApi.error('Ошибка при удалении'),
     });
 
     const toggleProductMutation = useMutation({
@@ -711,12 +721,29 @@ const AdminCatalogPage = () => {
                                                     label: 'Деактивировать',
                                                     onClick: () => batchActivateMutation.mutate(false),
                                                 },
-                                                { type: 'divider' },
+                                                { type: 'divider' as const },
                                                 {
                                                     key: 'move',
                                                     label: 'Переместить в категорию',
                                                     icon: <FolderOutlined />,
                                                     onClick: () => setBatchMoveOpen(true),
+                                                },
+                                                { type: 'divider' as const },
+                                                {
+                                                    key: 'delete',
+                                                    label: 'Удалить',
+                                                    danger: true,
+                                                    icon: <DeleteOutlined />,
+                                                    onClick: () => {
+                                                        Modal.confirm({
+                                                            title: `Удалить ${selectedRowKeys.length} товаров?`,
+                                                            content: 'Это действие нельзя отменить.',
+                                                            okText: 'Удалить',
+                                                            okButtonProps: { danger: true },
+                                                            cancelText: 'Отмена',
+                                                            onOk: () => batchDeleteMutation.mutate(),
+                                                        });
+                                                    },
                                                 },
                                             ],
                                         }}

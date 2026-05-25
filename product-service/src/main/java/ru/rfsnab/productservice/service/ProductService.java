@@ -349,6 +349,15 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
+    /**
+     * Массовое удаление товаров по id
+     */
+    @Transactional
+    public void batchDelete(List<Long> ids) {
+        log.info("Массовое удаление {} товаров", ids.size());
+        productRepository.deleteAllById(ids);
+    }
+
     @Transactional
     public void batchUpdateCategory(List<Long> productIds, Long categoryId) {
         Category category = categoryId != null
