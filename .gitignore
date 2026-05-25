@@ -46,7 +46,8 @@ frontend/design-reference/
 frontend/.vite/
 
 # Claude Code
-.claude/settings.local.json
+.claude/*
 LLM-wiki.md
 *.txt
 docs/superpowers/
+CLAUDE.md
