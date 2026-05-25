@@ -9,9 +9,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.orderservice.mapper.OrderMapper;
@@ -19,9 +22,11 @@ import ru.rfsnab.orderservice.models.dto.order.*;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
+import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.service.OrderService;
 import ru.rfsnab.orderservice.service.WarehousePointService;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -159,6 +164,33 @@ public class OrderController {
                                                @Valid @RequestBody OrderSyncRequest request){
         return ResponseEntity.ok(OrderMapper.toDto(
                 orderService.syncFrom1C(orderId, request.externalId(), request.newStatus())));
+    }
+
+    @GetMapping("/admin")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @Operation(summary = "Список заказов для админа с фильтрами")
+    public ResponseEntity<Page<OrderSummaryDto>> getAdminOrders(
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateTo,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<Order> orders = orderService.getAdminOrders(status, userId, dateFrom, dateTo, pageable);
+        List<OrderSummaryDto> content = orders.getContent().stream()
+                .map(OrderMapper::toSummaryDto)
+                .toList();
+        return ResponseEntity.ok(new PageImpl<>(content, pageable, orders.getTotalElements()));
+    }
+
+    @PatchMapping("/{orderId}/status")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    @Operation(summary = "Изменить статус заказа (только для админа)")
+    public ResponseEntity<OrderDto> changeOrderStatus(
+            @PathVariable UUID orderId,
+            @RequestBody Map<String, String> body) {
+        OrderStatus newStatus = OrderStatus.valueOf(body.get("status"));
+        Order order = orderService.updateStatus(orderId, newStatus);
+        return ResponseEntity.ok(enrichAndMap(order));
     }
 
     /**

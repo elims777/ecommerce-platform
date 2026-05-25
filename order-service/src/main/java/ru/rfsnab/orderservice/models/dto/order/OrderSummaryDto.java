@@ -1,5 +1,6 @@
 package ru.rfsnab.orderservice.models.dto.order;
 
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ public record OrderSummaryDto(
         String orderNumber,
         String externalId,
         OrderStatus status,
+        CustomerType customerType,
         int itemsCount,
         BigDecimal totalAmount,
         String customerEmail,

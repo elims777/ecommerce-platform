@@ -28,6 +28,7 @@ import ru.rfsnab.orderservice.service.client.PaymentServiceClient;
 import ru.rfsnab.orderservice.service.client.ProductServiceClient;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -310,6 +311,29 @@ public class OrderService {
     @Transactional(readOnly = true)
     public Page<Order> getUserOrders(Long userId, Pageable pageable) {
         return orderRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+    }
+
+    /**
+     * Получение всех заказов для админа с опциональными фильтрами.
+     * Приоритет: dateFrom+dateTo > status > userId > все заказы.
+     */
+    @Transactional(readOnly = true)
+    public Page<Order> getAdminOrders(
+            OrderStatus status,
+            Long userId,
+            LocalDateTime dateFrom,
+            LocalDateTime dateTo,
+            Pageable pageable) {
+        if (dateFrom != null && dateTo != null) {
+            return orderRepository.findByCreatedAtBetween(dateFrom, dateTo, pageable);
+        }
+        if (status != null) {
+            return orderRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+        }
+        if (userId != null) {
+            return orderRepository.findByUserId(userId, pageable);
+        }
+        return orderRepository.findAllByOrderByCreatedAtDesc(pageable);
     }
 
     /**

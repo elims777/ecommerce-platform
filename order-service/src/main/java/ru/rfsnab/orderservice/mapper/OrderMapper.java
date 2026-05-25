@@ -61,6 +61,7 @@ public class OrderMapper {
                 order.getOrderNumber(),
                 order.getExternalId(),
                 order.getStatus(),
+                order.getCustomerType(),
                 order.getItems().size(),
                 order.getTotalAmount(),
                 order.getCustomerEmail(),
