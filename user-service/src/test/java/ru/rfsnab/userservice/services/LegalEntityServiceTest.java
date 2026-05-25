@@ -20,6 +20,7 @@ import ru.rfsnab.userservice.models.enums.VerificationStatus;
 import ru.rfsnab.userservice.models.kafka.LegalEntityEvent;
 import ru.rfsnab.userservice.repository.*;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -180,6 +181,60 @@ class LegalEntityServiceTest {
             verify(kafkaProducerService).send(argThat(e ->
                     "LEGAL_ENTITY_REJECTED".equals(e.eventType()) &&
                     "Недействительный ИНН".equals(e.rejectionReason())));
+        }
+    }
+
+    @Nested
+    @DisplayName("getAllLinksForUser / detachFromUser")
+    class AdminLinkTests {
+
+        @Test
+        @DisplayName("getAllLinksForUser — возвращает все связи пользователя")
+        void shouldReturnAllLinksForUser() {
+            UserEntity user = UserEntity.builder().id(1L).email("user@example.com")
+                    .firstname("Иван").lastname("Иванов").build();
+            LegalEntity le1 = LegalEntity.builder().id(10L).inn("1111111111").build();
+            LegalEntity le2 = LegalEntity.builder().id(11L).inn("2222222222").build();
+            UserLegalEntity link1 = UserLegalEntity.builder()
+                    .user(user).legalEntity(le1).linkStatus(LinkStatus.CONFIRMED).build();
+            UserLegalEntity link2 = UserLegalEntity.builder()
+                    .user(user).legalEntity(le2).linkStatus(LinkStatus.PENDING).build();
+
+            when(userLegalEntityRepository.findAllByUserId(1L)).thenReturn(List.of(link1, link2));
+
+            List<UserLegalEntity> result = legalEntityService.getAllLinksForUser(1L);
+
+            assertThat(result).hasSize(2);
+            assertThat(result).extracting(l -> l.getLegalEntity().getInn())
+                    .containsExactlyInAnyOrder("1111111111", "2222222222");
+            verify(userLegalEntityRepository).findAllByUserId(1L);
+        }
+
+        @Test
+        @DisplayName("detachFromUser — удаляет связь юрлицо-пользователь")
+        void shouldDetachLegalEntityFromUser() {
+            UserEntity user = UserEntity.builder().id(1L).build();
+            LegalEntity le = LegalEntity.builder().id(10L).build();
+            UserLegalEntity link = UserLegalEntity.builder()
+                    .user(user).legalEntity(le).linkStatus(LinkStatus.CONFIRMED).build();
+
+            when(userLegalEntityRepository.findByUserIdAndLegalEntityId(1L, 10L))
+                    .thenReturn(Optional.of(link));
+            doNothing().when(userLegalEntityRepository).delete(link);
+
+            legalEntityService.detachFromUser(10L, 1L);
+
+            verify(userLegalEntityRepository).delete(link);
+        }
+
+        @Test
+        @DisplayName("detachFromUser — выбрасывает исключение если связь не найдена")
+        void shouldThrowWhenLinkNotFound() {
+            when(userLegalEntityRepository.findByUserIdAndLegalEntityId(1L, 99L))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> legalEntityService.detachFromUser(99L, 1L))
+                    .isInstanceOf(LegalEntityNotFoundException.class);
         }
     }
 
