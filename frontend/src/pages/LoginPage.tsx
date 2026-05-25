@@ -11,14 +11,16 @@ const BrandPanel = () => (
         color: '#fff', padding: 48, position: 'relative', overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
     }}>
-        <svg width="360" height="320" viewBox="0 0 360 320" style={{ position: 'absolute', right: -60, bottom: -80, opacity: 0.22, pointerEvents: 'none' }}>
-            <polygon points="180,10 180,220 40,260" fill="#C0272D" />
-            <polygon points="180,10 180,220 320,260" fill="#0F2845" />
-            <polygon points="40,260 320,260 180,220" fill="#1A6B3A" />
-        </svg>
+        <img src="/logo-light.png" alt=""
+            style={{
+                position: 'absolute', right: -40, bottom: -30,
+                height: 360, width: 'auto', opacity: 0.14,
+                pointerEvents: 'none',
+            }}
+        />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
-            <img src="/logo.png" alt="РФснаб" style={{ height: 56, display: 'block', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,.3))' }} />
+            <img src="/logo-light.png" alt="РФснаб" style={{ height: 56, display: 'block' }} />
         </div>
 
         <div style={{ marginTop: 'auto', position: 'relative', zIndex: 1 }}>

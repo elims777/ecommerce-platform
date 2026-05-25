@@ -208,11 +208,13 @@ const HomePage = () => {
                     position: 'relative',
                     overflow: 'hidden',
                 }}>
-                    <svg width="280" height="240" viewBox="0 0 280 240" style={{ position: 'absolute', right: -40, bottom: -30, opacity: 0.25, pointerEvents: 'none' }}>
-                        <polygon points="140,10 140,180 30,210" fill="#C0272D"/>
-                        <polygon points="140,10 140,180 250,210" fill="#0F2845"/>
-                        <polygon points="30,210 250,210 140,180" fill="#1A6B3A"/>
-                    </svg>
+                    <img src="/logo-light.png" alt=""
+                        style={{
+                            position: 'absolute', right: -24, bottom: -28,
+                            height: 280, width: 'auto', opacity: 0.12,
+                            pointerEvents: 'none',
+                        }}
+                    />
 
                     <div style={{ position: 'relative', zIndex: 1 }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,.1)', padding: '5px 12px', borderRadius: 99, fontSize: 12, marginBottom: 16 }}>
