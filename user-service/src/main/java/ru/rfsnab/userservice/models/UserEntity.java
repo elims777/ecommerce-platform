@@ -35,6 +35,10 @@ public class UserEntity {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean active = true;
+
     @PrePersist
     public void onCreate(){
         createdAt = LocalDateTime.now();
