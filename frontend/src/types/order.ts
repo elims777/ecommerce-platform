@@ -7,7 +7,7 @@ export enum PaymentMethod {
 
 export const PaymentMethodLabels: Record<PaymentMethod, string> = {
     [PaymentMethod.CARD]: 'Банковская карта',
-    [PaymentMethod.SBP]: 'Система быстрых платежей',
+    [PaymentMethod.SBP]: 'Система быстрых платежей (СБП)',
     [PaymentMethod.CASH_ON_DELIVERY]: 'Оплата при получении',
 };
 
@@ -46,6 +46,9 @@ export enum OrderStatus {
     CANCELLED = 'CANCELLED',
     REFUNDED = 'REFUNDED',
     AWAITING_CONFIRMATION = 'AWAITING_CONFIRMATION',
+    INVOICE_SENT = 'INVOICE_SENT',
+    PARTIALLY_PAID = 'PARTIALLY_PAID',
+    COMPLETED = 'COMPLETED',
 }
 
 export const OrderStatusLabels: Record<OrderStatus, string> = {
@@ -60,6 +63,9 @@ export const OrderStatusLabels: Record<OrderStatus, string> = {
     [OrderStatus.CANCELLED]: 'Отменён',
     [OrderStatus.REFUNDED]: 'Возврат',
     [OrderStatus.AWAITING_CONFIRMATION]: 'Ожидает подтверждения',
+    [OrderStatus.INVOICE_SENT]: 'Счёт выставлен',
+    [OrderStatus.PARTIALLY_PAID]: 'Частично оплачен',
+    [OrderStatus.COMPLETED]: 'Завершён',
 };
 
 /** Запрос на создание заказа */
@@ -110,6 +116,8 @@ export interface OrderDto {
     warehousePoint?: WarehousePointDto;
     trackingNumber?: string;
     customerEmail: string;
+    companyName?: string;
+    inn?: string;
     comment?: string;
     createdAt: string;
     updatedAt: string;
@@ -120,6 +128,7 @@ export interface OrderSummaryDto {
     id: string;
     orderNumber: string;
     status: OrderStatus;
+    customerType?: unknown;
     itemsCount: number;
     totalAmount: number;
     customerEmail: string;
