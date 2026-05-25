@@ -188,7 +188,16 @@ public class OrderController {
     public ResponseEntity<OrderDto> changeOrderStatus(
             @PathVariable UUID orderId,
             @RequestBody Map<String, String> body) {
-        OrderStatus newStatus = OrderStatus.valueOf(body.get("status"));
+        String raw = body.get("status");
+        if (raw == null || raw.isBlank()) {
+            return ResponseEntity.<OrderDto>badRequest().build();
+        }
+        OrderStatus newStatus;
+        try {
+            newStatus = OrderStatus.valueOf(raw.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.<OrderDto>badRequest().build();
+        }
         Order order = orderService.updateStatus(orderId, newStatus);
         return ResponseEntity.ok(enrichAndMap(order));
     }
