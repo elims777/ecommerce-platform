@@ -8,14 +8,18 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.userservice.exceptions.UserAlreadyExistsException;
 import ru.rfsnab.userservice.mappers.RegistrationMapper;
 import ru.rfsnab.userservice.mappers.UserMapper;
 import ru.rfsnab.userservice.models.UserEntity;
+import ru.rfsnab.userservice.models.dto.ChangeRoleRequest;
+import ru.rfsnab.userservice.models.dto.ChangeStatusRequest;
 import ru.rfsnab.userservice.models.dto.RegAuthResponse;
 import ru.rfsnab.userservice.models.dto.RegistrationRequest;
 import ru.rfsnab.userservice.models.dto.SimpleAuthRequest;
+import ru.rfsnab.userservice.models.dto.UpdateUserAdminRequest;
 import ru.rfsnab.userservice.models.dto.UserDto;
 import ru.rfsnab.userservice.services.UserService;
 
@@ -126,5 +130,36 @@ public class UserController {
     public ResponseEntity<String> verifyUser(@PathVariable Long userId) {
         userService.verifyUser(userId);
         return ResponseEntity.ok("User verified successfully");
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
+        return ResponseEntity.ok(UserMapper.mapToUserDto(userService.findById(id)));
+    }
+
+    @PatchMapping("/{id}/role")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<UserDto> changeRole(
+            @PathVariable Long id,
+            @RequestBody ChangeRoleRequest request) {
+        return ResponseEntity.ok(UserMapper.mapToUserDto(userService.changeRole(id, request.role())));
+    }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<UserDto> changeStatus(
+            @PathVariable Long id,
+            @RequestBody ChangeStatusRequest request) {
+        return ResponseEntity.ok(UserMapper.mapToUserDto(userService.setActive(id, request.active())));
+    }
+
+    @PatchMapping("/{id}/admin")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<UserDto> updateUserAdmin(
+            @PathVariable Long id,
+            @RequestBody UpdateUserAdminRequest request) {
+        return ResponseEntity.ok(UserMapper.mapToUserDto(
+            userService.updateUserAdmin(id, request.firstname(), request.lastname(), request.phone())));
     }
 }
