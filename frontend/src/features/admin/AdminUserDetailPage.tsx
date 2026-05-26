@@ -1,12 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Card, Descriptions, Tag, Table, Typography, Button,
-  Spin, App, Form, Input, Modal, Select, Popconfirm,
-} from 'antd';
-import {
-  ArrowLeftOutlined, EditOutlined, CheckOutlined, DisconnectOutlined,
-} from '@ant-design/icons';
+import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getUserById, changeUserRole, changeUserStatus, updateUserAdmin,
@@ -18,9 +12,6 @@ import { OrderStatusLabels } from '@/types/order';
 import { extractEnumCode } from '@/utils/enumUtils';
 import { useAuthStore } from '@/store/authStore';
 import type { OrderSummaryDto, OrderStatus } from '@/types/order';
-import type { ColumnsType } from 'antd/es/table';
-
-const { Title, Text } = Typography;
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(price);
@@ -34,21 +25,31 @@ const formatDateTime = (d: string) =>
     hour: '2-digit', minute: '2-digit',
   });
 
-const STATUS_COLORS: Record<string, string> = {
-  CREATED: 'blue',
-  PENDING_PAYMENT: 'orange',
-  PAID: 'cyan',
-  PAYMENT_FAILED: 'red',
-  PROCESSING: 'processing',
-  SHIPPED: 'purple',
-  IN_TRANSIT: 'geekblue',
-  DELIVERED: 'green',
-  CANCELLED: 'default',
-  REFUNDED: 'magenta',
-  AWAITING_CONFIRMATION: 'gold',
-  INVOICE_SENT: 'volcano',
-  PARTIALLY_PAID: 'lime',
-  COMPLETED: 'green',
+const ORDER_STATUS_BADGE: Record<string, string> = {
+  CREATED: 'rf-badge-warn rf-badge-dot',
+  PENDING_PAYMENT: 'rf-badge-warn rf-badge-dot',
+  PAID: 'rf-badge-success',
+  DELIVERED: 'rf-badge-success',
+  COMPLETED: 'rf-badge-success',
+  PROCESSING: 'rf-badge-navy',
+  INVOICE_SENT: 'rf-badge-navy',
+  SHIPPED: 'rf-badge-navy rf-badge-dot',
+  IN_TRANSIT: 'rf-badge-navy rf-badge-dot',
+  PAYMENT_FAILED: 'rf-badge-red',
+  CANCELLED: 'rf-badge-red',
+  REFUNDED: 'rf-badge-neutral',
+  AWAITING_CONFIRMATION: 'rf-badge-neutral',
+};
+
+const LE_STATUS_BADGE: Record<string, string> = {
+  VERIFIED: 'rf-badge-success',
+  PENDING: 'rf-badge-warn',
+  REJECTED: 'rf-badge-red',
+};
+const LE_STATUS_LABEL: Record<string, string> = {
+  VERIFIED: 'Верифицирована',
+  PENDING: 'На проверке',
+  REJECTED: 'Отклонена',
 };
 
 const AdminUserDetailPage = () => {
@@ -59,8 +60,8 @@ const AdminUserDetailPage = () => {
   const userId = Number(id);
   const adminEmail = useAuthStore((s) => s.user?.email ?? '');
 
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [form] = Form.useForm<UpdateUserAdminRequest>();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [editForm, setEditForm] = useState<UpdateUserAdminRequest>({ firstname: '', lastname: '', phone: '' });
 
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['adminUser', userId],
@@ -101,7 +102,7 @@ const AdminUserDetailPage = () => {
     mutationFn: (body: UpdateUserAdminRequest) => updateUserAdmin(userId, body),
     onSuccess: () => {
       messageApi.success('Данные обновлены');
-      setEditModalOpen(false);
+      dialogRef.current?.close();
       invalidateUser();
     },
     onError: () => messageApi.error('Ошибка обновления данных'),
@@ -125,251 +126,262 @@ const AdminUserDetailPage = () => {
     onError: () => messageApi.error('Ошибка отвязки организации'),
   });
 
-  const orderColumns: ColumnsType<OrderSummaryDto> = [
-    {
-      title: '№',
-      dataIndex: 'orderNumber',
-      key: 'orderNumber',
-      render: (num: string, record) => (
-        <a onClick={() => navigate(`/admin/orders/${record.id}`)}>{num}</a>
-      ),
-    },
-    {
-      title: 'Статус',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: unknown) => {
-        const code = extractEnumCode(status);
-        return (
-          <Tag color={STATUS_COLORS[code] ?? 'default'}>
-            {OrderStatusLabels[code as OrderStatus] ?? code}
-          </Tag>
-        );
-      },
-    },
-    {
-      title: 'Сумма',
-      dataIndex: 'totalAmount',
-      key: 'totalAmount',
-      render: (amount: number) => formatPrice(amount),
-    },
-    {
-      title: 'Дата',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (d: string) => formatDateTime(d),
-    },
-  ];
-
-  const leColumns: ColumnsType<LegalEntityDto> = [
-    {
-      title: 'Компания',
-      dataIndex: 'fullName',
-      key: 'fullName',
-    },
-    {
-      title: 'ИНН',
-      dataIndex: 'inn',
-      key: 'inn',
-      width: 120,
-    },
-    {
-      title: 'Статус',
-      dataIndex: 'verificationStatus',
-      key: 'verificationStatus',
-      width: 140,
-      render: (s: string) => {
-        const colorMap: Record<string, string> = {
-          VERIFIED: 'green',
-          REJECTED: 'red',
-          PENDING: 'orange',
-        };
-        const labelMap: Record<string, string> = {
-          VERIFIED: 'Верифицирована',
-          REJECTED: 'Отклонена',
-          PENDING: 'На проверке',
-        };
-        return (
-          <Tag color={colorMap[s] ?? 'default'}>
-            {labelMap[s] ?? s}
-          </Tag>
-        );
-      },
-    },
-    {
-      title: 'Добавлена',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 110,
-      render: (d: string) => formatDate(d),
-    },
-    {
-      title: '',
-      key: 'actions',
-      width: 80,
-      render: (_, record) => (
-        <div style={{ display: 'flex', gap: 4 }}>
-          {record.verificationStatus !== 'VERIFIED' && (
-            <Popconfirm
-              title="Верифицировать организацию?"
-              onConfirm={() => verifyMutation.mutate(record.id)}
-              okText="Да"
-              cancelText="Нет"
-            >
-              <Button
-                type="text"
-                icon={<CheckOutlined />}
-                size="small"
-                style={{ color: '#52c41a' }}
-              />
-            </Popconfirm>
-          )}
-          <Popconfirm
-            title="Отвязать организацию от пользователя?"
-            onConfirm={() => detachMutation.mutate(record.id)}
-            okText="Да"
-            cancelText="Нет"
-          >
-            <Button type="text" icon={<DisconnectOutlined />} size="small" danger />
-          </Popconfirm>
-        </div>
-      ),
-    },
-  ];
+  const openEditModal = () => {
+    if (!user) return;
+    setEditForm({ firstname: user.firstname, lastname: user.lastname, phone: user.phone ?? '' });
+    dialogRef.current?.showModal();
+  };
 
   if (userLoading || !user) {
-    return (
-      <div style={{ textAlign: 'center', padding: 120 }}>
-        <Spin size="large" />
-      </div>
-    );
+    return <div style={{ textAlign: 'center', padding: 120, color: 'var(--ink-3)' }}>Загрузка…</div>;
   }
 
   const currentRole = user.roles[0]?.name ?? 'USER';
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/users')}>
-          Назад
-        </Button>
-        <Title level={3} style={{ margin: 0 }}>
-          {user.lastname} {user.firstname}
-        </Title>
+      {/* Back */}
+      <div className="rf-admin-back" onClick={() => navigate('/admin/users')}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M10 4L6 8l4 4"/>
+        </svg>
+        Пользователи
       </div>
 
-      <Card
-        title="Личные данные"
-        style={{ borderRadius: 12, marginBottom: 16 }}
-        extra={
-          <Button
-            icon={<EditOutlined />}
-            size="small"
-            onClick={() => {
-              form.setFieldsValue({
-                firstname: user.firstname,
-                lastname: user.lastname,
-                phone: user.phone ?? '',
-              });
-              setEditModalOpen(true);
-            }}
-          >
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, margin: 0 }}>
+          {user.lastname} {user.firstname}
+        </h2>
+        <span className={`rf-badge ${user.active ? 'rf-badge-success' : 'rf-badge-red'}`}>
+          {user.active ? 'Активен' : 'Заблокирован'}
+        </span>
+        <span className="rf-badge rf-badge-navy">{currentRole}</span>
+      </div>
+
+      {/* Личные данные */}
+      <div className="rf-card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+        <div className="rf-card-header">
+          <h3>Личные данные</h3>
+          <div style={{ flex: 1 }} />
+          <button className="rf-btn rf-btn-sm rf-btn-quiet" onClick={openEditModal}>
             Редактировать
-          </Button>
-        }
-      >
-        <Descriptions column={2} size="small">
-          <Descriptions.Item label="Email">
-            <Text copyable>{user.email}</Text>
-          </Descriptions.Item>
-          <Descriptions.Item label="Телефон">{user.phone ?? '—'}</Descriptions.Item>
-          <Descriptions.Item label="Имя">{user.firstname}</Descriptions.Item>
-          <Descriptions.Item label="Фамилия">{user.lastname}</Descriptions.Item>
-          <Descriptions.Item label="Дата регистрации">{formatDate(user.createdAt)}</Descriptions.Item>
-          <Descriptions.Item label="Email подтверждён">
-            <Tag color={user.emailVerified ? 'green' : 'orange'}>
+          </button>
+        </div>
+        <div className="rf-detail-grid">
+          <div className="rf-detail-label">Email</div>
+          <div className="rf-detail-value" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {user.email}
+            <button
+              className="rf-btn rf-btn-sm rf-btn-ghost"
+              style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+              onClick={() => navigator.clipboard.writeText(user.email).then(() => messageApi.success('Скопировано'))}
+            >
+              копировать
+            </button>
+          </div>
+
+          <div className="rf-detail-label">Телефон</div>
+          <div className="rf-detail-value">{user.phone ?? '—'}</div>
+
+          <div className="rf-detail-label">Имя</div>
+          <div className="rf-detail-value">{user.firstname}</div>
+
+          <div className="rf-detail-label">Фамилия</div>
+          <div className="rf-detail-value">{user.lastname}</div>
+
+          <div className="rf-detail-label">Дата регистрации</div>
+          <div className="rf-detail-value rf-tabular">{formatDate(user.createdAt)}</div>
+
+          <div className="rf-detail-label">Email подтверждён</div>
+          <div className="rf-detail-value">
+            <span className={`rf-badge ${user.emailVerified ? 'rf-badge-success' : 'rf-badge-warn'}`}>
               {user.emailVerified ? 'Да' : 'Нет'}
-            </Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="Роль">
-            <Select
-              size="small"
-              style={{ width: 120 }}
+            </span>
+          </div>
+
+          <div className="rf-detail-label">Роль</div>
+          <div className="rf-detail-value">
+            <select
               value={currentRole}
-              options={[
-                { value: 'USER', label: 'USER' },
-                { value: 'ADMIN', label: 'ADMIN' },
-              ]}
-              onChange={(role) => roleMutation.mutate(role)}
-              loading={roleMutation.isPending}
-            />
-          </Descriptions.Item>
-          <Descriptions.Item label="Статус">
-            <Select
-              size="small"
-              style={{ width: 140 }}
-              value={user.active}
-              options={[
-                { value: true, label: 'Активен' },
-                { value: false, label: 'Заблокирован' },
-              ]}
-              onChange={(active) => statusMutation.mutate(active)}
-              loading={statusMutation.isPending}
-            />
-          </Descriptions.Item>
-        </Descriptions>
-      </Card>
+              onChange={(e) => roleMutation.mutate(e.target.value)}
+              disabled={roleMutation.isPending}
+              style={{ fontSize: 13, padding: '3px 8px', borderRadius: 'var(--r-2)', border: '1px solid var(--line-2)', background: 'var(--surface)', color: 'var(--ink-1)' }}
+            >
+              <option value="USER">USER</option>
+              <option value="ADMIN">ADMIN</option>
+            </select>
+          </div>
 
-      <Card title="Заказы" style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Table<OrderSummaryDto>
-          columns={orderColumns}
-          dataSource={ordersPage?.content ?? []}
-          rowKey="id"
-          loading={ordersLoading}
-          pagination={false}
-          size="small"
-          locale={{ emptyText: 'Заказов нет' }}
-        />
-      </Card>
+          <div className="rf-detail-label">Статус</div>
+          <div className="rf-detail-value">
+            <select
+              value={String(user.active)}
+              onChange={(e) => statusMutation.mutate(e.target.value === 'true')}
+              disabled={statusMutation.isPending}
+              style={{ fontSize: 13, padding: '3px 8px', borderRadius: 'var(--r-2)', border: '1px solid var(--line-2)', background: 'var(--surface)', color: 'var(--ink-1)' }}
+            >
+              <option value="true">Активен</option>
+              <option value="false">Заблокирован</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
-      <Card title="Юридические лица" style={{ borderRadius: 12 }}>
-        <Table<LegalEntityDto>
-          columns={leColumns}
-          dataSource={legalEntities}
-          rowKey="id"
-          loading={leLoading}
-          pagination={false}
-          size="small"
-          locale={{ emptyText: 'Нет привязанных организаций' }}
-        />
-      </Card>
+      {/* Заказы */}
+      <div className="rf-card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+        <div className="rf-card-header">
+          <h3>Заказы</h3>
+        </div>
+        {ordersLoading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)' }}>Загрузка…</div>
+        ) : (ordersPage?.content ?? []).length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)' }}>Заказов нет</div>
+        ) : (
+          <div className="rf-admin-table-wrap">
+            <table className="rf-admin-table">
+              <thead>
+                <tr>
+                  <th>№</th>
+                  <th>Статус</th>
+                  <th style={{ textAlign: 'right' }}>Сумма</th>
+                  <th>Дата</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(ordersPage?.content ?? []).map((order: OrderSummaryDto) => {
+                  const code = extractEnumCode(order.status);
+                  const badgeCls = ORDER_STATUS_BADGE[code] ?? 'rf-badge-neutral';
+                  return (
+                    <tr key={order.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/orders/${order.id}`)}>
+                      <td>
+                        <a onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${order.id}`); }}>
+                          {order.orderNumber}
+                        </a>
+                      </td>
+                      <td>
+                        <span className={`rf-badge ${badgeCls}`}>
+                          {OrderStatusLabels[code as OrderStatus] ?? code}
+                        </span>
+                      </td>
+                      <td className="col-right rf-tabular">{formatPrice(order.totalAmount)}</td>
+                      <td className="rf-tabular">{formatDateTime(order.createdAt)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
-      <Modal
-        title="Редактировать данные"
-        open={editModalOpen}
-        onCancel={() => setEditModalOpen(false)}
-        onOk={() => form.submit()}
-        confirmLoading={editMutation.isPending}
-        okText="Сохранить"
-        cancelText="Отмена"
+      {/* Юридические лица */}
+      <div className="rf-card" style={{ overflow: 'hidden' }}>
+        <div className="rf-card-header">
+          <h3>Юридические лица</h3>
+        </div>
+        {leLoading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)' }}>Загрузка…</div>
+        ) : legalEntities.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)' }}>Нет привязанных организаций</div>
+        ) : (
+          <div className="rf-admin-table-wrap">
+            <table className="rf-admin-table">
+              <thead>
+                <tr>
+                  <th>Компания</th>
+                  <th style={{ width: 120 }}>ИНН</th>
+                  <th style={{ width: 140 }}>Статус</th>
+                  <th style={{ width: 110 }}>Добавлена</th>
+                  <th style={{ width: 80 }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {legalEntities.map((le: LegalEntityDto) => (
+                  <tr key={le.id}>
+                    <td>{le.fullName}</td>
+                    <td className="rf-mono">{le.inn}</td>
+                    <td>
+                      <span className={`rf-badge ${LE_STATUS_BADGE[le.verificationStatus] ?? 'rf-badge-neutral'}`}>
+                        {LE_STATUS_LABEL[le.verificationStatus] ?? le.verificationStatus}
+                      </span>
+                    </td>
+                    <td className="rf-tabular">{formatDate(le.createdAt)}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {le.verificationStatus !== 'VERIFIED' && (
+                          <button
+                            className="rf-btn rf-btn-sm rf-btn-ghost"
+                            style={{ color: 'var(--brand-green)', height: 28, padding: '0 8px' }}
+                            title="Верифицировать"
+                            onClick={() => {
+                              if (window.confirm('Верифицировать организацию?')) {
+                                verifyMutation.mutate(le.id);
+                              }
+                            }}
+                          >
+                            ✓
+                          </button>
+                        )}
+                        <button
+                          className="rf-btn rf-btn-sm rf-btn-ghost"
+                          style={{ color: 'var(--brand-red)', height: 28, padding: '0 8px' }}
+                          title="Отвязать"
+                          onClick={() => {
+                            if (window.confirm('Отвязать организацию от пользователя?')) {
+                              detachMutation.mutate(le.id);
+                            }
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Edit dialog */}
+      <dialog
+        ref={dialogRef}
+        style={{ padding: 0, border: 'none', borderRadius: 'var(--r-4)', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', minWidth: 400 }}
+        onClick={(e) => { if (e.target === dialogRef.current) dialogRef.current?.close(); }}
       >
-        <Form<UpdateUserAdminRequest>
-          form={form}
-          layout="vertical"
-          onFinish={(values) => editMutation.mutate(values)}
-          style={{ marginTop: 16 }}
-        >
-          <Form.Item name="lastname" label="Фамилия" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="firstname" label="Имя" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="phone" label="Телефон">
-            <Input placeholder="+7 900 000 00 00" />
-          </Form.Item>
-        </Form>
-      </Modal>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--line-1)' }}>
+          <h3 style={{ margin: 0, fontFamily: 'var(--font-head)', fontSize: 16, fontWeight: 600 }}>Редактировать данные</h3>
+        </div>
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {(['lastname', 'firstname', 'phone'] as const).map((field) => (
+            <label key={field} style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+              <span style={{ color: 'var(--ink-3)', fontWeight: 500 }}>
+                {field === 'lastname' ? 'Фамилия' : field === 'firstname' ? 'Имя' : 'Телефон'}
+                {field !== 'phone' && <span style={{ color: 'var(--brand-red)' }}> *</span>}
+              </span>
+              <input
+                type="text"
+                value={editForm[field] ?? ''}
+                placeholder={field === 'phone' ? '+7 900 000 00 00' : ''}
+                onChange={(e) => setEditForm((f) => ({ ...f, [field]: e.target.value }))}
+                style={{ height: 36, padding: '0 10px', borderRadius: 'var(--r-2)', border: '1px solid var(--line-2)', fontSize: 13, background: 'var(--surface)', color: 'var(--ink-1)', outline: 'none' }}
+              />
+            </label>
+          ))}
+        </div>
+        <div style={{ padding: '12px 24px 20px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button className="rf-btn rf-btn-sm rf-btn-quiet" onClick={() => dialogRef.current?.close()}>Отмена</button>
+          <button
+            className="rf-btn rf-btn-sm rf-btn-primary"
+            disabled={editMutation.isPending}
+            onClick={() => editMutation.mutate(editForm)}
+          >
+            {editMutation.isPending ? 'Сохранение…' : 'Сохранить'}
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 };

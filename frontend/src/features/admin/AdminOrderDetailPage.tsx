@@ -1,9 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Card, Descriptions, Tag, Table, Typography,
-  Button, Spin, App, Select,
-} from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
+import { Select, App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/api/client';
 import { changeOrderStatus } from '@/api/adminOrders';
@@ -11,22 +7,28 @@ import { OrderStatus, OrderStatusLabels, PaymentMethodLabels, DeliveryMethodLabe
 import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
 import { getAllowedTransitions } from '@/utils/orderTransitions';
 import type { OrderDto, OrderItemDto } from '@/types/order';
-import type { ColumnsType } from 'antd/es/table';
 
-const { Title, Text } = Typography;
-
-const formatPrice = (price: number) =>
-  new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(price);
+const formatPrice = (n: number) =>
+  new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(n);
 
 const formatDate = (d: string) =>
   new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-const getStatusColor = (s: string): string => ({
-  CREATED: 'blue', PENDING_PAYMENT: 'orange', PAID: 'cyan',
-  PAYMENT_FAILED: 'red', PROCESSING: 'processing', SHIPPED: 'purple',
-  IN_TRANSIT: 'geekblue', DELIVERED: 'green', CANCELLED: 'default',
-  REFUNDED: 'magenta', AWAITING_CONFIRMATION: 'gold',
-} as Record<string, string>)[s] ?? 'default';
+const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
+  CREATED:               { cls: 'rf-badge-warn rf-badge-dot',    label: 'Ждёт согласования' },
+  PENDING_PAYMENT:       { cls: 'rf-badge-warn rf-badge-dot',    label: 'Ждёт оплаты' },
+  PAID:                  { cls: 'rf-badge-success rf-badge-dot', label: 'Оплачено' },
+  PROCESSING:            { cls: 'rf-badge-navy',                 label: 'В обработке' },
+  INVOICE_SENT:          { cls: 'rf-badge-navy',                 label: 'Счёт выставлен' },
+  SHIPPED:               { cls: 'rf-badge-navy rf-badge-dot',    label: 'В доставке' },
+  IN_TRANSIT:            { cls: 'rf-badge-navy rf-badge-dot',    label: 'В пути' },
+  DELIVERED:             { cls: 'rf-badge-neutral',              label: 'Доставлено' },
+  COMPLETED:             { cls: 'rf-badge-neutral',              label: 'Завершено' },
+  PAYMENT_FAILED:        { cls: 'rf-badge-red',                  label: 'Ошибка оплаты' },
+  CANCELLED:             { cls: 'rf-badge-red',                  label: 'Отменено' },
+  REFUNDED:              { cls: 'rf-badge-neutral',              label: 'Возврат' },
+  AWAITING_CONFIRMATION: { cls: 'rf-badge-warn',                 label: 'Ожид. подтверждения' },
+};
 
 const AdminOrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -54,81 +56,102 @@ const AdminOrderDetailPage = () => {
   });
 
   if (isLoading || !order) {
-    return <div style={{ textAlign: 'center', padding: 120 }}><Spin size="large" /></div>;
+    return (
+      <div style={{ textAlign: 'center', padding: 120, color: 'var(--ink-3)' }}>Загрузка…</div>
+    );
   }
 
   const statusCode = extractEnumCode(order.status);
   const transitions = getAllowedTransitions(statusCode);
-  const statusOptions = [
-    { value: statusCode, label: OrderStatusLabels[statusCode as OrderStatus] ?? statusCode, disabled: true },
-    ...transitions.map((s) => ({ value: s, label: OrderStatusLabels[s] ?? s })),
-  ];
-
+  const badge = STATUS_BADGE[statusCode] ?? { cls: 'rf-badge-neutral', label: statusCode };
   const paymentCode = extractEnumCode(order.paymentMethod);
   const deliveryCode = extractEnumCode(order.deliveryMethod);
 
-  const itemColumns: ColumnsType<OrderItemDto> = [
-    { title: 'Товар', dataIndex: 'productName', key: 'productName' },
-    { title: 'Кол-во', dataIndex: 'quantity', key: 'quantity', width: 80 },
-    { title: 'Цена', dataIndex: 'price', key: 'price', width: 130, render: (p: number) => formatPrice(p) },
-    {
-      title: 'Сумма', key: 'subtotal', width: 130,
-      render: (_: unknown, record: OrderItemDto) => (
-        <Text strong>{formatPrice(record.price * record.quantity)}</Text>
-      ),
-    },
-  ];
-
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/orders')}>
-          Назад
-        </Button>
-        <Title level={3} style={{ margin: 0 }}>Заказ {order.orderNumber}</Title>
+      {/* Back */}
+      <div className="rf-admin-back" onClick={() => navigate('/admin/orders')}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M10 4L6 8l4 4"/>
+        </svg>
+        Заявки и заказы
       </div>
 
-      <Card style={{ borderRadius: 12, marginBottom: 16 }}>
-        <Descriptions column={2} size="small">
-          <Descriptions.Item label="Статус">
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, margin: 0 }}>
+          Заявка {order.orderNumber}
+        </h2>
+        <span className={`rf-badge ${badge.cls}`}>{badge.label}</span>
+      </div>
+
+      {/* Order info */}
+      <div className="rf-card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+        <div className="rf-card-header"><h3>Основная информация</h3></div>
+        <div className="rf-detail-grid">
+          <div className="rf-detail-label">Статус</div>
+          <div className="rf-detail-value">
             {transitions.length > 0 ? (
               <Select
                 size="small"
-                style={{ width: 200 }}
+                style={{ width: 220 }}
                 value={statusCode}
-                options={statusOptions}
+                options={[
+                  { value: statusCode, label: OrderStatusLabels[statusCode as OrderStatus] ?? statusCode, disabled: true },
+                  ...transitions.map((s) => ({ value: s, label: OrderStatusLabels[s as OrderStatus] ?? s })),
+                ]}
                 onChange={(s) => statusMutation.mutate(s)}
                 loading={statusMutation.isPending}
               />
             ) : (
-              <Tag color={getStatusColor(statusCode)}>
-                {OrderStatusLabels[statusCode as OrderStatus] ?? statusCode}
-              </Tag>
+              <span className={`rf-badge ${badge.cls}`}>{badge.label}</span>
             )}
-          </Descriptions.Item>
-          <Descriptions.Item label="Дата создания">{formatDate(order.createdAt)}</Descriptions.Item>
-          <Descriptions.Item label="Клиент">{order.customerEmail}</Descriptions.Item>
-          <Descriptions.Item label="Оплата">
-            {PaymentMethodLabels[paymentCode as keyof typeof PaymentMethodLabels] ?? extractEnumDisplayName(order.paymentMethod, paymentCode)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Доставка">
-            {DeliveryMethodLabels[deliveryCode as keyof typeof DeliveryMethodLabels] ?? extractEnumDisplayName(order.deliveryMethod, deliveryCode)}
-          </Descriptions.Item>
+          </div>
+
+          <div className="rf-detail-label">Дата создания</div>
+          <div className="rf-detail-value rf-tabular">{formatDate(order.createdAt)}</div>
+
+          <div className="rf-detail-label">Клиент</div>
+          <div className="rf-detail-value">{order.customerEmail}</div>
+
+          <div className="rf-detail-label">Способ оплаты</div>
+          <div className="rf-detail-value">
+            {PaymentMethodLabels[paymentCode as keyof typeof PaymentMethodLabels]
+              ?? extractEnumDisplayName(order.paymentMethod, paymentCode)}
+          </div>
+
+          <div className="rf-detail-label">Доставка</div>
+          <div className="rf-detail-value">
+            {DeliveryMethodLabels[deliveryCode as keyof typeof DeliveryMethodLabels]
+              ?? extractEnumDisplayName(order.deliveryMethod, deliveryCode)}
+          </div>
+
           {order.trackingNumber && (
-            <Descriptions.Item label="Трекинг" span={2}>{order.trackingNumber}</Descriptions.Item>
+            <>
+              <div className="rf-detail-label">Трек-номер</div>
+              <div className="rf-detail-value rf-mono">{order.trackingNumber}</div>
+            </>
           )}
           {order.comment && (
-            <Descriptions.Item label="Комментарий" span={2}>{order.comment}</Descriptions.Item>
+            <>
+              <div className="rf-detail-label">Комментарий</div>
+              <div className="rf-detail-value" style={{ gridColumn: '2' }}>{order.comment}</div>
+            </>
           )}
-        </Descriptions>
-      </Card>
+        </div>
+      </div>
 
+      {/* Delivery address */}
       {order.deliveryAddress && (
-        <Card title="Адрес доставки" style={{ borderRadius: 12, marginBottom: 16 }}>
-          <Descriptions column={2} size="small">
-            <Descriptions.Item label="Получатель">{order.deliveryAddress.recipientName}</Descriptions.Item>
-            <Descriptions.Item label="Телефон">{order.deliveryAddress.phone}</Descriptions.Item>
-            <Descriptions.Item label="Адрес" span={2}>
+        <div className="rf-card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+          <div className="rf-card-header"><h3>Адрес доставки</h3></div>
+          <div className="rf-detail-grid">
+            <div className="rf-detail-label">Получатель</div>
+            <div className="rf-detail-value">{order.deliveryAddress.recipientName}</div>
+            <div className="rf-detail-label">Телефон</div>
+            <div className="rf-detail-value">{order.deliveryAddress.phone}</div>
+            <div className="rf-detail-label">Адрес</div>
+            <div className="rf-detail-value">
               {[
                 order.deliveryAddress.postalCode,
                 order.deliveryAddress.city,
@@ -136,24 +159,45 @@ const AdminOrderDetailPage = () => {
                 `д. ${order.deliveryAddress.building}`,
                 order.deliveryAddress.apartment ? `кв. ${order.deliveryAddress.apartment}` : null,
               ].filter(Boolean).join(', ')}
-            </Descriptions.Item>
-          </Descriptions>
-        </Card>
+            </div>
+          </div>
+        </div>
       )}
 
-      <Card
-        title={`Позиции заказа (${order.items?.length ?? 0})`}
-        style={{ borderRadius: 12 }}
-        extra={<Text strong>Итого: {formatPrice(order.totalAmount)}</Text>}
-      >
-        <Table<OrderItemDto>
-          columns={itemColumns}
-          dataSource={order.items ?? []}
-          rowKey="productId"
-          pagination={false}
-          size="small"
-        />
-      </Card>
+      {/* Items */}
+      <div className="rf-card" style={{ overflow: 'hidden' }}>
+        <div className="rf-card-header">
+          <h3>Позиции ({order.items?.length ?? 0})</h3>
+          <div style={{ flex: 1 }} />
+          <span style={{ fontWeight: 700, fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>
+            {formatPrice(order.totalAmount)}
+          </span>
+        </div>
+        <div className="rf-admin-table-wrap">
+          <table className="rf-admin-table">
+            <thead>
+              <tr>
+                <th>Товар</th>
+                <th style={{ width: 80, textAlign: 'right' }}>Кол-во</th>
+                <th style={{ width: 130, textAlign: 'right' }}>Цена</th>
+                <th style={{ width: 130, textAlign: 'right' }}>Сумма</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(order.items ?? []).map((item: OrderItemDto) => (
+                <tr key={item.productId}>
+                  <td>{item.productName}</td>
+                  <td className="col-right rf-tabular">{item.quantity}</td>
+                  <td className="col-right rf-tabular">{formatPrice(item.price)}</td>
+                  <td className="col-right rf-tabular" style={{ fontWeight: 600 }}>
+                    {formatPrice(item.price * item.quantity)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
