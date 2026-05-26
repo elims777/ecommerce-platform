@@ -9,21 +9,21 @@
   --brand-green: #1A6B3A;
   --brand-green-soft: #E6F1EB;
   --brand-ink: #1A1A1A;
-  --bg: oklch(0.987 0.004 40);
+  --bg: oklch(0.985 0.003 245);
   --surface: #ffffff;
-  --surface-2: oklch(0.972 0.006 40);
-  --surface-3: oklch(0.955 0.008 38);
-  --line-1: oklch(0.93 0.008 38);
-  --line-2: oklch(0.88 0.011 36);
-  --line-3: oklch(0.78 0.014 35);
+  --surface-2: oklch(0.968 0.005 245);
+  --surface-3: oklch(0.945 0.008 245);
+  --line-1: oklch(0.925 0.008 245);
+  --line-2: oklch(0.88 0.012 245);
+  --line-3: oklch(0.78 0.015 245);
   --ink-1: #1A1A1A;
-  --ink-2: oklch(0.42 0.012 35);
-  --ink-3: oklch(0.58 0.012 33);
-  --ink-4: oklch(0.72 0.010 33);
-  --red-tint: oklch(0.96 0.018 28);
-  --red-tint-2: oklch(0.92 0.038 28);
-  --navy-tint: oklch(0.96 0.012 250);
-  --green-tint: oklch(0.96 0.020 152);
+  --ink-2: oklch(0.42 0.012 245);
+  --ink-3: oklch(0.58 0.014 245);
+  --ink-4: oklch(0.72 0.012 245);
+  --red-tint: oklch(0.955 0.022 28);
+  --red-tint-2: oklch(0.91 0.045 28);
+  --navy-tint: oklch(0.955 0.018 245);
+  --green-tint: oklch(0.955 0.022 152);
   --warn: #B5630E;
   --warn-tint: oklch(0.96 0.030 75);
   --font-head: 'Geologica', system-ui, sans-serif;
@@ -156,3 +156,8 @@ html {
 
 .rf-mono { font-family: var(--font-mono); }
 .rf-tabular { font-variant-numeric: tabular-nums; }
+
+@keyframes rf-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}

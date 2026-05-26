@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Spin } from 'antd';
 import { useQuery } from '@tanstack/react-query';
@@ -8,14 +9,15 @@ import { useCartStore } from '@/store/cartStore';
 import { App } from 'antd';
 import type { CategoryTree } from '@/types/product';
 
-const ArrRight = () => (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+// ── Icons ─────────────────────────────────────────────────────
+const ArrRight = ({ width = 16, height = 16 }: { width?: number; height?: number }) => (
+    <svg viewBox="0 0 24 24" width={width} height={height} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 12h14M13 6l6 6-6 6"/>
     </svg>
 );
 const DocIcon = () => (
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
     </svg>
 );
 const TruckIcon = () => (
@@ -29,7 +31,7 @@ const ShieldIcon = () => (
     </svg>
 );
 const BuildingIcon = () => (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
     </svg>
 );
@@ -39,11 +41,68 @@ const CheckIcon = () => (
     </svg>
 );
 const GridIcon = () => (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
     </svg>
 );
+const ChevLeft = () => (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m15 18-6-6 6-6"/>
+    </svg>
+);
+const ChevRight = () => (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m9 18 6-6-6-6"/>
+    </svg>
+);
 
+// ── Hero slides data ──────────────────────────────────────────
+const HERO_SLIDES = [
+    {
+        bg: 'linear-gradient(98deg, #1E3A5F 0%, #16304F 100%)',
+        eyebrow: 'B2B-снабжение',
+        eyebrowDot: '#1A6B3A',
+        eyebrowText: 'Поставки от 1 часа по Москве',
+        title: 'Комплексное снабжение предприятий — в одном кабинете',
+        text: '12 000+ позиций со счёт-фактурой, ЭДО, отсрочкой по договору и закреплённым менеджером.',
+        cta1: 'Открыть каталог',
+        cta2: 'Запрос на снабжение',
+        sideType: 'jur' as const,
+    },
+    {
+        bg: 'linear-gradient(98deg, #C0272D 0%, #8E1C24 100%)',
+        eyebrow: 'Сезон противопожарной безопасности',
+        eyebrowDot: '#FFE08A',
+        eyebrowText: 'до 30 июня',
+        title: 'Оснащение объекта по 123-ФЗ под ключ — за 5 рабочих дней',
+        text: 'Огнетушители, шкафы, извещатели, знаки. Полный пакет сертификатов и паспортов в каждой накладной.',
+        cta1: 'Подобрать комплект',
+        cta2: 'Скачать спецификацию',
+        sideType: 'stats' as const,
+        stats: { counts: ['1 842', '5 раб. дн.', '143', '100%'], labels: ['позиции', 'на оснащение', 'комплекта в мае', 'сертификатов'] },
+    },
+    {
+        bg: 'linear-gradient(98deg, #1A6B3A 0%, #134F2A 100%)',
+        eyebrow: 'Спецодежда и СИЗ',
+        eyebrowDot: '#FFE08A',
+        eyebrowText: 'к летнему сезону',
+        title: 'Экипировка персонала по типовым нормам выдачи',
+        text: 'Поможем подобрать ассортимент по профессиям и роли, отгрузим со склада в Москве и Казани.',
+        cta1: 'Подобрать по нормам',
+        cta2: 'Прислать образцы',
+        sideType: 'stats' as const,
+        stats: { counts: ['5 317', 'по нормам', '38', '24 ч'], labels: ['позиции', 'выдачи', 'отраслей', 'на сборку заказа'] },
+    },
+];
+
+// ── Primary category colors (для первых 3 категорий из API) ──
+const PRIMARY_COLORS = [
+    { bg: '#C0272D', hover: '#A8222A' },
+    { bg: '#1A6B3A', hover: '#155930' },
+    { bg: '#1E3A5F', hover: '#16304F' },
+];
+
+// ── Helpers ───────────────────────────────────────────────────
 const flattenCategories = (tree: CategoryTree[]): CategoryTree[] => {
     const result: CategoryTree[] = [];
     const traverse = (nodes: CategoryTree[]) => {
@@ -56,71 +115,315 @@ const flattenCategories = (tree: CategoryTree[]): CategoryTree[] => {
     return result;
 };
 
-const CategoryTile = ({ category, featured, onClick }: { category: CategoryTree; featured: boolean; onClick: () => void }) => {
-    if (featured) {
-        return (
-            <div
-                onClick={onClick}
+// ── Sub-components ────────────────────────────────────────────
+const SmallBul = ({ children }: { children: React.ReactNode }) => (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, lineHeight: 1.4 }}>
+        <CheckIcon />
+        <span>{children}</span>
+    </div>
+);
+
+const HeroSideJur = ({ onRegister }: { onRegister: () => void }) => (
+    <div style={{
+        background: 'rgba(255,255,255,.95)', color: 'var(--ink-1)',
+        borderRadius: 10, padding: '16px 18px',
+        width: '100%', maxWidth: 320,
+    }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <BuildingIcon />
+            <span style={{ fontSize: 12.5, fontWeight: 600 }}>Для юридических лиц</span>
+            <span style={{
+                marginLeft: 'auto', display: 'inline-flex', alignItems: 'center',
+                height: 18, padding: '0 8px', borderRadius: 9,
+                background: 'var(--brand-green-soft)', color: 'var(--brand-green)',
+                fontSize: 11, fontWeight: 600,
+            }}>−7% к прайсу</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+            <SmallBul>Счёт-фактура, ЭДО, отсрочка до 45 дней</SmallBul>
+            <SmallBul>Закреплённый менеджер</SmallBul>
+            <SmallBul>Госзакупки 44-ФЗ · 223-ФЗ</SmallBul>
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+            <button
+                onClick={onRegister}
                 style={{
-                    gridColumn: 'span 2', gridRow: 'span 2',
-                    background: 'linear-gradient(140deg, #C0272D 0%, #8E1C24 100%)',
-                    color: '#fff', borderRadius: 10, padding: 24,
-                    display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                    position: 'relative', overflow: 'hidden', minHeight: 220, cursor: 'pointer',
+                    flex: 1, height: 32,
+                    background: 'var(--brand-red)', color: '#fff',
+                    border: 'none', borderRadius: 5, fontSize: 12.5, fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'var(--font-body)',
                 }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
             >
-                <div style={{ position: 'absolute', right: -20, top: -20, opacity: 0.15 }}>
-                    <GridIcon />
-                </div>
-                <div>
-                    <span style={{ fontSize: 11, opacity: 0.8, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Самая популярная категория</span>
-                    <h3 style={{ fontFamily: 'var(--font-head)', fontSize: 26, fontWeight: 600, color: '#fff', marginTop: 8, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                        {category.name}
-                    </h3>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 13 }}>Перейти в раздел</span>
-                    <ArrRight />
-                </div>
-            </div>
-        );
-    }
-    return (
-        <div
-            onClick={onClick}
-            style={{
-                background: '#fff', border: '1px solid var(--line-1)',
-                borderRadius: 8, padding: 16,
-                display: 'flex', flexDirection: 'column', gap: 12,
-                minHeight: 104, cursor: 'pointer',
-                transition: 'box-shadow 0.15s, transform 0.15s',
-            }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = 'var(--shadow-2)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '';
-                e.currentTarget.style.transform = '';
-            }}
-        >
-            <div style={{
-                width: 40, height: 40, borderRadius: 6,
-                background: 'var(--surface-2)', color: 'var(--brand-navy)',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                Открыть юр. счёт
+            </button>
+            <button style={{
+                height: 32, padding: '0 12px',
+                background: 'transparent', color: 'var(--ink-3)',
+                border: '1px solid rgba(0,0,0,.12)', borderRadius: 5, fontSize: 12.5,
+                cursor: 'pointer', fontFamily: 'var(--font-body)',
             }}>
-                <GridIcon />
+                Я физлицо
+            </button>
+        </div>
+    </div>
+);
+
+const HeroSideStats = ({ counts, labels }: { counts: string[]; labels: string[] }) => (
+    <div style={{
+        background: 'rgba(255,255,255,.10)', backdropFilter: 'blur(6px)',
+        border: '1px solid rgba(255,255,255,.18)',
+        borderRadius: 10, padding: 16,
+        width: '100%', maxWidth: 320,
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px',
+    }}>
+        {counts.map((c, i) => (
+            <div key={i}>
+                <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 22, color: '#fff', letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums' }}>{c}</div>
+                <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.7)', marginTop: 2 }}>{labels[i]}</div>
             </div>
-            <div>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink-1)', lineHeight: 1.3 }}>{category.name}</div>
+        ))}
+    </div>
+);
+
+const arrowBtn: React.CSSProperties = {
+    width: 30, height: 30, borderRadius: 15,
+    background: 'rgba(255,255,255,.14)', color: '#fff',
+    border: 0, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+};
+
+const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatalog: () => void }) => {
+    const [idx, setIdx] = useState(0);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const resetTimer = () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = setInterval(() => setIdx((i) => (i + 1) % HERO_SLIDES.length), 7000);
+    };
+
+    useEffect(() => {
+        resetTimer();
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }, []);
+
+    const go = (next: number) => {
+        setIdx(next);
+        resetTimer();
+    };
+
+    const s = HERO_SLIDES[idx];
+
+    return (
+        <div style={{
+            background: s.bg,
+            borderRadius: 12,
+            padding: '28px 36px 52px',
+            color: '#fff',
+            position: 'relative',
+            overflow: 'hidden',
+            minHeight: 280,
+            transition: 'background .35s ease',
+        }}>
+            {/* Watermark */}
+            <img src="/logo-light.png" alt=""
+                style={{
+                    position: 'absolute', right: -24, bottom: -28,
+                    height: 280, width: 'auto', opacity: .12,
+                    pointerEvents: 'none',
+                }}
+            />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 28, alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                <div>
+                    {/* Eyebrow */}
+                    <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 8,
+                        background: 'rgba(255,255,255,.12)', padding: '5px 12px', borderRadius: 99,
+                        fontSize: 12, marginBottom: 14,
+                    }}>
+                        <span style={{ width: 6, height: 6, borderRadius: 3, background: s.eyebrowDot, display: 'inline-block' }}/>
+                        <span style={{ fontWeight: 600 }}>{s.eyebrow}</span>
+                        <span style={{ opacity: .65 }}>· {s.eyebrowText}</span>
+                    </div>
+
+                    <h1 style={{
+                        fontFamily: 'var(--font-head)', fontSize: 32, fontWeight: 600,
+                        letterSpacing: '-0.022em', lineHeight: 1.12, color: '#fff',
+                        maxWidth: 580, margin: '0 0 12px',
+                    }}>
+                        {s.title}
+                    </h1>
+                    <p style={{ margin: '0 0 18px', fontSize: 14, lineHeight: 1.55, color: 'rgba(255,255,255,.78)', maxWidth: 520 }}>
+                        {s.text}
+                    </p>
+
+                    <div style={{ display: 'flex', gap: 10 }}>
+                        <button
+                            onClick={onCatalog}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                background: '#fff', color: '#1A1A1A', fontWeight: 600,
+                                padding: '0 18px', height: 44, border: 'none', borderRadius: 6,
+                                fontSize: 14, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                transition: 'opacity .12s',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.opacity = '.9'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+                        >
+                            {s.cta1} <ArrRight />
+                        </button>
+                        <button style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'rgba(255,255,255,.14)', color: '#fff',
+                            padding: '0 18px', height: 44, border: 0, borderRadius: 6,
+                            fontSize: 14, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                            transition: 'background .12s',
+                        }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.22)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.14)'; }}
+                        >
+                            <DocIcon /> {s.cta2}
+                        </button>
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    {s.sideType === 'jur'
+                        ? <HeroSideJur onRegister={onRegister} />
+                        : s.stats && <HeroSideStats counts={s.stats.counts} labels={s.stats.labels} />
+                    }
+                </div>
+            </div>
+
+            {/* Slider controls */}
+            <div style={{
+                position: 'absolute', left: 36, bottom: 14, right: 36,
+                display: 'flex', alignItems: 'center', gap: 14, zIndex: 2,
+            }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                    {HERO_SLIDES.map((_, i) => (
+                        <button key={i} onClick={() => go(i)} style={{
+                            width: i === idx ? 28 : 8, height: 4, borderRadius: 2,
+                            background: i === idx ? '#fff' : 'rgba(255,255,255,.4)',
+                            border: 0, padding: 0, cursor: 'pointer',
+                            transition: 'width .25s, background .25s',
+                        }}/>
+                    ))}
+                </div>
+                <div style={{ flex: 1 }}/>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', fontVariantNumeric: 'tabular-nums' }}>
+                    {String(idx + 1).padStart(2, '0')} / {String(HERO_SLIDES.length).padStart(2, '0')}
+                </span>
+                <button onClick={() => go((idx - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)} style={arrowBtn}>
+                    <ChevLeft />
+                </button>
+                <button onClick={() => go((idx + 1) % HERO_SLIDES.length)} style={arrowBtn}>
+                    <ChevRight />
+                </button>
             </div>
         </div>
     );
 };
 
+const PrimaryGroupCard = ({ category, color, hoverColor, index, onClick }: {
+    category: CategoryTree;
+    color: string;
+    hoverColor: string;
+    index: number;
+    onClick: () => void;
+}) => {
+    const [hovered, setHovered] = useState(false);
+    const tags = ['143 заказа в мае', 'Сезон 2026', 'Хит госзакупок'];
+
+    return (
+        <div
+            onClick={onClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                background: hovered ? hoverColor : color,
+                borderRadius: 10,
+                padding: 20,
+                color: '#fff',
+                display: 'flex', flexDirection: 'column',
+                position: 'relative', overflow: 'hidden',
+                minHeight: 220,
+                cursor: 'pointer',
+                transition: 'background .15s',
+            }}
+        >
+            {/* Watermark icon */}
+            <div style={{ position: 'absolute', right: -16, top: -10, opacity: .12 }}>
+                <GridIcon />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <div style={{
+                    width: 38, height: 38, borderRadius: 8,
+                    background: 'rgba(255,255,255,.15)',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <GridIcon />
+                </div>
+                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, background: 'rgba(255,255,255,.18)', fontWeight: 500 }}>
+                    {tags[index] ?? ''}
+                </span>
+            </div>
+
+            <h3 style={{
+                fontFamily: 'var(--font-head)', fontSize: 20, fontWeight: 600, color: '#fff',
+                letterSpacing: '-0.018em', lineHeight: 1.15,
+                marginBottom: 'auto',
+            }}>
+                {category.name}
+            </h3>
+
+            <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,.18)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, fontWeight: 500 }}>Перейти в раздел</span>
+                <ArrRight />
+            </div>
+        </div>
+    );
+};
+
+const SecondaryCatTile = ({ category, onClick }: { category: CategoryTree; onClick: () => void }) => {
+    const [hovered, setHovered] = useState(false);
+    return (
+        <div
+            onClick={onClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                background: '#fff', border: '1px solid var(--line-1)',
+                borderRadius: 8, padding: '14px 14px',
+                display: 'flex', alignItems: 'center', gap: 12,
+                cursor: 'pointer',
+                boxShadow: hovered ? 'var(--shadow-2)' : 'none',
+                transform: hovered ? 'translateY(-1px)' : 'none',
+                transition: 'box-shadow .15s, transform .15s',
+            }}
+        >
+            <div style={{
+                width: 36, height: 36, borderRadius: 6,
+                background: 'var(--surface-2)', color: 'var(--brand-navy)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                flex: '0 0 auto',
+            }}>
+                <GridIcon />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-1)', lineHeight: 1.3 }}>{category.name}</div>
+            </div>
+            <ArrRight width={14} height={14} />
+        </div>
+    );
+};
+
 const ServiceCard = ({ icon, title, text, cta, accent }: { icon: React.ReactNode; title: string; text: string; cta: string; accent?: string }) => {
-    const color = accent === 'navy' ? 'var(--brand-navy)' : accent === 'green' ? '#1A6B3A' : 'var(--brand-red)';
-    const tint  = accent === 'navy' ? '#EEF3F9' : accent === 'green' ? '#E6F1EB' : '#FDF2F2';
+    const color = accent === 'navy' ? 'var(--brand-navy)' : accent === 'green' ? 'var(--brand-green)' : 'var(--brand-red)';
+    const tint  = accent === 'navy' ? 'var(--navy-tint)' : accent === 'green' ? 'var(--brand-green-soft)' : 'var(--red-tint)';
     return (
         <div style={{ background: '#fff', border: '1px solid var(--line-1)', borderRadius: 10, padding: 22, display: 'flex', gap: 16 }}>
             <div style={{
@@ -132,33 +435,14 @@ const ServiceCard = ({ icon, title, text, cta, accent }: { icon: React.ReactNode
                 <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4, color: 'var(--ink-1)' }}>{title}</div>
                 <p style={{ fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.5, margin: 0 }}>{text}</p>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 13, fontWeight: 600, color, cursor: 'pointer' }}>
-                    {cta} <ArrRight />
+                    {cta} <ArrRight width={14} height={14} />
                 </div>
             </div>
         </div>
     );
 };
 
-const Bul = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ display: 'flex', gap: 10, fontSize: 13, lineHeight: 1.4 }}>
-        <span style={{
-            width: 18, height: 18, borderRadius: 4,
-            background: '#E6F1EB', color: '#1A6B3A',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto',
-        }}>
-            <CheckIcon />
-        </span>
-        <span style={{ color: 'var(--ink-2)' }}>{children}</span>
-    </div>
-);
-
-const Stat = ({ n, l }: { n: string; l: string }) => (
-    <div>
-        <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 20, color: '#fff', letterSpacing: '-0.01em', fontVariantNumeric: 'tabular-nums' }}>{n}</div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', marginTop: 2 }}>{l}</div>
-    </div>
-);
-
+// ── Main ──────────────────────────────────────────────────────
 const HomePage = () => {
     const navigate = useNavigate();
     const { message: messageApi } = App.useApp();
@@ -177,7 +461,8 @@ const HomePage = () => {
     });
 
     const allCategories = flattenCategories(categoryTree);
-    const displayCategories = allCategories.slice(0, 11);
+    const primaryCategories = allCategories.slice(0, 3);
+    const secondaryCategories = allCategories.slice(3, 11);
 
     const handleAddToCart = async (productId: number) => {
         try {
@@ -194,155 +479,44 @@ const HomePage = () => {
 
     return (
         <div style={{ paddingBottom: 60 }}>
-            {/* HERO */}
-            <div style={{ padding: '24px 0 0' }}>
-                <div style={{
-                    background: 'linear-gradient(95deg, #1E3A5F 0%, #16304F 100%)',
-                    borderRadius: 12,
-                    padding: '36px 44px',
-                    color: '#fff',
-                    display: 'grid',
-                    gridTemplateColumns: '1.4fr 1fr',
-                    gap: 32,
-                    alignItems: 'center',
-                    position: 'relative',
-                    overflow: 'hidden',
-                }}>
-                    <img src="/logo-light.png" alt=""
-                        style={{
-                            position: 'absolute', right: -24, bottom: -28,
-                            height: 280, width: 'auto', opacity: 0.12,
-                            pointerEvents: 'none',
-                        }}
-                    />
-
-                    <div style={{ position: 'relative', zIndex: 1 }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,.1)', padding: '5px 12px', borderRadius: 99, fontSize: 12, marginBottom: 16 }}>
-                            <span style={{ width: 6, height: 6, borderRadius: 3, background: '#1A6B3A', display: 'inline-block' }}/>
-                            Поставки от 1 часа по Москве
-                        </div>
-                        <h1 style={{
-                            fontFamily: 'var(--font-head)', fontSize: 38, fontWeight: 600,
-                            letterSpacing: '-0.022em', lineHeight: 1.1, color: '#fff',
-                            maxWidth: 580, margin: '0 0 14px',
-                        }}>
-                            Комплексное снабжение предприятий — в одном кабинете
-                        </h1>
-                        <p style={{ margin: '0 0 24px', fontSize: 14.5, lineHeight: 1.55, color: 'rgba(255,255,255,.78)', maxWidth: 480 }}>
-                            СИЗ, спецодежда, противопожарное оборудование, медицинские расходники и ещё 12 000+ позиций — со счёт-фактурой, ЭДО и отсрочкой по договору.
-                        </p>
-                        <div style={{ display: 'flex', gap: 10, marginBottom: 26 }}>
-                            <button
-                                onClick={() => navigate('/catalog')}
-                                style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                                    height: 44, padding: '0 20px',
-                                    background: '#C0272D', color: '#fff',
-                                    border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600,
-                                    cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = '#a82227'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = '#C0272D'}
-                            >
-                                Открыть каталог <ArrRight />
-                            </button>
-                            <button
-                                style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 8,
-                                    height: 44, padding: '0 20px',
-                                    background: 'rgba(255,255,255,.12)', color: '#fff',
-                                    border: '1px solid rgba(255,255,255,.2)', borderRadius: 6, fontSize: 14, fontWeight: 500,
-                                    cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,.2)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,.12)'}
-                            >
-                                <DocIcon /> Запрос на снабжение
-                            </button>
-                        </div>
-                        <div style={{ display: 'flex', gap: 28, fontSize: 12.5 }}>
-                            <Stat n="12 480" l="товаров в наличии"/>
-                            <Stat n="18 200" l="клиентов с 2008 г."/>
-                            <Stat n="84" l="региона доставки"/>
-                            <Stat n="4.9 ★" l="оценка на Я.Маркете"/>
-                        </div>
-                    </div>
-
-                    {/* Side card */}
-                    <div style={{
-                        background: '#fff', color: 'var(--ink-1)',
-                        borderRadius: 10, padding: 22,
-                        position: 'relative', zIndex: 1,
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                            <BuildingIcon />
-                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-1)' }}>Для юридических лиц</span>
-                            <span style={{
-                                marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 7px',
-                                borderRadius: 4, background: '#E6F1EB', color: '#1A6B3A', fontSize: 11, fontWeight: 600,
-                            }}>−7% к прайсу</span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
-                            <Bul>Безналичный расчёт, счёт-фактура, ЭДО</Bul>
-                            <Bul>Отсрочка платежа до 45 дней по договору</Bul>
-                            <Bul>Закреплённый персональный менеджер</Bul>
-                            <Bul>Госзакупки 44-ФЗ · 223-ФЗ</Bul>
-                        </div>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <button
-                                onClick={() => navigate('/register')}
-                                style={{
-                                    flex: 1, height: 38,
-                                    background: 'var(--brand-red)', color: '#fff',
-                                    border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600,
-                                    cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = '#a82227'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--brand-red)'}
-                            >
-                                Открыть юр. счёт
-                            </button>
-                            <button
-                                onClick={() => navigate('/register')}
-                                style={{
-                                    height: 38, padding: '0 14px',
-                                    background: 'transparent', color: 'var(--ink-3)',
-                                    border: '1px solid var(--line-2)', borderRadius: 6, fontSize: 13, fontWeight: 500,
-                                    cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-2)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                            >
-                                Я физлицо
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {/* HERO SLIDER */}
+            <div style={{ padding: '20px 0 0' }}>
+                <HeroSlider
+                    onRegister={() => navigate('/register')}
+                    onCatalog={() => navigate('/catalog')}
+                />
             </div>
 
-            {/* CATEGORIES */}
+            {/* PRIMARY 3 CATEGORIES */}
             <div style={{ paddingTop: 36 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
-                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
-                        Категории каталога
-                    </h2>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <div>
+                        <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
+                            Основные направления
+                        </h2>
+                        <p style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 4, marginBottom: 0 }}>
+                            Три направления, которые закрывают 80% заявок снабженца
+                        </p>
+                    </div>
                     <span
                         onClick={() => navigate('/catalog')}
-                        style={{ fontSize: 13, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
+                        style={{ fontSize: 13, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
                     >
-                        Все разделы →
+                        Все разделы каталога →
                     </span>
                 </div>
 
                 {categoriesLoading ? (
                     <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
-                ) : displayCategories.length > 0 ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-                        {displayCategories.map((cat, i) => (
-                            <CategoryTile
+                ) : primaryCategories.length > 0 ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+                        {primaryCategories.map((cat, i) => (
+                            <PrimaryGroupCard
                                 key={cat.id}
                                 category={cat}
-                                featured={i === 0}
+                                color={PRIMARY_COLORS[i].bg}
+                                hoverColor={PRIMARY_COLORS[i].hover}
+                                index={i}
                                 onClick={() => handleCategoryClick(cat.id)}
                             />
                         ))}
@@ -354,8 +528,26 @@ const HomePage = () => {
                 )}
             </div>
 
+            {/* SECONDARY CATEGORIES */}
+            {secondaryCategories.length > 0 && (
+                <div style={{ paddingTop: 20 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+                        Сопутствующие категории
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                        {secondaryCategories.map((cat) => (
+                            <SecondaryCatTile
+                                key={cat.id}
+                                category={cat}
+                                onClick={() => handleCategoryClick(cat.id)}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* FEATURED PRODUCTS */}
-            <div style={{ paddingTop: 36 }}>
+            <div style={{ paddingTop: 40 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
                     <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
                         Хиты снабжения
@@ -420,7 +612,7 @@ const HomePage = () => {
                         Нам доверяют 18 200+ организаций
                     </div>
                     <div style={{ display: 'flex', gap: 36, fontSize: 13, fontWeight: 600, color: 'var(--ink-3)', flex: 1, justifyContent: 'space-around' }}>
-                        {['РЖД', 'Газпром-нефть', 'Северсталь', 'Магнит', 'Сибур', 'Х5 Group'].map(b => (
+                        {['РЖД', 'Газпром-нефть', 'Северсталь', 'Магнит', 'Сибур', 'Х5 Group'].map((b) => (
                             <span key={b} style={{ letterSpacing: '0.05em' }}>{b}</span>
                         ))}
                     </div>
