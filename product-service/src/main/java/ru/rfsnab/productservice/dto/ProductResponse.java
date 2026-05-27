@@ -18,6 +18,7 @@ public class ProductResponse {
     private String description;
     private String shortDescription;
     private BigDecimal price;
+    private BigDecimal wholesalePrice;
     private Integer stockQuantity;
     private Long categoryId;
     private String categoryName;  // для удобства фронтенда

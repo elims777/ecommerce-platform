@@ -38,6 +38,8 @@ public class ProductImportItem {
     @DecimalMin(value = "0.0")
     private BigDecimal price;
 
+    @DecimalMin(value = "0.0")
+    private BigDecimal wholesalePrice;
 
     @Min(value = 0)
     private Integer stockQuantity;

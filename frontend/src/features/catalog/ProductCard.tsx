@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ShoppingOutlined } from '@ant-design/icons';
 import type { Product, ProductImage } from '@/types/product';
+import { useDisplayPrice } from '@/utils/priceUtils';
 
 const formatPrice = (price: number): string =>
     new Intl.NumberFormat('ru-RU', {
@@ -36,6 +37,7 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
+    const displayPrice = useDisplayPrice(product);
     const sortedImages = sortImages(product.images || []);
     const hasMultipleImages = sortedImages.length > 1;
 
@@ -160,7 +162,7 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
                         fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 20,
                         color: 'var(--ink-1)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
                     }}>
-                        {formatPrice(product.price)}
+                        {formatPrice(displayPrice)}
                     </span>
                 </div>
 

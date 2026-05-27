@@ -2,6 +2,7 @@ package ru.rfsnab.userservice.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,6 +10,7 @@ import ru.rfsnab.userservice.exceptions.LegalEntityAlreadyExistsException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotFoundException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotVerifiedException;
 import ru.rfsnab.userservice.models.*;
+import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthResponse;
 import ru.rfsnab.userservice.models.dto.legal.RegisterLegalEntityRequest;
 import ru.rfsnab.userservice.models.dto.legal.SaveBankAccountRequest;
 import ru.rfsnab.userservice.models.dto.legal.SaveLegalEntityAddressRequest;
@@ -75,7 +77,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_REGISTERED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), entity.getEmail(),
-                null, LocalDateTime.now()
+                null, LocalDateTime.now(), confirmToken
         ));
 
         log.info("Legal entity registered: inn={}, id={}", entity.getInn(), entity.getId());
@@ -95,7 +97,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_EMAIL_CONFIRMED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), "manager@rfsnab.ru",
-                null, LocalDateTime.now()
+                null, LocalDateTime.now(), null
         ));
 
         log.info("Legal entity email confirmed: id={}", entity.getId());
@@ -113,7 +115,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_VERIFIED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), entity.getEmail(),
-                null, LocalDateTime.now()
+                null, LocalDateTime.now(), null
         ));
 
         log.info("Legal entity verified: id={} by {}", id, managerEmail);
@@ -132,7 +134,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_REJECTED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), entity.getEmail(),
-                reason, LocalDateTime.now()
+                reason, LocalDateTime.now(), null
         ));
 
         log.info("Legal entity rejected: id={} by {}, reason: {}", id, managerEmail, reason);
@@ -166,7 +168,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_LINK_REQUESTED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), entity.getEmail(),
-                user.getFirstname() + " " + user.getLastname(), LocalDateTime.now()
+                user.getFirstname() + " " + user.getLastname(), LocalDateTime.now(), linkToken
         ));
 
         log.info("Link requested: userId={} → legalEntityId={}", userId, entity.getId());
@@ -189,7 +191,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_LINK_CONFIRMED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), user.getEmail(),
-                null, LocalDateTime.now()
+                null, LocalDateTime.now(), null
         ));
 
         log.info("Link confirmed: userId={} → legalEntityId={}", user.getId(), entity.getId());
@@ -264,5 +266,47 @@ public class LegalEntityService {
     @Transactional(readOnly = true)
     public List<LegalEntityAddress> getAddresses(Long legalEntityId) {
         return addressRepository.findAllByLegalEntityId(legalEntityId);
+    }
+
+    @Transactional(readOnly = true)
+    public LegalEntityAuthResponse authenticate(String login, String password) {
+        LegalEntity entity = login.matches("\\d{10}|\\d{12}")
+                ? legalEntityRepository.findByInn(login)
+                        .orElseThrow(() -> new LegalEntityNotFoundException("Юрлицо не найдено"))
+                : legalEntityRepository.findByEmail(login)
+                        .orElseThrow(() -> new LegalEntityNotFoundException("Юрлицо не найдено"));
+
+        if (!passwordEncoder.matches(password, entity.getPassword())) {
+            throw new BadCredentialsException("Неверный логин или пароль");
+        }
+        if (entity.getVerificationStatus() != VerificationStatus.VERIFIED) {
+            throw new LegalEntityNotVerifiedException("Юрлицо не прошло верификацию");
+        }
+
+        return new LegalEntityAuthResponse(entity.getId(), entity.getEmail(),
+                entity.getInn(), entity.getFullName());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isLinkConfirmed(Long userId, Long legalEntityId) {
+        return userLegalEntityRepository
+                .findByUserIdAndLegalEntityId(userId, legalEntityId)
+                .map(link -> link.getLinkStatus() == LinkStatus.CONFIRMED)
+                .orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserLegalEntity> getAllLinksForUser(Long userId) {
+        return userLegalEntityRepository.findAllByUserId(userId);
+    }
+
+    @Transactional
+    public void detachFromUser(Long legalEntityId, Long userId) {
+        UserLegalEntity link = userLegalEntityRepository
+                .findByUserIdAndLegalEntityId(userId, legalEntityId)
+                .orElseThrow(() -> new LegalEntityNotFoundException(
+                        "Связь пользователя " + userId + " с юрлицом " + legalEntityId + " не найдена"));
+        userLegalEntityRepository.delete(link);
+        log.info("Legal entity {} detached from user {} by admin", legalEntityId, userId);
     }
 }

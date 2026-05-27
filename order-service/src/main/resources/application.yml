@@ -44,16 +44,17 @@ spring:
       group-id: order-service
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
 
 services:
   product:
     url: ${PRODUCT_SERVICE_URL:http://localhost:8083}
-#  payment:
-#    url: ${PAYMENT_SERVICE_URL:http://localhost:8085}
+  payment:
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8090}
+
+internal:
+  secret: ${INTERNAL_SECRET:dev-secret}
 
 # Swagger
 springdoc:
@@ -72,3 +73,4 @@ app:
     topics:
       order-events: order-events
       order-1c-export: order-1c-export
+      payment-processed: payment.processed

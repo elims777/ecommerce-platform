@@ -38,3 +38,27 @@ export const repeatOrder = async (id: string): Promise<OrderDto> => {
     const { data } = await apiClient.post<OrderDto>(`/v1/orders/${id}/repeat`);
     return data;
 };
+
+export interface PaymentInitiationResponse {
+    paymentLink: string | null;
+    paymentMode: { code: string; displayName: string };
+    orderStatus: { code: string; displayName: string };
+}
+
+/** Подтвердить заказ (CREATED → PROCESSING, отправка в 1С) — POST /api/v1/orders/{orderId}/confirm */
+export const confirmOrder = async (id: string): Promise<OrderDto> => {
+    const { data } = await apiClient.post<OrderDto>(`/v1/orders/${id}/confirm`);
+    return data;
+};
+
+/** Инициировать оплату — POST /api/v1/orders/{orderId}/pay */
+export const initiatePayment = async (orderId: string): Promise<PaymentInitiationResponse> => {
+    const { data } = await apiClient.post<PaymentInitiationResponse>(`/v1/orders/${orderId}/pay`);
+    return data;
+};
+
+/** Получить статус оплаты — GET /api/v1/orders/{orderId}/pay/status */
+export const getPaymentStatus = async (orderId: string): Promise<{ status: string }> => {
+    const { data } = await apiClient.get<{ status: string }>(`/v1/orders/${orderId}/pay/status`);
+    return data;
+};

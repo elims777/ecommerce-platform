@@ -91,7 +91,10 @@ public class CatalogImportService {
 
             // 2. Merge: товары + цены/остатки по externalId
             Map<String, Offer> offersById = indexOffers(offersInfo);
-            List<ProductImportItemDto> importItems = mergeAndMap(products, offersById);
+            List<PriceType> priceTypes = (offersInfo != null && offersInfo.getOffersPackage() != null)
+                    ? offersInfo.getOffersPackage().getPriceTypes()
+                    : Collections.emptyList();
+            List<ProductImportItemDto> importItems = mergeAndMap(products, offersById, priceTypes);
             log.info("Подготовлено {} товаров для импорта. Session: {}", importItems.size(), sessionId);
 
             // 3. Chunk + parallel send
@@ -184,9 +187,10 @@ public class CatalogImportService {
      * по совпадению externalId, маппит в DTO для product-service.
      */
     private List<ProductImportItemDto> mergeAndMap(List<CmlProduct> products,
-                                                   Map<String, Offer> offersById) {
+                                                   Map<String, Offer> offersById,
+                                                   List<PriceType> priceTypes) {
         return products.stream()
-                .map(product -> mapToImportItem(product, offersById.get(product.getId())))
+                .map(product -> mapToImportItem(product, offersById.get(product.getId()), priceTypes))
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -194,8 +198,9 @@ public class CatalogImportService {
     /**
      * Маппинг CmlProduct + Offer → ProductImportItemDto.
      * Числовые поля парсятся здесь, чтобы JAXB-слой не падал на невалидных данных из 1С.
+     * price = "Оптовая" (B2B цена), wholesalePrice = "Розничная" (B2C цена).
      */
-    private ProductImportItemDto mapToImportItem(CmlProduct product, Offer offer) {
+    private ProductImportItemDto mapToImportItem(CmlProduct product, Offer offer, List<PriceType> priceTypes) {
         if (product.getId() == null || product.getName() == null) {
             log.warn("Пропущен товар без Ид или Наименования: {}", product.getId());
             return null;
@@ -209,7 +214,8 @@ public class CatalogImportService {
                 .unitOfMeasure(extractUnitOfMeasure(product));
 
         if (offer != null) {
-            builder.price(extractPrice(offer))
+            builder.price(extractPriceByType(offer, priceTypes, "Оптовая"))
+                    .wholesalePrice(extractPriceByType(offer, priceTypes, "Розничная"))
                     .stock(parseStock(offer.getQuantity()))
                     .vatRate(extractVatRate(offer));
         }
@@ -225,16 +231,19 @@ public class CatalogImportService {
         return (value != null && !value.isBlank()) ? value.trim() : product.getBaseUnit().getFullName();
     }
 
-    /**
-     * Берём первую цену из предложения.
-     * Для B2B-платформы пока достаточно первой доступной цены.
-     */
-    private BigDecimal extractPrice(Offer offer) {
-        if (offer.getPrices() == null || offer.getPrices().isEmpty()) {
-            return null;
-        }
-        OfferPrice firstPrice = offer.getPrices().getFirst();
-        return parseBigDecimal(firstPrice.getPricePerUnit(), "цена");
+    private BigDecimal extractPriceByType(Offer offer, List<PriceType> priceTypes, String typeName) {
+        if (offer.getPrices() == null || offer.getPrices().isEmpty()) return null;
+        String targetTypeId = priceTypes.stream()
+                .filter(pt -> typeName.equalsIgnoreCase(pt.getName()))
+                .map(PriceType::getId)
+                .findFirst()
+                .orElse(null);
+        if (targetTypeId == null) return null;
+        return offer.getPrices().stream()
+                .filter(p -> targetTypeId.equals(p.getPriceTypeId()))
+                .findFirst()
+                .map(p -> parseBigDecimal(p.getPricePerUnit(), "цена " + typeName))
+                .orElse(null);
     }
 
     private BigDecimal extractVatRate(Offer offer) {

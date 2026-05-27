@@ -29,6 +29,9 @@ const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
 const PersonalDataPage = lazy(() => import('@/pages/PersonalDataPage'));
 const AdminCatalogPage = lazy(() => import('@/features/admin/AdminCatalogPage'));
 const AdminProductEditPage = lazy(() => import('@/features/admin/AdminProductEditPage'));
+const AdminOrderDetailPage = lazy(() => import('@/features/admin/AdminOrderDetailPage'));
+const AdminUserDetailPage = lazy(() => import('@/features/admin/AdminUserDetailPage'));
+const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,7 +97,7 @@ const AppRoutes = () => {
   if (isLoading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <Spin size="large" tip="Загрузка..." />
+        <Spin size="large" />
       </div>
     );
   }
@@ -120,6 +123,8 @@ const AppRoutes = () => {
             <Route path="/contacts" element={<ContactsPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="/personal-data" element={<PersonalDataPage />} />
+            <Route path="/payment/success" element={<PaymentResultPage />} />
+            <Route path="/payment/fail" element={<PaymentResultPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/cart" element={<CartPage />} />
@@ -133,7 +138,9 @@ const AppRoutes = () => {
             <Route element={<AdminLayout />}>
               <Route path="/admin" element={<DashboardPage />} />
               <Route path="/admin/orders" element={<AdminOrdersPage />} />
+              <Route path="/admin/orders/:id" element={<AdminOrderDetailPage />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
               <Route path="/admin/integration" element={<IntegrationPage />} />
               <Route path="/admin/products" element={<AdminCatalogPage />} />
               <Route path="/admin/products/:id/edit" element={<AdminProductEditPage />} />

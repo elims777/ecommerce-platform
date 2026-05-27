@@ -38,6 +38,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/api/v1/auth/login",
             "/api/v1/auth/refresh",
             "/api/v1/register",
+            "/api/v1/register/legal",
+            "/api/v1/legal-entities/register",
+            "/api/v1/legal-entities/confirm-email",
+            "/api/v1/legal-entities/authenticate",
             "/v1/auth/",
             "/auth/",
             "/auth/login-form",
@@ -79,12 +83,16 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     .getPayload();
 
             String email = claims.get("email", String.class);
+            String clientType = claims.get("clientType", String.class);
+            String subject = claims.getSubject();
 
             // Пробрасываем данные пользователя в заголовках для downstream сервисов
             ServerHttpRequest modifiedRequest = request.mutate()
-                    .header("X-User-Email", email)
+                    .header("X-User-Email", email != null ? email : "")
+                    .header("X-User-Id", subject != null ? subject : "")
+                    .header("X-Client-Type", clientType != null ? clientType : "B2C")
                     .build();
-            log.debug("JWT валиден для пользователя: {}, {} {}", email, method, path);
+            log.debug("JWT валиден: clientType={}, sub={}, {} {}", clientType, subject, method, path);
 
             return chain.filter(exchange.mutate().request(modifiedRequest).build());
         } catch (ExpiredJwtException e) {

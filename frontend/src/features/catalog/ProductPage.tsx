@@ -6,6 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getProductById } from '@/api/products';
 import type { ProductImage } from '@/types/product';
 import { useCartStore } from '@/store/cartStore';
+import { useDisplayPrice } from '@/utils/priceUtils';
 
 const formatPrice = (price: number): string =>
     new Intl.NumberFormat('ru-RU', {
@@ -34,6 +35,8 @@ const ProductPage = () => {
         queryFn: () => getProductById(Number(id)),
         enabled: !!id,
     });
+
+    const displayPrice = useDisplayPrice(product ?? { price: 0, wholesalePrice: null });
 
     const handleAddToCart = async () => {
         if (!product) return;
@@ -200,7 +203,7 @@ const ProductPage = () => {
                     <div style={{ border: '1px solid var(--line-1)', borderRadius: 8, padding: 20, position: 'sticky', top: 20, background: 'var(--surface)' }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
                             <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 32, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink-1)' }}>
-                                {formatPrice(product.price)}
+                                {formatPrice(displayPrice)}
                             </span>
                         </div>
                         <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 20 }}>

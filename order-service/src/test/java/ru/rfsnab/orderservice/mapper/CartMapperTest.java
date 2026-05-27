@@ -32,9 +32,9 @@ class CartMapperTest {
             Cart cart = buildCartWithItems();
             Map<Long, ProductDto> products = Map.of(
                     1L, new ProductDto(1L, "Доска обрезная", new BigDecimal("1500.00"),
-                            100, true, "ext-001"),
+                            null, 100, true, "ext-001"),
                     2L, new ProductDto(2L, "Брус 100x100", new BigDecimal("3200.00"),
-                            50, true, "ext-002")
+                            null, 50, true, "ext-002")
             );
 
             CartDto dto = CartMapper.toDto(cart, products);
@@ -51,7 +51,7 @@ class CartMapperTest {
             Cart cart = buildCartWithSingleItem(1L, 10);
             Map<Long, ProductDto> products = Map.of(
                     1L, new ProductDto(1L, "Доска обрезная", new BigDecimal("1500.00"),
-                            100, true, "ext-001")
+                            null, 100, true, "ext-001")
             );
 
             CartDto dto = CartMapper.toDto(cart, products);
@@ -71,7 +71,7 @@ class CartMapperTest {
             // Только один товар в map — второй "удалён"
             Map<Long, ProductDto> products = Map.of(
                     1L, new ProductDto(1L, "Доска обрезная", new BigDecimal("1500.00"),
-                            100, true, "ext-001")
+                            null, 100, true, "ext-001")
             );
 
             CartDto dto = CartMapper.toDto(cart, products);

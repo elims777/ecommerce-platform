@@ -186,6 +186,117 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    public void sendLegalEntityVerificationEmail(String to, String companyName, String confirmUrl) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Подтвердите email организации — РФСнаб");
+        message.setText(String.format(
+                "Здравствуйте!\n\nВы зарегистрировали организацию \"%s\" на платформе РФСнаб.\n\n" +
+                "Для подтверждения email перейдите по ссылке:\n%s\n\n" +
+                "Ссылка действительна 24 часа.\n\nС уважением,\nКоманда РФСнаб",
+                companyName, confirmUrl));
+        mailSender.send(message);
+    }
+
+    public void sendLegalEntityEmailConfirmedToManager(String managerEmail, String companyName, String inn) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(managerEmail);
+        message.setSubject("Новое юрлицо на верификацию — " + companyName);
+        message.setText(String.format(
+                "Требуется верификация нового юридического лица:\n\n" +
+                "Организация: %s\nИНН: %s\n\n" +
+                "Перейдите в панель администратора для проверки документов.",
+                companyName, inn));
+        mailSender.send(message);
+    }
+
+    public void sendLegalEntityVerifiedEmail(String to, String companyName) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Регистрация подтверждена — РФСнаб");
+        message.setText(String.format(
+                "Поздравляем!\n\nОрганизация \"%s\" прошла верификацию.\n" +
+                "Теперь вы можете входить в систему и оформлять заказы.\n\n" +
+                "С уважением,\nКоманда РФСнаб",
+                companyName));
+        mailSender.send(message);
+    }
+
+    public void sendLegalEntityRejectedEmail(String to, String companyName, String reason) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Регистрация отклонена — РФСнаб");
+        message.setText(String.format(
+                "К сожалению, регистрация организации \"%s\" была отклонена.\n\n" +
+                "Причина: %s\n\n" +
+                "Если у вас есть вопросы, свяжитесь с нашей поддержкой.\n\n" +
+                "С уважением,\nКоманда РФСнаб",
+                companyName, reason != null ? reason : "не указана"));
+        mailSender.send(message);
+    }
+
+    public void sendLegalEntityLinkRequestedEmail(String to, String companyName,
+                                                   String userName, String confirmUrl) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Запрос на привязку аккаунта — РФСнаб");
+        message.setText(String.format(
+                "Пользователь %s хочет привязать аккаунт к вашей организации \"%s\".\n\n" +
+                "Для подтверждения перейдите по ссылке:\n%s\n\n" +
+                "Если вы не ожидали этого запроса — просто проигнорируйте письмо.\n\n" +
+                "С уважением,\nКоманда РФСнаб",
+                userName, companyName, confirmUrl));
+        mailSender.send(message);
+    }
+
+    public void sendLegalEntityLinkConfirmedEmail(String toLegal, String toUser,
+                                                   String companyName, String userName) {
+        SimpleMailMessage msgToLegal = new SimpleMailMessage();
+        msgToLegal.setFrom(fromEmail);
+        msgToLegal.setTo(toLegal);
+        msgToLegal.setSubject("Пользователь привязан к вашей организации — РФСнаб");
+        msgToLegal.setText(String.format(
+                "Пользователь %s успешно привязан к организации \"%s\".\n\nС уважением,\nКоманда РФСнаб",
+                userName, companyName));
+        mailSender.send(msgToLegal);
+
+        SimpleMailMessage msgToUser = new SimpleMailMessage();
+        msgToUser.setFrom(fromEmail);
+        msgToUser.setTo(toUser);
+        msgToUser.setSubject("Привязка к организации подтверждена — РФСнаб");
+        msgToUser.setText(String.format(
+                "Ваш аккаунт успешно привязан к организации \"%s\".\n" +
+                "Теперь вы можете переключаться на B2B контекст в личном кабинете.\n\n" +
+                "С уважением,\nКоманда РФСнаб", companyName));
+        mailSender.send(msgToUser);
+    }
+
+    public void sendPaymentApprovedEmail(String to, BigDecimal amount, String paymentMode) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Оплата прошла успешно — РФСнаб");
+        message.setText(String.format(
+                "Ваш платёж на сумму %.2f ₽ успешно принят (способ: %s).\n\nСпасибо за заказ!\n\nС уважением,\nКоманда РФСнаб",
+                amount, paymentMode
+        ));
+        mailSender.send(message);
+    }
+
+    public void sendPaymentFailedEmail(String to) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Ошибка оплаты — РФСнаб");
+        message.setText("К сожалению, ваш платёж не прошёл.\n\nПожалуйста, попробуйте снова или обратитесь в поддержку.\n\nС уважением,\nКоманда РФСнаб");
+        mailSender.send(message);
+    }
+
     /**
      * Уведомление о смене статуса заказа
      */

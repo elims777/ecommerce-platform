@@ -4,6 +4,8 @@ export interface UserRole {
     name: string;
 }
 
+export type ClientType = 'B2C' | 'B2B';
+
 /** Данные пользователя — маппится на UserDto из user-service */
 export interface User {
     id: number;
@@ -16,6 +18,9 @@ export interface User {
     roles: UserRole[];
     createdAt: string;
     updatedAt: string;
+    clientType: ClientType;
+    companyName?: string | null;
+    inn?: string | null;
 }
 
 /** Запрос на логин — маппится на SimpleAuthRequest */
@@ -41,6 +46,9 @@ export interface AuthTokens {
     token_type: string;
     expires_in: number;
     user: User;
+    clientType?: string;
+    companyName?: string | null;
+    inn?: string | null;
 }
 
 /** Проверка роли */

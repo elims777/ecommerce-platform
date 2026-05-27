@@ -5,6 +5,7 @@ import ru.rfsnab.orderservice.models.dto.order.OrderDto;
 import ru.rfsnab.orderservice.models.dto.order.OrderSummaryDto;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 
@@ -36,6 +37,9 @@ public class OrderMapper {
                 order.getTrackingNumber(),
                 order.getCustomerEmail(),
                 order.getComment(),
+                order.getCustomerType(),
+                order.getCompanyName(),
+                order.getInn(),
                 order.getCreatedAt(),
                 order.getUpdatedAt()
         );
@@ -57,6 +61,7 @@ public class OrderMapper {
                 order.getOrderNumber(),
                 order.getExternalId(),
                 order.getStatus(),
+                order.getCustomerType(),
                 order.getItems().size(),
                 order.getTotalAmount(),
                 order.getCustomerEmail(),
@@ -73,7 +78,7 @@ public class OrderMapper {
      * @param customerEmail email пользователя из JWT
      * @param request данные для создания заказа
      */
-    public static Order toEntity(Long userId, String customerEmail,CreateOrderRequest request) {
+    public static Order toEntity(Long userId, String customerEmail, String clientType, CreateOrderRequest request) {
         Order order = Order.builder()
                 .userId(userId)
                 .status(OrderStatus.CREATED)
@@ -81,6 +86,7 @@ public class OrderMapper {
                 .deliveryMethod(request.deliveryMethod())
                 .customerEmail(customerEmail)
                 .comment(request.comment())
+                .customerType(parseCustomerType(clientType))
                 .build();
 
         if (request.deliveryMethod() == DeliveryMethod.PICKUP) {
@@ -93,5 +99,14 @@ public class OrderMapper {
         }
 
         return order;
+    }
+
+    private static CustomerType parseCustomerType(String raw) {
+        if (raw == null) return CustomerType.B2C;
+        try {
+            return CustomerType.valueOf(raw.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return CustomerType.B2C;
+        }
     }
 }

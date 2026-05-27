@@ -18,6 +18,7 @@ public class UserMapper {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .emailVerified(user.isEmailVerified())
+                .active(user.isActive())
                 .roles(user.getRoles())
                 .build();
     }
@@ -34,6 +35,7 @@ public class UserMapper {
                 .createdAt(userDto.getCreatedAt())
                 .updatedAt(userDto.getUpdatedAt())
                 .emailVerified(userDto.isEmailVerified())
+                .active(userDto.isActive())
                 .roles(userDto.getRoles())
                 .build();
     }

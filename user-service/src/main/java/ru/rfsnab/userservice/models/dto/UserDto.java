@@ -23,6 +23,7 @@ public class UserDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private boolean emailVerified;
+    private boolean active;
     @Builder.Default
     private Set<RoleEntity> roles = new HashSet<>();
 }

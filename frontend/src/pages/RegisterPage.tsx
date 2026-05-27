@@ -65,26 +65,27 @@ const RegisterPage = () => {
                     flexDirection: 'column',
                 }}
             >
-                <svg width="360" height="320" viewBox="0 0 360 320" style={{ position: 'absolute', right: -60, bottom: -80, opacity: 0.22, pointerEvents: 'none' }}>
-                    <polygon points="180,10 180,220 40,260" fill="#C0272D" />
-                    <polygon points="180,10 180,220 320,260" fill="#0F2845" />
-                    <polygon points="40,260 320,260 180,220" fill="#1A6B3A" />
-                </svg>
+                <img src="/logo-light.png" alt=""
+                    style={{
+                        position: 'absolute', right: -40, bottom: -30,
+                        height: 360, width: 'auto', opacity: 0.14,
+                        pointerEvents: 'none',
+                    }}
+                />
 
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-                    <img src="/logo.png" alt="РФснаб" style={{ height: 38, filter: 'brightness(0) invert(1)' }} />
-                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#fff', letterSpacing: '-0.01em' }}>РФснаб</span>
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                    <img src="/logo-light.png" alt="РФснаб" style={{ height: 56, display: 'block' }} />
                 </div>
 
                 <div style={{ marginTop: 'auto', position: 'relative', zIndex: 1 }}>
-                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 36, fontWeight: 600, color: '#fff', letterSpacing: '-0.022em', lineHeight: 1.1, maxWidth: 400, marginBottom: 16 }}>
-                        Комплексное снабжение предприятий — в одном кабинете.
+                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 36, fontWeight: 600, color: '#fff', letterSpacing: '-0.022em', lineHeight: 1.1, maxWidth: 460, marginBottom: 16 }}>
+                        Один кабинет для всех заявок предприятия.
                     </h1>
-                    <p style={{ fontSize: 14.5, color: 'rgba(255,255,255,.7)', maxWidth: 380, lineHeight: 1.6, marginBottom: 32 }}>
-                        СИЗ, спецодежда, противопожарное оборудование и 12 000+ позиций со счёт-фактурой и ЭДО.
+                    <p style={{ fontSize: 14.5, color: 'rgba(255,255,255,.7)', maxWidth: 420, lineHeight: 1.6, marginBottom: 32 }}>
+                        Заявки, документы, согласования с менеджером, ЭДО, история закупок и аналитика — в одном защищённом аккаунте организации.
                     </p>
-                    <div style={{ display: 'flex', gap: 28, fontSize: 12.5 }}>
-                        {[['18 200', 'организаций'], ['12 480', 'товаров'], ['84', 'региона']].map(([n, l]) => (
+                    <div style={{ display: 'flex', gap: 26, fontSize: 12.5 }}>
+                        {[['18 200', 'организаций'], ['12 480', 'товаров в наличии'], ['4.9 ★', 'рейтинг']].map(([n, l]) => (
                             <div key={l}>
                                 <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 22, color: '#fff', letterSpacing: '-0.01em' }}>{n}</div>
                                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', marginTop: 2 }}>{l}</div>

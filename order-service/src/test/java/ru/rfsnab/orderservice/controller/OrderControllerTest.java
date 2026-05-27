@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
+import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
 import ru.rfsnab.orderservice.models.entity.DeliveryAddress;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.OrderItem;
@@ -86,7 +87,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("201 Created — заказ успешно создан (DELIVERY)")
         void shouldCreateDeliveryOrder() throws Exception {
             Order order = buildDeliveryOrder();
-            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class)))
+            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class)))
                     .thenReturn(order);
 
             String json = """
@@ -113,7 +114,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.status.code").value("CREATED"))
                     .andExpect(jsonPath("$.deliveryAddress.city").value("Сыктывкар"));
 
-            verify(orderService).createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class));
+            verify(orderService).createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class));
         }
 
         @Test
@@ -121,7 +122,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         void shouldCreatePickupOrder() throws Exception {
             Order order = buildPickupOrder();
             WarehousePoint point = buildWarehousePoint();
-            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class)))
+            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class)))
                     .thenReturn(order);
             when(warehousePointService.getActivePoint(1L)).thenReturn(point);
 
@@ -336,14 +337,14 @@ class OrderControllerTest extends BaseIntegrationTest {
         @Test
         @DisplayName("200 OK — оплата инициирована")
         void shouldInitiatePayment() throws Exception {
-            Order order = buildDeliveryOrder();
-            order.setStatus(OrderStatus.PENDING_PAYMENT);
-            when(orderService.initiatePayment(ORDER_ID, USER_ID)).thenReturn(order);
+            PaymentInitiationResponse response = new PaymentInitiationResponse(
+                    "https://pay.tochka.com/link", PaymentMethod.CARD, OrderStatus.PENDING_PAYMENT);
+            when(orderService.pay(ORDER_ID, USER_ID)).thenReturn(response);
 
             mockMvc.perform(post("/api/v1/orders/{id}/pay", ORDER_ID)
                             .with(jwtUser()).with(csrf()))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status.code").value("PENDING_PAYMENT"));
+                    .andExpect(jsonPath("$.orderStatus.code").value("PENDING_PAYMENT"));
         }
     }
 

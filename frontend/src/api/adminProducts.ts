@@ -125,3 +125,8 @@ export const batchUpdateActive = async (productIds: number[], isActive: boolean)
         params: { isActive },
     });
 };
+
+/** Массовое удаление товаров */
+export const bulkDeleteProducts = async (ids: number[]): Promise<void> => {
+    await apiClient.delete('/v1/products/batch', { data: ids });
+};

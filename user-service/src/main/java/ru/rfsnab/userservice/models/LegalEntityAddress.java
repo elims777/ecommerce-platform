@@ -38,7 +38,7 @@ public class LegalEntityAddress {
     @Column(length = 10)
     private String postalCode;
 
-    @Column(nullable = false)
+    @Column(name = "is_primary", nullable = false)
     @Builder.Default
     private boolean primary = false;
 

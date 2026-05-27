@@ -1,0 +1,55 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: payment-service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5438/payment_db
+    username: user
+    password: secret
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+tochka:
+  base-url: https://enter.tochka.com/sandbox/v2
+  token: ${TOCHKA_TOKEN:sandbox.jwt.token}
+  customer-code: ${TOCHKA_CUSTOMER_CODE}
+  merchant-id: ${TOCHKA_MERCHANT_ID}
+  redirect-url: ${TOCHKA_REDIRECT_URL}
+  fail-redirect-url: ${TOCHKA_FAIL_REDIRECT_URL}
+
+internal:
+  secret: ${INTERNAL_SECRET}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    ru.rfsnab.paymentservice: DEBUG

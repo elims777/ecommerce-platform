@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
@@ -72,6 +73,16 @@ public class Order {
 
     @Column(name = "customer_email", nullable = false)
     private String customerEmail;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "customer_type", nullable = false, length = 10)
+    private CustomerType customerType = CustomerType.B2C;
+
+    @Column(name = "company_name", length = 255)
+    private String companyName;
+
+    @Column(name = "inn", length = 12)
+    private String inn;
 
     private String comment;
 

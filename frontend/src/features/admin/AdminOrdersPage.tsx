@@ -1,377 +1,244 @@
 import { useState } from 'react';
-import {
-    Table,
-    Tag,
-    Typography,
-    Select,
-    Input,
-    Button,
-    Card,
-    Row,
-    Col,
-    Descriptions,
-    Spin,
-    App,
-} from 'antd';
-import {
-    SearchOutlined,
-    ReloadOutlined,
-} from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
+import { Select, App, DatePicker } from 'antd';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import apiClient from '@/api/client';
-import {
-    OrderStatus,
-    OrderStatusLabels,
-    PaymentMethodLabels,
-    DeliveryMethodLabels,
-} from '@/types/order';
-import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
-import type { OrderSummaryDto, OrderDto, OrderItemDto } from '@/types/order';
-import type { Page } from '@/types/product';
-import type { ColumnsType } from 'antd/es/table';
+import { getAdminOrders, changeOrderStatus } from '@/api/adminOrders';
+import { OrderStatus, OrderStatusLabels } from '@/types/order';
+import { extractEnumCode } from '@/utils/enumUtils';
+import { getAllowedTransitions } from '@/utils/orderTransitions';
+import type { OrderSummaryDto } from '@/types/order';
 
-const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 
-/** Форматирует цену */
-const formatPrice = (price: number): string =>
-    new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(price);
+const formatPrice = (n: number) =>
+  new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(n);
 
-/** Форматирует дату */
-const formatDate = (dateStr: string): string =>
-    new Date(dateStr).toLocaleDateString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
+const formatDate = (d: string) =>
+  new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-/** Цвет тега по статусу */
-const getStatusColor = (status: string): string => {
-    const colors: Record<string, string> = {
-        CREATED: 'blue',
-        PENDING_PAYMENT: 'orange',
-        PAID: 'cyan',
-        PAYMENT_FAILED: 'red',
-        PROCESSING: 'processing',
-        SHIPPED: 'purple',
-        IN_TRANSIT: 'geekblue',
-        DELIVERED: 'green',
-        CANCELLED: 'default',
-        REFUNDED: 'magenta',
-        AWAITING_CONFIRMATION: 'gold',
-    };
-    return colors[status] || 'default';
+const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
+  CREATED:               { cls: 'rf-badge-warn rf-badge-dot',    label: 'Ждёт согласования' },
+  PENDING_PAYMENT:       { cls: 'rf-badge-warn rf-badge-dot',    label: 'Ждёт оплаты' },
+  PAID:                  { cls: 'rf-badge-success rf-badge-dot', label: 'Оплачено' },
+  PROCESSING:            { cls: 'rf-badge-navy',                 label: 'В обработке' },
+  INVOICE_SENT:          { cls: 'rf-badge-navy',                 label: 'Счёт выставлен' },
+  SHIPPED:               { cls: 'rf-badge-navy rf-badge-dot',    label: 'В доставке' },
+  IN_TRANSIT:            { cls: 'rf-badge-navy rf-badge-dot',    label: 'В пути' },
+  DELIVERED:             { cls: 'rf-badge-neutral',              label: 'Доставлено' },
+  COMPLETED:             { cls: 'rf-badge-neutral',              label: 'Завершено' },
+  PAYMENT_FAILED:        { cls: 'rf-badge-red',                  label: 'Ошибка оплаты' },
+  CANCELLED:             { cls: 'rf-badge-red',                  label: 'Отменено' },
+  REFUNDED:              { cls: 'rf-badge-neutral',              label: 'Возврат' },
+  AWAITING_CONFIRMATION: { cls: 'rf-badge-warn',                 label: 'Ожид. подтверждения' },
 };
 
-/** Получить все заказы (админ) */
-const getAdminOrders = async (
-    page: number,
-    size: number,
-    status?: OrderStatus,
-): Promise<Page<OrderSummaryDto>> => {
-    const params: Record<string, string | number> = {
-        page,
-        size,
-        sort: 'createdAt,desc',
-    };
-    if (status) {
-        params.status = status;
-    }
-    const { data } = await apiClient.get<Page<OrderSummaryDto>>('/v1/orders', {
-        params,
-    });
-    return data;
-};
-
-/** Получить полный заказ */
-const getOrderDetails = async (id: string): Promise<OrderDto> => {
-    const { data } = await apiClient.get<OrderDto>(`/v1/orders/${id}`);
-    return data;
-};
+const STATUS_TABS = [
+  { label: 'Все',               value: undefined },
+  { label: 'Ждёт согласования', value: 'CREATED' as OrderStatus },
+  { label: 'Оплачено',          value: 'PAID' as OrderStatus },
+  { label: 'В доставке',        value: 'SHIPPED' as OrderStatus },
+  { label: 'Завершено',         value: 'COMPLETED' as OrderStatus },
+  { label: 'Отменено',          value: 'CANCELLED' as OrderStatus },
+];
 
 const AdminOrdersPage = () => {
-    const navigate = useNavigate();
-    const { message: messageApi } = App.useApp();
+  const navigate = useNavigate();
+  const { message: messageApi } = App.useApp();
+  const queryClient = useQueryClient();
 
-    const [currentPage, setCurrentPage] = useState(1);
-    const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [expandedDetails, setExpandedDetails] = useState<Record<string, OrderDto>>({});
-    const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
-    const pageSize = 15;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateRange, setDateRange] = useState<[string, string] | null>(null);
+  const pageSize = 15;
 
-    const {
-        data: ordersPage,
-        isLoading,
-        refetch,
-    } = useQuery({
-        queryKey: ['adminOrders', { page: currentPage, status: statusFilter }],
-        queryFn: () => getAdminOrders(currentPage - 1, pageSize, statusFilter),
-    });
+  const queryParams = {
+    page: currentPage - 1,
+    size: pageSize,
+    status: statusFilter,
+    dateFrom: dateRange?.[0],
+    dateTo: dateRange?.[1],
+  };
 
-    const loadDetails = async (orderId: string) => {
-        if (expandedDetails[orderId]) return;
-        setLoadingDetails((prev) => ({ ...prev, [orderId]: true }));
-        try {
-            const order = await getOrderDetails(orderId);
-            setExpandedDetails((prev) => ({ ...prev, [orderId]: order }));
-        } catch {
-            messageApi.error('Не удалось загрузить детали заказа');
-        } finally {
-            setLoadingDetails((prev) => ({ ...prev, [orderId]: false }));
-        }
-    };
+  const { data: ordersPage, isLoading } = useQuery({
+    queryKey: ['adminOrders', queryParams],
+    queryFn: () => getAdminOrders(queryParams),
+  });
 
-    const filteredOrders = ordersPage?.content.filter((o) =>
-        searchQuery
-            ? o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            o.customerEmail.toLowerCase().includes(searchQuery.toLowerCase())
-            : true,
-    );
+  const statusMutation = useMutation({
+    mutationFn: ({ orderId, status }: { orderId: string; status: string }) =>
+      changeOrderStatus(orderId, status),
+    onSuccess: () => {
+      messageApi.success('Статус обновлён');
+      queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
+    },
+    onError: () => messageApi.error('Ошибка смены статуса'),
+  });
 
-    const statusOptions = Object.entries(OrderStatusLabels).map(
-        ([key, label]) => ({ value: key, label }),
-    );
+  const orders: OrderSummaryDto[] = (ordersPage?.content ?? []).filter((o) =>
+    searchQuery
+      ? o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        o.customerEmail.toLowerCase().includes(searchQuery.toLowerCase())
+      : true,
+  );
 
-    const columns: ColumnsType<OrderSummaryDto> = [
-        {
-            title: '№ заказа',
-            dataIndex: 'orderNumber',
-            key: 'orderNumber',
-            width: 160,
-            render: (num: string) => <Text strong>{num}</Text>,
-        },
-        {
-            title: 'Клиент',
-            dataIndex: 'customerEmail',
-            key: 'customerEmail',
-            ellipsis: true,
-        },
-        {
-            title: 'Статус',
-            dataIndex: 'status',
-            key: 'status',
-            width: 200,
-            render: (status: unknown) => {
-                const code = extractEnumCode(status);
-                return (
-                    <Tag color={getStatusColor(code)}>
-                        {OrderStatusLabels[code as OrderStatus] || extractEnumDisplayName(status, code)}
-                    </Tag>
-                );
-            },
-        },
-        {
-            title: 'Позиций',
-            dataIndex: 'itemsCount',
-            key: 'itemsCount',
-            width: 90,
-        },
-        {
-            title: 'Сумма',
-            dataIndex: 'totalAmount',
-            key: 'totalAmount',
-            width: 140,
-            render: (amount: number) => (
-                <Text strong style={{ color: '#1677ff' }}>
-                    {formatPrice(amount)}
-                </Text>
-            ),
-        },
-        {
-            title: 'Дата',
-            dataIndex: 'createdAt',
-            key: 'createdAt',
-            width: 150,
-            render: (date: string) => formatDate(date),
-        },
-    ];
+  const total = ordersPage?.totalElements ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
 
-    const expandedRowRender = (record: OrderSummaryDto) => {
-        const order = expandedDetails[record.id];
-        const loading = loadingDetails[record.id];
+  return (
+    <div>
+      {/* Status tabs */}
+      <div className="rf-admin-tabs">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.label}
+            className={`rf-admin-tab${statusFilter === tab.value ? ' active' : ''}`}
+            onClick={() => { setStatusFilter(tab.value); setCurrentPage(1); }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        if (loading) {
-            return (
-                <div style={{ textAlign: 'center', padding: 24 }}>
-                    <Spin />
-                </div>
-            );
-        }
-
-        if (!order) return null;
-
-        const itemColumns: ColumnsType<OrderItemDto> = [
-            {
-                title: 'Товар',
-                dataIndex: 'productName',
-                key: 'productName',
-                render: (name: string, item) => (
-                    <a onClick={() => navigate(`/products/${item.productId}`)}>{name}</a>
-                ),
-            },
-            {
-                title: 'Цена',
-                dataIndex: 'price',
-                key: 'price',
-                width: 130,
-                render: (price: number) => formatPrice(price),
-            },
-            {
-                title: 'Кол-во',
-                dataIndex: 'quantity',
-                key: 'quantity',
-                width: 80,
-            },
-            {
-                title: 'Сумма',
-                dataIndex: 'subtotal',
-                key: 'subtotal',
-                width: 130,
-                render: (subtotal: number) => <Text strong>{formatPrice(subtotal)}</Text>,
-            },
-        ];
-
-        const paymentCode = extractEnumCode(order.paymentMethod);
-        const deliveryCode = extractEnumCode(order.deliveryMethod);
-
-        return (
-            <div style={{ padding: '0 16px' }}>
-                <Table<OrderItemDto>
-                    columns={itemColumns}
-                    dataSource={order.items}
-                    rowKey="productId"
-                    pagination={false}
-                    size="small"
-                    style={{ marginBottom: 16 }}
-                />
-                <Descriptions size="small" column={2}>
-                    <Descriptions.Item label="Оплата">
-                        {PaymentMethodLabels[paymentCode as keyof typeof PaymentMethodLabels] ||
-                            extractEnumDisplayName(order.paymentMethod)}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Доставка">
-                        {DeliveryMethodLabels[deliveryCode as keyof typeof DeliveryMethodLabels] ||
-                            extractEnumDisplayName(order.deliveryMethod)}
-                    </Descriptions.Item>
-                    {order.deliveryAddress && (
-                        <>
-                            <Descriptions.Item label="Получатель">
-                                {order.deliveryAddress.recipientName}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Телефон">
-                                {order.deliveryAddress.phone}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Адрес" span={2}>
-                                {[
-                                    order.deliveryAddress.postalCode,
-                                    order.deliveryAddress.city,
-                                    order.deliveryAddress.street,
-                                    `д. ${order.deliveryAddress.building}`,
-                                    order.deliveryAddress.apartment
-                                        ? `кв. ${order.deliveryAddress.apartment}`
-                                        : null,
-                                ]
-                                    .filter(Boolean)
-                                    .join(', ')}
-                            </Descriptions.Item>
-                        </>
-                    )}
-                    {order.warehousePoint && (
-                        <Descriptions.Item label="Самовывоз" span={2}>
-                            {order.warehousePoint.name} — {order.warehousePoint.city},{' '}
-                            {order.warehousePoint.street}
-                        </Descriptions.Item>
-                    )}
-                    {order.trackingNumber && (
-                        <Descriptions.Item label="Трекинг" span={2}>
-                            {order.trackingNumber}
-                        </Descriptions.Item>
-                    )}
-                    {order.comment && (
-                        <Descriptions.Item label="Комментарий" span={2}>
-                            {order.comment}
-                        </Descriptions.Item>
-                    )}
-                </Descriptions>
-            </div>
-        );
-    };
-
-    return (
-        <div>
-            <Title level={2} style={{ marginBottom: 24 }}>
-                Заказы
-            </Title>
-
-            <Card style={{ marginBottom: 16, borderRadius: 12 }}>
-                <Row gutter={16} align="middle">
-                    <Col xs={24} sm={8}>
-                        <Input
-                            placeholder="Поиск по номеру или email..."
-                            prefix={<SearchOutlined />}
-                            allowClear
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </Col>
-                    <Col xs={24} sm={8}>
-                        <Select
-                            placeholder="Все статусы"
-                            allowClear
-                            style={{ width: '100%' }}
-                            options={statusOptions}
-                            value={statusFilter}
-                            onChange={(val) => {
-                                setStatusFilter(val);
-                                setCurrentPage(1);
-                            }}
-                        />
-                    </Col>
-                    <Col xs={24} sm={8} style={{ textAlign: 'right' }}>
-                        <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
-                            Обновить
-                        </Button>
-                    </Col>
-                </Row>
-            </Card>
-
-            <Card style={{ borderRadius: 12 }}>
-                <Table<OrderSummaryDto>
-                    columns={columns}
-                    dataSource={filteredOrders}
-                    rowKey="id"
-                    loading={isLoading}
-                    expandable={{
-                        expandedRowRender,
-                        expandRowByClick: true,
-                        onExpand: (expanded, record) => {
-                            if (expanded) {
-                                loadDetails(record.id);
-                            }
-                        },
-                    }}
-                    pagination={{
-                        current: currentPage,
-                        total: ordersPage?.totalElements || 0,
-                        pageSize,
-                        onChange: (page) => setCurrentPage(page),
-                        showTotal: (total) => `Всего ${total} заказов`,
-                        showSizeChanger: false,
-                    }}
-                    size="middle"
-                    scroll={{ x: 900 }}
-                />
-            </Card>
+      {/* Filter bar */}
+      <div className="rf-admin-filterbar">
+        <div className="rf-admin-search" style={{ width: 280 }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <circle cx="6" cy="6" r="4"/><path d="M10 10l2.5 2.5"/>
+          </svg>
+          <input
+            placeholder="№ заявки, клиент…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-    );
+        <RangePicker
+          size="small"
+          onChange={(dates) => {
+            if (dates?.[0] && dates?.[1]) {
+              setDateRange([
+                dates[0].startOf('day').toISOString(),
+                dates[1].endOf('day').toISOString(),
+              ]);
+              setCurrentPage(1);
+            } else {
+              setDateRange(null);
+            }
+          }}
+        />
+        <div style={{ flex: 1 }} />
+        <button className="rf-btn rf-btn-quiet rf-btn-sm">Выгрузить XLS</button>
+        <button className="rf-btn rf-btn-primary rf-btn-sm">+ Новая заявка</button>
+      </div>
+
+      {/* Table */}
+      <div className="rf-card" style={{ overflow: 'hidden' }}>
+        <div className="rf-admin-table-wrap">
+          <table className="rf-admin-table">
+            <thead>
+              <tr>
+                <th style={{ width: 140 }}>№ заявки</th>
+                <th style={{ width: 100 }}>Дата</th>
+                <th>Клиент</th>
+                <th style={{ width: 60 }}>Тип</th>
+                <th style={{ width: 220 }}>Статус</th>
+                <th style={{ width: 130, textAlign: 'right' }}>Сумма</th>
+                <th style={{ width: 40 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: 60, color: 'var(--ink-3)' }}>
+                    Загрузка…
+                  </td>
+                </tr>
+              ) : orders.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: 60, color: 'var(--ink-3)' }}>
+                    Заявок нет
+                  </td>
+                </tr>
+              ) : orders.map((o) => {
+                const code = extractEnumCode(o.status);
+                const badge = STATUS_BADGE[code] ?? { cls: 'rf-badge-neutral', label: OrderStatusLabels[code as OrderStatus] ?? code };
+                const transitions = getAllowedTransitions(code);
+                const ctCode = extractEnumCode(o.customerType);
+
+                return (
+                  <tr
+                    key={o.id}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/admin/orders/${o.id}`)}
+                  >
+                    <td>
+                      <span className="rf-mono" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--brand-navy)' }}>
+                        {o.orderNumber}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="rf-tabular" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
+                        {formatDate(o.createdAt)}
+                      </span>
+                    </td>
+                    <td style={{ fontWeight: 500 }}>{o.customerEmail}</td>
+                    <td>
+                      <span className={`rf-badge ${ctCode === 'B2B' ? 'rf-badge-navy' : 'rf-badge-neutral'}`} style={{ fontSize: 11 }}>
+                        {ctCode || '—'}
+                      </span>
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {transitions.length > 0 ? (
+                        <Select
+                          size="small"
+                          style={{ width: 200 }}
+                          value={code}
+                          options={[
+                            { value: code, label: OrderStatusLabels[code as OrderStatus] ?? code, disabled: true },
+                            ...transitions.map((s) => ({ value: s, label: OrderStatusLabels[s] ?? s })),
+                          ]}
+                          onChange={(newStatus) => statusMutation.mutate({ orderId: o.id, status: newStatus })}
+                        />
+                      ) : (
+                        <span className={`rf-badge ${badge.cls}`}>{badge.label}</span>
+                      )}
+                    </td>
+                    <td className="col-right">
+                      <span className="rf-tabular" style={{ fontWeight: 600 }}>
+                        {formatPrice(o.totalAmount)}
+                      </span>
+                    </td>
+                    <td>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--ink-3)" strokeWidth="1.5">
+                        <path d="M6 4l4 4-4 4"/>
+                      </svg>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="rf-admin-pagination">
+          <span>Показано {orders.length} из {total}</span>
+          <div className="rf-admin-pagination-pages">
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                className={`rf-admin-page-btn${currentPage === page ? ' active' : ''}`}
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </button>
+            ))}
+            {totalPages > 5 && <span style={{ padding: '0 4px' }}>…</span>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default AdminOrdersPage;
