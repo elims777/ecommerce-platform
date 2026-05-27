@@ -49,5 +49,5 @@ frontend/.vite/
 .claude/*
 LLM-wiki.md
 *.txt
-docs/superpowers/
+docs/*
 CLAUDE.md
