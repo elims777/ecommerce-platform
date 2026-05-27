@@ -12,7 +12,9 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.authservice.models.dto.AuthResponse;
 import ru.rfsnab.authservice.models.dto.ErrorResponse;
+import ru.rfsnab.authservice.models.dto.LegalAuthRequest;
 import ru.rfsnab.authservice.models.dto.SimpleAuthRequest;
+import ru.rfsnab.authservice.models.dto.SwitchContextRequest;
 import ru.rfsnab.authservice.models.dto.UserDtoResponse;
 import ru.rfsnab.authservice.service.AuthService;
 
@@ -180,6 +182,19 @@ public class AuthController {
         }
     }
 
+
+    @PostMapping("/login/legal")
+    public ResponseEntity<AuthResponse> loginLegal(@RequestBody LegalAuthRequest request) {
+        return ResponseEntity.ok(authService.authenticateLegalEntity(request));
+    }
+
+    @PostMapping("/switch-context")
+    public ResponseEntity<AuthResponse> switchContext(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody SwitchContextRequest request) {
+        String token = authHeader.substring(7);
+        return ResponseEntity.ok(authService.switchContext(token, request));
+    }
 
     /**
      * Logout endpoint (пока просто возвращает success)

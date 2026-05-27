@@ -1,0 +1,1 @@
+ALTER TABLE pending_orders ALTER COLUMN order_id TYPE VARCHAR(50) USING order_id::VARCHAR;

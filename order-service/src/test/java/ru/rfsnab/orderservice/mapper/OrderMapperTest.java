@@ -121,9 +121,9 @@ class OrderMapperTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    address, null, "Комментарий");
+                    address, null, null, null, "Комментарий", null, null);
 
-            Order order = OrderMapper.toEntity(100L, USER_EMAIL, request);
+            Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
             assertThat(order.getUserId()).isEqualTo(100L);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
@@ -136,17 +136,19 @@ class OrderMapperTest {
         }
 
         @Test
-        @DisplayName("маппит CreateOrderRequest для PICKUP в Order")
+        @DisplayName("маппит CreateOrderRequest для PICKUP в Order, сохраняет pickup recipient")
         void shouldMapPickupRequestToEntity() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CASH_ON_DELIVERY, DeliveryMethod.PICKUP,
-                    null, 1L, null);
+                    null, 1L, "Петров Петр", "+79001112233", null, null, null);
 
-            Order order = OrderMapper.toEntity(100L, USER_EMAIL, request);
+            Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
             assertThat(order.getWarehousePointId()).isEqualTo(1L);
             assertThat(order.getDeliveryAddress()).isNull();
             assertThat(order.getDeliveryMethod()).isEqualTo(DeliveryMethod.PICKUP);
+            assertThat(order.getPickupRecipientName()).isEqualTo("Петров Петр");
+            assertThat(order.getPickupRecipientPhone()).isEqualTo("+79001112233");
         }
 
         @Test
@@ -154,9 +156,9 @@ class OrderMapperTest {
         void shouldNotPopulateItemsAndTotal() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.SBP, DeliveryMethod.PICKUP,
-                    null, 1L, null);
+                    null, 1L, null, null, null, null, null);
 
-            Order order = OrderMapper.toEntity(100L, USER_EMAIL, request);
+            Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
             assertThat(order.getItems()).isEmpty();
             assertThat(order.getTotalAmount()).isNull();

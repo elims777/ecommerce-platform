@@ -19,4 +19,5 @@ public class CategoryRequest {
     private String description;
 
     private Long parentId;
+    private String externalId;
 }

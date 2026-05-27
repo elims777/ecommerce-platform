@@ -19,9 +19,11 @@ public class UserDto {
     private String firstname;
     private String lastname;
     private String surname;
+    private String phone;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private boolean emailVerified;
+    private boolean active;
     @Builder.Default
     private Set<RoleEntity> roles = new HashSet<>();
 }

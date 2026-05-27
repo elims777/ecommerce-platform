@@ -71,14 +71,14 @@ public class ProductImageService {
      */
     private ImageDimensions getImageDimensions(MultipartFile file) {
         try {
+            // Для WebP и других форматов — используем ImageIO только если читается
+            // Если не читается — возвращаем дефолтные размеры
             BufferedImage image = ImageIO.read(file.getInputStream());
-
             if (image == null) {
-                throw new InvalidFileException("Не удалось прочитать изображение");
+                // WebP может не читаться без нативной либы — возвращаем 0,0
+                return new ImageDimensions(0, 0);
             }
-
             return new ImageDimensions(image.getWidth(), image.getHeight());
-
         } catch (IOException e) {
             throw new InvalidFileException("Ошибка при чтении размеров изображения: " + e.getMessage());
         }

@@ -11,16 +11,19 @@ import lombok.RequiredArgsConstructor;
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public enum OrderStatus {
     CREATED("Заказ создан"),
+    PROCESSING("В работе"),
+    INVOICE_SENT("Счёт выставлен"),
     PENDING_PAYMENT("Ожидает оплаты"),
+    AWAITING_CONFIRMATION("Ожидает подтверждения оплаты"),
     PAID("Оплачен"),
     PAYMENT_FAILED("Ошибка оплаты"),
-    PROCESSING("В обработке"),
     SHIPPED("Отправлен"),
     IN_TRANSIT("В пути"),
     DELIVERED("Доставлен"),
     CANCELLED("Отменён"),
     REFUNDED("Возврат средств"),
-    AWAITING_CONFIRMATION("Ожидает подтверждения менеджера");
+    PARTIALLY_PAID("Оплачен частично"),
+    COMPLETED("Завершён");
 
     private final String displayName;
 

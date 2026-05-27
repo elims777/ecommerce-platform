@@ -24,8 +24,11 @@ public class ProductRequest {
     @Size(max = 1000, message = "Краткое описание не должно превышать 1000 символов")
     private String shortDescription;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Цена не может быть отрицательной")
+    @DecimalMin(value = "0.0", message = "Цена не может быть отрицательной")
     private BigDecimal price;
+
+    @DecimalMin(value = "0.0", message = "Оптовая цена не может быть отрицательной")
+    private BigDecimal wholesalePrice;
 
     @Min(value = 0, message = "Количество не может быть отрицательным")
     @Builder.Default
@@ -38,4 +41,10 @@ public class ProductRequest {
 
     @Builder.Default
     private Boolean isFeatured = false;
+
+    private String externalId;
+    private String sku;
+    private String externalCode;
+    private String unitOfMeasure;
+    private Integer vatRate;
 }

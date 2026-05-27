@@ -1,0 +1,53 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  # Datasource настраивается через @DynamicPropertySource в BaseIntegrationTest
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: false
+
+  # Kafka consumer отключён в тестах — нет контейнера Kafka
+  # Order1CEventConsumer тестируем через прямой вызов consume()
+  kafka:
+    listener:
+      auto-startup: false
+    bootstrap-servers: localhost:9999
+
+integration:
+  commerceml:
+    username: test_user
+    password: test_pass
+    file-limit: 52428800
+    temp-dir: ${java.io.tmpdir}/1c-exchange-test
+  product-service:
+    url: http://localhost:9999
+    batch-size: 100
+  order-service:
+    url: http://localhost:9998
+  image-processing:
+    min-threads: 1
+    max-threads: 2
+    buffer-max-size: 10
+    max-image-width: 800
+    webp-quality: 0.80
+    poll-batch-size: 5
+    poll-interval-ms: 60000
+    max-retries: 2
+  import-config:
+    chunk-size: 50
+    max-concurrent-requests: 2
+
+logging:
+  level:
+    root: WARN
+    ru.rfsnab: INFO
+    org.testcontainers: INFO

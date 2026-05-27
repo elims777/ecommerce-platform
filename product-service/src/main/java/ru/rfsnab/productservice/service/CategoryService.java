@@ -9,6 +9,7 @@ import ru.rfsnab.productservice.exception.BusinessException;
 import ru.rfsnab.productservice.exception.CategoryNotFoundException;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.repository.CategoryRepository;
+import ru.rfsnab.productservice.repository.ProductRepository;
 
 import java.util.*;
 
@@ -17,7 +18,7 @@ import java.util.*;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
-    private final ProductService productService;
+    private final ProductRepository productRepository;
     private final SlugGeneratorService slugGenerator;
 
     // Кэш дерева категорий (в памяти)
@@ -166,7 +167,7 @@ public class CategoryService {
         }
 
         // Проверяем есть ли товары
-        long productCount = productService.countByCategoryId(id);
+        long productCount = productRepository.countByCategoryId(id);
         if (productCount > 0) {
             throw new BusinessException("Невозможно удалить категорию. В ней " + productCount + " товар(ов).");
         }
@@ -180,7 +181,7 @@ public class CategoryService {
      */
     public Category getCategoryById(Long id) {
         return categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException(id));
+                .orElseThrow(() -> new CategoryNotFoundException("Категория c id " + id + " не найдена"));
     }
 
     /**
@@ -200,7 +201,7 @@ public class CategoryService {
         Category parent = getCategoryById(parentId);
 
         // Проверяем что у родителя нет товаров
-        long productCount = productService.countByCategoryId(parent.getId());
+        long productCount = productRepository.countByCategoryId(parent.getId());
         if (productCount > 0) {
             throw new BusinessException(
                     "Категория '" + parent.getName() + "' содержит товары (" +
@@ -235,5 +236,13 @@ public class CategoryService {
         }
 
         return slug;
+    }
+
+    public boolean existsById(Long categoryId) {
+        return categoryRepository.existsById(categoryId);
+    }
+
+    public boolean existsByParentId(Long categoryId) {
+        return categoryRepository.existsByParentId(categoryId);
     }
 }

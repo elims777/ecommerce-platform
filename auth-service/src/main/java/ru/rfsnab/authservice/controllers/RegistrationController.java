@@ -66,5 +66,29 @@ public class RegistrationController {
         }
     }
 
+    @PostMapping(value = "/register/legal",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> registerLegal(@RequestBody Object request) {
+        try {
+            Object created = restTemplate.postForObject(
+                    userServiceUrl + "/api/v1/legal-entities/register",
+                    request,
+                    Object.class
+            );
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (HttpClientErrorException.Conflict e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ErrorResponse("Юрлицо уже зарегистрировано"));
+        } catch (HttpClientErrorException.BadRequest e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ErrorResponse("Некорректные данные регистрации"));
+        } catch (Exception e) {
+            log.error("Legal entity registration failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Ошибка регистрации"));
+        }
+    }
+
     record ErrorResponse(String error) { }
 }

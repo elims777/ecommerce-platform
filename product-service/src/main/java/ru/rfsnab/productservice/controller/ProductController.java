@@ -23,13 +23,23 @@ public class ProductController {
     private final ProductService productService;
 
     /**
-     * Получить все товары с пагинацией
+     * Получить все активные товары с пагинацией
      */
     @GetMapping
     public ResponseEntity<Page<ProductResponse>> getAllProducts(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)Pageable pageable
             ){
         Page<Product> productsPage = productService.getProductsPage(pageable);
+        return ResponseEntity.ok(productsPage.map(ProductMapper::mapToResponse));
+    }
+
+    /**
+     * Получить все товары с пагинацией для админки
+     */
+    @GetMapping("/admin")
+    public ResponseEntity<Page<ProductResponse>> getAllProductsAdmin(
+            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        Page<Product> productsPage = productService.getAllProductsPage(pageable);
         return ResponseEntity.ok(productsPage.map(ProductMapper::mapToResponse));
     }
 
@@ -59,7 +69,7 @@ public class ProductController {
             @PathVariable Long categoryId,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
             ){
-        Page<Product> products = productService.getProductsByCategory(categoryId, pageable);
+        Page<Product> products = productService.getProductsByCategoryPage(categoryId, pageable);
         return ResponseEntity.ok(products.map(ProductMapper::mapToResponse));
     }
 
@@ -160,4 +170,36 @@ public class ProductController {
         return ResponseEntity.ok(ProductMapper.mapToResponse(saved));
     }
 
+    /**
+     * Массовое перемещение товаров в категорию
+     */
+    @PutMapping("/batch/category")
+    public ResponseEntity<Void> batchUpdateCategory(
+            @RequestParam Long categoryId,
+            @RequestBody List<Long> productIds
+    ) {
+        productService.batchUpdateCategory(productIds, categoryId);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Массовая активация/деактивация товаров
+     */
+    @PutMapping("/batch/active")
+    public ResponseEntity<Void> batchUpdateActive(
+            @RequestParam Boolean isActive,
+            @RequestBody List<Long> productIds
+    ) {
+        productService.batchUpdateActive(productIds, isActive);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Массовое удаление товаров
+     */
+    @DeleteMapping("/batch")
+    public ResponseEntity<Void> batchDelete(@RequestBody List<Long> productIds) {
+        productService.batchDelete(productIds);
+        return ResponseEntity.noContent().build();
+    }
 }

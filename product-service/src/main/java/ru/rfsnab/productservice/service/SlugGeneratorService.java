@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -32,7 +33,6 @@ public class SlugGeneratorService {
      *
      * @param name название товара/категории
      * @return slug (URL-friendly строка)
-     *
      * Пример:
      * "Огнетушитель ОП-4(з)-АВСЕ-01" → "ognetushitel-op-4-z-avse-01"
      */
@@ -66,6 +66,30 @@ public class SlugGeneratorService {
         return result;
     }
 
+    /**
+     * Генерация гарантированно уникального slug.
+     * Проверяет in-memory Set вместо обращения в БД на каждый вызов.
+     * Thread-safe при использовании ConcurrentHashMap.newKeySet().
+     *
+     * @param name           название товара
+     * @param reservedSlugs  slug'и, уже занятые (из БД + текущий batch). Может быть null для единичного создания.
+     * @return уникальный slug
+     */
+    public String generateUniqueSlug(String name, Set<String> reservedSlugs) {
+        String baseSlug = generateSlug(name);
+        String candidateSlug = baseSlug;
+        int counter = 1;
+
+        if (reservedSlugs != null) {
+            while (reservedSlugs.contains(candidateSlug)) {
+                counter++;
+                candidateSlug = makeUnique(baseSlug, counter);
+            }
+            reservedSlugs.add(candidateSlug);
+        }
+
+        return candidateSlug;
+    }
 
     /**
      * Транслитерация кириллицы в латиницу

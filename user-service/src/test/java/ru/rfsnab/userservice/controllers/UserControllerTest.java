@@ -71,6 +71,7 @@ class UserControllerTest {
                 .firstname("Firstname")
                 .lastname("Lastname")
                 .surname("Surname")
+                .phone("+79998882221")
                 .emailVerified(false)
                 .roles(new HashSet<>(Set.of(roleUser)))
                 .build();
@@ -86,6 +87,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
+                "79991234567",
                 true
         );
 
@@ -114,6 +116,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
+                "79991234567",
                 true
         );
 
@@ -152,6 +155,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
+                "79991234567",
                 true
         );
 
@@ -188,6 +192,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
+                "79991234567",
                 true
         );
 
@@ -338,15 +343,15 @@ class UserControllerTest {
     @DisplayName("GET /v1/users/me - returns current user")
     void getCurrentUser_ReturnsCurrentUser() throws Exception {
         // Given
-        when(userService.findUserByEmail("test@test.com")).thenReturn(Optional.of(testUser));
+        when(userService.findUserById(1L)).thenReturn(Optional.of(testUser));
 
         // When & Then
         mockMvc.perform(get("/v1/users/me")
-                        .with(user("test@test.com")))
+                        .with(user("1")))  // userId, не email
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("test@test.com"));
 
-        verify(userService, times(1)).findUserByEmail("test@test.com");
+        verify(userService, times(1)).findUserById(1L);
     }
 
     @Test

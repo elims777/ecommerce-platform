@@ -400,4 +400,33 @@ class ProductServiceTest {
                     .isInstanceOf(ProductNotFoundException.class);
         }
     }
+
+    // ==================== batchDelete() Tests ====================
+
+    @Nested
+    @DisplayName("batchDelete()")
+    class BatchDeleteTests {
+
+        @Test
+        @DisplayName("удаляет список продуктов по ID")
+        void batchDelete_ValidIds_CallsDeleteAllById() {
+            List<Long> ids = List.of(1L, 2L, 3L);
+            doNothing().when(productRepository).deleteAllById(ids);
+
+            productService.batchDelete(ids);
+
+            verify(productRepository).deleteAllById(ids);
+        }
+
+        @Test
+        @DisplayName("пустой список — deleteAllById вызывается с пустым")
+        void batchDelete_EmptyList_CallsDeleteAllByIdWithEmpty() {
+            List<Long> ids = List.of();
+            doNothing().when(productRepository).deleteAllById(ids);
+
+            productService.batchDelete(ids);
+
+            verify(productRepository).deleteAllById(ids);
+        }
+    }
 }

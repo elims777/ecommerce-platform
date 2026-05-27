@@ -20,6 +20,7 @@ app:
   kafka:
     topic:
       user-events: user-events
+      legal-entity-events: legal-entity-events
 
 springdoc:
   api-docs:
@@ -28,3 +29,6 @@ springdoc:
     path: /swagger-ui.html
     operationsSorter: method
     tagsSorter: alpha
+
+jwt:
+  secret: "${SECRET_JWT}"

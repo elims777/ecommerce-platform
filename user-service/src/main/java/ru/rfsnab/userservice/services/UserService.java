@@ -65,10 +65,13 @@ public class UserService {
                 .map(
                         userEntity -> {
                             userEntity.setEmail(user.getEmail());
-                            userEntity.setPassword(passwordEncoder.encode(user.getPassword()));
+                            if (user.getPassword() != null && !user.getPassword().isBlank()) {
+                                userEntity.setPassword(passwordEncoder.encode(user.getPassword()));
+                            }
                             userEntity.setFirstname(user.getFirstname());
                             userEntity.setLastname(user.getLastname());
                             userEntity.setSurname(user.getSurname());
+                            userEntity.setPhone(user.getPhone());
                             userEntity.setRoles(user.getRoles());
                             return userRepository.save(userEntity);
                         }
@@ -91,5 +94,30 @@ public class UserService {
 
     public UserEntity findById(Long userId) {
         return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    @Transactional
+    public UserEntity changeRole(Long id, String roleName) {
+        UserEntity user = findById(id);
+        RoleEntity role = roleService.findRoleByName(roleName);
+        user.getRoles().clear();
+        user.getRoles().add(role);
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public UserEntity setActive(Long id, boolean active) {
+        UserEntity user = findById(id);
+        user.setActive(active);
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public UserEntity updateUserAdmin(Long id, String firstname, String lastname, String phone) {
+        UserEntity user = findById(id);
+        if (firstname != null) user.setFirstname(firstname);
+        if (lastname != null) user.setLastname(lastname);
+        if (phone != null) user.setPhone(phone);
+        return userRepository.save(user);
     }
 }

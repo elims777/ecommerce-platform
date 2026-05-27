@@ -21,9 +21,9 @@ import ru.rfsnab.orderservice.service.WarehousePointService;
 import java.math.BigDecimal;
 import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -372,6 +372,6 @@ class CartControllerTest extends BaseIntegrationTest {
     }
 
     private ProductDto buildProduct(Long id, String name, String price) {
-        return new ProductDto(id, name, new BigDecimal(price), 100, true);
+        return new ProductDto(id, name, new BigDecimal(price), null, 100, true, "ext-001");
     }
 }

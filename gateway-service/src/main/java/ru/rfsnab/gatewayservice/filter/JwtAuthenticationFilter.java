@@ -35,18 +35,20 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private final SecretKey signingKey;
 
     private static final List<String> PUBLIC_PATHS = List.of(
-            "/v1/auth/login",
-            "/v1/auth/refresh",
+            "/api/v1/auth/login",
+            "/api/v1/auth/refresh",
             "/api/v1/register",
+            "/api/v1/register/legal",
+            "/api/v1/legal-entities/register",
+            "/api/v1/legal-entities/confirm-email",
+            "/api/v1/legal-entities/authenticate",
+            "/v1/auth/",
             "/auth/",
             "/auth/login-form",
             "/auth/register",
             "/oauth2/",
             "/verify-email",
-            "/api/verification/",
-            "/",
-            "/api/v1/products",
-            "/api/v1/categories"
+            "/api/verification/"
     );
 
 
@@ -80,11 +82,18 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     .parseSignedClaims(token)
                     .getPayload();
 
-            String email = claims.getSubject();
+            String email = claims.get("email", String.class);
+            String clientType = claims.get("clientType", String.class);
+            String subject = claims.getSubject();
 
             // Пробрасываем данные пользователя в заголовках для downstream сервисов
-            ServerHttpRequest modifiedRequest = request.mutate().header("X-User-Email", email).build();
-            log.debug("JWT валиден для пользователя: {}, {} {}", email, method, path);
+            ServerHttpRequest modifiedRequest = request.mutate()
+                    .header("X-User-Email", email != null ? email : "")
+                    .header("X-User-Id", subject != null ? subject : "")
+                    .header("X-Client-Type", clientType != null ? clientType : "B2C")
+                    .build();
+            log.debug("JWT валиден: clientType={}, sub={}, {} {}", clientType, subject, method, path);
+
             return chain.filter(exchange.mutate().request(modifiedRequest).build());
         } catch (ExpiredJwtException e) {
             log.warn("Истёкший JWT токен: {} {}", method, path);
@@ -105,23 +114,25 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
      * GET запросы к каталогу (products, categories) — публичные.
      * POST/PUT/DELETE к ним — требуют авторизации.
      */
-    private boolean isPublicPath(String path, String method){
-        // Главная страница
-        if("/".equals(path)){
+    private boolean isPublicPath(String path, String method) {
+        // Главная страница — точное совпадение
+        if ("/".equals(path)) {
             return true;
         }
 
-        // Каталог — только GET без авторизации
-        if (("GET".equals(method)) &&
-                (path.startsWith("/api/v1/products") || path.startsWith("/api/v1/categories")
+        // Каталог и точки самовывоза — только GET
+        if ("GET".equals(method) &&
+                (path.startsWith("/api/v1/products")
+                        || path.startsWith("/api/v1/categories")
                         || path.startsWith("/api/v1/warehouse-points"))) {
             return true;
         }
 
-        // Остальные публичные пути
+        // Остальные публичные пути (исключаем "/", products, categories — уже проверены выше)
         return PUBLIC_PATHS.stream()
-                .filter(publicPath -> !publicPath.equals("/api/v1/products")
-                && !publicPath.equals("/api/v1/categories"))
+                .filter(publicPath -> !"/".equals(publicPath)
+                        && !"/api/v1/products".equals(publicPath)
+                        && !"/api/v1/categories".equals(publicPath))
                 .anyMatch(path::startsWith);
     }
 

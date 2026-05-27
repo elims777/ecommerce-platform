@@ -7,8 +7,6 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
@@ -33,7 +31,8 @@ public class BaseIntegrationTest {
                 .withPassword("test");
         postgres.start();
 
-        kafka = new KafkaContainer(DockerImageName.parse("apache/kafka-native:3.8.0"));
+        kafka = new KafkaContainer(DockerImageName.parse("apache/kafka-native:3.8.0"))
+                .withEnv("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "true");
         kafka.start();
 
         redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))

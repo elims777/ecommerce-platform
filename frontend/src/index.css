@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600;700&family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap');
+
+:root {
+  --brand-red: #C0272D;
+  --brand-red-hover: #A8222A;
+  --brand-red-pressed: #8E1C24;
+  --brand-navy: #1E3A5F;
+  --brand-navy-hover: #16304F;
+  --brand-green: #1A6B3A;
+  --brand-green-soft: #E6F1EB;
+  --brand-ink: #1A1A1A;
+  --bg: oklch(0.985 0.003 245);
+  --surface: #ffffff;
+  --surface-2: oklch(0.968 0.005 245);
+  --surface-3: oklch(0.945 0.008 245);
+  --line-1: oklch(0.925 0.008 245);
+  --line-2: oklch(0.88 0.012 245);
+  --line-3: oklch(0.78 0.015 245);
+  --ink-1: #1A1A1A;
+  --ink-2: oklch(0.42 0.012 245);
+  --ink-3: oklch(0.58 0.014 245);
+  --ink-4: oklch(0.72 0.012 245);
+  --red-tint: oklch(0.955 0.022 28);
+  --red-tint-2: oklch(0.91 0.045 28);
+  --navy-tint: oklch(0.955 0.018 245);
+  --green-tint: oklch(0.955 0.022 152);
+  --warn: #B5630E;
+  --warn-tint: oklch(0.96 0.030 75);
+  --font-head: 'Geologica', system-ui, sans-serif;
+  --font-body: 'Golos Text', system-ui, sans-serif;
+  --font-display: 'Unbounded', 'Geologica', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 6px;
+  --r-4: 8px;
+  --r-5: 12px;
+  --shadow-1: 0 1px 2px rgba(20,15,10,.04), 0 1px 0 rgba(20,15,10,.02);
+  --shadow-2: 0 1px 2px rgba(20,15,10,.05), 0 4px 12px rgba(20,15,10,.06);
+  --shadow-3: 0 6px 24px rgba(20,15,10,.10), 0 1px 2px rgba(20,15,10,.05);
+  --shadow-pop: 0 10px 40px rgba(20,15,10,.14), 0 2px 6px rgba(20,15,10,.06);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--ink-1);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: none;
+}
+
+.ant-layout {
+  overflow-x: hidden;
+}
+
+/* rf-* utility classes (from tokens.css) */
+.rf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: var(--r-3);
+  border: 1px solid transparent;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.rf-btn-sm { height: 32px; padding: 0 12px; font-size: 13px; }
+.rf-btn-lg { height: 48px; padding: 0 22px; font-size: 15px; }
+.rf-btn-primary { background: var(--brand-red); color: #fff; border-color: var(--brand-red); }
+.rf-btn-primary:hover { background: var(--brand-red-hover); border-color: var(--brand-red-hover); }
+.rf-btn-secondary { background: transparent; color: var(--brand-navy); border-color: var(--brand-navy); }
+.rf-btn-secondary:hover { background: var(--navy-tint); }
+.rf-btn-ghost { background: transparent; color: var(--ink-1); border-color: transparent; }
+.rf-btn-ghost:hover { background: var(--surface-3); }
+.rf-btn-quiet { background: var(--surface-2); color: var(--ink-1); border-color: var(--line-1); }
+.rf-btn-quiet:hover { background: var(--surface-3); }
+
+.rf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  line-height: 1;
+}
+.rf-badge-success { background: var(--brand-green-soft); color: var(--brand-green); }
+.rf-badge-warn { background: var(--warn-tint); color: var(--warn); }
+.rf-badge-red { background: var(--red-tint); color: var(--brand-red); }
+.rf-badge-navy { background: var(--navy-tint); color: var(--brand-navy); }
+.rf-badge-neutral { background: var(--surface-3); color: var(--ink-2); }
+.rf-badge-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+
+.rf-card {
+  background: var(--surface);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-4);
+}
+
+.rf-input {
+  display: block;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-3);
+  color: var(--ink-1);
+  font-size: 14px;
+  font-family: var(--font-body);
+  transition: border-color .12s, box-shadow .12s;
+  outline: none;
+}
+.rf-input::placeholder { color: var(--ink-4); }
+.rf-input:focus { border-color: var(--brand-navy); box-shadow: 0 0 0 3px oklch(0.92 0.04 250); }
+
+.rf-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+}
+
+.rf-mono { font-family: var(--font-mono); }
+.rf-tabular { font-variant-numeric: tabular-nums; }
+
+@keyframes rf-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}

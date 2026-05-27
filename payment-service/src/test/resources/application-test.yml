@@ -1,0 +1,22 @@
+spring:
+  kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: payment-test-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+tochka:
+  base-url: http://localhost:${wiremock.server.port:0}
+  token: test-token
+  customer-code: CUST-TEST
+  merchant-id: MERCH-TEST
+  redirect-url: http://localhost:3000/payment/success
+  fail-redirect-url: http://localhost:3000/payment/fail
+
+internal:
+  secret: test-secret

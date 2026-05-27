@@ -16,146 +16,219 @@ spring:
         webflux:
           routes:
             # === AUTH-SERVICE (:9000) ===
-                    # Login ? ??????? ????? (brute force ??????)
-                    - id: auth-login
-                      uri: http://localhost:9000
-                      predicates:
-                        - Path=/v1/auth/login
-                        - Method=POST
-                      filters:
-                        - name: RequestRateLimiter
-                          args:
-                            redis-rate-limiter.replenishRate: 5
-                            redis-rate-limiter.burstCapacity: 7
-                            redis-rate-limiter.requestedTokens: 1
-                            key-resolver: "#{@ipKeyResolver}"
 
-                    # Register ? ??????? ?????
-                    - id: auth-register
-                      uri: http://localhost:9000
-                      predicates:
-                        - Path=/api/v1/register
-                        - Method=POST
-                      filters:
-                        - name: RequestRateLimiter
-                          args:
-                            redis-rate-limiter.replenishRate: 3
-                            redis-rate-limiter.burstCapacity: 5
-                            redis-rate-limiter.requestedTokens: 1
-                            key-resolver: "#{@ipKeyResolver}"
+            # Login — строгий лимит (brute force защита)
+            - id: auth-login
+              uri: http://localhost:9000
+              predicates:
+                - Path=/api/v1/auth/login
+                - Method=POST
+              filters:
+                - RewritePath=/api(?<segment>/?.*), ${segment}
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 7
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
-                    # ????????? auth API
-                    - id: auth-api
-                      uri: http://localhost:9000
-                      predicates:
-                        - Path=/v1/auth/**
-                      filters:
-                        - name: RequestRateLimiter
-                          args:
-                            redis-rate-limiter.replenishRate: 15
-                            redis-rate-limiter.burstCapacity: 25
-                            redis-rate-limiter.requestedTokens: 1
-                            key-resolver: "#{@ipKeyResolver}"
+            # Register B2C — строгий лимит
+            - id: auth-register
+              uri: http://localhost:9000
+              predicates:
+                - Path=/api/v1/register
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 3
+                    redis-rate-limiter.burstCapacity: 5
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
-                    # OAuth2
-                    - id: auth-oauth2
-                      uri: http://localhost:9000
-                      predicates:
-                        - Path=/oauth2/**
-                      filters:
-                        - name: RequestRateLimiter
-                          args:
-                            redis-rate-limiter.replenishRate: 5
-                            redis-rate-limiter.burstCapacity: 7
-                            redis-rate-limiter.requestedTokens: 1
-                            key-resolver: "#{@ipKeyResolver}"
+            # Register legal entity (proxy через auth-service -> user-service)
+            - id: auth-register-legal
+              uri: http://localhost:9000
+              predicates:
+                - Path=/api/v1/register/legal
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 3
+                    redis-rate-limiter.burstCapacity: 5
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
-                    # ???-???????? (Thymeleaf)
-                    - id: auth-pages
-                      uri: http://localhost:9000
-                      predicates:
-                        - Path=/auth/**,/profile,/
-                      filters:
-                        - name: RequestRateLimiter
-                          args:
-                            redis-rate-limiter.replenishRate: 20
-                            redis-rate-limiter.burstCapacity: 30
-                            redis-rate-limiter.requestedTokens: 1
-                            key-resolver: "#{@ipKeyResolver}"
+            # Остальные auth API (refresh, logout и т.д.)
+            - id: auth-api
+              uri: http://localhost:9000
+              predicates:
+                - Path=/api/v1/auth/**
+              filters:
+                - RewritePath=/api(?<segment>/?.*), ${segment}
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 15
+                    redis-rate-limiter.burstCapacity: 25
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
-                    # Verify email
-                    - id: verify-email
-                      uri: http://localhost:9000
-                      predicates:
-                        - Path=/verify-email
+            # OAuth2
+            - id: auth-oauth2
+              uri: http://localhost:9000
+              predicates:
+                - Path=/oauth2/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 7
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
-                    # === NOTIFICATION-SERVICE (:8082) ===
-                    - id: notification-api
-                      uri: http://localhost:8082
-                      predicates:
-                        - Path=/api/verification/**
+            # Веб-страницы (Thymeleaf)
+            - id: auth-pages
+              uri: http://localhost:9000
+              predicates:
+                - Path=/auth/**,/profile,/
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 30
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
-                    # === ORDER-SERVICE (:8084) ===
-                    - id: order-cart
-                      uri: http://localhost:8084
-                      predicates:
-                        - Path=/api/v1/cart/**
-                      filters:
-                        - name: RequestRateLimiter
-                          args:
-                            redis-rate-limiter.replenishRate: 15
-                            redis-rate-limiter.burstCapacity: 25
-                            redis-rate-limiter.requestedTokens: 1
-                            key-resolver: "#{@ipKeyResolver}"
+            # Verify email
+            - id: verify-email
+              uri: http://localhost:9000
+              predicates:
+                - Path=/verify-email
 
-                    - id: order-api
-                      uri: http://localhost:8084
-                      predicates:
-                        - Path=/api/v1/orders/**
-                      filters:
-                        - name: RequestRateLimiter
-                          args:
-                            redis-rate-limiter.replenishRate: 15
-                            redis-rate-limiter.burstCapacity: 25
-                            redis-rate-limiter.requestedTokens: 1
-                            key-resolver: "#{@ipKeyResolver}"
+            # === USER-SERVICE (:8081) ===
+            - id: user-api
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/v1/users/**
+              filters:
+                - RewritePath=/api(?<segment>/?.*), ${segment}
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 15
+                    redis-rate-limiter.burstCapacity: 25
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
-                    - id: order-warehouse
-                      uri: http://localhost:8084
-                      predicates:
-                        - Path=/api/v1/warehouse-points/**
+            # Legal entities (user-service)
+            - id: legal-entities-api
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/v1/legal-entities/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 15
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
-                    # === PRODUCT-SERVICE (:8083) ===
-                    # ??????? ? ?????? ?? ????????
-                    - id: product-api
-                      uri: http://localhost:8083
-                      predicates:
-                        - Path=/api/v1/products/**
-                      filters:
-                        - name: RequestRateLimiter
-                          args:
-                            redis-rate-limiter.replenishRate: 20
-                            redis-rate-limiter.burstCapacity: 30
-                            redis-rate-limiter.requestedTokens: 1
-                            key-resolver: "#{@ipKeyResolver}"
+            # Legal entity admin (user-service)
+            - id: legal-entities-admin-api
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/v1/admin/legal-entities/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 15
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
-                    - id: category-api
-                      uri: http://localhost:8083
-                      predicates:
-                        - Path=/api/v1/categories/**
-                      filters:
-                        - name: RequestRateLimiter
-                          args:
-                            redis-rate-limiter.replenishRate: 20
-                            redis-rate-limiter.burstCapacity: 30
-                            redis-rate-limiter.requestedTokens: 1
-                            key-resolver: "#{@ipKeyResolver}"
+            # === NOTIFICATION-SERVICE (:8082) ===
+            - id: notification-api
+              uri: http://localhost:8082
+              predicates:
+                - Path=/api/verification/**
+
+            # === PRODUCT-SERVICE (:8083) ===
+            - id: product-api
+              uri: http://localhost:8083
+              predicates:
+                - Path=/api/v1/products/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 30
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
+            - id: category-api
+              uri: http://localhost:8083
+              predicates:
+                - Path=/api/v1/categories/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 30
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
+            # === ORDER-SERVICE (:8084) ===
+            - id: order-cart
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/v1/cart/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 15
+                    redis-rate-limiter.burstCapacity: 25
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
+            - id: order-api
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/v1/orders/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 15
+                    redis-rate-limiter.burstCapacity: 25
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
+            - id: order-warehouse
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/v1/warehouse-points/**
+            - id: order-recipients
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/v1/recipients/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 15
+                    redis-rate-limiter.burstCapacity: 25
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
+          # === INTEGRATION-SERVICE (:8085) ===
+            - id: integration-1c
+              uri: http://localhost:8085
+              predicates:
+                - Path=/1c-exchange/**
 
 # JWT
 jwt:
   secret: "${SECRET_JWT}"
 
-# ???????????
+# Логирование
 logging:
   level:
     ru.rfsnab.gatewayservice: DEBUG

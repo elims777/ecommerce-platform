@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.orderservice.exception.*;
+import ru.rfsnab.orderservice.kafka.Order1CKafkaProducer;
 import ru.rfsnab.orderservice.kafka.OrderKafkaProducer;
 import ru.rfsnab.orderservice.mapper.AddressMapper;
 import ru.rfsnab.orderservice.mapper.OrderMapper;
@@ -14,24 +15,33 @@ import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.HasDeliveryInfo;
 import ru.rfsnab.orderservice.models.dto.order.OrderItemDto;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
+import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
+import ru.rfsnab.orderservice.models.dto.payment.PaymentLinkResponse;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.entity.*;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
+import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
 import ru.rfsnab.orderservice.repository.OrderRepository;
+import ru.rfsnab.orderservice.service.client.PaymentServiceClient;
 import ru.rfsnab.orderservice.service.client.ProductServiceClient;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Сервис управления заказами.
- * Жизненный цикл заказа:
- * CREATED → PENDING_PAYMENT → PAID → PROCESSING → SHIPPED → IN_TRANSIT → DELIVERED
- * Отмена возможна до статуса SHIPPED.
- * Переход PAID → PROCESSING — автоматический.
- * TTL на оплату — 2 дня, после чего заказ отменяется.
+ *
+ * B2B предоплата 100%: CREATED → PROCESSING → INVOICE_SENT → PENDING_PAYMENT → PAID → SHIPPED → IN_TRANSIT → DELIVERED → COMPLETED
+ * B2B предоплата 30%: CREATED → PROCESSING → INVOICE_SENT → PENDING_PAYMENT → PARTIALLY_PAID → SHIPPED → IN_TRANSIT → DELIVERED → PENDING_PAYMENT → PAID → COMPLETED
+ * B2B постоплата: CREATED → PROCESSING → INVOICE_SENT → AWAITING_CONFIRMATION → SHIPPED → IN_TRANSIT → DELIVERED → PENDING_PAYMENT → PAID → COMPLETED
+ * B2C: CREATED → PROCESSING → PENDING_PAYMENT → PAID → SHIPPED → IN_TRANSIT → DELIVERED → COMPLETED
+ *
+ * CREATED — технический статус (клиент заполняет форму, в 1С не отправляется).
+ * Отправка в 1С происходит только при confirmOrder (CREATED → PROCESSING).
  */
 @Slf4j
 @Service
@@ -42,26 +52,51 @@ public class OrderService {
     private final CartService cartService;
     private final WarehousePointService warehousePointService;
     private final ProductServiceClient productServiceClient;
+    private final PaymentServiceClient paymentServiceClient;
     private final OrderKafkaProducer kafkaProducer;
+    private final Order1CKafkaProducer order1CKafkaProducer;
 
     /** Допустимые переходы между статусами */
-    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = Map.of(
-            OrderStatus.CREATED, Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED),
-            OrderStatus.PENDING_PAYMENT, Set.of(OrderStatus.PAID, OrderStatus.PAYMENT_FAILED, OrderStatus.CANCELLED),
-            OrderStatus.PAYMENT_FAILED, Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED),
-            OrderStatus.PAID, Set.of(OrderStatus.PROCESSING, OrderStatus.CANCELLED),
-            OrderStatus.PROCESSING, Set.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED),
-            OrderStatus.SHIPPED, Set.of(OrderStatus.IN_TRANSIT),
-            OrderStatus.IN_TRANSIT, Set.of(OrderStatus.DELIVERED),
-            OrderStatus.CANCELLED, Set.of(OrderStatus.REFUNDED)
-    );
+    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS;
 
-    /** Статусы, в которых пользователь может отменить заказ */
+    static {
+        Map<OrderStatus, Set<OrderStatus>> t = new java.util.EnumMap<>(OrderStatus.class);
+        t.put(OrderStatus.CREATED,               Set.of(OrderStatus.PROCESSING, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
+        t.put(OrderStatus.PROCESSING,            Set.of(OrderStatus.INVOICE_SENT, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
+        t.put(OrderStatus.INVOICE_SENT,          Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.AWAITING_CONFIRMATION, OrderStatus.CANCELLED));
+        t.put(OrderStatus.PENDING_PAYMENT,       Set.of(OrderStatus.PAID, OrderStatus.PARTIALLY_PAID, OrderStatus.PAYMENT_FAILED, OrderStatus.CANCELLED));
+        t.put(OrderStatus.PAYMENT_FAILED,        Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
+        t.put(OrderStatus.AWAITING_CONFIRMATION, Set.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED));
+        t.put(OrderStatus.PAID,                  Set.of(OrderStatus.SHIPPED, OrderStatus.REFUNDED));
+        t.put(OrderStatus.PARTIALLY_PAID,        Set.of(OrderStatus.SHIPPED, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
+        t.put(OrderStatus.SHIPPED,               Set.of(OrderStatus.IN_TRANSIT, OrderStatus.DELIVERED));
+        t.put(OrderStatus.IN_TRANSIT,            Set.of(OrderStatus.DELIVERED));
+        t.put(OrderStatus.DELIVERED,             Set.of(OrderStatus.PAID, OrderStatus.PENDING_PAYMENT, OrderStatus.COMPLETED));
+        t.put(OrderStatus.CANCELLED,             Set.of(OrderStatus.REFUNDED));
+        t.put(OrderStatus.REFUNDED,              Set.of(OrderStatus.COMPLETED));
+        ALLOWED_TRANSITIONS = java.util.Collections.unmodifiableMap(t);
+    }
+
+    /** Статусы, в которых клиент может отменить заказ самостоятельно */
     private static final Set<OrderStatus> CANCELLABLE_STATUSES = Set.of(
             OrderStatus.CREATED,
+            OrderStatus.PROCESSING,
+            OrderStatus.INVOICE_SENT,
             OrderStatus.PENDING_PAYMENT,
-            OrderStatus.PAID,
-            OrderStatus.PROCESSING
+            OrderStatus.PAYMENT_FAILED
+    );
+
+    private static final Set<OrderStatus> PAYABLE_STATUSES_B2C = Set.of(
+            OrderStatus.PROCESSING,
+            OrderStatus.PENDING_PAYMENT,
+            OrderStatus.PAYMENT_FAILED
+    );
+
+    private static final Set<OrderStatus> PAYABLE_STATUSES_B2B = Set.of(
+            OrderStatus.INVOICE_SENT,
+            OrderStatus.PENDING_PAYMENT,
+            OrderStatus.PAYMENT_FAILED,
+            OrderStatus.DELIVERED
     );
 
     /**
@@ -75,7 +110,7 @@ public class OrderService {
      * 6. Отправляем Kafka event
      */
     @Transactional
-    public Order createOrder(Long userId, String customerEmail, CreateOrderRequest request) {
+    public Order createOrder(Long userId, String customerEmail, String clientType, CreateOrderRequest request) {
         // 1. Получаем корзину
         Cart cart = cartService.getCart(userId);
         if (cart.getItems().isEmpty()) {
@@ -87,21 +122,48 @@ public class OrderService {
         validateDeliveryInfo(request);
 
         // 3. Создаём заказ — базовые поля через маппер
-        Order order = OrderMapper.toEntity(userId,customerEmail, request);
+        Order order = OrderMapper.toEntity(userId, customerEmail, clientType, request);
         order.setOrderNumber(generateOrderNumber(userId));
 
+        // B2B validation: companyName and inn are required
+        if (CustomerType.B2B == order.getCustomerType()) {
+            if (request.companyName() == null || request.inn() == null) {
+                throw new InvalidOrderStateException("B2B order requires companyName and inn");
+            }
+            order.setCompanyName(request.companyName());
+            order.setInn(request.inn());
+        }
+
         // 4. Обогащаем items данными из product-service
-        BigDecimal totalAmount = addItemsFromCart(order, cart.getItems(), products);
+        BigDecimal totalAmount = addItemsFromCart(order, cart.getItems(), products, clientType);
         order.setTotalAmount(totalAmount);
 
         order = orderRepository.save(order);
+        orderRepository.flush();
         log.info("Заказ создан: {} для пользователя {}", order.getOrderNumber(), userId);
 
         // 5. Очищаем корзину
         cartService.clearCart(userId);
 
-        // 6. Kafka event
+        // 6. Kafka event — в 1С заказ уйдёт только после confirmOrder
         kafkaProducer.sendOrderCreated(order);
+
+        return order;
+    }
+
+    /**
+     * Подтверждение заказа клиентом (CREATED → PROCESSING).
+     * Только в этот момент заказ с полными данными отправляется в 1С.
+     */
+    @Transactional
+    public Order confirmOrder(UUID orderId, Long userId) {
+        Order order = getOrderAndValidateOwner(orderId, userId);
+        changeStatus(order, OrderStatus.PROCESSING);
+        order = orderRepository.save(order);
+
+        log.info("Заказ подтверждён клиентом: {}", order.getOrderNumber());
+        kafkaProducer.sendOrderStatusChanged(order);
+        order1CKafkaProducer.sendOrderFor1C(order);
 
         return order;
     }
@@ -183,6 +245,7 @@ public class OrderService {
                 .warehousePointId(sourceOrder.getWarehousePointId())
                 .deliveryAddress(copyDeliveryAddress(sourceOrder.getDeliveryAddress()))
                 .customerEmail(customerEmail)
+                .customerType(sourceOrder.getCustomerType())
                 .comment(sourceOrder.getComment())
                 .build();
 
@@ -198,6 +261,7 @@ public class OrderService {
                     .productName(product.name())
                     .quantity(sourceItem.getQuantity())
                     .price(product.price())
+                    .externalId(product.externalId())
                     .build();
 
             newOrder.getItems().add(newItem);
@@ -228,7 +292,7 @@ public class OrderService {
      */
     @Transactional(readOnly = true)
     public Order getOrder(UUID orderId) {
-        return orderRepository.findById(orderId)
+        return orderRepository.findWithItemsById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Заказ не найден: " + orderId));
     }
 
@@ -250,7 +314,32 @@ public class OrderService {
     }
 
     /**
-     * Инициация оплаты (CREATED → PENDING_PAYMENT).
+     * Получение всех заказов для админа с опциональными фильтрами.
+     * Приоритет: dateFrom+dateTo > status > userId > все заказы.
+     */
+    @Transactional(readOnly = true)
+    public Page<Order> getAdminOrders(
+            OrderStatus status,
+            Long userId,
+            LocalDateTime dateFrom,
+            LocalDateTime dateTo,
+            Pageable pageable) {
+        if (dateFrom != null && dateTo != null) {
+            return orderRepository.findByCreatedAtBetween(dateFrom, dateTo, pageable);
+        }
+        if (status != null) {
+            return orderRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+        }
+        if (userId != null) {
+            return orderRepository.findByUserId(userId, pageable);
+        }
+        return orderRepository.findAllByOrderByCreatedAtDesc(pageable);
+    }
+
+    /**
+     * Инициация оплаты (PROCESSING/INVOICE_SENT/PAYMENT_FAILED → PENDING_PAYMENT).
+     * B2C: вызывается после confirmOrder когда клиент нажимает "Перейти к оплате".
+     * B2B: вызывается после INVOICE_SENT когда менеджер выбирает предоплату.
      */
     @Transactional
     public Order initiatePayment(UUID orderId, Long userId) {
@@ -265,21 +354,16 @@ public class OrderService {
     }
 
     /**
-     * Подтверждение оплаты (PENDING_PAYMENT → PAID → PROCESSING).
-     * Переход PAID → PROCESSING — автоматический.
+     * Подтверждение оплаты (PENDING_PAYMENT → PAID).
      * Вызывается через Kafka event от payment-service.
      */
     @Transactional
     public Order confirmPayment(UUID orderId) {
         Order order = getOrder(orderId);
-
         changeStatus(order, OrderStatus.PAID);
-        log.info("Оплата подтверждена для заказа: {}", order.getOrderNumber());
-
-        changeStatus(order, OrderStatus.PROCESSING);
-        log.info("Заказ {} переведён в обработку", order.getOrderNumber());
-
         order = orderRepository.save(order);
+
+        log.info("Оплата подтверждена для заказа: {}", order.getOrderNumber());
         kafkaProducer.sendOrderPaid(order);
 
         return order;
@@ -310,6 +394,17 @@ public class OrderService {
     }
 
     /**
+     * Обновление статусов заказа для обмена с 1С
+     */
+    @Transactional
+    public Order syncFrom1C(UUID orderId, String externalId, OrderStatus newStatus) {
+        Order order = getOrder(orderId);
+        order.setExternalId(externalId);
+        order.setStatus(newStatus);
+        return orderRepository.save(order);
+    }
+
+    /**
      * Отмена заказа пользователем. Возможна только до статуса SHIPPED.
      */
     @Transactional
@@ -328,6 +423,90 @@ public class OrderService {
         kafkaProducer.sendOrderCancelled(order);
 
         return order;
+    }
+
+    @Transactional
+    public PaymentInitiationResponse pay(UUID orderId, Long userId) {
+        Order order = getOrderAndValidateOwner(orderId, userId);
+        validatePayable(order);
+
+        return switch (order.getPaymentMethod()) {
+            case CARD, SBP -> initiateOnlinePayment(order);
+            case CASH_ON_DELIVERY -> recordCashOnDeliveryIntent(order);
+        };
+    }
+
+    public String getPaymentStatus(UUID orderId, Long userId) {
+        getOrderByIdAndUser(orderId, userId);
+        var response = paymentServiceClient.getPaymentStatus(orderId);
+        return response.status();
+    }
+
+    @Transactional
+    public Order confirmCashPayment(UUID orderId) {
+        Order order = getOrder(orderId);
+        if (order.getPaymentMethod() != PaymentMethod.CASH_ON_DELIVERY) {
+            throw new InvalidOrderStateException("Заказ не является cash-on-delivery");
+        }
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new InvalidOrderStateException(
+                    "Фиксация наличных возможна только в статусе PENDING_PAYMENT");
+        }
+        paymentServiceClient.recordCashPayment(orderId, order.getTotalAmount());
+        changeStatus(order, OrderStatus.PAID);
+        order = orderRepository.save(order);
+        kafkaProducer.sendOrderPaid(order);
+        log.info("Cash payment confirmed for order: {}", order.getOrderNumber());
+        return order;
+    }
+
+    @Transactional
+    public Order refund(UUID orderId) {
+        Order order = getOrder(orderId);
+        if (order.getStatus() != OrderStatus.PAID && order.getStatus() != OrderStatus.CANCELLED) {
+            throw new InvalidOrderStateException(
+                    "Возврат возможен только для оплаченных или отменённых заказов");
+        }
+        paymentServiceClient.refundPayment(orderId);
+        changeStatus(order, OrderStatus.REFUNDED);
+        order = orderRepository.save(order);
+        kafkaProducer.sendOrderStatusChanged(order);
+        log.info("Refund initiated for order: {}", order.getOrderNumber());
+        return order;
+    }
+
+    private PaymentInitiationResponse initiateOnlinePayment(Order order) {
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            changeStatus(order, OrderStatus.PENDING_PAYMENT);
+            order = orderRepository.save(order);
+            kafkaProducer.sendOrderStatusChanged(order);
+        }
+        PaymentLinkResponse resp = paymentServiceClient.createPayment(order);
+        log.info("Online payment initiated: orderId={}, mode={}, link={}",
+                order.getId(), order.getPaymentMethod(), resp.paymentLink());
+        return new PaymentInitiationResponse(resp.paymentLink(), order.getPaymentMethod(), order.getStatus());
+    }
+
+    private PaymentInitiationResponse recordCashOnDeliveryIntent(Order order) {
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            changeStatus(order, OrderStatus.PENDING_PAYMENT);
+            order = orderRepository.save(order);
+            kafkaProducer.sendOrderStatusChanged(order);
+        }
+        log.info("Cash-on-delivery intent recorded for order: {}", order.getOrderNumber());
+        return new PaymentInitiationResponse(null, PaymentMethod.CASH_ON_DELIVERY, order.getStatus());
+    }
+
+    private void validatePayable(Order order) {
+        boolean isB2B = order.getCustomerType() == CustomerType.B2B;
+        Set<OrderStatus> allowed = isB2B ? PAYABLE_STATUSES_B2B : PAYABLE_STATUSES_B2C;
+        if (!allowed.contains(order.getStatus())) {
+            throw new InvalidOrderStateException(
+                    "Оплата невозможна в статусе " + order.getStatus().getDisplayName());
+        }
+        if (order.getPaymentMethod() == null) {
+            throw new InvalidOrderStateException("Способ оплаты не задан");
+        }
     }
 
     // ==================== Private methods ====================
@@ -360,23 +539,27 @@ public class OrderService {
      * @return totalAmount заказа
      */
     private BigDecimal addItemsFromCart(Order order, List<CartItem> cartItems,
-                                        Map<Long, ProductDto> products) {
+                                        Map<Long, ProductDto> products, String clientType) {
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (CartItem cartItem : cartItems) {
             ProductDto product = products.get(cartItem.getProductId());
+
+            BigDecimal snapshotPrice = CustomerType.B2B.name().equals(clientType)
+                    ? product.price()
+                    : (product.wholesalePrice() != null ? product.wholesalePrice() : product.price());
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
                     .productId(cartItem.getProductId())
                     .productName(product.name())
                     .quantity(cartItem.getQuantity())
-                    .price(product.price())
+                    .price(snapshotPrice)
+                    .externalId(product.externalId())
                     .build();
 
             order.getItems().add(orderItem);
-            totalAmount = totalAmount.add(
-                    product.price().multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+            totalAmount = totalAmount.add(snapshotPrice.multiply(BigDecimal.valueOf(cartItem.getQuantity())));
         }
 
         return totalAmount;
@@ -401,6 +584,7 @@ public class OrderService {
                     .productName(product.name())
                     .quantity(itemDto.quantity())
                     .price(product.price())
+                    .externalId(product.externalId())
                     .build();
 
             order.getItems().add(orderItem);
@@ -431,7 +615,7 @@ public class OrderService {
         for (CartItem item : items) {
             ProductDto product = products.get(item.getProductId());
 
-            if (product == null || !product.active()) {
+            if (product == null || !product.isActive()) {
                 throw new ProductNotFoundException(
                         "Товар недоступен: " + item.getProductId());
             }
@@ -451,7 +635,7 @@ public class OrderService {
         for (OrderItemDto item : items) {
             ProductDto product = products.get(item.productId());
 
-            if (product == null || !product.active()) {
+            if (product == null || !product.isActive()) {
                 throw new ProductNotFoundException(
                         "Товар недоступен: " + item.productId());
             }
@@ -474,7 +658,7 @@ public class OrderService {
         for (OrderItem item : items) {
             ProductDto product = products.get(item.getProductId());
 
-            if (product == null || !product.active()) {
+            if (product == null || !product.isActive()) {
                 insufficientItems.add(
                         String.format("Товар '%s' (ID: %d) больше недоступен",
                                 item.getProductName(), item.getProductId()));
@@ -546,7 +730,7 @@ public class OrderService {
      * Получение заказа с проверкой владельца.
      */
     private Order getOrderAndValidateOwner(UUID orderId, Long userId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findWithItemsById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Заказ не найден: " + orderId));
 
         if (!order.getUserId().equals(userId)) {

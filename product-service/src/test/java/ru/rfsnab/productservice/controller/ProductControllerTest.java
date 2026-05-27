@@ -22,6 +22,7 @@ import ru.rfsnab.productservice.service.StorageService;
 
 import java.math.BigDecimal;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -259,6 +260,56 @@ class ProductControllerTest {
         void deleteProduct_RoleAdmin_Returns204() throws Exception {
             mockMvc.perform(delete("/api/v1/products/{id}", testProduct.getId()))
                     .andExpect(status().isNoContent());
+        }
+    }
+
+    // ==================== Batch Delete ====================
+
+    @Nested
+    @DisplayName("DELETE /api/v1/products/batch (Admin)")
+    class BatchDeleteTests {
+
+        @Test
+        @DisplayName("без авторизации → 401")
+        void batchDelete_NoAuth_Returns401() throws Exception {
+            mockMvc.perform(delete("/api/v1/products/batch")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("[1,2,3]"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser(authorities = "ROLE_USER")
+        @DisplayName("с ROLE_USER → 403")
+        void batchDelete_RoleUser_Returns403() throws Exception {
+            mockMvc.perform(delete("/api/v1/products/batch")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("[1,2,3]"))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @WithMockUser(authorities = "ROLE_ADMIN")
+        @DisplayName("с ROLE_ADMIN, существующие ID → 204 No Content")
+        void batchDelete_RoleAdmin_Returns204() throws Exception {
+            Long id1 = testProduct.getId();
+            Product second = productRepository.save(Product.builder()
+                    .name("Второй товар")
+                    .slug("vtoroy-tovar")
+                    .price(new BigDecimal("500.00"))
+                    .stockQuantity(10)
+                    .isActive(true)
+                    .isFeatured(false)
+                    .category(testCategory)
+                    .build());
+
+            mockMvc.perform(delete("/api/v1/products/batch")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("[%d,%d]".formatted(id1, second.getId())))
+                    .andExpect(status().isNoContent());
+
+            assertThat(productRepository.findById(id1)).isEmpty();
+            assertThat(productRepository.findById(second.getId())).isEmpty();
         }
     }
 

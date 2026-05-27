@@ -2,6 +2,7 @@ package ru.rfsnab.productservice.mapper;
 
 import ru.rfsnab.productservice.dto.ProductRequest;
 import ru.rfsnab.productservice.dto.ProductResponse;
+import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
 
 public class ProductMapper {
@@ -12,9 +13,18 @@ public class ProductMapper {
                 .description(productRequest.getDescription())
                 .shortDescription(productRequest.getShortDescription())
                 .price(productRequest.getPrice())
+                .wholesalePrice(productRequest.getWholesalePrice())
                 .stockQuantity(productRequest.getStockQuantity())
                 .isActive(productRequest.getIsActive())
                 .isFeatured(productRequest.getIsFeatured())
+                .externalId(productRequest.getExternalId())
+                .sku(productRequest.getSku())
+                .externalCode(productRequest.getExternalCode())
+                .unitOfMeasure(productRequest.getUnitOfMeasure())
+                .vatRate(productRequest.getVatRate())
+                .category(productRequest.getCategoryId() != null
+                        ? Category.builder().id(productRequest.getCategoryId()).build()
+                        : null)
                 .build();
     }
 
@@ -26,9 +36,15 @@ public class ProductMapper {
                 .description(product.getDescription())
                 .shortDescription(product.getShortDescription())
                 .price(product.getPrice())
+                .wholesalePrice(product.getWholesalePrice())
                 .stockQuantity(product.getStockQuantity())
                 .isActive(product.getIsActive())
                 .isFeatured(product.getIsFeatured())
+                .externalId(product.getExternalId())
+                .sku(product.getSku())
+                .externalCode(product.getExternalCode())
+                .unitOfMeasure(product.getUnitOfMeasure())
+                .vatRate(product.getVatRate())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .images(product.getImages().stream().map(ImageMapper::mapToResponse).toList())

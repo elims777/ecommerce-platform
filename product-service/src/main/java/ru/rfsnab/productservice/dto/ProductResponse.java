@@ -18,11 +18,19 @@ public class ProductResponse {
     private String description;
     private String shortDescription;
     private BigDecimal price;
+    private BigDecimal wholesalePrice;
     private Integer stockQuantity;
     private Long categoryId;
     private String categoryName;  // для удобства фронтенда
     private Boolean isActive;
     private Boolean isFeatured;
+
+    //интеграция с 1с
+    private String externalId;
+    private String sku;
+    private String externalCode;
+    private String unitOfMeasure;
+    private Integer vatRate;
 
     // Вложенные данные
     private List<ProductImageResponse> images;

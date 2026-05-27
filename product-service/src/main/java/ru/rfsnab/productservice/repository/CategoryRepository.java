@@ -22,4 +22,10 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     @Query("SELECT c FROM Category c WHERE c.parent IS NULL AND c.isActive = true ORDER BY c.displayOrder ASC")
     List<Category> findRootCategories();
+
+    Optional<Category> findByExternalId(String externalId);
+
+    List<Category> findByExternalIdIn(List<String> externalIds);
+
+    boolean existsById(Long categoryId);
 }

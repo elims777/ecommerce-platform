@@ -18,6 +18,7 @@ public class RegAuthResponse {
     private String firstname;
     private String lastname;
     private String surname;
+    private String phone;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private boolean emailVerified;

@@ -5,7 +5,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
 import ru.rfsnab.orderservice.exception.InsufficientStockException;
 import ru.rfsnab.orderservice.exception.ProductNotFoundException;
@@ -14,7 +13,6 @@ import ru.rfsnab.orderservice.models.entity.Cart;
 import ru.rfsnab.orderservice.models.entity.CartItem;
 import ru.rfsnab.orderservice.repository.CartRedisRepository;
 import ru.rfsnab.orderservice.repository.CartRepository;
-import ru.rfsnab.orderservice.service.client.ProductServiceClient;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -29,7 +27,6 @@ import static org.mockito.Mockito.when;
  * Интеграционные тесты CartService.
  * Реальные Redis и PostgreSQL через Testcontainers.
  * ProductServiceClient замокан — внешний сервис.
- *
  * Тестируем:
  * - Redis ↔ PostgreSQL синхронизацию
  * - afterCommit поведение (Redis очищается только после commit)
@@ -134,7 +131,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("добавляет новый товар в пустую корзину")
         void shouldAddNewItemToEmptyCart() {
-            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100);
+            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
 
             Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 5);
 
@@ -146,7 +143,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("увеличивает количество существующего товара")
         void shouldIncrementExistingItemQuantity() {
-            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100);
+            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
             cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 10);
 
             Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 5);
@@ -158,8 +155,8 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("восстанавливает корзину из БД перед добавлением")
         void shouldRestoreFromDbBeforeAdding() {
-            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100);
-            mockProduct(PRODUCT_ID_2, "Брус", "3200.00", 50);
+            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
+            mockProduct(PRODUCT_ID_2, "Брус", "3200.00", 50, "ext-002");
 
             // Корзина только в БД
             Cart dbCart = Cart.builder().userId(USER_ID).build();
@@ -178,30 +175,10 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @DisplayName("бросает ProductNotFoundException для неактивного товара")
         void shouldThrowWhenProductInactive() {
             when(productServiceClient.getProduct(PRODUCT_ID_1))
-                    .thenReturn(new ProductDto(PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"), 100, false));
+                    .thenReturn(new ProductDto(PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"), null, 100, false, "ext-001"));
 
             assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1))
                     .isInstanceOf(ProductNotFoundException.class);
-        }
-
-        @Test
-        @DisplayName("бросает InsufficientStockException при превышении остатка")
-        void shouldThrowWhenInsufficientStock() {
-            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 10);
-
-            assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 100))
-                    .isInstanceOf(InsufficientStockException.class);
-        }
-
-        @Test
-        @DisplayName("бросает InsufficientStockException с учётом текущего количества в корзине")
-        void shouldThrowWhenCumulativeQuantityExceedsStock() {
-            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 10);
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 8);
-
-            // 8 уже в корзине + 5 = 13 > 10 на складе
-            assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 5))
-                    .isInstanceOf(InsufficientStockException.class);
         }
     }
 
@@ -214,7 +191,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("обновляет количество товара")
         void shouldUpdateQuantity() {
-            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100);
+            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
             cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 10);
 
             Cart cart = cartService.updateItemQuantity(USER_ID, PRODUCT_ID_1, 20);
@@ -232,16 +209,6 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             assertThat(cart.getItems()).isEmpty();
             assertThat(cartRedisRepository.getCart(USER_ID)).isEmpty();
-        }
-
-        @Test
-        @DisplayName("бросает InsufficientStockException при превышении остатка")
-        void shouldThrowWhenInsufficientStock() {
-            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 10);
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 5);
-
-            assertThatThrownBy(() -> cartService.updateItemQuantity(USER_ID, PRODUCT_ID_1, 100))
-                    .isInstanceOf(InsufficientStockException.class);
         }
     }
 
@@ -361,8 +328,8 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             cart.getItems().add(item1);
             cart.getItems().add(item2);
 
-            ProductDto product1 = buildProduct(PRODUCT_ID_1, "Доска", "1500.00");
-            ProductDto product2 = buildProduct(PRODUCT_ID_2, "Брус", "3200.00");
+            ProductDto product1 = buildProduct(PRODUCT_ID_1, "Доска", "1500.00", "ext-001");
+            ProductDto product2 = buildProduct(PRODUCT_ID_2, "Брус", "3200.00", "ext-002");
             when(productServiceClient.getProducts(Set.of(PRODUCT_ID_1, PRODUCT_ID_2)))
                     .thenReturn(Map.of(PRODUCT_ID_1, product1, PRODUCT_ID_2, product2));
 
@@ -382,7 +349,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("полный цикл: добавить → сохранить в БД → восстановить → очистить")
         void shouldHandleFullCartLifecycle() {
-            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100);
+            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
 
             // 1. Добавляем товар
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 10);
@@ -408,14 +375,14 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
 
     // ==================== Helpers ====================
 
-    private void mockProduct(Long id, String name, String price, int stock) {
-        ProductDto product = new ProductDto(id, name, new BigDecimal(price), stock, true);
+    private void mockProduct(Long id, String name, String price, int stock, String externalId) {
+        ProductDto product = new ProductDto(id, name, new BigDecimal(price), null, stock, true, externalId);
         when(productServiceClient.getProduct(id)).thenReturn(product);
         when(productServiceClient.getProducts(Set.of(id)))
                 .thenReturn(Map.of(id, product));
     }
 
-    private ProductDto buildProduct(Long id, String name, String price) {
-        return new ProductDto(id, name, new BigDecimal(price), 100, true);
+    private ProductDto buildProduct(Long id, String name, String price, String externalId) {
+        return new ProductDto(id, name, new BigDecimal(price), null, 100, true, externalId);
     }
 }

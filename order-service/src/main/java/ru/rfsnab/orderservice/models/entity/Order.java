@@ -2,8 +2,10 @@ package ru.rfsnab.orderservice.models.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
@@ -32,6 +34,9 @@ public class Order {
     @Column(nullable = false, unique = true)
     private String orderNumber;
 
+    @Column(name = "external_id", length = 50)
+    private String externalId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus status;
@@ -49,6 +54,7 @@ public class Order {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @BatchSize(size = 50)
     private List<OrderItem> items = new ArrayList<>();
 
     @Embedded
@@ -59,8 +65,24 @@ public class Order {
     @Column(name = "warehouse_point_id")
     private Long warehousePointId;
 
+    @Column(name = "pickup_recipient_name", length = 100)
+    private String pickupRecipientName;
+
+    @Column(name = "pickup_recipient_phone", length = 20)
+    private String pickupRecipientPhone;
+
     @Column(name = "customer_email", nullable = false)
     private String customerEmail;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "customer_type", nullable = false, length = 10)
+    private CustomerType customerType = CustomerType.B2C;
+
+    @Column(name = "company_name", length = 255)
+    private String companyName;
+
+    @Column(name = "inn", length = 12)
+    private String inn;
 
     private String comment;
 

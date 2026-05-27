@@ -67,11 +67,12 @@ class AuthControllerTest {
         validAuthRequest.setEmail("test@example.com");
         validAuthRequest.setPassword("password123");
 
-        validAuthResponse = new AuthResponse(
-                "access.token.here",
-                "refresh.token.here",
-                "Bearer"
-        );
+        validAuthResponse = AuthResponse.builder()
+                .accessToken("access.token.here")
+                .refreshToken("refresh.token.here")
+                .tokenType("Bearer")
+                .clientType("B2C")
+                .build();
 
         RoleEntity userRole = new RoleEntity();
         userRole.setId(1L);
@@ -180,11 +181,12 @@ class AuthControllerTest {
     void refresh_ValidToken_ReturnsNewTokens() throws Exception {
         // Given
         String refreshToken = "valid.refresh.token";
-        AuthResponse newTokens = new AuthResponse(
-                "new.access.token",
-                "new.refresh.token",
-                "Bearer"
-        );
+        AuthResponse newTokens = AuthResponse.builder()
+                .accessToken("new.access.token")
+                .refreshToken("new.refresh.token")
+                .tokenType("Bearer")
+                .clientType("B2C")
+                .build();
 
         when(authService.refresh(refreshToken)).thenReturn(newTokens);
 

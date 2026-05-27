@@ -1,6 +1,7 @@
 package ru.rfsnab.orderservice.models.dto.order;
 
 import lombok.Builder;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
@@ -15,6 +16,7 @@ public record OrderDto(
         UUID id,
         Long userId,
         String orderNumber,
+        String externalId,
         OrderStatus status,
         PaymentMethod paymentMethod,
         DeliveryMethod deliveryMethod,
@@ -25,6 +27,9 @@ public record OrderDto(
         String trackingNumber,
         String customerEmail,
         String comment,
+        CustomerType customerType,
+        String companyName,
+        String inn,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

@@ -83,7 +83,7 @@ public class CartService {
     public Cart addItemToCart(Long userId, Long productId, int quantity){
         ProductDto product = productServiceClient.getProduct(productId);
 
-        if(!product.active()){
+        if(!product.isActive()){
             throw new ProductNotFoundException("Product is not available " + productId);
         }
 
@@ -93,8 +93,6 @@ public class CartService {
         Map<Long, Integer> currentCart = cartRedisRepository.getCart(userId);
         int currentQuantity = currentCart.getOrDefault(productId, 0);
         int newQuantity = currentQuantity + quantity;
-
-        validateStock(product, newQuantity);
 
         cartRedisRepository.addItem(userId,productId,newQuantity);
         log.debug("Товар {} добавлен в корзину пользователя {}, количество: {}",
@@ -115,7 +113,6 @@ public class CartService {
     public Cart updateItemQuantity(Long userId, Long productId, int quantity){
         if(quantity>0){
             ProductDto product = productServiceClient.getProduct(productId);
-            validateStock(product, quantity);
         }
         cartRedisRepository.updateItemQuantity(userId,productId,quantity);
         return getCart(userId);

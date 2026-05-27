@@ -14,9 +14,11 @@ public class UserMapper {
                 .firstname(user.getFirstname())
                 .lastname(user.getLastname())
                 .surname(user.getSurname())
+                .phone(user.getPhone())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .emailVerified(user.isEmailVerified())
+                .active(user.isActive())
                 .roles(user.getRoles())
                 .build();
     }
@@ -29,9 +31,11 @@ public class UserMapper {
                 .firstname(userDto.getFirstname())
                 .lastname(userDto.getLastname())
                 .surname(userDto.getSurname())
+                .phone(userDto.getPhone())
                 .createdAt(userDto.getCreatedAt())
                 .updatedAt(userDto.getUpdatedAt())
                 .emailVerified(userDto.isEmailVerified())
+                .active(userDto.isActive())
                 .roles(userDto.getRoles())
                 .build();
     }

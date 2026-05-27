@@ -28,10 +28,16 @@ public class UserEntity {
     private String lastname;
     private String surname;
 
+    private String phone;
+
     private boolean emailVerified;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean active = true;
 
     @PrePersist
     public void onCreate(){

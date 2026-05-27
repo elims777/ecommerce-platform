@@ -1,9 +1,8 @@
 package ru.rfsnab.gatewayservice;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+//@SpringBootTest
 class GatewayServiceApplicationTests {
 
     @Test

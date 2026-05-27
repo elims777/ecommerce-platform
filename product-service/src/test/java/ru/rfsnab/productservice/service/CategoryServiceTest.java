@@ -12,6 +12,7 @@ import ru.rfsnab.productservice.exception.BusinessException;
 import ru.rfsnab.productservice.exception.CategoryNotFoundException;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.repository.CategoryRepository;
+import ru.rfsnab.productservice.repository.ProductRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -29,7 +30,7 @@ class CategoryServiceTest {
     private CategoryRepository categoryRepository;
 
     @Mock
-    private ProductService productService;
+    private ProductRepository productRepository;
 
     @Mock
     private SlugGeneratorService slugGenerator;
@@ -41,7 +42,7 @@ class CategoryServiceTest {
 
     @BeforeEach
     void setUp() {
-        categoryService = new CategoryService(categoryRepository, productService, slugGenerator);
+        categoryService = new CategoryService(categoryRepository, productRepository, slugGenerator);
 
         rootCategory = Category.builder()
                 .id(1L)
@@ -197,7 +198,7 @@ class CategoryServiceTest {
         void deleteCategory_NoChildrenNoProducts_Success() {
             // Given
             when(categoryRepository.existsByParentId(1L)).thenReturn(false);
-            when(productService.countByCategoryId(1L)).thenReturn(0L);
+            when(productRepository.countByCategoryId(1L)).thenReturn(0L);
             doNothing().when(categoryRepository).deleteById(1L);
             when(categoryRepository.findAll()).thenReturn(List.of());
 
@@ -225,7 +226,7 @@ class CategoryServiceTest {
         void deleteCategory_HasProducts_ThrowsException() {
             // Given
             when(categoryRepository.existsByParentId(1L)).thenReturn(false);
-            when(productService.countByCategoryId(1L)).thenReturn(5L);
+            when(productRepository.countByCategoryId(1L)).thenReturn(5L);
 
             // When & Then
             assertThatThrownBy(() -> categoryService.deleteCategory(1L))

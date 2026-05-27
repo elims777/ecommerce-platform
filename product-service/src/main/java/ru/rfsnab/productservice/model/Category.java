@@ -39,6 +39,9 @@ public class Category {
     @Builder.Default
     private Integer displayOrder = 0;
 
+    @Column(length = 50)
+    private String externalId;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -1,0 +1,95 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: integration-service
+
+  datasource:
+    url: jdbc:postgresql://${INTEGRATION_DB_HOST:localhost}:${INTEGRATION_DB_PORT:5437}/${INTEGRATION_DB_NAME:integration_db}
+    username: ${INTEGRATION_DB_USER}
+    password: ${INTEGRATION_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 15
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: integration-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+# ===== Настройки интеграции с 1С =====
+integration:
+  import-config:
+    chunk-size: 100
+    max-concurrent-requests: 4
+  commerceml:
+    # Авторизация от 1С (Basic auth)
+    username: ${CML_USERNAME:1c_exchange}
+    password: ${CML_PASSWORD:change_me_in_env}
+    # Лимит размера файла для передачи через протокол (в байтах)
+    file-limit: 52428800  # 50MB
+    # Временная директория для файлов обмена
+    temp-dir: ${CML_TEMP_DIR:/tmp/1c-exchange}
+
+  # Адреса внутренних сервисов
+  product-service:
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8083}
+    batch-size: 100  # размер пачки для HTTP-запроса в product-service
+  order-service:
+    url: ${ORDER_SERVICE_URL:http://localhost:8084}
+
+  # Обработка изображений (adaptive thread pool)
+  image-processing:
+    min-threads: 2
+    max-threads: 20
+    max-threads-per-cpu: 5        # потолок = кол-во ядер × 5
+    scale-up-threshold: 100       # pending > 100 → увеличить пул
+    scale-down-threshold: 10      # pending < 10 → уменьшить пул
+    check-interval-seconds: 30    # интервал проверки размера очереди
+    buffer-max-size: 500          # макс файлов на диске (backpressure)
+    max-image-width: 1200         # макс ширина после ресайза
+    webp-quality: 0.80            # качество WebP (0.0 - 1.0)
+    poll-batch-size: 50
+    poll-interval-ms: 5000
+    max-retries: 3
+
+# ===== Kafka topics =====
+app:
+  kafka:
+    topics:
+      order-events: order-events
+      order-1c-export: order-1c-export
+# ===== Swagger =====
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+## ===== Logging =====
+logging:
+  level:
+    reactor.netty: DEBUG
+    io.netty: DEBUG

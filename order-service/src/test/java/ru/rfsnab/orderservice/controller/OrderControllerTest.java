@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,6 +19,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
+import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
 import ru.rfsnab.orderservice.models.entity.DeliveryAddress;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.OrderItem;
@@ -43,6 +45,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -84,7 +87,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("201 Created — заказ успешно создан (DELIVERY)")
         void shouldCreateDeliveryOrder() throws Exception {
             Order order = buildDeliveryOrder();
-            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class)))
+            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class)))
                     .thenReturn(order);
 
             String json = """
@@ -111,7 +114,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.status.code").value("CREATED"))
                     .andExpect(jsonPath("$.deliveryAddress.city").value("Сыктывкар"));
 
-            verify(orderService).createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class));
+            verify(orderService).createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class));
         }
 
         @Test
@@ -119,7 +122,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         void shouldCreatePickupOrder() throws Exception {
             Order order = buildPickupOrder();
             WarehousePoint point = buildWarehousePoint();
-            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(CreateOrderRequest.class)))
+            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class)))
                     .thenReturn(order);
             when(warehousePointService.getActivePoint(1L)).thenReturn(point);
 
@@ -167,12 +170,13 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — возвращает страницу с заказами")
         void shouldReturnPageOfOrders() throws Exception {
             Order order = buildDeliveryOrder();
-            Page<Order> page = new PageImpl<>(List.of(order));
+            Page<Order> page = new PageImpl<>(List.of(order), PageRequest.of(0, 20), 0);
             when(orderService.getUserOrders(eq(USER_ID), any(Pageable.class)))
                     .thenReturn(page);
 
             mockMvc.perform(get("/api/v1/orders")
                             .with(jwtUser()))
+                    .andDo(print())
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content", hasSize(1)))
                     .andExpect(jsonPath("$.content[0].orderNumber").value("ABC-00001"))
@@ -183,7 +187,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — пустой список")
         void shouldReturnEmptyPage() throws Exception {
             when(orderService.getUserOrders(eq(USER_ID), any(Pageable.class)))
-                    .thenReturn(Page.empty());
+                    .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
 
             mockMvc.perform(get("/api/v1/orders")
                             .with(jwtUser()))
@@ -274,6 +278,36 @@ class OrderControllerTest extends BaseIntegrationTest {
         }
     }
 
+    // ==================== POST /api/v1/orders/{id}/confirm ====================
+
+    @Nested
+    @DisplayName("POST /api/v1/orders/{id}/confirm — подтверждение заказа")
+    class ConfirmOrderTests {
+
+        @Test
+        @DisplayName("200 OK — заказ переведён в PROCESSING и отправлен в 1С")
+        void shouldConfirmOrder() throws Exception {
+            Order order = buildDeliveryOrder();
+            order.setStatus(OrderStatus.PROCESSING);
+            when(orderService.confirmOrder(ORDER_ID, USER_ID)).thenReturn(order);
+
+            mockMvc.perform(post("/api/v1/orders/{id}/confirm", ORDER_ID)
+                            .with(jwtUser()).with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status.code").value("PROCESSING"));
+
+            verify(orderService).confirmOrder(ORDER_ID, USER_ID);
+        }
+
+        @Test
+        @DisplayName("401 Unauthorized — без аутентификации")
+        void shouldReturn401WithoutAuth() throws Exception {
+            mockMvc.perform(post("/api/v1/orders/{id}/confirm", ORDER_ID)
+                            .with(csrf()))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
     // ==================== POST /api/v1/orders/{id}/cancel ====================
 
     @Nested
@@ -303,14 +337,14 @@ class OrderControllerTest extends BaseIntegrationTest {
         @Test
         @DisplayName("200 OK — оплата инициирована")
         void shouldInitiatePayment() throws Exception {
-            Order order = buildDeliveryOrder();
-            order.setStatus(OrderStatus.PENDING_PAYMENT);
-            when(orderService.initiatePayment(ORDER_ID, USER_ID)).thenReturn(order);
+            PaymentInitiationResponse response = new PaymentInitiationResponse(
+                    "https://pay.tochka.com/link", PaymentMethod.CARD, OrderStatus.PENDING_PAYMENT);
+            when(orderService.pay(ORDER_ID, USER_ID)).thenReturn(response);
 
             mockMvc.perform(post("/api/v1/orders/{id}/pay", ORDER_ID)
                             .with(jwtUser()).with(csrf()))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status.code").value("PENDING_PAYMENT"));
+                    .andExpect(jsonPath("$.orderStatus.code").value("PENDING_PAYMENT"));
         }
     }
 
@@ -332,6 +366,49 @@ class OrderControllerTest extends BaseIntegrationTest {
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.orderNumber").value("ABC-00002"))
                     .andExpect(jsonPath("$.status.code").value("CREATED"));
+        }
+    }
+
+    // ==================== PATCH /api/v1/orders/{id}/1c-sync ====================
+
+    @Nested
+    @DisplayName("PATCH /api/v1/orders/{id}/1c-sync — синхронизация с 1С")
+    class SyncFrom1CTests {
+
+        @Test
+        @DisplayName("200 OK — externalId и статус обновлены")
+        void shouldSyncFrom1C() throws Exception {
+            Order order = buildDeliveryOrder();
+            order.setExternalId("РФ-000123");
+            order.setStatus(OrderStatus.PROCESSING);
+            when(orderService.syncFrom1C(eq(ORDER_ID), eq("РФ-000123"), eq(OrderStatus.PROCESSING)))
+                    .thenReturn(order);
+
+            String json = """
+                {
+                    "externalId": "РФ-000123",
+                    "newStatus": "PROCESSING"
+                }
+                """;
+
+            mockMvc.perform(patch("/api/v1/orders/{id}/1c-sync", ORDER_ID)
+                            .with(jwtUser()).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.externalId").value("РФ-000123"))
+                    .andExpect(jsonPath("$.status.code").value("PROCESSING"));
+
+            verify(orderService).syncFrom1C(ORDER_ID, "РФ-000123", OrderStatus.PROCESSING);
+        }
+
+        @Test
+        @DisplayName("400 Bad Request — без body")
+        void shouldReturn400WithoutBody() throws Exception {
+            mockMvc.perform(patch("/api/v1/orders/{id}/1c-sync", ORDER_ID)
+                            .with(jwtUser()).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isInternalServerError());
         }
     }
 

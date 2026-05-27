@@ -37,6 +37,8 @@ public class SecurityConfig {
                         // Публичные endpoints (только чтение)
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/import/batch").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/external/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
 

@@ -34,4 +34,7 @@ public class OrderItem {
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
+
+    @Column(name = "external_id", length = 50)
+    private String externalId;
 }

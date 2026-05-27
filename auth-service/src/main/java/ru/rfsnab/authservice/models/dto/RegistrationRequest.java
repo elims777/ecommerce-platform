@@ -26,6 +26,9 @@ public class RegistrationRequest {
 
     private String surname;
 
+    @NotBlank
+    private String phone;
+
     @Builder.Default
     private boolean emailVerified = false;
 }

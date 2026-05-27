@@ -1,0 +1,53 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: auth-login
+              uri: http://localhost:19999
+              predicates:
+                - Path=/v1/auth/login
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 1
+                    redis-rate-limiter.burstCapacity: 3
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
+            - id: auth-api
+              uri: http://localhost:19999
+              predicates:
+                - Path=/v1/auth/**
+
+            - id: product-api
+              uri: http://localhost:19999
+              predicates:
+                - Path=/api/v1/products/**
+
+            - id: category-api
+              uri: http://localhost:19999
+              predicates:
+                - Path=/api/v1/categories/**
+
+            - id: order-api
+              uri: http://localhost:19999
+              predicates:
+                - Path=/api/v1/orders/**
+
+            - id: order-cart
+              uri: http://localhost:19999
+              predicates:
+                - Path=/api/v1/cart/**
+
+jwt:
+  secret: test-secret-key-for-testing-must-be-at-least-256-bits-long-for-hs256
+
+logging:
+  level:
+    ru.rfsnab.gatewayservice: DEBUG
