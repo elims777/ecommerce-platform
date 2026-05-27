@@ -28,11 +28,13 @@ import java.util.stream.Collectors;
 
 /**
  * Сервис управления заказами.
- * Жизненный цикл заказа:
- * CREATED → PENDING_PAYMENT → PAID → PROCESSING → SHIPPED → IN_TRANSIT → DELIVERED
- * Отмена возможна до статуса SHIPPED.
- * Переход PAID → PROCESSING — автоматический.
- * TTL на оплату — 2 дня, после чего заказ отменяется.
+ *
+ * B2B: CREATED → PROCESSING → INVOICE_SENT → PENDING_PAYMENT → PAID → SHIPPED → IN_TRANSIT → DELIVERED
+ * B2B постоплата: CREATED → PROCESSING → INVOICE_SENT → AWAITING_CONFIRMATION → SHIPPED → IN_TRANSIT → DELIVERED → PAID
+ * B2C: CREATED → PROCESSING → PENDING_PAYMENT → PAID → SHIPPED → IN_TRANSIT → DELIVERED
+ *
+ * CREATED — технический статус (клиент заполняет форму, в 1С не отправляется).
+ * Отправка в 1С происходит только при confirmOrder (CREATED → PROCESSING).
  */
 @Slf4j
 @Service
@@ -47,23 +49,31 @@ public class OrderService {
     private final Order1CKafkaProducer order1CKafkaProducer;
 
     /** Допустимые переходы между статусами */
-    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = Map.of(
-            OrderStatus.CREATED, Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED),
-            OrderStatus.PENDING_PAYMENT, Set.of(OrderStatus.PAID, OrderStatus.PAYMENT_FAILED, OrderStatus.CANCELLED),
-            OrderStatus.PAYMENT_FAILED, Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED),
-            OrderStatus.PAID, Set.of(OrderStatus.PROCESSING, OrderStatus.CANCELLED),
-            OrderStatus.PROCESSING, Set.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED),
-            OrderStatus.SHIPPED, Set.of(OrderStatus.IN_TRANSIT),
-            OrderStatus.IN_TRANSIT, Set.of(OrderStatus.DELIVERED),
-            OrderStatus.CANCELLED, Set.of(OrderStatus.REFUNDED)
-    );
+    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS;
 
-    /** Статусы, в которых пользователь может отменить заказ */
+    static {
+        Map<OrderStatus, Set<OrderStatus>> t = new java.util.EnumMap<>(OrderStatus.class);
+        t.put(OrderStatus.CREATED,               Set.of(OrderStatus.PROCESSING, OrderStatus.CANCELLED));
+        t.put(OrderStatus.PROCESSING,            Set.of(OrderStatus.INVOICE_SENT, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
+        t.put(OrderStatus.INVOICE_SENT,          Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.AWAITING_CONFIRMATION, OrderStatus.CANCELLED));
+        t.put(OrderStatus.PENDING_PAYMENT,       Set.of(OrderStatus.PAID, OrderStatus.PAYMENT_FAILED, OrderStatus.CANCELLED));
+        t.put(OrderStatus.PAYMENT_FAILED,        Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
+        t.put(OrderStatus.AWAITING_CONFIRMATION, Set.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED));
+        t.put(OrderStatus.PAID,                  Set.of(OrderStatus.SHIPPED));
+        t.put(OrderStatus.SHIPPED,               Set.of(OrderStatus.IN_TRANSIT));
+        t.put(OrderStatus.IN_TRANSIT,            Set.of(OrderStatus.DELIVERED));
+        t.put(OrderStatus.DELIVERED,             Set.of(OrderStatus.PAID));
+        t.put(OrderStatus.CANCELLED,             Set.of(OrderStatus.REFUNDED));
+        ALLOWED_TRANSITIONS = java.util.Collections.unmodifiableMap(t);
+    }
+
+    /** Статусы, в которых клиент может отменить заказ самостоятельно */
     private static final Set<OrderStatus> CANCELLABLE_STATUSES = Set.of(
             OrderStatus.CREATED,
+            OrderStatus.PROCESSING,
+            OrderStatus.INVOICE_SENT,
             OrderStatus.PENDING_PAYMENT,
-            OrderStatus.PAID,
-            OrderStatus.PROCESSING
+            OrderStatus.PAYMENT_FAILED
     );
 
     /**
@@ -103,8 +113,24 @@ public class OrderService {
         // 5. Очищаем корзину
         cartService.clearCart(userId);
 
-        // 6. Kafka event
+        // 6. Kafka event — в 1С заказ уйдёт только после confirmOrder
         kafkaProducer.sendOrderCreated(order);
+
+        return order;
+    }
+
+    /**
+     * Подтверждение заказа клиентом (CREATED → PROCESSING).
+     * Только в этот момент заказ с полными данными отправляется в 1С.
+     */
+    @Transactional
+    public Order confirmOrder(UUID orderId, Long userId) {
+        Order order = getOrderAndValidateOwner(orderId, userId);
+        changeStatus(order, OrderStatus.PROCESSING);
+        order = orderRepository.save(order);
+
+        log.info("Заказ подтверждён клиентом: {}", order.getOrderNumber());
+        kafkaProducer.sendOrderStatusChanged(order);
         order1CKafkaProducer.sendOrderFor1C(order);
 
         return order;
@@ -255,7 +281,9 @@ public class OrderService {
     }
 
     /**
-     * Инициация оплаты (CREATED → PENDING_PAYMENT).
+     * Инициация оплаты (PROCESSING/INVOICE_SENT/PAYMENT_FAILED → PENDING_PAYMENT).
+     * B2C: вызывается после confirmOrder когда клиент нажимает "Перейти к оплате".
+     * B2B: вызывается после INVOICE_SENT когда менеджер выбирает предоплату.
      */
     @Transactional
     public Order initiatePayment(UUID orderId, Long userId) {
@@ -270,21 +298,16 @@ public class OrderService {
     }
 
     /**
-     * Подтверждение оплаты (PENDING_PAYMENT → PAID → PROCESSING).
-     * Переход PAID → PROCESSING — автоматический.
+     * Подтверждение оплаты (PENDING_PAYMENT → PAID).
      * Вызывается через Kafka event от payment-service.
      */
     @Transactional
     public Order confirmPayment(UUID orderId) {
         Order order = getOrder(orderId);
-
         changeStatus(order, OrderStatus.PAID);
-        log.info("Оплата подтверждена для заказа: {}", order.getOrderNumber());
-
-        changeStatus(order, OrderStatus.PROCESSING);
-        log.info("Заказ {} переведён в обработку", order.getOrderNumber());
-
         order = orderRepository.save(order);
+
+        log.info("Оплата подтверждена для заказа: {}", order.getOrderNumber());
         kafkaProducer.sendOrderPaid(order);
 
         return order;

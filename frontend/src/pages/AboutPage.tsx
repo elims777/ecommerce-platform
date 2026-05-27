@@ -1,4 +1,5 @@
 import { Typography, Card, Row, Col, Space } from 'antd';
+import { company } from '@/config/company';
 import {
     CheckCircleOutlined,
     TruckOutlined,
@@ -38,13 +39,13 @@ const AboutPage = () => {
 
             <Card style={{ marginBottom: 24 }}>
                 <Paragraph style={{ fontSize: 16 }}>
-                    <Text strong>ООО «МСВ»</Text> — надёжный партнёр в сфере комплексного
+                    <Text strong>{company.legalName}</Text> — надёжный партнёр в сфере комплексного
                     снабжения предприятий. Мы специализируемся на поставках средств
                     индивидуальной защиты, противопожарного оборудования, медицинских
                     товаров, спецодежды и промышленной химии.
                 </Paragraph>
                 <Paragraph style={{ fontSize: 16 }}>
-                    Компания работает с 2016 года, обеспечивая предприятия и организации
+                    Компания работает с {company.founded} года, обеспечивая предприятия и организации
                     всем необходимым для безопасной и эффективной работы. Среди наших
                     клиентов — промышленные предприятия, медицинские учреждения,
                     государственные организации.
@@ -80,12 +81,12 @@ const AboutPage = () => {
                     <Col span={12}>
                         <Text type="secondary">ИНН</Text>
                         <br />
-                        <Text strong>1101059443</Text>
+                        <Text strong>{company.inn}</Text>
                     </Col>
                     <Col span={12}>
                         <Text type="secondary">ОГРН</Text>
                         <br />
-                        <Text strong>1161101055620</Text>
+                        <Text strong>{company.ogrn}</Text>
                     </Col>
                 </Row>
             </Card>

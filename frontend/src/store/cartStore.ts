@@ -27,7 +27,7 @@ interface CartState {
     resetCart: () => void;
 }
 
-export const useCartStore = create<CartState>((set) => ({
+export const useCartStore = create<CartState>((set, get) => ({
     items: [],
     totalItems: 0,
     totalAmount: 0,
@@ -49,39 +49,60 @@ export const useCartStore = create<CartState>((set) => ({
     },
 
     addItem: async (productId, quantity) => {
-        const cart = await cartApi.addToCart({ productId, quantity });
-        set({
-            items: cart.items,
-            totalItems: cart.totalItems,
-            totalAmount: cart.totalAmount,
-        });
+        const prev = get();
+        const existing = prev.items.find(i => i.productId === productId);
+        if (existing) {
+            const updatedItems = prev.items.map(i =>
+                i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i
+            );
+            set({
+                items: updatedItems,
+                totalItems: updatedItems.reduce((s, i) => s + i.quantity, 0),
+                totalAmount: updatedItems.reduce((s, i) => s + i.price * i.quantity, 0),
+            });
+        }
+        try {
+            await cartApi.addToCart({ productId, quantity });
+            await get().fetchCart();
+        } catch {
+            set({ items: prev.items, totalItems: prev.totalItems, totalAmount: prev.totalAmount });
+            throw new Error('Не удалось добавить товар');
+        }
     },
 
     updateQuantity: async (productId, quantity) => {
-        if (quantity <= 0) {
-            const cart = await cartApi.removeCartItem(productId);
-            set({
-                items: cart.items,
-                totalItems: cart.totalItems,
-                totalAmount: cart.totalAmount,
-            });
-        } else {
-            const cart = await cartApi.updateCartItem(productId, quantity);
-            set({
-                items: cart.items,
-                totalItems: cart.totalItems,
-                totalAmount: cart.totalAmount,
-            });
+        if (quantity <= 0) { await get().removeItem(productId); return; }
+        const prev = get();
+        const updatedItems = prev.items.map(i =>
+            i.productId === productId ? { ...i, quantity } : i
+        );
+        set({
+            items: updatedItems,
+            totalItems: updatedItems.reduce((s, i) => s + i.quantity, 0),
+            totalAmount: updatedItems.reduce((s, i) => s + i.price * i.quantity, 0),
+        });
+        try {
+            await cartApi.updateCartItem(productId, quantity);
+        } catch {
+            set({ items: prev.items, totalItems: prev.totalItems, totalAmount: prev.totalAmount });
+            throw new Error('Не удалось обновить количество');
         }
     },
 
     removeItem: async (productId) => {
-        const cart = await cartApi.removeCartItem(productId);
+        const prev = get();
+        const updatedItems = prev.items.filter(i => i.productId !== productId);
         set({
-            items: cart.items,
-            totalItems: cart.totalItems,
-            totalAmount: cart.totalAmount,
+            items: updatedItems,
+            totalItems: updatedItems.reduce((s, i) => s + i.quantity, 0),
+            totalAmount: updatedItems.reduce((s, i) => s + i.price * i.quantity, 0),
         });
+        try {
+            await cartApi.removeCartItem(productId);
+        } catch {
+            set({ items: prev.items, totalItems: prev.totalItems, totalAmount: prev.totalAmount });
+            throw new Error('Не удалось удалить товар');
+        }
     },
 
     clearCart: async () => {

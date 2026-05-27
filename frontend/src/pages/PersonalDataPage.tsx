@@ -1,4 +1,5 @@
 import { Typography, Card } from 'antd';
+import { company } from '@/config/company';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -14,14 +15,14 @@ const PersonalDataPage = () => {
 
                 <Title level={4}>1. Оператор персональных данных</Title>
                 <Paragraph>
-                    Оператором персональных данных является ООО «МСВ» (ИНН 1101059443,
-                    ОГРН 1161101055620, адрес электронной почты: msvkomi@mail.ru,
+                    Оператором персональных данных является {company.legalName} (ИНН {company.inn},
+                    ОГРН {company.ogrn}, адрес электронной почты: {company.email.support},
                     далее — Оператор).
                 </Paragraph>
 
                 <Title level={4}>2. Предмет согласия</Title>
                 <Paragraph>
-                    Регистрируясь на сайте rfsnab.ru (далее — Сайт) и/или оформляя заказ,
+                    Регистрируясь на сайте {company.domain} (далее — Сайт) и/или оформляя заказ,
                     Пользователь даёт своё согласие Оператору на обработку следующих
                     персональных данных:
                 </Paragraph>
@@ -114,7 +115,7 @@ const PersonalDataPage = () => {
                     устаревшими, неточными;
                     {'\n'}— отозвать своё согласие на обработку персональных данных, направив
                     письменное заявление на электронную почту:{' '}
-                    <Text strong>msvkomi@mail.ru</Text>;
+                    <Text strong>{company.email.support}</Text>;
                     {'\n'}— обжаловать действия или бездействие Оператора в уполномоченный
                     орган по защите прав субъектов персональных данных (Роскомнадзор).
                 </Paragraph>
@@ -123,7 +124,7 @@ const PersonalDataPage = () => {
                 <Paragraph>
                     Согласие на обработку персональных данных может быть отозвано Пользователем
                     в любой момент путём направления соответствующего заявления на электронную
-                    почту Оператора: <Text strong>msvkomi@mail.ru</Text>. При отзыве согласия
+                    почту Оператора: <Text strong>{company.email.support}</Text>. При отзыве согласия
                     Оператор прекращает обработку персональных данных и уничтожает их в
                     установленные сроки, за исключением случаев, когда обработка необходима
                     для исполнения требований законодательства РФ.
@@ -132,9 +133,9 @@ const PersonalDataPage = () => {
                 <Title level={4}>10. Контактная информация</Title>
                 <Paragraph>
                     По всем вопросам, связанным с обработкой персональных данных:
-                    {'\n'}ООО «МСВ»
-                    {'\n'}Email: <Text strong>msvkomi@mail.ru</Text>
-                    {'\n'}Телефон: <Text strong>8 (800) 201-78-01</Text>
+                    {'\n'}{company.legalName}
+                    {'\n'}Email: <Text strong>{company.email.support}</Text>
+                    {'\n'}Телефон: <Text strong>{company.phone.free}</Text>
                 </Paragraph>
             </Card>
         </div>

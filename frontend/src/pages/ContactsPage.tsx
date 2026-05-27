@@ -1,4 +1,5 @@
 import { Typography, Card, Row, Col, Space, Divider } from 'antd';
+import { company } from '@/config/company';
 import {
     PhoneOutlined,
     MailOutlined,
@@ -23,8 +24,8 @@ const ContactsPage = () => {
                                     <div>
                                         <Text type="secondary">Телефон (бесплатно по России)</Text>
                                         <br />
-                                        <Link href="tel:+78002017801" strong style={{ fontSize: 18 }}>
-                                            8 (800) 201-78-01
+                                        <Link href={`tel:${company.phone.free.replace(/[^+\d]/g, '')}`} strong style={{ fontSize: 18 }}>
+                                            {company.phone.free}
                                         </Link>
                                     </div>
                                 </Space>
@@ -36,8 +37,8 @@ const ContactsPage = () => {
                                     <div>
                                         <Text type="secondary">Городской</Text>
                                         <br />
-                                        <Link href="tel:+78212296971" strong style={{ fontSize: 18 }}>
-                                            +7 (8212) 29-69-71
+                                        <Link href={`tel:${company.phone.city.replace(/[^+\d]/g, '')}`} strong style={{ fontSize: 18 }}>
+                                            {company.phone.city}
                                         </Link>
                                     </div>
                                 </Space>
@@ -49,8 +50,8 @@ const ContactsPage = () => {
                                     <div>
                                         <Text type="secondary">Email</Text>
                                         <br />
-                                        <Link href="mailto:msvkomi@mail.ru" strong style={{ fontSize: 18 }}>
-                                            msvkomi@mail.ru
+                                        <Link href={`mailto:${company.email.sales}`} strong style={{ fontSize: 18 }}>
+                                            {company.email.sales}
                                         </Link>
                                     </div>
                                 </Space>
@@ -68,7 +69,7 @@ const ContactsPage = () => {
                                     <div>
                                         <Text type="secondary">Адрес</Text>
                                         <br />
-                                        <Text strong>Россия, г. Москва</Text>
+                                        <Text strong>{company.address.full}</Text>
                                     </div>
                                 </Space>
                             </div>
@@ -79,7 +80,7 @@ const ContactsPage = () => {
                                     <div>
                                         <Text type="secondary">Режим работы</Text>
                                         <br />
-                                        <Text strong>Пн — Пт: 9:00 — 18:00</Text>
+                                        <Text strong>{company.workHours}</Text>
                                         <br />
                                         <Text type="secondary">Сб, Вс — выходной</Text>
                                     </div>
@@ -98,17 +99,17 @@ const ContactsPage = () => {
                     <Col xs={24} sm={8}>
                         <Text type="secondary">Наименование</Text>
                         <br />
-                        <Text strong>ООО «МСВ»</Text>
+                        <Text strong>{company.legalName}</Text>
                     </Col>
                     <Col xs={24} sm={8}>
                         <Text type="secondary">ИНН</Text>
                         <br />
-                        <Text strong>1101059443</Text>
+                        <Text strong>{company.inn}</Text>
                     </Col>
                     <Col xs={24} sm={8}>
                         <Text type="secondary">ОГРН</Text>
                         <br />
-                        <Text strong>1161101055620</Text>
+                        <Text strong>{company.ogrn}</Text>
                     </Col>
                 </Row>
             </Card>

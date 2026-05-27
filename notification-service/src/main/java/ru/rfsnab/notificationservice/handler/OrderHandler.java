@@ -76,12 +76,24 @@ public class OrderHandler implements NotificationHandler{
     }
 
     private void handleStatusChanged(OrderEvent event){
-        emailService.sendOrderStatusChangedEmail(
-                event.customerEmail(),
-                event.orderNumber(),
-                event.status()
-        );
-        log.info("Order status changed email: order={}, status={}, email={}",
-                event.orderNumber(), event.status(), event.customerEmail());
+        switch (event.status()) {
+            case "INVOICE_SENT" -> {
+                emailService.sendInvoiceSentEmail(event.customerEmail(), event.orderNumber());
+                log.info("Invoice sent email: order={}, email={}", event.orderNumber(), event.customerEmail());
+            }
+            case "AWAITING_CONFIRMATION" -> {
+                emailService.sendAwaitingConfirmationEmail(event.customerEmail(), event.orderNumber());
+                log.info("Awaiting confirmation email: order={}, email={}", event.orderNumber(), event.customerEmail());
+            }
+            default -> {
+                emailService.sendOrderStatusChangedEmail(
+                        event.customerEmail(),
+                        event.orderNumber(),
+                        event.status()
+                );
+                log.info("Order status changed email: order={}, status={}, email={}",
+                        event.orderNumber(), event.status(), event.customerEmail());
+            }
+        }
     }
 }

@@ -26,20 +26,22 @@ public class Order1CKafkaProducer {
      */
     public void sendOrderFor1C(Order order) {
         DeliveryAddress address = order.getDeliveryAddress();
+        boolean isPickup = address == null;
+
         Order1CExportEvent event = Order1CExportEvent.builder()
                 .orderId(order.getId())
                 .orderNumber(order.getOrderNumber())
                 .createdAt(order.getCreatedAt())
                 .userId(order.getUserId())
                 .customerEmail(order.getCustomerEmail())
-                .recipientName(address != null ? address.getRecipientName() : null)
-                .recipientPhone(address != null ? address.getPhone() : null)
+                .recipientName(isPickup ? order.getPickupRecipientName() : address.getRecipientName())
+                .recipientPhone(isPickup ? order.getPickupRecipientPhone() : address.getPhone())
                 .deliveryMethod(order.getDeliveryMethod().name())
-                .city(address !=null ? address.getCity() : null)
-                .street(address != null ? address.getStreet() : null)
-                .building(address != null ? address.getBuilding() : null)
-                .apartment(address != null ? address.getApartment() : null)
-                .postalCode(address != null ? address.getPostalCode() : null)
+                .city(isPickup ? null : address.getCity())
+                .street(isPickup ? null : address.getStreet())
+                .building(isPickup ? null : address.getBuilding())
+                .apartment(isPickup ? null : address.getApartment())
+                .postalCode(isPickup ? null : address.getPostalCode())
                 .warehousePointId(order.getWarehousePointId())
                 .paymentMethod(order.getPaymentMethod().name())
                 .totalAmount(order.getTotalAmount())

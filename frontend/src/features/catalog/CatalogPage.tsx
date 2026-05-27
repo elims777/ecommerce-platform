@@ -1,22 +1,6 @@
 import { useState } from 'react';
-import {
-    Row,
-    Col,
-    Card,
-    Input,
-    Pagination,
-    Typography,
-    Spin,
-    Empty,
-    Space,
-    Breadcrumb,
-    App,
-} from 'antd';
-import {
-    SearchOutlined,
-    HomeOutlined,
-    AppstoreOutlined,
-} from '@ant-design/icons';
+import { Input, Pagination, Spin, Empty, App, Skeleton } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getProducts, searchProducts } from '@/api/products';
@@ -26,14 +10,9 @@ import type { CategoryTree } from '@/types/product';
 import CategoryTreeMenu from './CategoryTreeMenu';
 import ProductCard from './ProductCard';
 
-const { Title, Text } = Typography;
 const { Search } = Input;
 
-/** Находит категорию по ID в дереве (рекурсивный поиск) */
-const findCategoryInTree = (
-    tree: CategoryTree[],
-    id: number,
-): CategoryTree | null => {
+const findCategoryInTree = (tree: CategoryTree[], id: number): CategoryTree | null => {
     for (const node of tree) {
         if (node.id === id) return node;
         const found = findCategoryInTree(node.children, id);
@@ -42,25 +21,16 @@ const findCategoryInTree = (
     return null;
 };
 
-/** Строит цепочку от корня до выбранной категории (для хлебных крошек) */
-const buildBreadcrumb = (
-    tree: CategoryTree[],
-    targetId: number,
-): CategoryTree[] => {
+const buildBreadcrumb = (tree: CategoryTree[], targetId: number): CategoryTree[] => {
     const path: CategoryTree[] = [];
-
     const find = (nodes: CategoryTree[], trail: CategoryTree[]): boolean => {
         for (const node of nodes) {
             const currentTrail = [...trail, node];
-            if (node.id === targetId) {
-                path.push(...currentTrail);
-                return true;
-            }
+            if (node.id === targetId) { path.push(...currentTrail); return true; }
             if (find(node.children, currentTrail)) return true;
         }
         return false;
     };
-
     find(tree, []);
     return path;
 };
@@ -72,11 +42,8 @@ const CatalogPage = () => {
     const addItem = useCartStore((state) => state.addItem);
 
     const currentPage = Number(searchParams.get('page')) || 1;
-    const categoryId = searchParams.get('category')
-        ? Number(searchParams.get('category'))
-        : undefined;
+    const categoryId = searchParams.get('category') ? Number(searchParams.get('category')) : undefined;
     const searchQuery = searchParams.get('q') || '';
-
     const [searchInput, setSearchInput] = useState(searchQuery);
 
     const { data: categoryTree = [], isLoading: categoriesLoading } = useQuery({
@@ -85,11 +52,7 @@ const CatalogPage = () => {
         staleTime: 5 * 60 * 1000,
     });
 
-    const {
-        data: productsPage,
-        isLoading: productsLoading,
-        isError,
-    } = useQuery({
+    const { data: productsPage, isLoading: productsLoading, isError } = useQuery({
         queryKey: ['products', { page: currentPage, categoryId, q: searchQuery }],
         queryFn: async () => {
             if (searchQuery) {
@@ -109,15 +72,11 @@ const CatalogPage = () => {
         },
     });
 
-    const breadcrumbItems = categoryId
-        ? buildBreadcrumb(categoryTree, categoryId)
-        : [];
+    const breadcrumbItems = categoryId ? buildBreadcrumb(categoryTree, categoryId) : [];
 
     const handleCategorySelect = (selectedKeys: React.Key[]) => {
         const newParams = new URLSearchParams();
-        if (selectedKeys.length > 0) {
-            newParams.set('category', String(selectedKeys[0]));
-        }
+        if (selectedKeys.length > 0) newParams.set('category', String(selectedKeys[0]));
         setSearchParams(newParams);
         setSearchInput('');
     };
@@ -125,9 +84,7 @@ const CatalogPage = () => {
     const handleSearch = (value: string) => {
         const trimmed = value.trim();
         const newParams = new URLSearchParams();
-        if (trimmed) {
-            newParams.set('q', trimmed);
-        }
+        if (trimmed) newParams.set('q', trimmed);
         setSearchParams(newParams);
     };
 
@@ -152,49 +109,48 @@ const CatalogPage = () => {
         }
     };
 
-    return (
-        <div>
-            <Breadcrumb
-                style={{ marginBottom: 16 }}
-                items={[
-                    {
-                        title: (
-                            <span onClick={handleClearFilters} style={{ cursor: 'pointer' }}>
-                                <HomeOutlined /> Каталог
-                            </span>
-                        ),
-                    },
-                    ...breadcrumbItems.map((cat) => ({
-                        title: (
-                            <span
-                                onClick={() => {
-                                    const params = new URLSearchParams();
-                                    params.set('category', String(cat.id));
-                                    setSearchParams(params);
-                                }}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                {cat.name}
-                            </span>
-                        ),
-                    })),
-                    ...(searchQuery ? [{ title: `Поиск: «${searchQuery}»` }] : []),
-                ]}
-            />
+    const currentCategory = categoryId ? findCategoryInTree(categoryTree, categoryId) : null;
+    const pageTitle = categoryId
+        ? (currentCategory?.name ?? 'Товары')
+        : searchQuery
+            ? `Результаты поиска: «${searchQuery}»`
+            : 'Все товары';
 
-            <Row gutter={24}>
-                {/* Левая колонка — дерево категорий */}
-                <Col xs={24} md={6}>
-                    <Card
-                        title={
-                            <Space>
-                                <AppstoreOutlined />
-                                <span>Категории</span>
-                            </Space>
-                        }
-                        size="small"
-                        style={{ marginBottom: 16 }}
-                    >
+    return (
+        <div style={{ paddingTop: 20, paddingBottom: 60 }}>
+            {/* Хлебные крошки */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 16 }}>
+                <span onClick={handleClearFilters} style={{ cursor: 'pointer' }}>Каталог</span>
+                {breadcrumbItems.map((cat) => (
+                    <span key={cat.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ opacity: 0.5 }}>›</span>
+                        <span
+                            onClick={() => {
+                                const params = new URLSearchParams();
+                                params.set('category', String(cat.id));
+                                setSearchParams(params);
+                            }}
+                            style={{ cursor: 'pointer', color: 'var(--ink-2)', fontWeight: 500 }}
+                        >
+                            {cat.name}
+                        </span>
+                    </span>
+                ))}
+                {searchQuery && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ opacity: 0.5 }}>›</span>
+                        <span>Поиск: «{searchQuery}»</span>
+                    </span>
+                )}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20 }}>
+                {/* Сайдбар */}
+                <aside>
+                    <div style={{ border: '1px solid var(--line-1)', borderRadius: 6, background: 'var(--surface)', overflow: 'hidden', marginBottom: 16 }}>
+                        <div style={{ padding: '10px 14px 8px', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Каталог
+                        </div>
                         {categoriesLoading ? (
                             <div style={{ textAlign: 'center', padding: 24 }}>
                                 <Spin />
@@ -207,90 +163,89 @@ const CatalogPage = () => {
                             />
                         )}
                         {categoryId && (
-                            <a
-                                onClick={handleClearFilters}
-                                style={{ display: 'block', marginTop: 12, textAlign: 'center' }}
-                            >
-                                Показать все товары
-                            </a>
+                            <div style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--line-1)' }}>
+                                <span
+                                    onClick={handleClearFilters}
+                                    style={{ fontSize: 12.5, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
+                                >
+                                    Показать все товары
+                                </span>
+                            </div>
                         )}
-                    </Card>
-                </Col>
+                    </div>
+                </aside>
 
-                {/* Правая колонка — поиск + карточки товаров */}
-                <Col xs={24} md={18}>
+                {/* Правая колонка */}
+                <div>
                     <Search
                         placeholder="Поиск товаров..."
                         allowClear
-                        enterButton={
-                            <>
-                                <SearchOutlined /> Найти
-                            </>
-                        }
+                        enterButton={<SearchOutlined />}
                         size="large"
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
                         onSearch={handleSearch}
-                        style={{ marginBottom: 24 }}
+                        style={{ marginBottom: 20 }}
                     />
 
                     {productsPage && !productsLoading && (
-                        <div
-                            style={{
-                                marginBottom: 16,
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                            }}
-                        >
-                            <Title level={4} style={{ margin: 0 }}>
-                                {categoryId
-                                    ? (findCategoryInTree(categoryTree, categoryId)?.name ?? 'Товары')
-                                    : searchQuery
-                                        ? `Результаты поиска: «${searchQuery}»`
-                                        : 'Все товары'}
-                            </Title>
-                            <Text type="secondary">Найдено: {productsPage.totalElements}</Text>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+                            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', margin: 0 }}>
+                                {pageTitle}
+                            </h1>
+                            <span style={{ fontSize: 14, color: 'var(--ink-3)' }}>
+                                {productsPage.totalElements} товаров
+                            </span>
                         </div>
                     )}
 
                     {productsLoading && (
-                        <div style={{ textAlign: 'center', padding: 80 }}>
-                            <Spin size="large" tip="Загрузка товаров..." />
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, padding: '16px 0' }}>
+                            {Array.from({ length: 12 }).map((_, i) => (
+                                <div key={i} style={{ background: '#fff', borderRadius: 10, padding: 16, border: '1px solid var(--line-1)' }}>
+                                    <Skeleton.Image active style={{ width: '100%', height: 180, borderRadius: 6 }} />
+                                    <div style={{ marginTop: 12 }}>
+                                        <Skeleton active paragraph={{ rows: 2 }} title={{ width: '60%' }} />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     )}
 
                     {isError && (
-                        <Empty
-                            description="Не удалось загрузить товары. Проверьте подключение к серверу."
-                            style={{ padding: 80 }}
-                        />
+                        <Empty description="Не удалось загрузить товары. Проверьте подключение к серверу." style={{ padding: 80 }} />
                     )}
 
                     {productsPage?.empty && !productsLoading && (
-                        <Empty
-                            image={Empty.PRESENTED_IMAGE_SIMPLE}
-                            description={
-                                searchQuery
-                                    ? `По запросу «${searchQuery}» ничего не найдено`
-                                    : 'В данной категории пока нет товаров'
-                            }
-                        />
+                        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                            <div style={{ fontSize: 32, marginBottom: 12, color: 'var(--ink-4)' }}>🔍</div>
+                            <div style={{ fontFamily: 'var(--font-head)', fontSize: 18, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>
+                                {searchQuery ? `По запросу «${searchQuery}» ничего не найдено` : 'В этой категории пока нет товаров'}
+                            </div>
+                            <div style={{ fontSize: 14, color: 'var(--ink-3)', marginBottom: 20 }}>
+                                {searchQuery ? 'Попробуйте изменить запрос или выбрать категорию' : 'Скоро здесь появятся новинки'}
+                            </div>
+                            <button
+                                onClick={handleClearFilters}
+                                style={{ display: 'inline-flex', alignItems: 'center', height: 40, padding: '0 16px', border: '1px solid var(--brand-navy)', color: 'var(--brand-navy)', background: 'transparent', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                            >
+                                Все товары
+                            </button>
+                        </div>
                     )}
 
                     {productsPage && !productsPage.empty && !productsLoading && (
                         <>
-                            <Row gutter={[16, 16]}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
                                 {productsPage.content.map((product) => (
-                                    <Col xs={24} sm={12} lg={8} xl={8} key={product.id}>
-                                        <ProductCard
-                                            product={product}
-                                            onClick={() => navigate(`/products/${product.id}`)}
-                                            onAddToCart={handleAddToCart}
-                                        />
-                                    </Col>
+                                    <ProductCard
+                                        key={product.id}
+                                        product={product}
+                                        onClick={() => navigate(`/products/${product.id}`)}
+                                        onAddToCart={handleAddToCart}
+                                    />
                                 ))}
-                            </Row>
+                            </div>
 
                             {productsPage.totalPages > 1 && (
                                 <div style={{ textAlign: 'center', marginTop: 32 }}>
@@ -306,8 +261,8 @@ const CatalogPage = () => {
                             )}
                         </>
                     )}
-                </Col>
-            </Row>
+                </div>
+            </div>
         </div>
     );
 };

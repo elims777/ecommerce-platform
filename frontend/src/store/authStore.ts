@@ -108,6 +108,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                         firstname: '',
                         lastname: '',
                         surname: null,
+                        phone: null,
                         emailVerified: true,
                         roles: ((payload.roles as string[]) || []).map((name, idx) => ({ id: idx, name })),
                         createdAt: '',

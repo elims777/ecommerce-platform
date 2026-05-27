@@ -64,6 +64,12 @@ public class Order {
     @Column(name = "warehouse_point_id")
     private Long warehousePointId;
 
+    @Column(name = "pickup_recipient_name", length = 100)
+    private String pickupRecipientName;
+
+    @Column(name = "pickup_recipient_phone", length = 20)
+    private String pickupRecipientPhone;
+
     @Column(name = "customer_email", nullable = false)
     private String customerEmail;
 

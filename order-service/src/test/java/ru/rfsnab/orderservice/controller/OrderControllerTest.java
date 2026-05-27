@@ -277,6 +277,36 @@ class OrderControllerTest extends BaseIntegrationTest {
         }
     }
 
+    // ==================== POST /api/v1/orders/{id}/confirm ====================
+
+    @Nested
+    @DisplayName("POST /api/v1/orders/{id}/confirm — подтверждение заказа")
+    class ConfirmOrderTests {
+
+        @Test
+        @DisplayName("200 OK — заказ переведён в PROCESSING и отправлен в 1С")
+        void shouldConfirmOrder() throws Exception {
+            Order order = buildDeliveryOrder();
+            order.setStatus(OrderStatus.PROCESSING);
+            when(orderService.confirmOrder(ORDER_ID, USER_ID)).thenReturn(order);
+
+            mockMvc.perform(post("/api/v1/orders/{id}/confirm", ORDER_ID)
+                            .with(jwtUser()).with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status.code").value("PROCESSING"));
+
+            verify(orderService).confirmOrder(ORDER_ID, USER_ID);
+        }
+
+        @Test
+        @DisplayName("401 Unauthorized — без аутентификации")
+        void shouldReturn401WithoutAuth() throws Exception {
+            mockMvc.perform(post("/api/v1/orders/{id}/confirm", ORDER_ID)
+                            .with(csrf()))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
     // ==================== POST /api/v1/orders/{id}/cancel ====================
 
     @Nested

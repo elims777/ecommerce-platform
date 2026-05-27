@@ -133,6 +133,60 @@ public class EmailService {
     }
 
     /**
+     * Уведомление о выставлении счёта (INVOICE_SENT)
+     */
+    public void sendInvoiceSentEmail(String toEmail, String orderNumber) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(toEmail);
+        message.setSubject("Счёт по заказу " + orderNumber + " — РФСнаб");
+        message.setText(String.format(
+                """
+                Добрый день!
+
+                По вашему заказу %s выставлен счёт на оплату.
+                Счёт направлен на ваш email отдельным письмом.
+
+                После оплаты счёта менеджер подтвердит получение и заказ будет передан в отгрузку.
+
+                Отслеживайте статус в личном кабинете.
+
+                С уважением,
+                Команда РФСнаб
+                """,
+                orderNumber
+        ));
+        mailSender.send(message);
+    }
+
+    /**
+     * Уведомление об ожидании подтверждения оплаты (AWAITING_CONFIRMATION — B2B постоплата)
+     */
+    public void sendAwaitingConfirmationEmail(String toEmail, String orderNumber) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(toEmail);
+        message.setSubject("Заказ " + orderNumber + " отгружен — ожидаем подтверждения оплаты");
+        message.setText(String.format(
+                """
+                Добрый день!
+
+                Ваш заказ %s передан в доставку.
+
+                Согласно условиям договора, оплата производится после получения товара.
+                Просим подтвердить получение и произвести оплату в установленный срок.
+
+                Если у вас есть вопросы — ответьте на это письмо или свяжитесь с менеджером.
+
+                С уважением,
+                Команда РФСнаб
+                """,
+                orderNumber
+        ));
+        mailSender.send(message);
+    }
+
+    /**
      * Уведомление о смене статуса заказа
      */
     public void sendOrderStatusChangedEmail(String toEmail, String orderNumber, String newStatus) {

@@ -1,37 +1,20 @@
-import { useRef, useEffect } from 'react';
-import { Layout, Menu, Button, Badge, Dropdown } from 'antd';
-import {
-    ShoppingCartOutlined,
-    UserOutlined,
-    LoginOutlined,
-    LogoutOutlined,
-    ProfileOutlined,
-    SettingOutlined,
-} from '@ant-design/icons';
+import { useRef, useState } from 'react';
+import { Dropdown } from 'antd';
+import { company } from '@/config/company';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
-import { isAdmin } from '@/types/auth'
+import { isAdmin } from '@/types/auth';
 import type { MenuProps } from 'antd';
+import { useEffect } from 'react';
 
+const TOPBAR_H = 36;
+const MAIN_H = 76;
+const CAT_H = 46;
+const HEADER_TOTAL = TOPBAR_H + MAIN_H + CAT_H;
 
-const { Content, Footer } = Layout;
-
-/** Порядок страниц — определяет направление анимации */
-const PAGE_ORDER = [
-    '/about',
-    '/contacts',
-    '/',
-    '/cart',
-    '/orders',
-    '/profile',
-    '/login',
-    '/register',
-    '/privacy-policy',
-    '/personal-data',
-];
-
+const PAGE_ORDER = ['/about', '/contacts', '/', '/catalog', '/cart', '/orders', '/profile', '/privacy-policy', '/personal-data'];
 const getPageIndex = (pathname: string): number => {
     if (pathname.startsWith('/products/')) return 2.5;
     if (pathname.startsWith('/checkout')) return 4.5;
@@ -39,206 +22,361 @@ const getPageIndex = (pathname: string): number => {
     return idx >= 0 ? idx : 5;
 };
 
-const HEADER_HEIGHT = 80;
-const LOGO_SIZE = 140;
+const SearchIcon = () => (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+    </svg>
+);
+const CartIcon = () => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 4h2.5l2 13.5h11l2-9h-14"/><circle cx="9" cy="20.5" r="1.4"/><circle cx="18" cy="20.5" r="1.4"/>
+    </svg>
+);
+const UserIcon = () => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.6 4.2-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/>
+    </svg>
+);
+const HeartIcon = () => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>
+    </svg>
+);
+const PhoneIcon = () => (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 6 6L15 14l5 2v3a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z"/>
+    </svg>
+);
+const TruckIcon = () => (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 6h12v10H2zM14 10h4l3 3v3h-7"/><circle cx="6.5" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/>
+    </svg>
+);
+const PinIcon = () => (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>
+    </svg>
+);
+const MenuIcon = () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <path d="M4 7h16M4 12h16M4 17h16"/>
+    </svg>
+);
+const ChevDownIcon = () => (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m6 9 6 6 6-6"/>
+    </svg>
+);
+const DownloadIcon = () => (
+    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>
+    </svg>
+);
+
+
+
+const HeaderAction = ({ icon, label, count, highlight, onClick }: { icon: React.ReactNode; label: string; count?: number; highlight?: boolean; onClick?: () => void }) => (
+    <button onClick={onClick} style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+        background: 'transparent', border: 0, cursor: 'pointer',
+        padding: '6px 10px', borderRadius: 6, color: 'var(--ink-1)', fontFamily: 'inherit',
+    }}>
+        <span style={{ position: 'relative', color: highlight ? 'var(--brand-red)' : 'var(--ink-1)' }}>
+            {icon}
+            {count != null && count > 0 && (
+                <span style={{
+                    position: 'absolute', top: -4, right: -8,
+                    minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8,
+                    background: 'var(--brand-red)', color: '#fff',
+                    fontSize: 10, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '2px solid #fff',
+                }}>{count}</span>
+            )}
+        </span>
+        <span style={{ fontSize: 11, color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{label}</span>
+    </button>
+);
 
 const ClientLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { isAuthenticated, user, logout } = useAuthStore();
     const totalItems = useCartStore((state) => state.totalItems);
-    const prevIndexRef = useRef(getPageIndex(location.pathname));
     const fetchCart = useCartStore((state) => state.fetchCart);
+    const [searchQuery, setSearchQuery] = useState('');
+    const prevIndexRef = useRef(getPageIndex(location.pathname));
 
     useEffect(() => {
-        if (isAuthenticated) {
-            fetchCart();
-        }
+        if (isAuthenticated) fetchCart();
     }, [isAuthenticated, fetchCart]);
+
     const handleLogout = async () => {
         await logout();
         navigate('/');
     };
 
-    // Определяем направление анимации
     const currentIndex = getPageIndex(location.pathname);
-    const direction = currentIndex > prevIndexRef.current ? 1 : -1;
     prevIndexRef.current = currentIndex;
 
-    // Левая навигация
-    const leftNavItems: MenuProps['items'] = [
-        { key: '/', label: 'Каталог' },
-        { key: '/about', label: 'О нас' },
-        { key: '/contacts', label: 'Контакты' },
+    const userMenuItems: MenuProps['items'] = [
+        { key: 'orders', label: 'Мои заказы', onClick: () => navigate('/orders') },
+        { key: 'profile', label: 'Профиль', onClick: () => navigate('/profile') },
+        ...(user && isAdmin(user) ? [
+            { type: 'divider' as const },
+            { key: 'admin', label: 'Админ-панель', onClick: () => navigate('/admin') },
+        ] : []),
+        { type: 'divider' as const },
+        { key: 'logout', label: 'Выйти', onClick: handleLogout },
     ];
 
-    // Dropdown-меню пользователя
-    const userMenuItems: MenuProps['items'] = [
-        {
-            key: 'orders',
-            icon: <ProfileOutlined />,
-            label: 'Мои заказы',
-            onClick: () => navigate('/orders'),
-        },
-        {
-            key: 'profile',
-            icon: <SettingOutlined />,
-            label: 'Профиль',
-            onClick: () => navigate('/profile'),
-        },
-        ...(user && isAdmin(user)
-            ? [
-                { type: 'divider' as const },
-                {
-                    key: 'admin',
-                    icon: <SettingOutlined />,
-                    label: 'Админ-панель',
-                    onClick: () => navigate('/admin'),
-                },
-            ]
-            : []),
-        { type: 'divider' as const },
-        {
-            key: 'logout',
-            icon: <LogoutOutlined />,
-            label: 'Выйти',
-            onClick: handleLogout,
-        },
-    ];
+    const isActive = (path: string) => location.pathname === path;
+
+    const navLink = (path: string, label: string, hasChev?: boolean) => (
+        <a
+            key={path}
+            onClick={() => navigate(path)}
+            style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '0 14px', height: '100%', fontSize: 14, fontWeight: 500,
+                color: isActive(path) ? 'var(--brand-red)' : 'var(--ink-1)',
+                borderBottom: isActive(path) ? '2px solid var(--brand-red)' : '2px solid transparent',
+                marginBottom: -1, cursor: 'pointer', textDecoration: 'none',
+                transition: 'color 0.12s',
+            }}
+            onMouseEnter={(e) => { if (!isActive(path)) (e.currentTarget as HTMLElement).style.color = 'var(--brand-navy)'; }}
+            onMouseLeave={(e) => { if (!isActive(path)) (e.currentTarget as HTMLElement).style.color = 'var(--ink-1)'; }}
+        >
+            {label}
+            {hasChev && <ChevDownIcon />}
+        </a>
+    );
 
     return (
-        <Layout style={{ minHeight: '100vh' }}>
-            {/* Хэдер */}
-            <header
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    zIndex: 1000,
-                    height: HEADER_HEIGHT,
-                    background: '#fff',
-                    boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0 32px',
-                }}
-            >
-                {/* Левая навигация */}
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', paddingRight: 70 }}>
-                    <Menu
-                        mode="horizontal"
-                        selectedKeys={[location.pathname]}
-                        items={leftNavItems}
-                        onClick={({ key }) => navigate(key)}
-                        style={{
-                            border: 'none',
-                            background: 'transparent',
-                            fontWeight: 500,
-                            fontSize: 15,
-                        }}
-                    />
+        <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
+            <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000 }}>
+                {/* TopBar */}
+                <div style={{
+                    background: 'var(--brand-navy)', color: 'rgba(255,255,255,.85)',
+                    fontSize: 12.5, height: TOPBAR_H,
+                    display: 'flex', alignItems: 'center', padding: '0 40px', gap: 20,
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <PinIcon /> {company.address.full}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <TruckIcon /> Доставка по РФ
+                    </div>
+                    <div style={{ flex: 1 }} />
+                    <a onClick={() => navigate('/about')} style={{ opacity: 0.85, cursor: 'pointer', color: 'inherit', textDecoration: 'none' }}>О компании</a>
+                    <a onClick={() => navigate('/contacts')} style={{ opacity: 0.85, cursor: 'pointer', color: 'inherit', textDecoration: 'none' }}>Контакты</a>
+                    <a style={{ opacity: 0.85, cursor: 'pointer', color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        Прайс-листы <DownloadIcon />
+                    </a>
+                    <span style={{ opacity: 0.35 }}>·</span>
+                    <a style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#fff', cursor: 'pointer', textDecoration: 'none' }}>
+                        <PhoneIcon /> {company.phone.free}
+                    </a>
                 </div>
 
-                {/* Логотип-медальон по центру */}
-                <div
-                    className="glass-sphere"
-                    onClick={() => navigate('/')}
-                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.08)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)')}
-                    style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        zIndex: 1001,
-                        width: LOGO_SIZE,
-                        height: LOGO_SIZE,
-                        marginTop: LOGO_SIZE * 0.25,
-                        cursor: 'pointer',
-                        background: '#fff',
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        transition: 'transform 0.2s ease-out',
-                        willChange: 'transform',
-                        backfaceVisibility: 'hidden' as const,
-                    }}
-                >
-                    <img
-                        src="/logo.png"
-                        alt="РФснаб"
-                        style={{
-                            width: LOGO_SIZE,
-                            height: LOGO_SIZE,
-                            objectFit: 'contain',
-                            position: 'relative',
-                            zIndex: 2,
-                            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))',
-                        }}
-                    />
-                </div>
+                {/* Main header */}
+                <div style={{
+                    background: '#fff', borderBottom: '1px solid var(--line-1)',
+                    height: MAIN_H, display: 'flex', alignItems: 'center',
+                    padding: '0 40px', gap: 28,
+                }}>
+                    <div onClick={() => navigate('/')} style={{ cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <img src="/logo.png" alt="РФснаб" style={{ height: 52, display: 'block' }} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <span style={{
+                                fontFamily: 'var(--font-display)',
+                                fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em',
+                                color: 'var(--brand-navy)', lineHeight: 1.1,
+                            }}>РФснаб</span>
+                            <span style={{
+                                fontFamily: 'var(--font-body)',
+                                fontSize: 11, fontWeight: 400, letterSpacing: '0.04em',
+                                color: 'var(--ink-3)', lineHeight: 1.2, textTransform: 'uppercase',
+                            }}>комплексное снабжение</span>
+                        </div>
+                    </div>
 
-                {/* Правая навигация */}
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 100, gap: 8 }}>
-                    <Badge count={totalItems} size="small">
-                        <Button
-                            type="text"
-                            icon={<ShoppingCartOutlined style={{ fontSize: 20 }} />}
-                            onClick={() => navigate('/cart')}
-                            style={{ fontWeight: 500 }}
+                    {/* Search */}
+                    <div style={{ flex: 1, maxWidth: 620, position: 'relative' }}>
+                        <input
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Артикул, бренд или название товара"
+                            style={{
+                                width: '100%', height: 44, padding: '0 120px 0 42px',
+                                border: '1px solid var(--line-2)', borderRadius: 8,
+                                fontSize: 14, fontFamily: 'var(--font-body)', outline: 'none',
+                                background: 'var(--surface)', color: 'var(--ink-1)',
+                                transition: 'border-color 0.12s',
+                            }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--brand-navy)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--line-2)'; }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && searchQuery.trim()) {
+                                    navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
+                                }
+                            }}
                         />
-                    </Badge>
-
-                    {isAuthenticated ? (
-                        <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
-                            <Button
-                                type="text"
-                                icon={<UserOutlined style={{ fontSize: 18 }} />}
-                                style={{ fontWeight: 500 }}
-                            >
-                                {user?.firstname}
-                            </Button>
-                        </Dropdown>
-                    ) : (
-                        <Button
-                            type="primary"
-                            icon={<LoginOutlined />}
-                            onClick={() => navigate('/login')}
-                            style={{ borderRadius: 20, fontWeight: 500 }}
+                        <span style={{ position: 'absolute', left: 14, top: 13, color: 'var(--ink-3)' }}>
+                            <SearchIcon />
+                        </span>
+                        <button
+                            onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
+                            style={{
+                                position: 'absolute', right: 4, top: 4, height: 36, padding: '0 18px',
+                                background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6,
+                                fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
                         >
-                            Войти
-                        </Button>
-                    )}
+                            Найти
+                        </button>
+                    </div>
+
+                    {/* User actions */}
+                    <div style={{ display: 'flex', gap: 2, alignItems: 'center', marginLeft: 'auto', flexShrink: 0 }}>
+                        <HeaderAction icon={<HeartIcon />} label="Избранное" />
+                        <HeaderAction icon={<CartIcon />} label="Корзина" count={totalItems} highlight onClick={() => navigate('/cart')} />
+                        <div style={{ width: 1, height: 28, background: 'var(--line-1)', margin: '0 4px' }} />
+                        {isAuthenticated ? (
+                            <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
+                                <button style={{
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    background: 'transparent', border: '1px solid var(--line-2)',
+                                    borderRadius: 6, padding: '6px 12px', cursor: 'pointer',
+                                    fontSize: 13.5, fontWeight: 500, color: 'var(--ink-1)', fontFamily: 'var(--font-body)',
+                                }}>
+                                    <UserIcon /> {user?.firstname}
+                                </button>
+                            </Dropdown>
+                        ) : (
+                            <button
+                                onClick={() => navigate('/login')}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    height: 36, padding: '0 14px',
+                                    background: 'transparent', color: 'var(--brand-navy)',
+                                    border: '1px solid var(--brand-navy)', borderRadius: 6,
+                                    fontSize: 13.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                    transition: 'background 0.12s',
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--navy-tint)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                            >
+                                <UserIcon /> Войти
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Categories nav */}
+                <div style={{
+                    background: '#fff', borderBottom: '1px solid var(--line-1)',
+                    height: CAT_H, display: 'flex', alignItems: 'center',
+                    padding: '0 40px', gap: 0,
+                }}>
+                    <button
+                        onClick={() => navigate('/catalog')}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 8,
+                            height: 36, padding: '0 14px', marginRight: 8,
+                            background: 'var(--brand-red)', color: '#fff',
+                            border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600,
+                            cursor: 'pointer', fontFamily: 'var(--font-body)',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
+                    >
+                        <MenuIcon /> Каталог товаров
+                    </button>
+                    {navLink('/about', 'О компании', true)}
+                    {navLink('/contacts', 'Контакты')}
+                    <a style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '0 14px', height: '100%', fontSize: 14, fontWeight: 500,
+                        color: 'var(--ink-1)', cursor: 'pointer', textDecoration: 'none',
+                    }}>
+                        Акции
+                    </a>
+                    <div style={{ flex: 1 }} />
+                    <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>
+                        <span style={{ color: 'var(--brand-green)', fontWeight: 600 }}>●</span>{' '}
+                        12 480 товаров в наличии · отгрузка от 1 часа
+                    </span>
                 </div>
             </header>
 
-            {/* Spacer — чтобы контент не залезал под fixed-хэдер + место для выступающего логотипа */}
-            <div style={{ height: HEADER_HEIGHT + LOGO_SIZE * 0.25 + 10 }} />
+            <div style={{ height: HEADER_TOTAL }} />
 
-            {/* Основное содержимое с анимацией перехода */}
-            <Content style={{ maxWidth: 1440, margin: '0 auto', width: '100%', padding: '0 48px', overflow: 'hidden' }}>
+            <main style={{ flex: 1, maxWidth: 1440, margin: '0 auto', width: '100%', padding: '0 40px' }}>
                 <AnimatePresence mode="wait" initial={false}>
                     <motion.div
                         key={location.pathname}
-                        initial={{ x: direction * 300, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: direction * -300, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.2, ease: [0.25, 0, 0, 1] }}
                     >
                         <Outlet />
                     </motion.div>
                 </AnimatePresence>
-            </Content>
+            </main>
 
-            <Footer style={{ textAlign: 'center', background: '#f5f5f5', marginTop: 40 }}>
-                <div>
-                    <a href="/privacy-policy" style={{ marginRight: 16 }}>Политика конфиденциальности</a>
-                    <a href="/personal-data">Обработка персональных данных</a>
+            <footer style={{ background: '#1A1A1A', color: '#fff', padding: '40px 40px 28px', marginTop: 40 }}>
+                <div style={{ maxWidth: 1360, margin: '0 auto' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr', gap: 40, marginBottom: 32 }}>
+                        <div>
+                            <div style={{ marginBottom: 16 }}>
+                                <img src="/logo.png" alt="РФснаб" style={{ height: 44, display: 'block' }} />
+                            </div>
+                            <p style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', lineHeight: 1.6 }}>
+                                Комплексное снабжение предприятий и организаций. Работаем с {company.founded} года.
+                            </p>
+                        </div>
+                        {[
+                            ['Каталог', ['Противопожарное оборудование', 'СИЗ и спецодежда', 'Инструмент', 'Электротехника', 'Все категории →']],
+                            ['Компания', ['О нас', 'Реквизиты', 'Сертификаты', 'Поставщикам', 'Вакансии']],
+                            ['Покупателям', ['Доставка', 'Оплата и договор', 'Возврат', 'Госзакупки 44-ФЗ', 'Тендеры']],
+                            ['Контакты', [company.phone.free, company.email.sales, company.workHours, company.address.city]],
+                        ].map(([heading, items]) => (
+                            <div key={heading as string}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 14 }}>{heading}</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, color: 'rgba(255,255,255,.6)' }}>
+                                    {(items as string[]).map((item) => (
+                                        <a key={item} style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none', transition: 'color 0.12s' }}
+                                            onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.9)'; }}
+                                            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.6)'; }}
+                                        >{item}</a>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{
+                        paddingTop: 20, borderTop: '1px solid rgba(255,255,255,.1)',
+                        display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(255,255,255,.45)',
+                    }}>
+                        <span>© {company.founded}–{new Date().getFullYear()} {company.legalName} · ИНН {company.inn}</span>
+                        <span style={{ display: 'flex', gap: 18 }}>
+                            <a href="/privacy-policy" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.12s' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.8)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.45)'; }}
+                            >Политика конфиденциальности</a>
+                            <a href="/personal-data" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.12s' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.8)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.45)'; }}
+                            >Публичная оферта</a>
+                        </span>
+                    </div>
                 </div>
-                <div style={{ marginTop: 8 }}>ООО «МСВ» — Комплексное снабжение © {new Date().getFullYear()}</div>
-            </Footer>
-        </Layout>
+            </footer>
+        </div>
     );
 };
 
