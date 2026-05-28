@@ -339,12 +339,8 @@ const CartPage = () => {
                             onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}
                             onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-red)')}
                         >
-                            Отправить менеджеру <ArrRight />
+                            Оформить заявку <ArrRight />
                         </button>
-
-                        <div style={{ fontSize: 11.5, color: 'var(--ink-3)', textAlign: 'center', marginTop: 8, lineHeight: 1.5 }}>
-                            Менеджер согласует наличие и условия в течение 15 мин
-                        </div>
                     </div>
                 </aside>
             </div>

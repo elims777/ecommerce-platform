@@ -167,6 +167,16 @@ public class ProductService {
         return productRepository.findAll(pageable);
     }
 
+    public Page<Product> getAllProductsAdminPage(Long categoryId, Pageable pageable) {
+        if (categoryId != null) {
+            if (!categoryRepository.existsById(categoryId)) {
+                throw new CategoryNotFoundException(categoryId);
+            }
+            return productRepository.findByCategoryId(categoryId, pageable);
+        }
+        return productRepository.findAll(pageable);
+    }
+
     /**
      * Пагинация товаров по категории
      */

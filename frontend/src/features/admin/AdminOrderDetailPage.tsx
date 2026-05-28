@@ -39,7 +39,7 @@ const AdminOrderDetailPage = () => {
   const { data: order, isLoading } = useQuery({
     queryKey: ['adminOrderDetail', id],
     queryFn: async () => {
-      const { data } = await apiClient.get<OrderDto>(`/v1/orders/${id}`);
+      const { data } = await apiClient.get<OrderDto>(`/v1/admin/orders/${id}`);
       return data;
     },
     enabled: !!id,

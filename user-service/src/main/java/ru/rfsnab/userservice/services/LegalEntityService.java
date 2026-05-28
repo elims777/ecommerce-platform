@@ -14,6 +14,7 @@ import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthResponse;
 import ru.rfsnab.userservice.models.dto.legal.RegisterLegalEntityRequest;
 import ru.rfsnab.userservice.models.dto.legal.SaveBankAccountRequest;
 import ru.rfsnab.userservice.models.dto.legal.SaveLegalEntityAddressRequest;
+import ru.rfsnab.userservice.models.dto.legal.UpdateLegalEntityRequest;
 import ru.rfsnab.userservice.models.enums.LinkStatus;
 import ru.rfsnab.userservice.models.enums.VerificationStatus;
 import ru.rfsnab.userservice.models.kafka.LegalEntityEvent;
@@ -138,6 +139,24 @@ public class LegalEntityService {
         ));
 
         log.info("Legal entity rejected: id={} by {}, reason: {}", id, managerEmail, reason);
+        return entity;
+    }
+
+    @Transactional
+    public LegalEntity update(Long id, UpdateLegalEntityRequest request) {
+        LegalEntity entity = getById(id);
+        entity.setFullName(request.fullName());
+        entity.setDirector(request.director());
+        entity.setDirectorTitle(request.directorTitle());
+        entity.setBasisOfAuthority(request.basisOfAuthority());
+        entity.setOffice(request.office());
+        entity.setPhone(request.phone());
+        entity.setLegalCity(request.legalCity());
+        entity.setLegalStreet(request.legalStreet());
+        entity.setLegalBuilding(request.legalBuilding());
+        entity.setLegalPostalCode(request.legalPostalCode());
+        entity = legalEntityRepository.save(entity);
+        log.info("Legal entity updated: id={}", id);
         return entity;
     }
 

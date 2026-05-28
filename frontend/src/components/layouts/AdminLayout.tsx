@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { key: '/admin/products',   label: 'Каталог',        icon: MenuIcon },
   { key: '/admin/users',      label: 'Клиенты',        icon: PersonIcon },
   { key: '/admin/integration',label: 'Интеграция 1С',  icon: SyncIcon },
+  { key: '/admin/settings',   label: 'Настройки',      icon: SettingsIcon },
 ];
 
 const PAGE_TITLES: Record<string, string> = {
@@ -15,6 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/products':    'Каталог',
   '/admin/users':       'Клиенты',
   '/admin/integration': 'Интеграция 1С',
+  '/admin/settings':    'Настройки',
 };
 
 function GridIcon() {
@@ -56,6 +58,15 @@ function SyncIcon() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M2 8a6 6 0 0110.5-4M14 8a6 6 0 01-10.5 4"/>
       <path d="M12 3l1 2-2 .5M4 13l-1-2 2-.5"/>
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="8" cy="8" r="2.5"/>
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.42 1.42M11.53 11.53l1.42 1.42M3.05 12.95l1.42-1.42M11.53 4.47l1.42-1.42"/>
     </svg>
   );
 }
@@ -105,13 +116,15 @@ const AdminLayout = () => {
     <div className="rf-admin-layout">
       {/* Sidebar */}
       <aside className="rf-admin-sidebar">
-        <div className="rf-admin-logo">
-          <img
-            src="/logo-dark.png"
-            alt="РФснаб"
-            style={{ height: 28, cursor: 'pointer' }}
-            onClick={() => navigate('/admin')}
-          />
+        <div
+          className="rf-admin-logo"
+          onClick={() => navigate('/admin')}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+        >
+          <img src="/logo-dark.png" alt="РФснаб" style={{ height: 28 }} />
+          <span style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 15, color: 'var(--ink-1)', letterSpacing: '-0.01em' }}>
+            РФснаб
+          </span>
         </div>
 
         <nav className="rf-admin-nav">
@@ -128,7 +141,12 @@ const AdminLayout = () => {
           ))}
         </nav>
 
-        <div className="rf-admin-user">
+        <div
+          className="rf-admin-user"
+          onClick={() => navigate('/profile')}
+          style={{ cursor: 'pointer' }}
+          title="Личный кабинет"
+        >
           <div className="rf-admin-avatar">{initials}</div>
           <div style={{ flex: 1, fontSize: 12 }}>
             <div style={{ fontWeight: 600, color: 'var(--ink-1)' }}>{displayName}</div>
@@ -154,9 +172,6 @@ const AdminLayout = () => {
             style={{ gap: 6 }}
           >
             ← В магазин
-          </button>
-          <button className="rf-btn rf-btn-primary rf-btn-sm">
-            + Новая заявка
           </button>
         </div>
 

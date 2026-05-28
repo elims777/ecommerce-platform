@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Form, Input, App } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -48,14 +48,29 @@ const LoginPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const login = useAuthStore((state) => state.login);
+    const loginLegal = useAuthStore((state) => state.loginLegal);
     const { message: messageApi } = App.useApp();
 
     const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
-    const handleSubmit = async (values: LoginRequest) => {
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const confirmed = params.get('legal_confirmed');
+        if (confirmed === 'true') {
+            messageApi.success('Email подтверждён. Ожидайте верификации от менеджера — это займёт до 1 рабочего дня.');
+        } else if (confirmed === 'error') {
+            messageApi.error('Ссылка подтверждения недействительна или уже была использована.');
+        }
+    }, []);
+
+    const handleSubmit = async (values: LoginRequest & { login?: string }) => {
         setLoading(true);
         try {
-            await login(values);
+            if (accountType === 'legal') {
+                await loginLegal(values.email, values.password);
+            } else {
+                await login(values);
+            }
             messageApi.success('Вы успешно вошли в систему');
             navigate(from, { replace: true });
         } catch (error) {

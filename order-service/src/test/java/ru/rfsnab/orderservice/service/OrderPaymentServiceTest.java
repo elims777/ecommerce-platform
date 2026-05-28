@@ -18,7 +18,9 @@ import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
+import ru.rfsnab.orderservice.models.entity.PaymentMethodSettings;
 import ru.rfsnab.orderservice.repository.OrderRepository;
+import ru.rfsnab.orderservice.repository.PaymentMethodSettingsRepository;
 import ru.rfsnab.orderservice.service.client.PaymentServiceClient;
 
 import java.math.BigDecimal;
@@ -38,6 +40,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
     @Autowired OrderService orderService;
     @Autowired CartService cartService;
     @Autowired OrderRepository orderRepository;
+    @Autowired PaymentMethodSettingsRepository paymentMethodSettingsRepository;
 
     @MockitoBean
     PaymentServiceClient paymentServiceClient;
@@ -54,6 +57,17 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
     void setUp() {
         orderRepository.deleteAll();
         cartService.clearCart(USER_ID);
+
+        PaymentMethodSettings settings = paymentMethodSettingsRepository.findById(1L)
+                .orElseGet(() -> {
+                    PaymentMethodSettings s = new PaymentMethodSettings();
+                    s.setId(1L);
+                    return s;
+                });
+        settings.setCardEnabled(true);
+        settings.setSbpEnabled(true);
+        paymentMethodSettingsRepository.save(settings);
+
         when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(PRODUCT_ID, PRODUCT));
         when(productServiceClient.getProduct(PRODUCT_ID)).thenReturn(PRODUCT);
     }

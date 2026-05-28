@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
 import ru.rfsnab.orderservice.exception.CartEmptyException;
-import ru.rfsnab.orderservice.exception.InsufficientStockException;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
 import ru.rfsnab.orderservice.models.dto.event.OrderEvent;
 import ru.rfsnab.orderservice.models.dto.order.AddressDto;
@@ -29,7 +28,10 @@ import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
+import ru.rfsnab.orderservice.exception.PaymentMethodNotAvailableException;
+import ru.rfsnab.orderservice.models.entity.PaymentMethodSettings;
 import ru.rfsnab.orderservice.repository.OrderRepository;
+import ru.rfsnab.orderservice.repository.PaymentMethodSettingsRepository;
 import ru.rfsnab.orderservice.repository.WarehousePointRepository;
 
 import java.math.BigDecimal;
@@ -60,6 +62,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
     @Autowired
     private WarehousePointRepository warehousePointRepository;
+
+    @Autowired
+    private PaymentMethodSettingsRepository paymentMethodSettingsRepository;
 
 //    @MockitoBean
 //    private ProductServiceClient productServiceClient;
@@ -99,6 +104,17 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                         .active(true)
                         .build()
         );
+
+        // По умолчанию card включена — существующие тесты с PaymentMethod.CARD работают
+        PaymentMethodSettings settings = paymentMethodSettingsRepository.findById(1L)
+                .orElseGet(() -> {
+                    PaymentMethodSettings s = new PaymentMethodSettings();
+                    s.setId(1L);
+                    return s;
+                });
+        settings.setCardEnabled(true);
+        settings.setSbpEnabled(true);
+        paymentMethodSettingsRepository.save(settings);
 
         // Mock product-service
         stubProducts();
@@ -174,29 +190,6 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .isInstanceOf(CartEmptyException.class);
         }
 
-        @Test
-        @DisplayName("выбрасывает InsufficientStockException при недостатке товара")
-        void shouldThrowWhenInsufficientStock() {
-            addItemsToCart();
-
-            // Переопределяем мок — мало на складе
-            when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(
-                    PRODUCT_ID_1, new ProductDto(
-                            PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"),
-                            null, 1, true, "ext-001"),
-                    PRODUCT_ID_2, new ProductDto(
-                            PRODUCT_ID_2, "Брус", new BigDecimal("1000.00"),
-                            null, 100, true, "ext-002")
-            ));
-
-            CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), null, null, null, null, null);
-
-            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
-                    .isInstanceOf(InsufficientStockException.class)
-                    .hasMessageContaining("Доска");
-        }
 
         @Test
         @DisplayName("выбрасывает исключение при PICKUP без warehousePointId")
@@ -435,24 +428,6 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             assertThat(repeated.getDeliveryMethod()).isEqualTo(original.getDeliveryMethod());
         }
 
-        @Test
-        @DisplayName("выбрасывает исключение при недостатке товара")
-        void shouldThrowWhenInsufficientStockForRepeat() {
-            Order original = createTestOrder();
-
-            when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(
-                    PRODUCT_ID_1, new ProductDto(
-                            PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"),
-                            null, 0, true, "ext-001"),
-                    PRODUCT_ID_2, new ProductDto(
-                            PRODUCT_ID_2, "Брус", new BigDecimal("1000.00"),
-                            null, 100, true, "ext-002")
-            ));
-
-            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL))
-                    .isInstanceOf(InsufficientStockException.class)
-                    .hasMessageContaining("Доска");
-        }
     }
 
     // ==================== confirmOrder ====================
@@ -495,6 +470,89 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             UUID orderId = order.getId();
             assertThatThrownBy(() -> orderService.confirmOrder(orderId, USER_ID))
                     .isInstanceOf(InvalidOrderStateException.class);
+        }
+    }
+
+    // ==================== confirmOrder: payment method settings ====================
+
+    @Nested
+    @DisplayName("confirmOrder — настройки оплаты B2C")
+    class ConfirmOrderPaymentSettingsTests {
+
+        @Test
+        @DisplayName("B2C с INVOICE идёт в 1С когда оба метода выключены")
+        void b2cInvoice_bothDisabled_confirmsSuccessfully() {
+            PaymentMethodSettings s = getOrCreateSettings();
+            s.setCardEnabled(false);
+            s.setSbpEnabled(false);
+            paymentMethodSettingsRepository.save(s);
+
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            CreateOrderRequest req = new CreateOrderRequest(
+                    PaymentMethod.INVOICE, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, null, null, null);
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
+
+            Order confirmed = orderService.confirmOrder(order.getId(), USER_ID);
+            assertThat(confirmed.getStatus()).isEqualTo(OrderStatus.PROCESSING);
+        }
+
+        @Test
+        @DisplayName("B2C с CARD когда card выключена — PaymentMethodNotAvailableException")
+        void b2cCard_cardDisabled_throws() {
+            PaymentMethodSettings s = getOrCreateSettings();
+            s.setCardEnabled(false);
+            s.setSbpEnabled(false);
+            paymentMethodSettingsRepository.save(s);
+
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            CreateOrderRequest req = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, null, null, null);
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
+
+            UUID orderId = order.getId();
+            assertThatThrownBy(() -> orderService.confirmOrder(orderId, USER_ID))
+                    .isInstanceOf(PaymentMethodNotAvailableException.class)
+                    .hasMessageContaining("картой");
+        }
+
+        @Test
+        @DisplayName("B2C с SBP когда sbp выключен — PaymentMethodNotAvailableException")
+        void b2cSbp_sbpDisabled_throws() {
+            PaymentMethodSettings s = getOrCreateSettings();
+            s.setCardEnabled(false);
+            s.setSbpEnabled(false);
+            paymentMethodSettingsRepository.save(s);
+
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            CreateOrderRequest req = new CreateOrderRequest(
+                    PaymentMethod.SBP, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, null, null, null);
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
+
+            UUID orderId = order.getId();
+            assertThatThrownBy(() -> orderService.confirmOrder(orderId, USER_ID))
+                    .isInstanceOf(PaymentMethodNotAvailableException.class)
+                    .hasMessageContaining("СБП");
+        }
+
+        @Test
+        @DisplayName("B2B с INVOICE — не проверяет флаги, подтверждается успешно")
+        void b2b_invoice_ignoresPaymentSettings() {
+            PaymentMethodSettings s = getOrCreateSettings();
+            s.setCardEnabled(false);
+            s.setSbpEnabled(false);
+            paymentMethodSettingsRepository.save(s);
+
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            CreateOrderRequest req = new CreateOrderRequest(
+                    PaymentMethod.INVOICE, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, null, "ООО Тест", "1234567890");
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2B", req);
+
+            Order confirmed = orderService.confirmOrder(order.getId(), USER_ID);
+            assertThat(confirmed.getStatus()).isEqualTo(OrderStatus.PROCESSING);
         }
     }
 
@@ -778,6 +836,15 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                 buildAddressDto(), null, null, null, "Тест", null, null);
 
         return orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
+    }
+
+    private PaymentMethodSettings getOrCreateSettings() {
+        return paymentMethodSettingsRepository.findById(1L)
+                .orElseGet(() -> {
+                    PaymentMethodSettings s = new PaymentMethodSettings();
+                    s.setId(1L);
+                    return s;
+                });
     }
 
     private AddressDto buildAddressDto() {

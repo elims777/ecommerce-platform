@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { User, ClientType } from '@/types/auth';
 import * as authApi from '@/api/auth';
 import type { LoginRequest } from '@/types/auth';
+import { getLegalEntity } from '@/api/legalEntity';
 
 interface AuthState {
     user: User | null;
@@ -9,6 +10,7 @@ interface AuthState {
     isLoading: boolean;
 
     login: (request: LoginRequest) => Promise<void>;
+    loginLegal: (login: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     restoreSession: () => Promise<void>;
     switchContext: (targetType: ClientType, password?: string) => Promise<void>;
@@ -44,10 +46,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     isLoading: true,
 
     login: async (request) => {
-        // Login response содержит и токены, и user — не нужен отдельный /me
         const tokens = await authApi.login(request);
         localStorage.setItem('accessToken', tokens.access_token);
         localStorage.setItem('refreshToken', tokens.refresh_token);
+        set({ user: tokens.user, isAuthenticated: true });
+    },
+
+    loginLegal: async (login, password) => {
+        const tokens = await authApi.loginLegal(login, password);
+        localStorage.setItem('accessToken', tokens.access_token);
+        localStorage.setItem('refreshToken', tokens.refresh_token);
+        localStorage.setItem('clientType', 'B2B');
+        localStorage.setItem('userId', String(tokens.user.id));
         set({ user: tokens.user, isAuthenticated: true });
     },
 
@@ -59,6 +69,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         } finally {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
+            localStorage.removeItem('clientType');
+            localStorage.removeItem('userId');
             set({ user: null, isAuthenticated: false });
         }
     },
@@ -94,38 +106,49 @@ export const useAuthStore = create<AuthState>((set) => ({
             return;
         }
 
-        // Токен валидный — извлекаем данные пользователя из JWT
-        try {
-            const user = await authApi.getCurrentUser();
-            set({ user, isAuthenticated: true, isLoading: false });
-        } catch {
-            // /me упал — но токен не истёк, пробуем использовать данные из JWT
-            const payload = decodeJwtPayload(accessToken);
-            if (payload) {
+        // Токен валидный — загружаем данные пользователя из БД
+        const savedClientType = localStorage.getItem('clientType');
+        const savedUserId = localStorage.getItem('userId');
+
+        if (savedClientType === 'B2B' && savedUserId) {
+            try {
+                const entity = await getLegalEntity(Number(savedUserId));
                 set({
                     user: {
-                        id: Number(payload.sub),
-                        email: payload.email as string,
+                        id: entity.id,
+                        email: entity.email,
                         firstname: '',
                         lastname: '',
                         surname: null,
                         phone: null,
                         emailVerified: true,
-                        roles: ((payload.roles as string[]) || []).map((name, idx) => ({ id: idx, name })),
-                        createdAt: '',
+                        roles: [{ id: 0, name: 'ROLE_USER' }],
+                        createdAt: entity.createdAt,
                         updatedAt: '',
-                        clientType: (payload.clientType as ClientType) ?? 'B2C',
-                        companyName: (payload.companyName as string) ?? null,
-                        inn: (payload.inn as string) ?? null,
+                        clientType: 'B2B',
+                        companyName: entity.fullName,
+                        inn: entity.inn,
                     },
                     isAuthenticated: true,
                     isLoading: false,
                 });
-            } else {
+            } catch {
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
+                localStorage.removeItem('clientType');
+                localStorage.removeItem('userId');
                 set({ user: null, isAuthenticated: false, isLoading: false });
             }
+            return;
+        }
+
+        try {
+            const user = await authApi.getCurrentUser();
+            set({ user, isAuthenticated: true, isLoading: false });
+        } catch {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            set({ user: null, isAuthenticated: false, isLoading: false });
         }
     },
 

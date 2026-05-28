@@ -36,6 +36,15 @@ public class LegalEntity {
     @Column(nullable = false)
     private String director;
 
+    @Column(length = 100)
+    private String directorTitle;
+
+    @Column(length = 200)
+    private String basisOfAuthority;
+
+    @Column(length = 50)
+    private String office;
+
     @Column(nullable = false, length = 20)
     private String phone;
 

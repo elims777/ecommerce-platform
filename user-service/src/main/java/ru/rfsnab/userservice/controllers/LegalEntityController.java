@@ -2,6 +2,7 @@ package ru.rfsnab.userservice.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +11,8 @@ import ru.rfsnab.userservice.models.dto.legal.*;
 import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthRequest;
 import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthResponse;
 import ru.rfsnab.userservice.services.LegalEntityService;
+
+import java.net.URI;
 
 import java.util.List;
 import java.util.Map;
@@ -25,6 +28,9 @@ public class LegalEntityController {
 
     private final LegalEntityService legalEntityService;
 
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
+
     @PostMapping("/register")
     public ResponseEntity<LegalEntityDto> register(@Valid @RequestBody RegisterLegalEntityRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -33,8 +39,16 @@ public class LegalEntityController {
 
     @GetMapping("/confirm-email")
     public ResponseEntity<Void> confirmEmail(@RequestParam String token) {
-        legalEntityService.confirmEmail(token);
-        return ResponseEntity.ok().build();
+        try {
+            legalEntityService.confirmEmail(token);
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(frontendUrl + "/login?legal_confirmed=true"))
+                    .build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(frontendUrl + "/login?legal_confirmed=error"))
+                    .build();
+        }
     }
 
     @PostMapping("/confirm-link")
@@ -46,6 +60,13 @@ public class LegalEntityController {
     @GetMapping("/{id}")
     public ResponseEntity<LegalEntityDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(LegalEntityMapper.toDto(legalEntityService.getById(id)));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<LegalEntityDto> update(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateLegalEntityRequest request) {
+        return ResponseEntity.ok(LegalEntityMapper.toDto(legalEntityService.update(id, request)));
     }
 
     @GetMapping("/{id}/addresses")

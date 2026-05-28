@@ -637,12 +637,6 @@ public class OrderService {
                 throw new ProductNotFoundException(
                         "Товар недоступен: " + item.getProductId());
             }
-
-            if (product.stockQuantity() < item.getQuantity()) {
-                throw new InsufficientStockException(
-                        String.format("Недостаточно товара %s. Доступно: %d, Запрошено: %d",
-                                product.name(), product.stockQuantity(), item.getQuantity()));
-            }
         }
     }
 
@@ -657,12 +651,6 @@ public class OrderService {
                 throw new ProductNotFoundException(
                         "Товар недоступен: " + item.productId());
             }
-
-            if (product.stockQuantity() < item.quantity()) {
-                throw new InsufficientStockException(
-                        String.format("Недостаточно товара %s. Доступно: %d, Запрошено: %d",
-                                product.name(), product.stockQuantity(), item.quantity()));
-            }
         }
     }
 
@@ -671,29 +659,22 @@ public class OrderService {
      * При недостатке — собирает все проблемы в один ответ с доступным количеством.
      */
     private void validateStockForRepeat(List<OrderItem> items, Map<Long, ProductDto> products) {
-        List<String> insufficientItems = new ArrayList<>();
+        List<String> unavailableItems = new ArrayList<>();
 
         for (OrderItem item : items) {
             ProductDto product = products.get(item.getProductId());
 
             if (product == null || !product.isActive()) {
-                insufficientItems.add(
+                unavailableItems.add(
                         String.format("Товар '%s' (ID: %d) больше недоступен",
                                 item.getProductName(), item.getProductId()));
-                continue;
-            }
-
-            if (product.stockQuantity() < item.getQuantity()) {
-                insufficientItems.add(
-                        String.format("Товар '%s': запрошено %d, доступно %d",
-                                product.name(), item.getQuantity(), product.stockQuantity()));
             }
         }
 
-        if (!insufficientItems.isEmpty()) {
+        if (!unavailableItems.isEmpty()) {
             throw new InsufficientStockException(
-                    "Невозможно повторить заказ. Проблемы с наличием:\n"
-                            + String.join("\n", insufficientItems));
+                    "Невозможно повторить заказ. Товары недоступны:\n"
+                            + String.join("\n", unavailableItems));
         }
     }
 

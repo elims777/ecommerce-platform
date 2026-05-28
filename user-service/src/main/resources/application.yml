@@ -1,5 +1,10 @@
 server:
   port: 8081
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 spring:
   application:
@@ -21,6 +26,7 @@ app:
     topic:
       user-events: user-events
       legal-entity-events: legal-entity-events
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
 springdoc:
   api-docs:

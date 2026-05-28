@@ -31,6 +31,7 @@ const AdminCatalogPage = lazy(() => import('@/features/admin/AdminCatalogPage'))
 const AdminProductEditPage = lazy(() => import('@/features/admin/AdminProductEditPage'));
 const AdminOrderDetailPage = lazy(() => import('@/features/admin/AdminOrderDetailPage'));
 const AdminUserDetailPage = lazy(() => import('@/features/admin/AdminUserDetailPage'));
+const AdminSettingsPage = lazy(() => import('@/features/admin/AdminSettingsPage'));
 const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage'));
 
 const queryClient = new QueryClient({
@@ -144,6 +145,7 @@ const AppRoutes = () => {
               <Route path="/admin/integration" element={<IntegrationPage />} />
               <Route path="/admin/products" element={<AdminCatalogPage />} />
               <Route path="/admin/products/:id/edit" element={<AdminProductEditPage />} />
+              <Route path="/admin/settings" element={<AdminSettingsPage />} />
             </Route>
           </Route>
         </Routes>
