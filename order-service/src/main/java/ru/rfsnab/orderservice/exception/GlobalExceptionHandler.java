@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -102,6 +103,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleServiceUnavailable(
             ServiceUnavailableException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "Service Unavailable", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(PaymentMethodNotAvailableException.class)
+    public ResponseEntity<ErrorResponse> handlePaymentMethodNotAvailable(
+            PaymentMethodNotAvailableException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Payment Method Not Available", ex.getMessage(), request);
+    }
+
+    // ==================== 403 Forbidden ====================
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(
+            AccessDeniedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, "Forbidden", "Недостаточно прав для выполнения операции", request);
     }
 
     // ==================== 500 Internal Server Error ====================
