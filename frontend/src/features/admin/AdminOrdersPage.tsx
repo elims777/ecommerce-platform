@@ -181,7 +181,12 @@ const AdminOrdersPage = () => {
                         {formatDate(o.createdAt)}
                       </span>
                     </td>
-                    <td style={{ fontWeight: 500 }}>{o.customerEmail}</td>
+                    <td>
+                      <div style={{ fontWeight: 500, fontSize: 13 }}>{o.customerEmail}</div>
+                      {o.companyName && (
+                        <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 1 }}>{o.companyName}</div>
+                      )}
+                    </td>
                     <td>
                       <span className={`rf-badge ${ctCode === 'B2B' ? 'rf-badge-navy' : 'rf-badge-neutral'}`} style={{ fontSize: 11 }}>
                         {ctCode || '—'}

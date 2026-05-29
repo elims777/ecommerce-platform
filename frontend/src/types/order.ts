@@ -134,5 +134,6 @@ export interface OrderSummaryDto {
     itemsCount: number;
     totalAmount: number;
     customerEmail: string;
+    companyName?: string | null;
     createdAt: string;
 }

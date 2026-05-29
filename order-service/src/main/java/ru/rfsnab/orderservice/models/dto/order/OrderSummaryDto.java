@@ -19,6 +19,7 @@ public record OrderSummaryDto(
         int itemsCount,
         BigDecimal totalAmount,
         String customerEmail,
+        String companyName,
         LocalDateTime createdAt
 ) {
 }

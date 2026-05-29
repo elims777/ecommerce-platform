@@ -65,6 +65,7 @@ public class OrderMapper {
                 order.getItems().size(),
                 order.getTotalAmount(),
                 order.getCustomerEmail(),
+                order.getCompanyName(),
                 order.getCreatedAt()
         );
     }
