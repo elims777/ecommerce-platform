@@ -223,6 +223,11 @@ public class LegalEntityService {
     }
 
     @Transactional(readOnly = true)
+    public List<LegalEntity> getAll() {
+        return legalEntityRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
     public List<LegalEntity> getByVerificationStatus(VerificationStatus status) {
         return legalEntityRepository.findAllByVerificationStatus(status);
     }
