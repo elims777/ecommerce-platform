@@ -88,7 +88,8 @@ class UserControllerTest {
                 "Lastname",
                 "Surname",
                 "79991234567",
-                true
+                true,
+                false
         );
 
         when(userService.findUserByEmail(anyString())).thenReturn(Optional.of(testUser));
@@ -117,7 +118,8 @@ class UserControllerTest {
                 "Lastname",
                 "Surname",
                 "79991234567",
-                true
+                true,
+                false
         );
 
         UserEntity newUser = UserEntity.builder()
@@ -156,7 +158,8 @@ class UserControllerTest {
                 "Lastname",
                 "Surname",
                 "79991234567",
-                true
+                true,
+                false
         );
 
         UserEntity newUser = UserEntity.builder()
@@ -193,7 +196,8 @@ class UserControllerTest {
                 "Lastname",
                 "Surname",
                 "79991234567",
-                true
+                true,
+                false
         );
 
         when(userService.findUserByEmail(anyString())).thenReturn(Optional.of(testUser));
