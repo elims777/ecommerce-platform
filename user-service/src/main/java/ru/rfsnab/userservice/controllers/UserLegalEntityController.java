@@ -15,7 +15,7 @@ import java.util.Map;
  * Контроллер для привязки физических пользователей к юридическим лицам из личного кабинета.
  */
 @RestController
-@RequestMapping("/api/v1/users/me/legal-entities")
+@RequestMapping("/v1/users/me/legal-entities")
 @RequiredArgsConstructor
 public class UserLegalEntityController {
 
