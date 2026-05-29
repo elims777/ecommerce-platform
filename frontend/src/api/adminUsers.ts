@@ -38,6 +38,13 @@ export const getAllUsers = async (): Promise<AdminUserDto[]> => {
   return data;
 };
 
+export const getAllLegalEntities = async (status?: string): Promise<LegalEntityDto[]> => {
+  const { data } = await apiClient.get<LegalEntityDto[]>('/v1/admin/legal-entities', {
+    params: status ? { status } : {},
+  });
+  return data;
+};
+
 export const getUserById = async (id: number): Promise<AdminUserDto> => {
   const { data } = await apiClient.get<AdminUserDto>(`/v1/users/${id}`);
   return data;
