@@ -127,6 +127,10 @@ public class OrderService {
         Order order = OrderMapper.toEntity(userId, customerEmail, clientType, request);
         order.setOrderNumber(generateOrderNumber(userId));
 
+        // Снапшот имени и телефона заказчика
+        if (request.customerName() != null) order.setCustomerName(request.customerName());
+        if (request.customerPhone() != null) order.setCustomerPhone(request.customerPhone());
+
         // B2B validation: companyName and inn are required
         if (CustomerType.B2B == order.getCustomerType()) {
             if (request.companyName() == null || request.inn() == null) {

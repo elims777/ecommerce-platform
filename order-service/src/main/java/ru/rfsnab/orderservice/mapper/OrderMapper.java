@@ -36,6 +36,8 @@ public class OrderMapper {
                         : null,
                 order.getTrackingNumber(),
                 order.getCustomerEmail(),
+                order.getCustomerName(),
+                order.getCustomerPhone(),
                 order.getComment(),
                 order.getCustomerType(),
                 order.getCompanyName(),
@@ -65,6 +67,8 @@ public class OrderMapper {
                 order.getItems().size(),
                 order.getTotalAmount(),
                 order.getCustomerEmail(),
+                order.getCustomerName(),
+                order.getCustomerPhone(),
                 order.getCompanyName(),
                 order.getCreatedAt()
         );

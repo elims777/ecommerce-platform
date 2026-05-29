@@ -74,6 +74,12 @@ public class Order {
     @Column(name = "customer_email", nullable = false)
     private String customerEmail;
 
+    @Column(name = "customer_name", length = 255)
+    private String customerName;
+
+    @Column(name = "customer_phone", length = 30)
+    private String customerPhone;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "customer_type", nullable = false, length = 10)
     private CustomerType customerType = CustomerType.B2C;

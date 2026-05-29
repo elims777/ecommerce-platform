@@ -133,7 +133,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, "Тестовый заказ", null, null);
+                    buildAddressDto(), null, null, null, "Тестовый заказ", null, null, null, null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -168,7 +168,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CASH_ON_DELIVERY, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null, null, null);
+                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null, null, null, null, null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -184,7 +184,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         void shouldThrowWhenCartEmpty() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), null, null, null, null, null);
+                    null, savedWarehousePoint.getId(), null, null, null, null, null, null, null);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
                     .isInstanceOf(CartEmptyException.class);
@@ -198,7 +198,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, null, null, null, null, null, null);
+                    null, null, null, null, null, null, null, null, null);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
                     .isInstanceOf(InvalidOrderStateException.class)
@@ -212,7 +212,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    null, null, null, null, null, null, null);
+                    null, null, null, null, null, null, null, null, null);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
                     .isInstanceOf(InvalidOrderStateException.class)
@@ -226,7 +226,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, "Тест externalId", null, null);
+                    buildAddressDto(), null, null, null, "Тест externalId", null, null, null, null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -264,7 +264,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, null, null);
+                    buildAddressDto(), null, null, null, null, null, null, null, null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -311,7 +311,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, null, null);
+                    buildAddressDto(), null, null, null, null, null, null, null, null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -490,7 +490,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.INVOICE, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, null, null);
+                    buildAddressDto(), null, null, null, null, null, null, null, null);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
 
             Order confirmed = orderService.confirmOrder(order.getId(), USER_ID);
@@ -508,7 +508,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, null, null);
+                    buildAddressDto(), null, null, null, null, null, null, null, null);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
 
             UUID orderId = order.getId();
@@ -528,7 +528,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.SBP, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, null, null);
+                    buildAddressDto(), null, null, null, null, null, null, null, null);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
 
             UUID orderId = order.getId();
@@ -748,7 +748,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null, null, null);
+                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null, null, null, null, null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -789,7 +789,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, "Тест 1С export", null, null);
+                    buildAddressDto(), null, null, null, "Тест 1С export", null, null, null, null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -833,7 +833,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
         CreateOrderRequest request = new CreateOrderRequest(
                 PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                buildAddressDto(), null, null, null, "Тест", null, null);
+                buildAddressDto(), null, null, null, "Тест", null, null, null, null);
 
         return orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
     }

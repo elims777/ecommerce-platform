@@ -112,7 +112,15 @@ const AdminOrderDetailPage = () => {
           <div className="rf-detail-value rf-tabular">{formatDate(order.createdAt)}</div>
 
           <div className="rf-detail-label">Клиент</div>
-          <div className="rf-detail-value">{order.customerEmail}</div>
+          <div className="rf-detail-value">
+            {order.customerName && (
+              <div style={{ fontWeight: 500 }}>{order.customerName}</div>
+            )}
+            <div style={{ color: order.customerName ? 'var(--ink-3)' : undefined }}>{order.customerEmail}</div>
+            {order.customerPhone && (
+              <div style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 2 }}>{order.customerPhone}</div>
+            )}
+          </div>
 
           <div className="rf-detail-label">Способ оплаты</div>
           <div className="rf-detail-value">

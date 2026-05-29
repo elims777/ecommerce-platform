@@ -79,6 +79,8 @@ export interface CreateOrderRequest {
     comment?: string;
     companyName?: string;
     inn?: string;
+    customerName?: string;
+    customerPhone?: string;
 }
 
 /** Позиция заказа */
@@ -118,6 +120,8 @@ export interface OrderDto {
     warehousePoint?: WarehousePointDto;
     trackingNumber?: string;
     customerEmail: string;
+    customerName?: string | null;
+    customerPhone?: string | null;
     companyName?: string;
     inn?: string;
     comment?: string;
@@ -134,6 +138,8 @@ export interface OrderSummaryDto {
     itemsCount: number;
     totalAmount: number;
     customerEmail: string;
+    customerName?: string | null;
+    customerPhone?: string | null;
     companyName?: string | null;
     createdAt: string;
 }

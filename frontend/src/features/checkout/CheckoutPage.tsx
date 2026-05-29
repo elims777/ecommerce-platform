@@ -161,10 +161,28 @@ const CheckoutPage = () => {
     const handleSubmit = async (values: CheckoutFormValues) => {
         setLoading(true);
         try {
+            // Определяем имя и телефон заказчика
+            let customerName: string | undefined;
+            let customerPhone: string | undefined;
+            if (user?.clientType === 'B2B') {
+                customerName = user.companyName ?? undefined;
+            } else if (manualInput) {
+                customerName = values.newRecipientName;
+                customerPhone = values.newRecipientPhone;
+            } else if (selectedRecipient) {
+                customerName = selectedRecipient.name;
+                customerPhone = selectedRecipient.phone;
+            }
+            if (!customerName && user) {
+                customerName = [user.firstname, user.lastname].filter(Boolean).join(' ') || undefined;
+            }
+
             const request: CreateOrderRequest = {
                 paymentMethod: values.paymentMethod,
                 deliveryMethod: values.deliveryMethod,
                 comment: values.comment,
+                customerName,
+                customerPhone,
                 ...(user?.clientType === 'B2B' ? {
                     companyName: user.companyName ?? undefined,
                     inn: user.inn ?? undefined,

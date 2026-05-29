@@ -26,6 +26,8 @@ public record OrderDto(
         WarehousePointDto warehousePoint,
         String trackingNumber,
         String customerEmail,
+        String customerName,
+        String customerPhone,
         String comment,
         CustomerType customerType,
         String companyName,

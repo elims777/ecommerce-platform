@@ -183,8 +183,10 @@ const AdminOrdersPage = () => {
                     </td>
                     <td>
                       <div style={{ fontWeight: 500, fontSize: 13 }}>{o.customerEmail}</div>
-                      {o.companyName && (
-                        <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 1 }}>{o.companyName}</div>
+                      {(o.customerName || o.companyName) && (
+                        <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 1 }}>
+                          {o.customerName || o.companyName}
+                        </div>
                       )}
                     </td>
                     <td>

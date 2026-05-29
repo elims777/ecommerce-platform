@@ -345,7 +345,8 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
                         .phone("+79001234567").recipientName("Тест").build(),
                 null, null, null, null,
                 "B2B".equals(clientType) ? "ООО Тест" : null,
-                "B2B".equals(clientType) ? "1234567890" : null);
+                "B2B".equals(clientType) ? "1234567890" : null,
+                null, null);
         return orderService.createOrder(USER_ID, USER_EMAIL, clientType, request);
     }
 

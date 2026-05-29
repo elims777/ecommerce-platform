@@ -29,6 +29,10 @@ public record CreateOrderRequest(
 
         // B2B snapshot — required when clientType=B2B, validated in service
         String companyName,
-        String inn
+        String inn,
+
+        // Customer snapshot — имя и телефон заказчика (B2C и B2B)
+        String customerName,
+        String customerPhone
 ) implements HasDeliveryInfo {
 }
