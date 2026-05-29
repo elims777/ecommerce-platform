@@ -30,6 +30,11 @@ public class LegalEntityAdminController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<LegalEntityDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(LegalEntityMapper.toDto(legalEntityService.getById(id)));
+    }
+
     @GetMapping("/users/{userId}")
     public ResponseEntity<List<LegalEntityDto>> getByUser(@PathVariable Long userId) {
         return ResponseEntity.ok(

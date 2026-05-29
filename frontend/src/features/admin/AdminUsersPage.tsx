@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/authStore';
 import {
-    getAllUsers, getAllLegalEntities, changeUserRole, changeUserStatus, verifyLegalEntity,
+    getAllUsers, getAllLegalEntities, changeUserRole, changeUserStatus, verifyLegalEntity, rejectLegalEntity,
 } from '@/api/adminUsers';
 import type { AdminUserDto, LegalEntityDto } from '@/api/adminUsers';
 
@@ -25,6 +26,7 @@ const AdminUsersPage = () => {
     const { message: messageApi } = App.useApp();
     const queryClient = useQueryClient();
 
+    const adminEmail = useAuthStore((s) => s.user?.email ?? '');
     const [tab, setTab] = useState<Tab>('individuals');
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState<string | undefined>();
@@ -57,9 +59,15 @@ const AdminUsersPage = () => {
     });
 
     const verifyMutation = useMutation({
-        mutationFn: ({ id }: { id: number }) => verifyLegalEntity(id, 'admin'),
+        mutationFn: ({ id, managerEmail }: { id: number; managerEmail: string }) => verifyLegalEntity(id, managerEmail),
         onSuccess: () => { messageApi.success('Верифицировано'); queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] }); },
         onError: () => messageApi.error('Ошибка верификации'),
+    });
+
+    const rejectMutation = useMutation({
+        mutationFn: ({ id, managerEmail }: { id: number; managerEmail: string }) => rejectLegalEntity(id, managerEmail, ''),
+        onSuccess: () => { messageApi.success('Отклонено'); queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] }); },
+        onError: () => messageApi.error('Ошибка отклонения'),
     });
 
     const switchTab = (t: Tab) => { setTab(t); setSearchQuery(''); setPage(1); };
@@ -290,7 +298,7 @@ const AdminUsersPage = () => {
                                         ) : paginatedLegal.map((le: LegalEntityDto) => {
                                             const badge = VERIFICATION_BADGE[le.verificationStatus] ?? { cls: 'rf-badge-neutral', label: le.verificationStatus };
                                             return (
-                                                <tr key={le.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/users/${le.id}?type=legal`)}>
+                                                <tr key={le.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/legal-entities/${le.id}`)}>
                                                     <td className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{le.id}</td>
                                                     <td>
                                                         <div style={{ fontWeight: 500, fontSize: 13 }}>{le.fullName}</div>
@@ -304,15 +312,19 @@ const AdminUsersPage = () => {
                                                     <td onClick={(e) => e.stopPropagation()}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                             <span className={`rf-badge ${badge.cls}`}>{badge.label}</span>
-                                                            {le.verificationStatus === 'PENDING' && (
-                                                                <button
-                                                                    className="rf-btn rf-btn-sm rf-btn-primary"
-                                                                    style={{ fontSize: 11, padding: '2px 8px' }}
-                                                                    onClick={(e) => { e.stopPropagation(); verifyMutation.mutate({ id: le.id }); }}
-                                                                >
-                                                                    Верифицировать
-                                                                </button>
-                                                            )}
+                                                            <select
+                                                                value={le.verificationStatus}
+                                                                onChange={(e) => {
+                                                                    const v = e.target.value;
+                                                                    if (v === 'VERIFIED') verifyMutation.mutate({ id: le.id, managerEmail: adminEmail });
+                                                                    else if (v === 'REJECTED') rejectMutation.mutate({ id: le.id, managerEmail: adminEmail });
+                                                                }}
+                                                                style={{ fontSize: 12, padding: '2px 6px', borderRadius: 'var(--r-2)', border: '1px solid var(--line-2)', background: 'var(--surface)', color: 'var(--ink-1)' }}
+                                                            >
+                                                                <option value="PENDING">На проверке</option>
+                                                                <option value="VERIFIED">Верифицирована</option>
+                                                                <option value="REJECTED">Отклонена</option>
+                                                            </select>
                                                         </div>
                                                     </td>
                                                     <td className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{formatDate(le.createdAt)}</td>
@@ -320,7 +332,7 @@ const AdminUsersPage = () => {
                                                         <button
                                                             className="rf-btn rf-btn-sm rf-btn-ghost"
                                                             style={{ padding: '4px 8px' }}
-                                                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/users/${le.id}?type=legal`); }}
+                                                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/legal-entities/${le.id}`); }}
                                                         >
                                                             <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
                                                                 <path d="M7.5 11C4.803 11 2.53 9.622 1.096 7.5 2.53 5.378 4.803 4 7.5 4c2.697 0 4.97 1.378 6.404 3.5C12.47 9.622 10.197 11 7.5 11Zm0-8C4.308 3 1.656 4.706.076 7.235a.5.5 0 0 0 0 .53C1.656 10.294 4.308 12 7.5 12s5.844-1.706 7.424-4.235a.5.5 0 0 0 0-.53C13.344 4.706 10.692 3 7.5 3Zm0 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>

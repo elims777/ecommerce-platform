@@ -26,10 +26,19 @@ export interface LegalEntityDto {
   ogrn: string | null;
   fullName: string;
   director: string | null;
+  directorTitle: string | null;
+  basisOfAuthority: string | null;
+  office: string | null;
   phone: string | null;
   email: string | null;
+  legalCity: string | null;
+  legalStreet: string | null;
+  legalBuilding: string | null;
+  legalPostalCode: string | null;
   verificationStatus: string;
   verifiedAt: string | null;
+  bankAccounts: { id: number; bankName: string; bik: string; correspondentAccount: string; settlementAccount: string; primary: boolean }[];
+  addresses: { id: number; city: string; street: string; building: string; apartment: string | null; postalCode: string; primary: boolean }[];
   createdAt: string;
 }
 
@@ -65,6 +74,11 @@ export const updateUserAdmin = async (id: number, body: UpdateUserAdminRequest):
   return data;
 };
 
+export const getLegalEntityById = async (id: number): Promise<LegalEntityDto> => {
+  const { data } = await apiClient.get<LegalEntityDto>(`/v1/admin/legal-entities/${id}`);
+  return data;
+};
+
 // GET /api/v1/admin/legal-entities/users/{userId} → user-service LegalEntityAdminController
 export const getUserLegalEntities = async (userId: number): Promise<LegalEntityDto[]> => {
   const { data } = await apiClient.get<LegalEntityDto[]>(`/v1/admin/legal-entities/users/${userId}`);
@@ -74,6 +88,13 @@ export const getUserLegalEntities = async (userId: number): Promise<LegalEntityD
 // POST /api/v1/admin/legal-entities/{id}/verify?managerEmail=...
 export const verifyLegalEntity = async (legalEntityId: number, managerEmail: string): Promise<void> => {
   await apiClient.post(`/v1/admin/legal-entities/${legalEntityId}/verify`, null, {
+    params: { managerEmail },
+  });
+};
+
+// POST /api/v1/admin/legal-entities/{id}/reject?managerEmail=...
+export const rejectLegalEntity = async (legalEntityId: number, managerEmail: string, reason: string): Promise<void> => {
+  await apiClient.post(`/v1/admin/legal-entities/${legalEntityId}/reject`, { reason }, {
     params: { managerEmail },
   });
 };
