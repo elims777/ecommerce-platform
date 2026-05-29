@@ -11,6 +11,7 @@ import {
     getLinkStatus,
     getLegalEntity,
     linkLegalEntityByInn,
+    resendLegalEntityLink,
     updateLegalEntity,
     type UpdateLegalEntityRequest,
     type LegalEntityResponse,
@@ -296,6 +297,50 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
     );
 };
 
+// ─── Блок "На проверке" с кнопкой повторной отправки ────────
+const ResendLinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResponse | undefined; userId: number }) => {
+    const { message: messageApi } = App.useApp();
+    const queryClient = useQueryClient();
+
+    const resendMutation = useMutation({
+        mutationFn: resendLegalEntityLink,
+        onSuccess: () => {
+            messageApi.success('Письмо отправлено повторно на email организации');
+            queryClient.invalidateQueries({ queryKey: ['link-status', userId] });
+        },
+        onError: () => {
+            messageApi.error('Не удалось отправить письмо');
+        },
+    });
+
+    return (
+        <>
+            <div style={headerStyle}>
+                <span style={{ fontSize: 14, fontWeight: 600 }}>Организация</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 12, fontWeight: 500, background: 'var(--warn-tint)', color: 'var(--warn)' }}>
+                    Ожидает подтверждения
+                </span>
+            </div>
+            <div style={{ padding: 20 }}>
+                <Row label="Организация" value={legalEntity?.fullName} />
+                <Row label="ИНН" value={legalEntity?.inn} last />
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line-1)', fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+                    На email организации отправлено письмо со ссылкой подтверждения. Если письмо не дошло — отправьте его повторно.
+                </div>
+                <div style={{ marginTop: 12 }}>
+                    <button
+                        onClick={() => resendMutation.mutate()}
+                        disabled={resendMutation.isPending}
+                        style={{ height: 36, padding: '0 14px', background: 'transparent', color: 'var(--brand-navy)', border: '1px solid var(--brand-navy)', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: resendMutation.isPending ? 'not-allowed' : 'pointer', opacity: resendMutation.isPending ? 0.6 : 1, fontFamily: 'var(--font-body)' }}
+                    >
+                        {resendMutation.isPending ? 'Отправка...' : 'Отправить письмо повторно'}
+                    </button>
+                </div>
+            </div>
+        </>
+    );
+};
+
 // ─── Секция организации (для физлиц) ─────────────────────────
 const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegistered: () => Promise<void> }) => {
     const [showForm, setShowForm] = useState(false);
@@ -393,14 +438,7 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
     if (!linkStatus.confirmed || legalEntity?.verificationStatus !== 'VERIFIED') {
         return (
             <div style={sectionStyle}>
-                <div style={headerStyle}>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>Организация</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 12, fontWeight: 500, background: 'var(--warn-tint)', color: 'var(--warn)' }}>На проверке</span>
-                </div>
-                <div style={{ padding: 20 }}>
-                    <Row label="Организация" value={legalEntity?.fullName} />
-                    <Row label="ИНН" value={legalEntity?.inn} last />
-                </div>
+                <ResendLinkBlock legalEntity={legalEntity} userId={userId} />
             </div>
         );
     }

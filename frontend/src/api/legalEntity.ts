@@ -62,6 +62,10 @@ export const linkLegalEntityByInn = async (inn: string): Promise<void> => {
     await apiClient.post('/v1/users/me/legal-entities/link', { inn });
 };
 
+export const resendLegalEntityLink = async (): Promise<void> => {
+    await apiClient.post('/v1/users/me/legal-entities/resend-link');
+};
+
 export const registerLegalEntity = async (
     request: RegisterLegalEntityRequest,
 ): Promise<void> => {

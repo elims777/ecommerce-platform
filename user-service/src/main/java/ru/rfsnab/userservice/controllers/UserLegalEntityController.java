@@ -29,6 +29,13 @@ public class UserLegalEntityController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/resend-link")
+    public ResponseEntity<Void> resendLink(Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        legalEntityService.resendLink(userId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping
     public ResponseEntity<List<LegalEntityDto>> getMyLegalEntities(Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());

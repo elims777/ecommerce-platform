@@ -325,6 +325,31 @@ public class LegalEntityService {
     }
 
     @Transactional
+    public void resendLink(Long userId) {
+        List<UserLegalEntity> links = userLegalEntityRepository.findAllByUserId(userId);
+        UserLegalEntity pendingLink = links.stream()
+                .filter(l -> l.getLinkStatus() == LinkStatus.PENDING)
+                .findFirst()
+                .orElseThrow(() -> new LegalEntityNotFoundException("Нет активной заявки на привязку"));
+
+        String newToken = UUID.randomUUID().toString();
+        pendingLink.setLinkToken(newToken);
+        userLegalEntityRepository.save(pendingLink);
+
+        LegalEntity entity = pendingLink.getLegalEntity();
+        UserEntity user = pendingLink.getUser();
+
+        kafkaProducerService.send(new LegalEntityEvent(
+                "LEGAL_ENTITY_LINK_REQUESTED",
+                entity.getId(), entity.getInn(), entity.getFullName(),
+                entity.getEmail(), entity.getEmail(),
+                user.getFirstname() + " " + user.getLastname(), LocalDateTime.now(), newToken
+        ));
+
+        log.info("Resend link requested: userId={} → legalEntityId={}", userId, entity.getId());
+    }
+
+    @Transactional
     public void detachFromUser(Long legalEntityId, Long userId) {
         UserLegalEntity link = userLegalEntityRepository
                 .findByUserIdAndLegalEntityId(userId, legalEntityId)
