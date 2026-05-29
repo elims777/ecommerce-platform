@@ -13,22 +13,18 @@ public record RegisterLegalEntityRequest(
         @Pattern(regexp = "\\d{10}|\\d{12}", message = "ИНН должен содержать только цифры")
         String inn,
 
-        @NotBlank @Size(min = 13, max = 15)
-        @Pattern(regexp = "\\d{13}|\\d{15}", message = "ОГРН должен содержать 13 или 15 цифр")
         String ogrn,
 
         @NotBlank String fullName,
-        @NotBlank String director,
-
-        @NotBlank @Pattern(regexp = "\\+?[0-9]{11}", message = "Некорректный формат телефона")
+        String director,
         String phone,
 
         @NotBlank @Email String email,
 
         @NotBlank @Size(min = 8, max = 100) String password,
 
-        @NotBlank String legalCity,
-        @NotBlank String legalStreet,
-        @NotBlank String legalBuilding,
+        String legalCity,
+        String legalStreet,
+        String legalBuilding,
         String legalPostalCode
 ) {}

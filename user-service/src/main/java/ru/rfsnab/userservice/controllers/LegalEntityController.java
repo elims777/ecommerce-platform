@@ -117,6 +117,34 @@ public class LegalEntityController {
         return ResponseEntity.ok(legalEntityService.authenticate(request.login(), request.password()));
     }
 
+    @GetMapping("/link-status/{userId}")
+    public ResponseEntity<Map<String, Object>> getLinkStatusByUser(@PathVariable Long userId) {
+        List<ru.rfsnab.userservice.models.UserLegalEntity> links =
+                legalEntityService.getConfirmedLinksForUser(userId);
+
+        if (links.isEmpty()) {
+            // нет подтверждённых — проверяем все (включая PENDING)
+            List<ru.rfsnab.userservice.models.UserLegalEntity> allLinks =
+                    legalEntityService.getAllLinksForUser(userId);
+            if (allLinks.isEmpty()) {
+                return ResponseEntity.ok(Map.of("linked", false, "confirmed", false));
+            }
+            ru.rfsnab.userservice.models.UserLegalEntity link = allLinks.get(0);
+            return ResponseEntity.ok(Map.of(
+                    "linked", true,
+                    "confirmed", false,
+                    "legalEntityId", link.getLegalEntity().getId()
+            ));
+        }
+
+        ru.rfsnab.userservice.models.UserLegalEntity link = links.get(0);
+        return ResponseEntity.ok(Map.of(
+                "linked", true,
+                "confirmed", true,
+                "legalEntityId", link.getLegalEntity().getId()
+        ));
+    }
+
     @GetMapping("/link-status/{userId}/{legalEntityId}")
     public ResponseEntity<Map<String, Boolean>> getLinkStatus(
             @PathVariable Long userId,
