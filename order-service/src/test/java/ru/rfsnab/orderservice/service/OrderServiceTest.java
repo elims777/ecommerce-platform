@@ -248,7 +248,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, "ООО Ромашка", "1234567890");
+                    buildAddressDto(), null, null, null, null, "ООО Ромашка", "1234567890", null, null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2B", request);
 
@@ -287,7 +287,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, "ООО Тест", "9876543210");
+                    buildAddressDto(), null, null, null, null, "ООО Тест", "9876543210", null, null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2B", request);
 
@@ -328,7 +328,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, "ООО Ромашка", null);
+                    buildAddressDto(), null, null, null, null, "ООО Ромашка", null, null, null);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2B", request))
                     .isInstanceOf(InvalidOrderStateException.class);
@@ -548,7 +548,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.INVOICE, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, "ООО Тест", "1234567890");
+                    buildAddressDto(), null, null, null, null, "ООО Тест", "1234567890", null, null);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2B", req);
 
             Order confirmed = orderService.confirmOrder(order.getId(), USER_ID);
