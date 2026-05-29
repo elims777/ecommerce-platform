@@ -139,13 +139,13 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(UserMapper.mapToUserDto(userService.findById(id)));
     }
 
     @PatchMapping("/{id}/role")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<UserDto> changeRole(
             @PathVariable Long id,
             @Valid @RequestBody ChangeRoleRequest request) {
@@ -153,7 +153,7 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<UserDto> changeStatus(
             @PathVariable Long id,
             @Valid @RequestBody ChangeStatusRequest request) {
@@ -161,7 +161,7 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/admin")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<UserDto> updateUserAdmin(
             @PathVariable Long id,
             @Valid @RequestBody UpdateUserAdminRequest request) {
