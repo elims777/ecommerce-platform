@@ -216,7 +216,7 @@ public class CatalogImportService {
         if (offer != null) {
             builder.price(extractPriceByType(offer, priceTypes, "Оптовая"))
                     .wholesalePrice(extractPriceByType(offer, priceTypes, "Розничная"))
-                    .stock(parseStock(offer.getQuantity()))
+                    .stockQuantity(parseStock(offer.getQuantity()))
                     .vatRate(extractVatRate(offer));
         }
 
@@ -246,16 +246,17 @@ public class CatalogImportService {
                 .orElse(null);
     }
 
-    private BigDecimal extractVatRate(Offer offer) {
+    private Integer extractVatRate(Offer offer) {
         if (offer.getTaxRates() == null || offer.getTaxRates().isEmpty()) {
             return null;
         }
         TaxRate taxRate = offer.getTaxRates().getFirst();
         String rate = taxRate.getRate();
         if (rate == null || "Без НДС".equalsIgnoreCase(rate.trim())) {
-            return BigDecimal.ZERO;
+            return 0;
         }
-        return parseBigDecimal(rate, "НДС");
+        BigDecimal bd = parseBigDecimal(rate, "НДС");
+        return bd != null ? bd.intValue() : null;
     }
 
     private BigDecimal parseBigDecimal(String value, String fieldName) {
@@ -331,7 +332,7 @@ public class CatalogImportService {
                 return errorResponse(chunk.size(), "Пустой ответ от product-service");
             }
             log.debug("Chunk отправлен: created={}, updated={}, failed={}",
-                    body.getCreatedCount(), body.getUpdatedCount(), body.getFailedCount());
+                    body.getCreated(), body.getUpdated(), body.getFailed());
             return body;
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             log.error("HTTP ошибка при отправке chunk: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
@@ -344,8 +345,8 @@ public class CatalogImportService {
 
     private BatchImportResponse errorResponse(int chunkSize, String errorMessage) {
         BatchImportResponse response = new BatchImportResponse();
-        response.setTotalProcessed(chunkSize);
-        response.setFailedCount(chunkSize);
+        response.setTotalReceived(chunkSize);
+        response.setFailed(chunkSize);
         response.setErrors(List.of(errorMessage));
         return response;
     }
@@ -360,10 +361,10 @@ public class CatalogImportService {
         for (CompletableFuture<BatchImportResponse> future : futures) {
             try {
                 BatchImportResponse response = future.join();
-                totalItems += response.getTotalProcessed();
-                createdCount += response.getCreatedCount();
-                updatedCount += response.getUpdatedCount();
-                failedCount += response.getFailedCount();
+                totalItems += response.getTotalReceived();
+                createdCount += response.getCreated();
+                updatedCount += response.getUpdated();
+                failedCount += response.getFailed();
                 if (response.getErrors() != null) {
                     allErrors.addAll(response.getErrors());
                 }

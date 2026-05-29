@@ -49,7 +49,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/auth/register",
             "/oauth2/",
             "/verify-email",
-            "/api/verification/"
+            "/api/verification/",
+            "/1c-exchange"
     );
 
 
