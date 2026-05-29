@@ -37,6 +37,7 @@ export interface RegisterRequest {
     lastname: string;
     surname?: string;
     phone: string;
+    newsletterConsent?: boolean;
 }
 
 /** Ответ от auth-service при логине — маппится на AuthResponse */

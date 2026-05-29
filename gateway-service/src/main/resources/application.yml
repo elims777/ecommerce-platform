@@ -241,6 +241,12 @@ spring:
                     key-resolver: "#{@ipKeyResolver}"
 
           # === INTEGRATION-SERVICE (:8085) ===
+            - id: integration-logs
+              uri: http://localhost:8085
+              predicates:
+                - Path=/api/v1/admin/integration/logs
+              filters:
+                - RewritePath=/api/v1/admin/integration/logs, /1c-exchange/logs
             - id: integration-1c
               uri: http://localhost:8085
               predicates:

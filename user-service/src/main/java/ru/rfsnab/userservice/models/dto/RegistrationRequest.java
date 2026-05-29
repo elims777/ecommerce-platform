@@ -33,4 +33,7 @@ public class RegistrationRequest {
 
     @Builder.Default
     private boolean emailVerified = false;
+
+    @Builder.Default
+    private boolean newsletterConsent = false;
 }

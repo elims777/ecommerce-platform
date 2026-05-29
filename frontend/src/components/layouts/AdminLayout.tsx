@@ -2,12 +2,13 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 
 const NAV_ITEMS = [
-  { key: '/admin',            label: 'Сводка',        icon: GridIcon },
-  { key: '/admin/orders',     label: 'Заявки',         icon: DocIcon },
-  { key: '/admin/products',   label: 'Каталог',        icon: MenuIcon },
-  { key: '/admin/users',      label: 'Клиенты',        icon: PersonIcon },
-  { key: '/admin/integration',label: 'Интеграция 1С',  icon: SyncIcon },
-  { key: '/admin/settings',   label: 'Настройки',      icon: SettingsIcon },
+  { key: '/admin',             label: 'Сводка',        icon: GridIcon },
+  { key: '/admin/orders',      label: 'Заявки',         icon: DocIcon },
+  { key: '/admin/products',    label: 'Каталог',        icon: MenuIcon },
+  { key: '/admin/users',       label: 'Клиенты',        icon: PersonIcon },
+  { key: '/admin/logistics',   label: 'Логистика',      icon: TruckIcon },
+  { key: '/admin/integration', label: 'Интеграция 1С',  icon: SyncIcon },
+  { key: '/admin/settings',    label: 'Настройки',      icon: SettingsIcon },
 ];
 
 const PAGE_TITLES: Record<string, string> = {
@@ -15,6 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/orders':      'Заявки и заказы',
   '/admin/products':    'Каталог',
   '/admin/users':       'Клиенты',
+  '/admin/logistics':   'Логистика',
   '/admin/integration': 'Интеграция 1С',
   '/admin/settings':    'Настройки',
 };
@@ -49,6 +51,15 @@ function PersonIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+    </svg>
+  );
+}
+
+function TruckIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M1 3h9v8H1zM10 5h2.5L14 7.5V11h-4V5z" strokeLinejoin="round"/>
+      <circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="12.5" r="1.5"/>
     </svg>
   );
 }

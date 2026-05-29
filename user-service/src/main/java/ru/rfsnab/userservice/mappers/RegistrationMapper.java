@@ -14,6 +14,7 @@ public class RegistrationMapper {
                 .lastname(request.getLastname())
                 .surname(request.getSurname())
                 .phone(request.getPhone())
+                .newsletterConsent(request.isNewsletterConsent())
                 .build();
     }
 

@@ -12,12 +12,14 @@ interface PersonalFormValues extends RegisterRequest {
     confirmPassword: string;
     privacyPolicy: boolean;
     personalData: boolean;
+    newsletterConsent: boolean;
 }
 
 interface LegalFormValues extends RegisterLegalRequest {
     confirmPassword: string;
     privacyPolicy: boolean;
     personalData: boolean;
+    newsletterConsent: boolean;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -48,7 +50,8 @@ const RegisterPage = () => {
     const handlePersonalSubmit = async (values: PersonalFormValues) => {
         setLoading(true);
         try {
-            const { confirmPassword: _, privacyPolicy: __, personalData: ___, ...request } = values;
+            const { confirmPassword: _, privacyPolicy: __, personalData: ___, newsletterConsent: ____, ...rest } = values;
+            const request = { ...rest, newsletterConsent: values.newsletterConsent ?? false };
             await register(request);
             messageApi.success('Регистрация прошла успешно! Проверьте почту для подтверждения аккаунта.');
             navigate('/login', { replace: true });
@@ -67,7 +70,7 @@ const RegisterPage = () => {
     const handleLegalSubmit = async (values: LegalFormValues) => {
         setLoading(true);
         try {
-            const { confirmPassword: _, privacyPolicy: __, personalData: ___, ...request } = values;
+            const { confirmPassword: _, privacyPolicy: __, personalData: ___, newsletterConsent: ____, ...request } = values;
             await registerLegal(request);
             messageApi.success('Заявка на регистрацию отправлена! Проверьте почту — ссылка для подтверждения.');
             navigate('/login', { replace: true });
@@ -131,6 +134,11 @@ const RegisterPage = () => {
                 <Checkbox style={{ fontSize: 13, color: 'var(--ink-2)' }}>
                     Я даю согласие на{' '}
                     <a href="/personal-data" target="_blank" style={{ color: 'var(--brand-navy)' }}>обработку персональных данных</a>
+                </Checkbox>
+            </Form.Item>
+            <Form.Item name="newsletterConsent" valuePropName="checked" noStyle>
+                <Checkbox style={{ fontSize: 13, color: 'var(--ink-2)' }}>
+                    Хочу получать новости, акции и специальные предложения
                 </Checkbox>
             </Form.Item>
         </div>
