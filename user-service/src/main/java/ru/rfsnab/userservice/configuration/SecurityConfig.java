@@ -46,6 +46,7 @@ public class SecurityConfig {
                                 "/v1/users/*/verify",
                                 "/api/v1/legal-entities/register",
                                 "/api/v1/legal-entities/confirm-email",
+                                "/api/v1/legal-entities/confirm-link",
                                 "/api/v1/legal-entities/authenticate",
                                 "/api/v1/legal-entities/link-status/**",
                                 "/v1/legal-entities/authenticate",

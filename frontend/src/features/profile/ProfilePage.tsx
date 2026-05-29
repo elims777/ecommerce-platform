@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Form, Input, App, Spin } from 'antd';
 import { EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { updateProfile } from '@/api/profile';
 import type { UpdateProfileRequest } from '@/api/profile';
@@ -426,6 +427,18 @@ const B2CProfilePage = () => {
     const { message: messageApi } = App.useApp();
     const user = useAuthStore((state) => state.user)!;
     const restoreSession = useAuthStore((state) => state.restoreSession);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    useEffect(() => {
+        const status = searchParams.get('link_confirmed');
+        if (status === 'true') {
+            messageApi.success('Организация успешно привязана!');
+            setSearchParams({}, { replace: true });
+        } else if (status === 'error') {
+            messageApi.error('Ссылка недействительна или уже была использована');
+            setSearchParams({}, { replace: true });
+        }
+    }, []);
 
     const updateMutation = useMutation({
         mutationFn: (values: UpdateProfileRequest) => updateProfile(user.id, values),

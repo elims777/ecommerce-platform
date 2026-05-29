@@ -51,10 +51,18 @@ public class LegalEntityController {
         }
     }
 
-    @PostMapping("/confirm-link")
+    @GetMapping("/confirm-link")
     public ResponseEntity<Void> confirmLink(@RequestParam String token) {
-        legalEntityService.confirmLink(token);
-        return ResponseEntity.ok().build();
+        try {
+            legalEntityService.confirmLink(token);
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(frontendUrl + "/profile?link_confirmed=true"))
+                    .build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(frontendUrl + "/profile?link_confirmed=error"))
+                    .build();
+        }
     }
 
     @GetMapping("/{id}")
