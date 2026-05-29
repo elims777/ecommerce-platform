@@ -210,7 +210,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_LINK_CONFIRMED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), user.getEmail(),
-                null, LocalDateTime.now(), null
+                user.getFirstname() + " " + user.getLastname(), LocalDateTime.now(), null
         ));
 
         log.info("Link confirmed: userId={} → legalEntityId={}", user.getId(), entity.getId());
