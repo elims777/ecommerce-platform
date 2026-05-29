@@ -9,9 +9,8 @@ import type { AxiosError } from 'axios';
 import {
     getLinkStatus,
     getLegalEntity,
-    registerLegalEntity,
+    linkLegalEntityByInn,
     updateLegalEntity,
-    type RegisterLegalEntityRequest,
     type UpdateLegalEntityRequest,
     type LegalEntityResponse,
 } from '@/api/legalEntity';
@@ -299,8 +298,9 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
 // ─── Секция организации (для физлиц) ─────────────────────────
 const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegistered: () => Promise<void> }) => {
     const [showForm, setShowForm] = useState(false);
-    const [form] = Form.useForm<RegisterLegalEntityRequest>();
+    const [inn, setInn] = useState('');
     const { message: messageApi } = App.useApp();
+    const queryClient = useQueryClient();
 
     const { data: linkStatus, isLoading: linkLoading } = useQuery({
         queryKey: ['link-status', userId],
@@ -313,15 +313,18 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
         enabled: !!linkStatus?.legalEntityId,
     });
 
-    const registerMutation = useMutation({
-        mutationFn: (values: RegisterLegalEntityRequest) => registerLegalEntity(values),
+    const linkMutation = useMutation({
+        mutationFn: () => linkLegalEntityByInn(inn.trim()),
         onSuccess: async () => {
-            messageApi.success('Заявка подана. Ожидайте верификации.');
+            messageApi.success('Заявка отправлена. На email организации придёт письмо для подтверждения.');
             setShowForm(false);
-            form.resetFields();
+            setInn('');
+            queryClient.invalidateQueries({ queryKey: ['link-status', userId] });
             await onRegistered();
         },
-        onError: () => { messageApi.error('Ошибка при подаче заявки'); },
+        onError: (e: { response?: { data?: { message?: string } } }) => {
+            messageApi.error(e.response?.data?.message || 'Организация с таким ИНН не найдена или не прошла верификацию');
+        },
     });
 
     if (linkLoading || legalLoading) {
@@ -340,7 +343,7 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
                     <span style={{ fontSize: 14, fontWeight: 600 }}>Организация</span>
                     {!showForm && (
                         <button onClick={() => setShowForm(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                            Подать заявку
+                            Подключить организацию
                         </button>
                     )}
                 </div>
@@ -350,42 +353,36 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
                             Работаете от юридического лица? Подключите организацию для доступа к оптовым ценам и B2B-документообороту.
                         </div>
                     ) : (
-                        <Form<RegisterLegalEntityRequest> form={form} layout="vertical" onFinish={(v) => registerMutation.mutate(v)}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                                <div>
-                                    <label style={labelStyle}>Наименование организации</label>
-                                    <Form.Item name="fullName" noStyle rules={[{ required: true, message: 'Введите наименование' }]}>
-                                        <Input style={inputStyle} placeholder='ООО "Ромашка"' />
-                                    </Form.Item>
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>ИНН</label>
-                                    <Form.Item name="inn" noStyle rules={[{ required: true, message: 'Введите ИНН' }, { len: 10, message: 'ИНН — 10 цифр' }]}>
-                                        <Input style={inputStyle} placeholder="1234567890" maxLength={10} />
-                                    </Form.Item>
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Email организации</label>
-                                    <Form.Item name="email" noStyle rules={[{ required: true, type: 'email', message: 'Введите email' }]}>
-                                        <Input style={inputStyle} placeholder="org@company.ru" />
-                                    </Form.Item>
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Пароль для B2B аккаунта</label>
-                                    <Form.Item name="password" noStyle rules={[{ required: true, min: 6, message: 'Минимум 6 символов' }]}>
-                                        <Input.Password style={inputStyle} placeholder="Пароль" />
-                                    </Form.Item>
-                                </div>
+                        <div>
+                            <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 16, lineHeight: 1.5 }}>
+                                Введите ИНН вашей организации. На её email придёт письмо для подтверждения привязки.
                             </div>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                <button type="submit" disabled={registerMutation.isPending} style={{ height: 40, padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                                    {registerMutation.isPending ? 'Отправка...' : 'Подать заявку'}
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                                <div style={{ flex: '0 0 220px' }}>
+                                    <label style={labelStyle}>ИНН организации</label>
+                                    <Input
+                                        style={inputStyle}
+                                        placeholder="1234567890"
+                                        maxLength={12}
+                                        value={inn}
+                                        onChange={(e) => setInn(e.target.value.replace(/\D/g, ''))}
+                                    />
+                                </div>
+                                <button
+                                    disabled={inn.length < 10 || linkMutation.isPending}
+                                    onClick={() => linkMutation.mutate()}
+                                    style={{ height: 40, padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: inn.length < 10 ? 'not-allowed' : 'pointer', opacity: inn.length < 10 ? 0.5 : 1, fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}
+                                >
+                                    {linkMutation.isPending ? 'Отправка...' : 'Отправить заявку'}
                                 </button>
-                                <button type="button" onClick={() => { setShowForm(false); form.resetFields(); }} style={{ height: 40, padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                                <button
+                                    onClick={() => { setShowForm(false); setInn(''); }}
+                                    style={{ height: 40, padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                                >
                                     Отмена
                                 </button>
                             </div>
-                        </Form>
+                        </div>
                     )}
                 </div>
             </div>
