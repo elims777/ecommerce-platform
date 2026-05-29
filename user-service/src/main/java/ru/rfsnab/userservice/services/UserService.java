@@ -12,6 +12,7 @@ import ru.rfsnab.userservice.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.UUID;
 
 
 @Service
@@ -114,6 +115,38 @@ public class UserService {
         UserEntity user = findById(id);
         user.setActive(active);
         return userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserEntity> findInactiveUsers(LocalDateTime loginThreshold, LocalDateTime emailThreshold) {
+        return userRepository
+                .findAllByLastLoginAtBeforeAndLastInactivityEmailAtIsNullOrLastInactivityEmailAtBefore(
+                        loginThreshold, emailThreshold);
+    }
+
+    @Transactional
+    public void markInactivityEmailSent(Long userId) {
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setLastInactivityEmailAt(LocalDateTime.now());
+            userRepository.save(user);
+        });
+    }
+
+    @Transactional
+    public void unsubscribeByToken(String token) {
+        UserEntity user = userRepository.findByUnsubscribeToken(token)
+                .orElseThrow(() -> new RuntimeException("Недействительная ссылка отписки"));
+        user.setNewsletterConsent(false);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void recordLogin(UserEntity user) {
+        user.setLastLoginAt(LocalDateTime.now());
+        if (user.getUnsubscribeToken() == null) {
+            user.setUnsubscribeToken(UUID.randomUUID().toString());
+        }
+        userRepository.save(user);
     }
 
     @Transactional

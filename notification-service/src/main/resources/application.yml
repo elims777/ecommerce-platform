@@ -55,6 +55,11 @@ app:
       legal-entity-events: legal-entity-events
       payment-events: payment.processed
 
+  user-service:
+    url: ${USER_SERVICE_URL:http://localhost:8081}
+
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+
   # Email
   email:
     from: "${MAIL_USER}"

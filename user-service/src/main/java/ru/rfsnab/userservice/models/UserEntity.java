@@ -39,6 +39,11 @@ public class UserEntity {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime lastLoginAt;
+    private LocalDateTime lastInactivityEmailAt;
+
+    @Column(unique = true)
+    private String unsubscribeToken;
 
     @Builder.Default
     @Column(nullable = false)
