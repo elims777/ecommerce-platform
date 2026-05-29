@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.userservice.mappers.LegalEntityMapper;
@@ -11,8 +12,6 @@ import ru.rfsnab.userservice.models.dto.legal.*;
 import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthRequest;
 import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthResponse;
 import ru.rfsnab.userservice.services.LegalEntityService;
-
-import java.net.URI;
 
 import java.util.List;
 import java.util.Map;
@@ -37,32 +36,30 @@ public class LegalEntityController {
                 .body(LegalEntityMapper.toDto(legalEntityService.register(request)));
     }
 
-    @GetMapping("/confirm-email")
-    public ResponseEntity<Void> confirmEmail(@RequestParam String token) {
+    @GetMapping(value = "/confirm-email", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> confirmEmail(@RequestParam String token) {
+        String redirectUrl;
         try {
             legalEntityService.confirmEmail(token);
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(frontendUrl + "/login?legal_confirmed=true"))
-                    .build();
+            redirectUrl = frontendUrl + "/login?legal_confirmed=true";
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(frontendUrl + "/login?legal_confirmed=error"))
-                    .build();
+            redirectUrl = frontendUrl + "/login?legal_confirmed=error";
         }
+        String html = "<html><head><meta http-equiv=\"refresh\" content=\"0;url=" + redirectUrl + "\"></head><body></body></html>";
+        return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
     }
 
-    @GetMapping("/confirm-link")
-    public ResponseEntity<Void> confirmLink(@RequestParam String token) {
+    @GetMapping(value = "/confirm-link", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> confirmLink(@RequestParam String token) {
+        String redirectUrl;
         try {
             legalEntityService.confirmLink(token);
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(frontendUrl + "/profile?link_confirmed=true"))
-                    .build();
+            redirectUrl = frontendUrl + "/profile?link_confirmed=true";
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(frontendUrl + "/profile?link_confirmed=error"))
-                    .build();
+            redirectUrl = frontendUrl + "/profile?link_confirmed=error";
         }
+        String html = "<html><head><meta http-equiv=\"refresh\" content=\"0;url=" + redirectUrl + "\"></head><body></body></html>";
+        return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(html);
     }
 
     @GetMapping("/{id}")

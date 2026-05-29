@@ -36,6 +36,14 @@ public class UserLegalEntityController {
         return ResponseEntity.ok().build();
     }
 
+    @DeleteMapping("/{legalEntityId}")
+    public ResponseEntity<Void> unlink(Authentication authentication,
+                                       @PathVariable Long legalEntityId) {
+        Long userId = Long.parseLong(authentication.getName());
+        legalEntityService.detachFromUser(legalEntityId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     public ResponseEntity<List<LegalEntityDto>> getMyLegalEntities(Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());

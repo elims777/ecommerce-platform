@@ -276,6 +276,28 @@ public class EmailService {
         mailSender.send(msgToUser);
     }
 
+    public void sendLegalEntityUnlinkedEmail(String toLegal, String toUser,
+                                              String companyName, String userName) {
+        SimpleMailMessage msgToLegal = new SimpleMailMessage();
+        msgToLegal.setFrom(fromEmail);
+        msgToLegal.setTo(toLegal);
+        msgToLegal.setSubject("Пользователь отвязан от вашей организации — РФСнаб");
+        msgToLegal.setText(String.format(
+                "Пользователь %s отвязал свой аккаунт от организации \"%s\".\n\nС уважением,\nКоманда РФСнаб",
+                userName, companyName));
+        mailSender.send(msgToLegal);
+
+        SimpleMailMessage msgToUser = new SimpleMailMessage();
+        msgToUser.setFrom(fromEmail);
+        msgToUser.setTo(toUser);
+        msgToUser.setSubject("Организация отвязана — РФСнаб");
+        msgToUser.setText(String.format(
+                "Ваш аккаунт отвязан от организации \"%s\".\n" +
+                "Если это произошло по ошибке, вы можете снова подать заявку на привязку в личном кабинете.\n\n" +
+                "С уважением,\nКоманда РФСнаб", companyName));
+        mailSender.send(msgToUser);
+    }
+
     public void sendInactivityEmail(String to, String firstname, String catalogUrl, String unsubscribeUrl) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail);

@@ -107,24 +107,26 @@ class LegalEntityControllerTest {
     class ConfirmEmailTests {
 
         @Test
-        @DisplayName("302 redirect → /login?legal_confirmed=true при успехе")
+        @DisplayName("200 HTML с meta-redirect → /login?legal_confirmed=true при успехе")
         void shouldConfirmEmail() throws Exception {
             mockMvc.perform(get("/api/v1/legal-entities/confirm-email")
                             .param("token", "valid-token"))
-                    .andExpect(status().isFound())
-                    .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("legal_confirmed=true")));
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentTypeCompatibleWith(org.springframework.http.MediaType.TEXT_HTML))
+                    .andExpect(content().string(org.hamcrest.Matchers.containsString("legal_confirmed=true")));
         }
 
         @Test
-        @DisplayName("302 redirect → /login?legal_confirmed=error при невалидном токене")
+        @DisplayName("200 HTML с meta-redirect → /login?legal_confirmed=error при невалидном токене")
         void shouldReturn404WhenTokenInvalid() throws Exception {
             org.mockito.Mockito.doThrow(new LegalEntityNotFoundException("Токен не найден"))
                     .when(legalEntityService).confirmEmail("bad-token");
 
             mockMvc.perform(get("/api/v1/legal-entities/confirm-email")
                             .param("token", "bad-token"))
-                    .andExpect(status().isFound())
-                    .andExpect(header().string("Location", org.hamcrest.Matchers.containsString("legal_confirmed=error")));
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentTypeCompatibleWith(org.springframework.http.MediaType.TEXT_HTML))
+                    .andExpect(content().string(org.hamcrest.Matchers.containsString("legal_confirmed=error")));
         }
     }
 }

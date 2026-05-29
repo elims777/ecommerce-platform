@@ -62,6 +62,10 @@ public class LegalEntityHandler implements NotificationHandler {
                         emailService.sendLegalEntityLinkConfirmedEmail(
                                 event.legalEntityEmail(), event.targetEmail(),
                                 event.companyName(), event.rejectionReason());
+                case "LEGAL_ENTITY_LINK_REMOVED" ->
+                        emailService.sendLegalEntityUnlinkedEmail(
+                                event.legalEntityEmail(), event.targetEmail(),
+                                event.companyName(), event.rejectionReason());
                 default -> log.warn("Неизвестный тип события юрлица: {}", event.eventType());
             }
         } catch (Exception e) {

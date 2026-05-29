@@ -12,6 +12,7 @@ import {
     getLegalEntity,
     linkLegalEntityByInn,
     resendLegalEntityLink,
+    unlinkLegalEntity,
     updateLegalEntity,
     type UpdateLegalEntityRequest,
     type LegalEntityResponse,
@@ -297,6 +298,56 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
     );
 };
 
+// ─── Блок верифицированной организации с кнопкой отвязки ────
+const UnlinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResponse; userId: number }) => {
+    const { message: messageApi, modal } = App.useApp();
+    const queryClient = useQueryClient();
+
+    const unlinkMutation = useMutation({
+        mutationFn: () => unlinkLegalEntity(legalEntity.id),
+        onSuccess: () => {
+            messageApi.success('Организация отвязана');
+            queryClient.invalidateQueries({ queryKey: ['link-status', userId] });
+            queryClient.invalidateQueries({ queryKey: ['legal-entity', legalEntity.id] });
+        },
+        onError: () => { messageApi.error('Не удалось отвязать организацию'); },
+    });
+
+    const confirmUnlink = () => {
+        modal.confirm({
+            title: 'Отвязать организацию?',
+            content: `Связь с «${legalEntity.fullName}» будет удалена. Для повторной привязки потребуется подтверждение от организации.`,
+            okText: 'Отвязать',
+            okType: 'danger',
+            cancelText: 'Отмена',
+            onOk: () => unlinkMutation.mutate(),
+        });
+    };
+
+    return (
+        <div style={sectionStyle}>
+            <div style={headerStyle}>
+                <span style={{ fontSize: 14, fontWeight: 600 }}>Организация</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 12, fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>Верифицирована</span>
+            </div>
+            <div style={{ padding: 20 }}>
+                <Row label="Организация" value={legalEntity.fullName} />
+                <Row label="ИНН" value={legalEntity.inn} />
+                <Row label="Email" value={legalEntity.email} last />
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line-1)' }}>
+                    <button
+                        onClick={confirmUnlink}
+                        disabled={unlinkMutation.isPending}
+                        style={{ height: 36, padding: '0 14px', background: 'transparent', color: 'var(--error, #d32f2f)', border: '1px solid var(--error, #d32f2f)', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: unlinkMutation.isPending ? 0.6 : 1 }}
+                    >
+                        {unlinkMutation.isPending ? 'Отвязка...' : 'Отвязать организацию'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ─── Блок "На проверке" с кнопкой повторной отправки ────────
 const ResendLinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResponse | undefined; userId: number }) => {
     const { message: messageApi } = App.useApp();
@@ -444,17 +495,7 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
     }
 
     return (
-        <div style={sectionStyle}>
-            <div style={headerStyle}>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>Организация</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 12, fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>Верифицирована</span>
-            </div>
-            <div style={{ padding: 20 }}>
-                <Row label="Организация" value={legalEntity?.fullName} />
-                <Row label="ИНН" value={legalEntity?.inn} />
-                <Row label="Email" value={legalEntity?.email} last />
-            </div>
-        </div>
+        <UnlinkBlock legalEntity={legalEntity!} userId={userId} />
     );
 };
 

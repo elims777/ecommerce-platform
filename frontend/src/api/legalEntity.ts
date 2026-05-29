@@ -66,6 +66,10 @@ export const resendLegalEntityLink = async (): Promise<void> => {
     await apiClient.post('/v1/users/me/legal-entities/resend-link');
 };
 
+export const unlinkLegalEntity = async (legalEntityId: number): Promise<void> => {
+    await apiClient.delete(`/v1/users/me/legal-entities/${legalEntityId}`);
+};
+
 export const registerLegalEntity = async (
     request: RegisterLegalEntityRequest,
 ): Promise<void> => {
