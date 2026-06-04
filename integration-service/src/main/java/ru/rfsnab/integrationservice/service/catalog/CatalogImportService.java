@@ -20,6 +20,7 @@ import ru.rfsnab.integrationservice.model.ImportLog.ImportStatus;
 import ru.rfsnab.integrationservice.model.commerceml.*;
 import ru.rfsnab.integrationservice.repository.ImportLogRepository;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -78,6 +79,7 @@ public class CatalogImportService {
 
         try {
             // 1. Parse XML файлы
+            logReceivedFiles(exchangeDir, sessionId);
             CommerceInfo importInfo = parseXmlFile(exchangeDir.resolve(IMPORT_XML));
             CommerceInfo offersInfo = parseOffersIfExists(exchangeDir.resolve(OFFERS_XML));
 
@@ -130,6 +132,38 @@ public class CatalogImportService {
     }
 
     // ==================== XML Parsing ====================
+
+    private void logReceivedFiles(Path exchangeDir, String sessionId) {
+        try {
+            Path importXml = exchangeDir.resolve(IMPORT_XML);
+            Path offersXml = exchangeDir.resolve(OFFERS_XML);
+
+            boolean hasImport = Files.exists(importXml);
+            boolean hasOffers = Files.exists(offersXml);
+
+            log.info("Файлы обмена. Session: {}. import.xml: {} ({}), offers.xml: {} ({})",
+                    sessionId,
+                    hasImport ? "есть" : "ОТСУТСТВУЕТ",
+                    hasImport ? Files.size(importXml) + " байт" : "-",
+                    hasOffers ? "есть" : "ОТСУТСТВУЕТ",
+                    hasOffers ? Files.size(offersXml) + " байт" : "-");
+
+            if (!hasOffers) {
+                log.warn("offers.xml не получен от 1С — цены и остатки обновлены не будут. Session: {}", sessionId);
+            }
+
+            // Лог картинок (import_files/)
+            Path imagesDir = exchangeDir.resolve("import_files");
+            if (Files.exists(imagesDir)) {
+                try (var stream = Files.walk(imagesDir)) {
+                    long imageCount = stream.filter(Files::isRegularFile).count();
+                    log.info("Получено файлов изображений: {}. Session: {}", imageCount, sessionId);
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Не удалось прочитать список файлов обмена. Session: {}", sessionId, e);
+        }
+    }
 
     /**
      * JAXB unmarshalling XML-файла в CommerceInfo.
@@ -214,8 +248,8 @@ public class CatalogImportService {
                 .unitOfMeasure(extractUnitOfMeasure(product));
 
         if (offer != null) {
-            builder.price(extractPriceByType(offer, priceTypes, "Оптовая"))
-                    .wholesalePrice(extractPriceByType(offer, priceTypes, "Розничная"))
+            builder.price(extractPriceByType(offer, priceTypes, "Оптовая цена"))
+                    .wholesalePrice(extractPriceByType(offer, priceTypes, "Розничная цена"))
                     .stockQuantity(parseStock(offer.getQuantity()))
                     .vatRate(extractVatRate(offer));
         }
@@ -234,7 +268,7 @@ public class CatalogImportService {
     private BigDecimal extractPriceByType(Offer offer, List<PriceType> priceTypes, String typeName) {
         if (offer.getPrices() == null || offer.getPrices().isEmpty()) return null;
         String targetTypeId = priceTypes.stream()
-                .filter(pt -> typeName.equalsIgnoreCase(pt.getName()))
+                .filter(pt -> pt.getName() != null && pt.getName().toLowerCase().contains(typeName.toLowerCase()))
                 .map(PriceType::getId)
                 .findFirst()
                 .orElse(null);
