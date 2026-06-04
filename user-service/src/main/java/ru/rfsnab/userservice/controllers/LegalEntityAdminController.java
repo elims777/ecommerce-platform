@@ -22,11 +22,17 @@ public class LegalEntityAdminController {
     private final LegalEntityService legalEntityService;
 
     @GetMapping
-    public ResponseEntity<List<LegalEntityDto>> getByStatus(
-            @RequestParam(defaultValue = "PENDING") VerificationStatus status) {
-        return ResponseEntity.ok(
-                legalEntityService.getByVerificationStatus(status).stream()
-                        .map(LegalEntityMapper::toDto).toList());
+    public ResponseEntity<List<LegalEntityDto>> getAll(
+            @RequestParam(required = false) VerificationStatus status) {
+        List<LegalEntityDto> result = status != null
+                ? legalEntityService.getByVerificationStatus(status).stream().map(LegalEntityMapper::toDto).toList()
+                : legalEntityService.getAll().stream().map(LegalEntityMapper::toDto).toList();
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<LegalEntityDto> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(LegalEntityMapper.toDto(legalEntityService.getById(id)));
     }
 
     @GetMapping("/users/{userId}")

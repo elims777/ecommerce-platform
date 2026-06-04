@@ -35,4 +35,5 @@ public class UserLegalEntity {
     private String linkToken;
 
     private LocalDateTime linkedAt;
+    private LocalDateTime linkRequestedAt;
 }

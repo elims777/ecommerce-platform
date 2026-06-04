@@ -15,7 +15,7 @@ import java.util.Map;
  * Контроллер для привязки физических пользователей к юридическим лицам из личного кабинета.
  */
 @RestController
-@RequestMapping("/api/v1/users/me/legal-entities")
+@RequestMapping("/v1/users/me/legal-entities")
 @RequiredArgsConstructor
 public class UserLegalEntityController {
 
@@ -27,6 +27,21 @@ public class UserLegalEntityController {
         Long userId = Long.parseLong(authentication.getName());
         legalEntityService.linkToUser(userId, body.get("inn"));
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/resend-link")
+    public ResponseEntity<Void> resendLink(Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        legalEntityService.resendLink(userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{legalEntityId}")
+    public ResponseEntity<Void> unlink(Authentication authentication,
+                                       @PathVariable Long legalEntityId) {
+        Long userId = Long.parseLong(authentication.getName());
+        legalEntityService.detachFromUser(legalEntityId, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping

@@ -14,6 +14,7 @@ import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthResponse;
 import ru.rfsnab.userservice.models.dto.legal.RegisterLegalEntityRequest;
 import ru.rfsnab.userservice.models.dto.legal.SaveBankAccountRequest;
 import ru.rfsnab.userservice.models.dto.legal.SaveLegalEntityAddressRequest;
+import ru.rfsnab.userservice.models.dto.legal.UpdateLegalEntityRequest;
 import ru.rfsnab.userservice.models.enums.LinkStatus;
 import ru.rfsnab.userservice.models.enums.VerificationStatus;
 import ru.rfsnab.userservice.models.kafka.LegalEntityEvent;
@@ -142,6 +143,24 @@ public class LegalEntityService {
     }
 
     @Transactional
+    public LegalEntity update(Long id, UpdateLegalEntityRequest request) {
+        LegalEntity entity = getById(id);
+        entity.setFullName(request.fullName());
+        entity.setDirector(request.director());
+        entity.setDirectorTitle(request.directorTitle());
+        entity.setBasisOfAuthority(request.basisOfAuthority());
+        entity.setOffice(request.office());
+        entity.setPhone(request.phone());
+        entity.setLegalCity(request.legalCity());
+        entity.setLegalStreet(request.legalStreet());
+        entity.setLegalBuilding(request.legalBuilding());
+        entity.setLegalPostalCode(request.legalPostalCode());
+        entity = legalEntityRepository.save(entity);
+        log.info("Legal entity updated: id={}", id);
+        return entity;
+    }
+
+    @Transactional
     public void linkToUser(Long userId, String inn) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new LegalEntityNotFoundException("Пользователь не найден"));
@@ -161,6 +180,7 @@ public class LegalEntityService {
                 .legalEntity(entity)
                 .linkStatus(LinkStatus.PENDING)
                 .linkToken(linkToken)
+                .linkRequestedAt(LocalDateTime.now())
                 .build();
         userLegalEntityRepository.save(link);
 
@@ -191,7 +211,7 @@ public class LegalEntityService {
                 "LEGAL_ENTITY_LINK_CONFIRMED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
                 entity.getEmail(), user.getEmail(),
-                null, LocalDateTime.now(), null
+                user.getFirstname() + " " + user.getLastname(), LocalDateTime.now(), null
         ));
 
         log.info("Link confirmed: userId={} → legalEntityId={}", user.getId(), entity.getId());
@@ -201,6 +221,11 @@ public class LegalEntityService {
     public LegalEntity getById(Long id) {
         return legalEntityRepository.findById(id)
                 .orElseThrow(() -> new LegalEntityNotFoundException("Юрлицо не найдено: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<LegalEntity> getAll() {
+        return legalEntityRepository.findAll();
     }
 
     @Transactional(readOnly = true)
@@ -301,12 +326,57 @@ public class LegalEntityService {
     }
 
     @Transactional
+    public void resendLink(Long userId) {
+        List<UserLegalEntity> links = userLegalEntityRepository.findAllByUserId(userId);
+        UserLegalEntity pendingLink = links.stream()
+                .filter(l -> l.getLinkStatus() == LinkStatus.PENDING)
+                .findFirst()
+                .orElseThrow(() -> new LegalEntityNotFoundException("Нет активной заявки на привязку"));
+
+        LocalDateTime lastRequested = pendingLink.getLinkRequestedAt();
+        if (lastRequested != null && lastRequested.isAfter(LocalDateTime.now().minusMinutes(10))) {
+            long secondsLeft = java.time.Duration.between(LocalDateTime.now(), lastRequested.plusMinutes(10)).getSeconds();
+            throw new ru.rfsnab.userservice.exceptions.LegalEntityAlreadyExistsException(
+                    "Повторная отправка будет доступна через " + secondsLeft + " сек.");
+        }
+
+        String newToken = UUID.randomUUID().toString();
+        pendingLink.setLinkToken(newToken);
+        pendingLink.setLinkRequestedAt(LocalDateTime.now());
+        userLegalEntityRepository.save(pendingLink);
+
+        LegalEntity entity = pendingLink.getLegalEntity();
+        UserEntity user = pendingLink.getUser();
+
+        kafkaProducerService.send(new LegalEntityEvent(
+                "LEGAL_ENTITY_LINK_REQUESTED",
+                entity.getId(), entity.getInn(), entity.getFullName(),
+                entity.getEmail(), entity.getEmail(),
+                user.getFirstname() + " " + user.getLastname(), LocalDateTime.now(), newToken
+        ));
+
+        log.info("Resend link requested: userId={} → legalEntityId={}", userId, entity.getId());
+    }
+
+    @Transactional
     public void detachFromUser(Long legalEntityId, Long userId) {
         UserLegalEntity link = userLegalEntityRepository
                 .findByUserIdAndLegalEntityId(userId, legalEntityId)
                 .orElseThrow(() -> new LegalEntityNotFoundException(
                         "Связь пользователя " + userId + " с юрлицом " + legalEntityId + " не найдена"));
+
+        LegalEntity entity = link.getLegalEntity();
+        UserEntity user = link.getUser();
+
         userLegalEntityRepository.delete(link);
-        log.info("Legal entity {} detached from user {} by admin", legalEntityId, userId);
+
+        kafkaProducerService.send(new LegalEntityEvent(
+                "LEGAL_ENTITY_LINK_REMOVED",
+                entity.getId(), entity.getInn(), entity.getFullName(),
+                entity.getEmail(), user.getEmail(),
+                user.getFirstname() + " " + user.getLastname(), LocalDateTime.now(), null
+        ));
+
+        log.info("Legal entity {} detached from user {}", legalEntityId, userId);
     }
 }

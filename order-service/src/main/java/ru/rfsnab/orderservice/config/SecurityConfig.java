@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 @EnableWebSecurity
 @EnableConfigurationProperties()
 @RequiredArgsConstructor
+@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
@@ -36,7 +37,8 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/swagger-ui/**",
                                 "/api-docs/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui.html",
+                                "/api/v1/payment-settings"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

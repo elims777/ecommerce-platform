@@ -36,9 +36,68 @@ export const login = async (request: LoginRequest): Promise<AuthTokens> => {
     };
 };
 
-/** Регистрация — POST /v1/register */
+/** Логин юрлица — POST /v1/auth/login/legal, затем GET /api/v1/legal-entities/{id} */
+export const loginLegal = async (login: string, password: string): Promise<AuthTokens> => {
+    const { data } = await apiClient.post<Record<string, unknown>>('/v1/auth/login/legal', { login, password });
+    const accessToken = (data.accessToken || data.access_token) as string;
+    const refreshToken = (data.refreshToken || data.refresh_token) as string;
+
+    // sub содержит только цифры — ASCII, atob не ломает
+    const subStr = accessToken.split('.')[1];
+    const rawPayload = JSON.parse(atob(subStr.replace(/-/g, '+').replace(/_/g, '/')));
+    const legalId = Number(rawPayload.sub);
+
+    // Сохраняем токен заранее, чтобы GET-запрос прошёл с авторизацией
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+
+    const { data: entity } = await apiClient.get<Record<string, unknown>>(`/v1/legal-entities/${legalId}`);
+
+    return {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        token_type: ((data.tokenType || data.token_type) as string) ?? 'Bearer',
+        expires_in: ((data.expiresIn || data.expires_in) as number) ?? 3600,
+        user: {
+            id: legalId,
+            email: (entity.email as string) ?? '',
+            firstname: '',
+            lastname: '',
+            surname: null,
+            phone: null,
+            emailVerified: true,
+            roles: [{ id: 0, name: 'ROLE_USER' }],
+            createdAt: (entity.createdAt as string) ?? '',
+            updatedAt: '',
+            clientType: 'B2B',
+            companyName: (entity.fullName as string) ?? null,
+            inn: (entity.inn as string) ?? null,
+        },
+    };
+};
+
+/** Регистрация физлица — POST /v1/register */
 export const register = async (request: RegisterRequest): Promise<void> => {
     await apiClient.post('/v1/register', request);
+};
+
+export interface RegisterLegalRequest {
+    inn: string;
+    ogrn: string;
+    fullName: string;
+    director: string;
+    phone: string;
+    email: string;
+    password: string;
+    legalCity: string;
+    legalStreet: string;
+    legalBuilding: string;
+    legalPostalCode?: string;
+}
+
+/** Регистрация юрлица — POST /v1/register/legal */
+export const registerLegal = async (request: RegisterLegalRequest): Promise<void> => {
+    await apiClient.post('/v1/register/legal', request);
 };
 
 /** Получение текущего пользователя — GET /v1/auth/me */

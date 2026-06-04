@@ -15,10 +15,6 @@ import java.nio.file.Path;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * Unit-тесты CatalogFileService.
- * Используем @TempDir вместо реальной файловой системы.
- */
 @DisplayName("CatalogFileService")
 class CatalogFileServiceTest {
 
@@ -41,7 +37,7 @@ class CatalogFileServiceTest {
         ByteArrayInputStream inputStream = new ByteArrayInputStream(
                 content.getBytes(StandardCharsets.UTF_8));
 
-        fileService.saveFile("import.xml", inputStream);
+        fileService.saveFile("import.xml", "session-1", inputStream);
 
         Path savedFile = tempDir.resolve("import.xml");
         assertThat(savedFile).exists();
@@ -55,7 +51,7 @@ class CatalogFileServiceTest {
         ByteArrayInputStream inputStream = new ByteArrayInputStream(
                 content.getBytes(StandardCharsets.UTF_8));
 
-        fileService.saveFile("import_files/foto/product.jpg", inputStream);
+        fileService.saveFile("import_files/foto/product.jpg", "session-1", inputStream);
 
         Path savedFile = tempDir.resolve("import_files/foto/product.jpg");
         assertThat(savedFile).exists();
@@ -67,9 +63,9 @@ class CatalogFileServiceTest {
         String original = "original";
         String updated = "updated";
 
-        fileService.saveFile("import.xml",
+        fileService.saveFile("import.xml", "session-1",
                 new ByteArrayInputStream(original.getBytes(StandardCharsets.UTF_8)));
-        fileService.saveFile("import.xml",
+        fileService.saveFile("import.xml", "session-1",
                 new ByteArrayInputStream(updated.getBytes(StandardCharsets.UTF_8)));
 
         assertThat(Files.readString(tempDir.resolve("import.xml"))).isEqualTo(updated);
@@ -80,7 +76,31 @@ class CatalogFileServiceTest {
     void shouldBlockPathTraversal() {
         ByteArrayInputStream inputStream = new ByteArrayInputStream("hack".getBytes());
 
-        assertThatThrownBy(() -> fileService.saveFile("../../etc/passwd", inputStream))
+        assertThatThrownBy(() -> fileService.saveFile("../../etc/passwd", "session-1", inputStream))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("XML-файл копируется в archive/{sessionId}/")
+    void shouldArchiveXmlFile() throws IOException {
+        String content = "<?xml version=\"1.0\"?><КоммерческаяИнформация/>";
+        String sessionId = "abc123session";
+
+        fileService.saveFile("offers.xml", sessionId,
+                new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
+
+        Path archived = tempDir.resolve("archive").resolve(sessionId).resolve("offers.xml");
+        assertThat(archived).exists();
+        assertThat(Files.readString(archived)).isEqualTo(content);
+    }
+
+    @Test
+    @DisplayName("картинки в архив не копируются")
+    void shouldNotArchiveImages() throws IOException {
+        fileService.saveFile("import_files/foto/product.jpg", "session-jpg",
+                new ByteArrayInputStream("img".getBytes(StandardCharsets.UTF_8)));
+
+        Path archived = tempDir.resolve("archive").resolve("session-jpg");
+        assertThat(archived).doesNotExist();
     }
 }

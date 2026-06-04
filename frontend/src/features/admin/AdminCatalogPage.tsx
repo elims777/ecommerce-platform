@@ -159,7 +159,7 @@ const AdminCatalogPage = () => {
 
     // Bulk selection & batch move
     const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
-    const [batchMoveOpen, setBatchMoveOpen] = useState(false);
+    const batchMoveDialogRef = useRef<HTMLDialogElement>(null);
     const [batchTargetCategory, setBatchTargetCategory] = useState<number | ''>('');
 
     const [pageSize, setPageSize] = useState(20);
@@ -285,7 +285,7 @@ const AdminCatalogPage = () => {
             const catName = findCatName(categoryTree, variables.categoryId);
             messageApi.success(`${variables.productIds.length} товаров перемещено в «${catName}»`);
             setSelectedRowKeys([]);
-            setBatchMoveOpen(false);
+            batchMoveDialogRef.current?.close();
             setBatchTargetCategory('');
             invalidateAll();
         },
@@ -407,6 +407,11 @@ const AdminCatalogPage = () => {
             productIds: selectedRowKeys,
             categoryId: batchTargetCategory as number,
         });
+    };
+
+    const openBatchMoveDialog = () => {
+        setBatchTargetCategory('');
+        batchMoveDialogRef.current?.showModal();
     };
 
     const handleBatchDelete = () => {
@@ -582,7 +587,7 @@ const AdminCatalogPage = () => {
                 <div style={{ width: 280, flexShrink: 0 }}>
                     <div className="rf-card">
                         {/* Header */}
-                        <div className="rf-card-header" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                        <div className="rf-card-header" style={{ justifyContent: 'space-between' }}>
                             <h3 style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                                     <rect x="1" y="1" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.4" />
@@ -592,45 +597,58 @@ const AdminCatalogPage = () => {
                                 </svg>
                                 Категории
                             </h3>
-                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: 2 }}>
+                                {/* Добавить корневую категорию */}
                                 <button
-                                    className="rf-btn rf-btn-sm rf-btn-quiet"
+                                    className="rf-btn rf-btn-ghost"
+                                    style={{ height: 28, width: 28, padding: 0, color: 'var(--ink-2)' }}
+                                    onClick={handleAddCategory}
+                                    title="Новая категория"
+                                >
+                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                        <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                    </svg>
+                                </button>
+                                {/* Добавить подкатегорию */}
+                                <button
+                                    className="rf-btn rf-btn-ghost"
+                                    style={{ height: 28, width: 28, padding: 0, color: 'var(--ink-2)', opacity: selectedCategoryId ? 1 : 0.35 }}
                                     disabled={!selectedCategoryId}
                                     onClick={() => selectedCategoryId && handleAddSubcategory(selectedCategoryId)}
                                     title="Добавить подкатегорию"
                                 >
-                                    + Подкат.
+                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                        <path d="M2 4h5l2 2h5v8H2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
+                                        <path d="M8 8v4M6 10h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                                    </svg>
                                 </button>
+                                {/* Редактировать */}
                                 <button
-                                    className="rf-btn rf-btn-sm rf-btn-quiet"
+                                    className="rf-btn rf-btn-ghost"
+                                    style={{ height: 28, width: 28, padding: 0, color: 'var(--ink-2)', opacity: selectedCategoryId ? 1 : 0.35 }}
                                     disabled={!selectedCategoryId}
                                     onClick={() => selectedCategoryId && handleEditCategory(selectedCategoryId)}
-                                    title="Редактировать"
+                                    title="Редактировать категорию"
                                 >
-                                    Изм.
+                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                        <path d="M11 2l3 3-8 8H3v-3L11 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
+                                    </svg>
                                 </button>
+                                {/* Удалить */}
                                 <button
-                                    className="rf-btn rf-btn-sm rf-btn-quiet"
+                                    className="rf-btn rf-btn-ghost"
+                                    style={{ height: 28, width: 28, padding: 0, color: selectedCategoryId ? 'var(--brand-red)' : 'var(--ink-3)', opacity: selectedCategoryId ? 1 : 0.35 }}
                                     disabled={!selectedCategoryId}
-                                    style={{ color: selectedCategoryId ? 'var(--brand-red)' : undefined }}
                                     onClick={() => {
-                                        if (
-                                            selectedCategoryId &&
-                                            window.confirm('Удалить категорию? Это действие нельзя отменить.')
-                                        ) {
+                                        if (selectedCategoryId && window.confirm('Удалить категорию? Это действие нельзя отменить.')) {
                                             deleteCatMutation.mutate(selectedCategoryId);
                                         }
                                     }}
-                                    title="Удалить"
+                                    title="Удалить категорию"
                                 >
-                                    Удал.
-                                </button>
-                                <button
-                                    className="rf-btn rf-btn-sm rf-btn-quiet"
-                                    onClick={handleAddCategory}
-                                    title="Добавить корневую категорию"
-                                >
-                                    + Кат.
+                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                        <path d="M2 4h12M6 4V2h4v2M5 4l.5 9h5l.5-9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
@@ -926,44 +944,6 @@ const AdminCatalogPage = () => {
                         )}
                     </div>
 
-                    {/* Batch move inline panel (shown below table when batchMoveOpen) */}
-                    {batchMoveOpen && (
-                        <div className="rf-card" style={{ marginTop: 10, padding: 16 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: 'var(--ink-1)' }}>
-                                Переместить {selectedRowKeys.length} товаров в:
-                            </div>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                <select
-                                    style={{
-                                        flex: 1, height: 34, fontSize: 13,
-                                        border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
-                                        background: 'var(--surface)', color: 'var(--ink-1)',
-                                        padding: '0 10px', outline: 'none', fontFamily: 'var(--font-body)',
-                                    }}
-                                    value={batchTargetCategory}
-                                    onChange={(e) => setBatchTargetCategory(e.target.value ? Number(e.target.value) : '')}
-                                >
-                                    <option value="">Выберите категорию</option>
-                                    {flatCategoryOptions.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
-                                <button
-                                    className="rf-btn rf-btn-sm rf-btn-quiet"
-                                    onClick={() => { setBatchMoveOpen(false); setBatchTargetCategory(''); }}
-                                >
-                                    Отмена
-                                </button>
-                                <button
-                                    className="rf-btn rf-btn-sm rf-btn-primary"
-                                    disabled={!batchTargetCategory || batchMoveMutation.isPending}
-                                    onClick={handleBatchMove}
-                                >
-                                    {batchMoveMutation.isPending ? 'Перемещение…' : 'Переместить'}
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -980,7 +960,7 @@ const AdminCatalogPage = () => {
                     </button>
                     <button
                         className="rf-bulk-btn"
-                        onClick={() => { setBatchMoveOpen(true); setBatchTargetCategory(''); }}
+                        onClick={openBatchMoveDialog}
                     >
                         Переместить
                     </button>
@@ -998,6 +978,73 @@ const AdminCatalogPage = () => {
                     </button>
                 </div>
             )}
+
+            {/* Batch move dialog */}
+            <dialog
+                ref={batchMoveDialogRef}
+                style={{
+                    border: '1px solid var(--line-1)',
+                    borderRadius: 'var(--r-4)',
+                    background: 'var(--surface)',
+                    color: 'var(--ink-1)',
+                    padding: 0,
+                    width: 400,
+                    maxWidth: '90vw',
+                    boxShadow: 'var(--shadow-pop)',
+                }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                        batchMoveDialogRef.current?.close();
+                        setBatchTargetCategory('');
+                    }
+                }}
+            >
+                <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 15 }}>
+                        Переместить {selectedRowKeys.length} товаров
+                    </span>
+                    <button
+                        className="rf-btn rf-btn-ghost"
+                        style={{ height: 28, width: 28, padding: 0, fontSize: 16, color: 'var(--ink-3)' }}
+                        onClick={() => { batchMoveDialogRef.current?.close(); setBatchTargetCategory(''); }}
+                    >✕</button>
+                </div>
+                <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                            Целевая категория <span style={{ color: 'var(--brand-red)' }}>*</span>
+                        </label>
+                        <select
+                            style={{
+                                width: '100%', height: 34, fontSize: 13,
+                                border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
+                                background: 'var(--surface)', color: 'var(--ink-1)',
+                                padding: '0 8px', outline: 'none', fontFamily: 'var(--font-body)', boxSizing: 'border-box',
+                            }}
+                            value={batchTargetCategory}
+                            onChange={(e) => setBatchTargetCategory(e.target.value ? Number(e.target.value) : '')}
+                        >
+                            <option value="">Выберите категорию</option>
+                            {flatCategoryOptions.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+                <div style={{ padding: '14px 22px', borderTop: '1px solid var(--line-1)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button
+                        className="rf-btn rf-btn-sm rf-btn-quiet"
+                        onClick={() => { batchMoveDialogRef.current?.close(); setBatchTargetCategory(''); }}
+                    >Отмена</button>
+                    <button
+                        className="rf-btn rf-btn-sm rf-btn-primary"
+                        disabled={!batchTargetCategory || batchMoveMutation.isPending}
+                        onClick={handleBatchMove}
+                    >
+                        {batchMoveMutation.isPending ? 'Перемещение…' : 'Переместить'}
+                    </button>
+                </div>
+            </dialog>
 
             {/* Category create/edit dialog */}
             <dialog

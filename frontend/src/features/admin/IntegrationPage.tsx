@@ -1,7 +1,50 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '@/api/client';
+
+interface ImportLogEntry {
+    id: number;
+    exchangeType: string;
+    status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
+    totalReceived: number;
+    created: number;
+    updated: number;
+    failed: number;
+    durationMs: number | null;
+    errorMessage: string | null;
+    createdAt: string;
+}
+
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+    SUCCESS: { label: 'Успешно',  className: 'rf-badge rf-badge-success' },
+    PARTIAL: { label: 'Частично', className: 'rf-badge rf-badge-warn' },
+    FAILED:  { label: 'Ошибка',   className: 'rf-badge rf-badge-red' },
+};
+
+const TYPE_LABEL: Record<string, string> = {
+    CATALOG:      'Каталог',
+    OFFERS:       'Цены/остатки',
+    ORDER_STATUS: 'Статусы заказов',
+};
+
+function formatDate(iso: string) {
+    return new Date(iso).toLocaleString('ru-RU', {
+        day: '2-digit', month: '2-digit', year: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+    });
+}
 
 const IntegrationPage = () => {
     const navigate = useNavigate();
+    const [logs, setLogs] = useState<ImportLogEntry[]>([]);
+    const [logsLoading, setLogsLoading] = useState(true);
+
+    useEffect(() => {
+        apiClient.get<ImportLogEntry[]>('/v1/admin/integration/logs')
+            .then(r => setLogs(r.data))
+            .catch(() => setLogs([]))
+            .finally(() => setLogsLoading(false));
+    }, []);
 
     return (
         <div>
@@ -53,6 +96,58 @@ const IntegrationPage = () => {
                     <div className="rf-detail-value">
                         <span className="rf-badge rf-badge-success">Активен</span>
                     </div>
+                </div>
+            </div>
+
+            {/* История обменов */}
+            <div className="rf-card" style={{ marginBottom: 24 }}>
+                <div className="rf-card-header">
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ marginRight: 6 }}>
+                        <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.4"/>
+                        <path d="M7.5 4v3.5l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                    </svg>
+                    <h3>История обменов</h3>
+                </div>
+                <div className="rf-card-body" style={{ padding: 0 }}>
+                    {logsLoading ? (
+                        <div style={{ padding: '24px 18px', textAlign: 'center', fontSize: 13, color: 'var(--ink-3)' }}>Загрузка...</div>
+                    ) : logs.length === 0 ? (
+                        <div style={{ padding: '24px 18px', textAlign: 'center', fontSize: 13, color: 'var(--ink-3)' }}>
+                            Обменов пока не было. История появится после первой синхронизации с 1С.
+                        </div>
+                    ) : (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                            <thead>
+                                <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--line-1)' }}>
+                                    {['Дата', 'Тип', 'Статус', 'Получено', 'Создано', 'Обновлено', 'Ошибок', 'Время'].map(h => (
+                                        <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {logs.map((log, i) => {
+                                    const badge = STATUS_BADGE[log.status] ?? { label: log.status, className: 'rf-badge' };
+                                    return (
+                                        <tr key={log.id} style={{ borderBottom: i < logs.length - 1 ? '1px solid var(--line-1)' : 'none' }}>
+                                            <td style={{ padding: '9px 14px', whiteSpace: 'nowrap', color: 'var(--ink-2)' }}>{formatDate(log.createdAt)}</td>
+                                            <td style={{ padding: '9px 14px' }}>{TYPE_LABEL[log.exchangeType] ?? log.exchangeType}</td>
+                                            <td style={{ padding: '9px 14px' }}>
+                                                <span className={badge.className}>{badge.label}</span>
+                                                {log.status === 'FAILED' && log.errorMessage && (
+                                                    <span title={log.errorMessage} style={{ marginLeft: 6, cursor: 'help', color: 'var(--ink-3)', fontSize: 11 }}>ℹ</span>
+                                                )}
+                                            </td>
+                                            <td style={{ padding: '9px 14px', textAlign: 'center' }}>{log.totalReceived}</td>
+                                            <td style={{ padding: '9px 14px', textAlign: 'center', color: 'var(--success)' }}>{log.created}</td>
+                                            <td style={{ padding: '9px 14px', textAlign: 'center' }}>{log.updated}</td>
+                                            <td style={{ padding: '9px 14px', textAlign: 'center', color: log.failed > 0 ? 'var(--brand-red)' : 'inherit' }}>{log.failed}</td>
+                                            <td style={{ padding: '9px 14px', color: 'var(--ink-3)' }}>{log.durationMs != null ? `${(log.durationMs / 1000).toFixed(1)}с` : '—'}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </div>
 

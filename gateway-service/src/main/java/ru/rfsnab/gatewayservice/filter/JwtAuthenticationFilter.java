@@ -41,6 +41,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/api/v1/register/legal",
             "/api/v1/legal-entities/register",
             "/api/v1/legal-entities/confirm-email",
+            "/api/v1/legal-entities/confirm-link",
             "/api/v1/legal-entities/authenticate",
             "/v1/auth/",
             "/auth/",
@@ -48,7 +49,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/auth/register",
             "/oauth2/",
             "/verify-email",
-            "/api/verification/"
+            "/api/verification/",
+            "/1c-exchange"
     );
 
 

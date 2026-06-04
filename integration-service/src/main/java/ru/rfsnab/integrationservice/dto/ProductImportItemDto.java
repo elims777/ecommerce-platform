@@ -26,6 +26,6 @@ public class ProductImportItemDto {
     private String unitOfMeasure;
     private BigDecimal price;
     private BigDecimal wholesalePrice;
-    private Integer stock;
-    private BigDecimal vatRate;
+    private Integer stockQuantity;
+    private Integer vatRate;
 }

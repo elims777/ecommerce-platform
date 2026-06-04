@@ -135,7 +135,14 @@ const DashboardPage = () => {
                         {formatDate(o.createdAt)}
                       </span>
                     </td>
-                    <td style={{ fontWeight: 500 }}>{o.customerEmail}</td>
+                    <td>
+                      <div style={{ fontWeight: 500, fontSize: 13 }}>{o.customerEmail}</div>
+                      {(o.customerName || o.companyName) && (
+                        <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 1 }}>
+                          {o.customerName || o.companyName}
+                        </div>
+                      )}
+                    </td>
                     <td><span className={`rf-badge ${badge.cls}`}>{badge.label}</span></td>
                     <td className="col-right">
                       <span className="rf-tabular" style={{ fontWeight: 600 }}>{formatPrice(o.totalAmount)}</span>

@@ -20,6 +20,7 @@ import ru.rfsnab.integrationservice.model.ImportLog.ImportStatus;
 import ru.rfsnab.integrationservice.model.commerceml.*;
 import ru.rfsnab.integrationservice.repository.ImportLogRepository;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -78,6 +79,7 @@ public class CatalogImportService {
 
         try {
             // 1. Parse XML файлы
+            logReceivedFiles(exchangeDir, sessionId);
             CommerceInfo importInfo = parseXmlFile(exchangeDir.resolve(IMPORT_XML));
             CommerceInfo offersInfo = parseOffersIfExists(exchangeDir.resolve(OFFERS_XML));
 
@@ -130,6 +132,38 @@ public class CatalogImportService {
     }
 
     // ==================== XML Parsing ====================
+
+    private void logReceivedFiles(Path exchangeDir, String sessionId) {
+        try {
+            Path importXml = exchangeDir.resolve(IMPORT_XML);
+            Path offersXml = exchangeDir.resolve(OFFERS_XML);
+
+            boolean hasImport = Files.exists(importXml);
+            boolean hasOffers = Files.exists(offersXml);
+
+            log.info("Файлы обмена. Session: {}. import.xml: {} ({}), offers.xml: {} ({})",
+                    sessionId,
+                    hasImport ? "есть" : "ОТСУТСТВУЕТ",
+                    hasImport ? Files.size(importXml) + " байт" : "-",
+                    hasOffers ? "есть" : "ОТСУТСТВУЕТ",
+                    hasOffers ? Files.size(offersXml) + " байт" : "-");
+
+            if (!hasOffers) {
+                log.warn("offers.xml не получен от 1С — цены и остатки обновлены не будут. Session: {}", sessionId);
+            }
+
+            // Лог картинок (import_files/)
+            Path imagesDir = exchangeDir.resolve("import_files");
+            if (Files.exists(imagesDir)) {
+                try (var stream = Files.walk(imagesDir)) {
+                    long imageCount = stream.filter(Files::isRegularFile).count();
+                    log.info("Получено файлов изображений: {}. Session: {}", imageCount, sessionId);
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Не удалось прочитать список файлов обмена. Session: {}", sessionId, e);
+        }
+    }
 
     /**
      * JAXB unmarshalling XML-файла в CommerceInfo.
@@ -214,9 +248,9 @@ public class CatalogImportService {
                 .unitOfMeasure(extractUnitOfMeasure(product));
 
         if (offer != null) {
-            builder.price(extractPriceByType(offer, priceTypes, "Оптовая"))
-                    .wholesalePrice(extractPriceByType(offer, priceTypes, "Розничная"))
-                    .stock(parseStock(offer.getQuantity()))
+            builder.price(extractPriceByType(offer, priceTypes, "Оптовая цена"))
+                    .wholesalePrice(extractPriceByType(offer, priceTypes, "Розничная цена"))
+                    .stockQuantity(parseStock(offer.getQuantity()))
                     .vatRate(extractVatRate(offer));
         }
 
@@ -234,7 +268,7 @@ public class CatalogImportService {
     private BigDecimal extractPriceByType(Offer offer, List<PriceType> priceTypes, String typeName) {
         if (offer.getPrices() == null || offer.getPrices().isEmpty()) return null;
         String targetTypeId = priceTypes.stream()
-                .filter(pt -> typeName.equalsIgnoreCase(pt.getName()))
+                .filter(pt -> pt.getName() != null && pt.getName().toLowerCase().contains(typeName.toLowerCase()))
                 .map(PriceType::getId)
                 .findFirst()
                 .orElse(null);
@@ -246,16 +280,17 @@ public class CatalogImportService {
                 .orElse(null);
     }
 
-    private BigDecimal extractVatRate(Offer offer) {
+    private Integer extractVatRate(Offer offer) {
         if (offer.getTaxRates() == null || offer.getTaxRates().isEmpty()) {
             return null;
         }
         TaxRate taxRate = offer.getTaxRates().getFirst();
         String rate = taxRate.getRate();
         if (rate == null || "Без НДС".equalsIgnoreCase(rate.trim())) {
-            return BigDecimal.ZERO;
+            return 0;
         }
-        return parseBigDecimal(rate, "НДС");
+        BigDecimal bd = parseBigDecimal(rate, "НДС");
+        return bd != null ? bd.intValue() : null;
     }
 
     private BigDecimal parseBigDecimal(String value, String fieldName) {
@@ -331,7 +366,7 @@ public class CatalogImportService {
                 return errorResponse(chunk.size(), "Пустой ответ от product-service");
             }
             log.debug("Chunk отправлен: created={}, updated={}, failed={}",
-                    body.getCreatedCount(), body.getUpdatedCount(), body.getFailedCount());
+                    body.getCreated(), body.getUpdated(), body.getFailed());
             return body;
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             log.error("HTTP ошибка при отправке chunk: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
@@ -344,8 +379,8 @@ public class CatalogImportService {
 
     private BatchImportResponse errorResponse(int chunkSize, String errorMessage) {
         BatchImportResponse response = new BatchImportResponse();
-        response.setTotalProcessed(chunkSize);
-        response.setFailedCount(chunkSize);
+        response.setTotalReceived(chunkSize);
+        response.setFailed(chunkSize);
         response.setErrors(List.of(errorMessage));
         return response;
     }
@@ -360,10 +395,10 @@ public class CatalogImportService {
         for (CompletableFuture<BatchImportResponse> future : futures) {
             try {
                 BatchImportResponse response = future.join();
-                totalItems += response.getTotalProcessed();
-                createdCount += response.getCreatedCount();
-                updatedCount += response.getUpdatedCount();
-                failedCount += response.getFailedCount();
+                totalItems += response.getTotalReceived();
+                createdCount += response.getCreated();
+                updatedCount += response.getUpdated();
+                failedCount += response.getFailed();
                 if (response.getErrors() != null) {
                     allErrors.addAll(response.getErrors());
                 }

@@ -276,6 +276,58 @@ public class EmailService {
         mailSender.send(msgToUser);
     }
 
+    public void sendLegalEntityUnlinkedEmail(String toLegal, String toUser,
+                                              String companyName, String userName) {
+        SimpleMailMessage msgToLegal = new SimpleMailMessage();
+        msgToLegal.setFrom(fromEmail);
+        msgToLegal.setTo(toLegal);
+        msgToLegal.setSubject("Пользователь отвязан от вашей организации — РФСнаб");
+        msgToLegal.setText(String.format(
+                "Пользователь %s отвязал свой аккаунт от организации \"%s\".\n\nС уважением,\nКоманда РФСнаб",
+                userName, companyName));
+        mailSender.send(msgToLegal);
+
+        SimpleMailMessage msgToUser = new SimpleMailMessage();
+        msgToUser.setFrom(fromEmail);
+        msgToUser.setTo(toUser);
+        msgToUser.setSubject("Организация отвязана — РФСнаб");
+        msgToUser.setText(String.format(
+                "Ваш аккаунт отвязан от организации \"%s\".\n" +
+                "Если это произошло по ошибке, вы можете снова подать заявку на привязку в личном кабинете.\n\n" +
+                "С уважением,\nКоманда РФСнаб", companyName));
+        mailSender.send(msgToUser);
+    }
+
+    public void sendInactivityEmail(String to, String firstname, String catalogUrl, String unsubscribeUrl) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(to);
+        message.setSubject("Мы соскучились, " + firstname + "! 👋 Посмотрите наши актуальные предложения");
+        message.setText(String.format(
+                """
+                Добрый день, %s!
+
+                Мы заметили, что вас давно не было на нашей платформе РФСнаб.
+
+                У нас появились новые товары, акции и специальные предложения для наших клиентов.
+                Загляните в каталог — возможно, найдёте что-то интересное:
+
+                %s
+
+                Если у вас есть вопросы или нужна помощь с заказом — наши менеджеры всегда на связи.
+
+                С уважением,
+                Команда РФСнаб
+
+                ---
+                Вы получили это письмо, так как зарегистрированы на rfsnab.ru.
+                Чтобы отписаться от рассылки, перейдите по ссылке: %s
+                """,
+                firstname, catalogUrl, unsubscribeUrl
+        ));
+        mailSender.send(message);
+    }
+
     public void sendPaymentApprovedEmail(String to, BigDecimal amount, String paymentMode) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail);

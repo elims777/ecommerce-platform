@@ -18,6 +18,7 @@ import ru.rfsnab.userservice.mappers.UserMapper;
 import ru.rfsnab.userservice.models.UserEntity;
 import ru.rfsnab.userservice.models.dto.ChangeRoleRequest;
 import ru.rfsnab.userservice.models.dto.ChangeStatusRequest;
+import ru.rfsnab.userservice.models.dto.InactiveUserDto;
 import ru.rfsnab.userservice.models.dto.RegAuthResponse;
 import ru.rfsnab.userservice.models.dto.RegistrationRequest;
 import ru.rfsnab.userservice.models.dto.SimpleAuthRequest;
@@ -25,6 +26,7 @@ import ru.rfsnab.userservice.models.dto.UpdateUserAdminRequest;
 import ru.rfsnab.userservice.models.dto.UserDto;
 import ru.rfsnab.userservice.services.UserService;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -92,6 +94,8 @@ public class UserController {
             throw new DisabledException("Аккаунт заблокирован");
         }
 
+        userService.recordLogin(user);
+
         return ResponseEntity.ok(UserMapper.mapToUserDto(user));
     }
 
@@ -139,13 +143,13 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(UserMapper.mapToUserDto(userService.findById(id)));
     }
 
     @PatchMapping("/{id}/role")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<UserDto> changeRole(
             @PathVariable Long id,
             @Valid @RequestBody ChangeRoleRequest request) {
@@ -153,15 +157,36 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<UserDto> changeStatus(
             @PathVariable Long id,
             @Valid @RequestBody ChangeStatusRequest request) {
         return ResponseEntity.ok(UserMapper.mapToUserDto(userService.setActive(id, request.active())));
     }
 
+    @GetMapping("/inactive")
+    public ResponseEntity<List<InactiveUserDto>> getInactiveUsers() {
+        LocalDateTime threshold = LocalDateTime.now().minusDays(14);
+        List<InactiveUserDto> result = userService.findInactiveUsers(threshold, threshold).stream()
+                .map(u -> new InactiveUserDto(u.getId(), u.getEmail(), u.getFirstname(), u.getUnsubscribeToken()))
+                .toList();
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/{id}/inactivity-email-sent")
+    public ResponseEntity<Void> markInactivityEmailSent(@PathVariable Long id) {
+        userService.markInactivityEmailSent(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/unsubscribe")
+    public ResponseEntity<String> unsubscribe(@RequestParam String token) {
+        userService.unsubscribeByToken(token);
+        return ResponseEntity.ok("Вы успешно отписались от рассылки");
+    }
+
     @PatchMapping("/{id}/admin")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<UserDto> updateUserAdmin(
             @PathVariable Long id,
             @Valid @RequestBody UpdateUserAdminRequest request) {

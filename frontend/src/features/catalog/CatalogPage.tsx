@@ -68,7 +68,7 @@ const buildBreadcrumb = (tree: CategoryTree[], targetId: number): CategoryTree[]
 
 // ── Skeleton card ─────────────────────────────────────────────
 const SkeletonCard = () => (
-    <div style={{ background: '#fff', borderRadius: 8, border: '1px solid var(--line-1)', overflow: 'hidden' }}>
+    <div style={{ width: 'var(--product-card-w)', background: '#fff', borderRadius: 8, border: '1px solid var(--line-1)', overflow: 'hidden' }}>
         <div style={{ height: 200, background: 'var(--surface-2)', animation: 'rf-pulse 1.5s ease-in-out infinite' }}/>
         <div style={{ padding: '12px 14px' }}>
             <div style={{ height: 11, width: '40%', background: 'var(--surface-3)', borderRadius: 4, marginBottom: 8, animation: 'rf-pulse 1.5s ease-in-out infinite' }}/>
@@ -355,7 +355,7 @@ const CatalogPage = () => {
 
                     {/* Loading skeletons */}
                     {productsLoading && (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
                             {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
                         </div>
                     )}
@@ -396,7 +396,7 @@ const CatalogPage = () => {
                     {/* Products grid */}
                     {productsPage && !productsPage.empty && !productsLoading && (
                         <>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
                                 {productsPage.content.map((product) => (
                                     <ProductCard
                                         key={product.id}

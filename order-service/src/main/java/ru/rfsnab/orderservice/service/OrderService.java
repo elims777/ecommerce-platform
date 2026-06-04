@@ -16,6 +16,7 @@ import ru.rfsnab.orderservice.models.dto.order.HasDeliveryInfo;
 import ru.rfsnab.orderservice.models.dto.order.OrderItemDto;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
+import ru.rfsnab.orderservice.models.dto.payment.PaymentMethodSettingsDto;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentLinkResponse;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.entity.*;
@@ -55,6 +56,7 @@ public class OrderService {
     private final PaymentServiceClient paymentServiceClient;
     private final OrderKafkaProducer kafkaProducer;
     private final Order1CKafkaProducer order1CKafkaProducer;
+    private final PaymentMethodSettingsService paymentMethodSettingsService;
 
     /** Допустимые переходы между статусами */
     private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS;
@@ -125,6 +127,10 @@ public class OrderService {
         Order order = OrderMapper.toEntity(userId, customerEmail, clientType, request);
         order.setOrderNumber(generateOrderNumber(userId));
 
+        // Снапшот имени и телефона заказчика
+        if (request.customerName() != null) order.setCustomerName(request.customerName());
+        if (request.customerPhone() != null) order.setCustomerPhone(request.customerPhone());
+
         // B2B validation: companyName and inn are required
         if (CustomerType.B2B == order.getCustomerType()) {
             if (request.companyName() == null || request.inn() == null) {
@@ -158,6 +164,20 @@ public class OrderService {
     @Transactional
     public Order confirmOrder(UUID orderId, Long userId) {
         Order order = getOrderAndValidateOwner(orderId, userId);
+
+        if (order.getCustomerType() == CustomerType.B2C) {
+            PaymentMethodSettingsDto settings = paymentMethodSettingsService.getSettings();
+            PaymentMethod method = order.getPaymentMethod();
+
+            if (method == PaymentMethod.CARD && !settings.cardEnabled()) {
+                throw new PaymentMethodNotAvailableException("Оплата картой временно недоступна");
+            }
+            if (method == PaymentMethod.SBP && !settings.sbpEnabled()) {
+                throw new PaymentMethodNotAvailableException("Оплата через СБП временно недоступна");
+            }
+            // INVOICE — оба метода выключены, заказ идёт в 1С как B2B
+        }
+
         changeStatus(order, OrderStatus.PROCESSING);
         order = orderRepository.save(order);
 
@@ -433,6 +453,8 @@ public class OrderService {
         return switch (order.getPaymentMethod()) {
             case CARD, SBP -> initiateOnlinePayment(order);
             case CASH_ON_DELIVERY -> recordCashOnDeliveryIntent(order);
+            case INVOICE -> throw new PaymentMethodNotAvailableException(
+                    "Онлайн-оплата недоступна: заказ будет обработан менеджером через 1С");
         };
     }
 
@@ -619,12 +641,6 @@ public class OrderService {
                 throw new ProductNotFoundException(
                         "Товар недоступен: " + item.getProductId());
             }
-
-            if (product.stockQuantity() < item.getQuantity()) {
-                throw new InsufficientStockException(
-                        String.format("Недостаточно товара %s. Доступно: %d, Запрошено: %d",
-                                product.name(), product.stockQuantity(), item.getQuantity()));
-            }
         }
     }
 
@@ -639,12 +655,6 @@ public class OrderService {
                 throw new ProductNotFoundException(
                         "Товар недоступен: " + item.productId());
             }
-
-            if (product.stockQuantity() < item.quantity()) {
-                throw new InsufficientStockException(
-                        String.format("Недостаточно товара %s. Доступно: %d, Запрошено: %d",
-                                product.name(), product.stockQuantity(), item.quantity()));
-            }
         }
     }
 
@@ -653,29 +663,22 @@ public class OrderService {
      * При недостатке — собирает все проблемы в один ответ с доступным количеством.
      */
     private void validateStockForRepeat(List<OrderItem> items, Map<Long, ProductDto> products) {
-        List<String> insufficientItems = new ArrayList<>();
+        List<String> unavailableItems = new ArrayList<>();
 
         for (OrderItem item : items) {
             ProductDto product = products.get(item.getProductId());
 
             if (product == null || !product.isActive()) {
-                insufficientItems.add(
+                unavailableItems.add(
                         String.format("Товар '%s' (ID: %d) больше недоступен",
                                 item.getProductName(), item.getProductId()));
-                continue;
-            }
-
-            if (product.stockQuantity() < item.getQuantity()) {
-                insufficientItems.add(
-                        String.format("Товар '%s': запрошено %d, доступно %d",
-                                product.name(), item.getQuantity(), product.stockQuantity()));
             }
         }
 
-        if (!insufficientItems.isEmpty()) {
+        if (!unavailableItems.isEmpty()) {
             throw new InsufficientStockException(
-                    "Невозможно повторить заказ. Проблемы с наличием:\n"
-                            + String.join("\n", insufficientItems));
+                    "Невозможно повторить заказ. Товары недоступны:\n"
+                            + String.join("\n", unavailableItems));
         }
     }
 

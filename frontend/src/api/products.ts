@@ -45,11 +45,10 @@ export const searchProducts = async (query: string): Promise<Product[]> => {
 /** Получить все товары включая неактивные (для админки) */
 export const getAdminProducts = async (params: GetProductsParams = {}): Promise<Page<Product>> => {
     const { page = 0, size = 20, sort = 'name,asc', categoryId } = params;
-    const url = categoryId
-        ? `/v1/products/category/${categoryId}`
-        : '/v1/products/admin';
-    const { data } = await apiClient.get<Page<Product>>(url, {
-        params: { page, size, sort },
+    const queryParams: Record<string, unknown> = { page, size, sort };
+    if (categoryId !== undefined) queryParams.categoryId = categoryId;
+    const { data } = await apiClient.get<Page<Product>>('/v1/products/admin', {
+        params: queryParams,
     });
     return data;
 };

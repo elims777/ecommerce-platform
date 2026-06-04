@@ -178,6 +178,18 @@ spring:
                     key-resolver: "#{@ipKeyResolver}"
 
             # === ORDER-SERVICE (:8084) ===
+            - id: admin-orders-api
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/v1/admin/orders/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 15
+                    redis-rate-limiter.burstCapacity: 25
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
             - id: order-cart
               uri: http://localhost:8084
               predicates:
@@ -206,6 +218,16 @@ spring:
               uri: http://localhost:8084
               predicates:
                 - Path=/api/v1/warehouse-points/**
+
+            - id: order-payment-settings-public
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/v1/payment-settings
+
+            - id: order-payment-settings-admin
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/v1/admin/payment-settings
             - id: order-recipients
               uri: http://localhost:8084
               predicates:
@@ -219,6 +241,12 @@ spring:
                     key-resolver: "#{@ipKeyResolver}"
 
           # === INTEGRATION-SERVICE (:8085) ===
+            - id: integration-logs
+              uri: http://localhost:8085
+              predicates:
+                - Path=/api/v1/admin/integration/logs
+              filters:
+                - RewritePath=/api/v1/admin/integration/logs, /1c-exchange/logs
             - id: integration-1c
               uri: http://localhost:8085
               predicates:

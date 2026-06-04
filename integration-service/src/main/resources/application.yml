@@ -51,7 +51,7 @@ integration:
     # Лимит размера файла для передачи через протокол (в байтах)
     file-limit: 52428800  # 50MB
     # Временная директория для файлов обмена
-    temp-dir: ${CML_TEMP_DIR:/tmp/1c-exchange}
+    temp-dir: ${CML_TEMP_DIR:/app/1c-exchange}
 
   # Адреса внутренних сервисов
   product-service:

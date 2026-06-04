@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ShoppingOutlined } from '@ant-design/icons';
 import type { Product, ProductImage } from '@/types/product';
 import { useDisplayPrice } from '@/utils/priceUtils';
@@ -29,6 +29,78 @@ const CartIcon = () => (
         <path d="M3 4h2.5l2 13.5h11l2-9h-14"/><circle cx="9" cy="20.5" r="1.4"/><circle cx="18" cy="20.5" r="1.4"/>
     </svg>
 );
+
+const NameWithPopover = ({ name }: { name: string }) => {
+    const spanRef = useRef<HTMLSpanElement>(null);
+    const [isClamped, setIsClamped] = useState(false);
+    const [showPopover, setShowPopover] = useState(false);
+    const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+    const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        const el = spanRef.current;
+        if (el) setIsClamped(el.scrollHeight > el.clientHeight);
+    }, [name]);
+
+    const handleMouseEnter = useCallback(() => {
+        if (!isClamped) return;
+        if (hideTimer.current) clearTimeout(hideTimer.current);
+        const el = spanRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        setPos({ top: rect.top, left: rect.left, width: rect.width });
+        setShowPopover(true);
+    }, [isClamped]);
+
+    const handleMouseLeave = useCallback(() => {
+        hideTimer.current = setTimeout(() => setShowPopover(false), 120);
+    }, []);
+
+    return (
+        <>
+            <span
+                ref={spanRef}
+                title={isClamped ? name : undefined}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                style={{
+                    fontSize: 13.5, fontWeight: 500, lineHeight: 1.4, color: 'var(--ink-1)',
+                    display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden', minHeight: 76, fontFamily: 'var(--font-body)',
+                    textAlign: 'justify', hyphens: 'auto',
+                    cursor: isClamped ? 'help' : 'pointer',
+                }}
+            >
+                {name}
+            </span>
+
+            {showPopover && (
+                <div
+                    onMouseEnter={() => { if (hideTimer.current) clearTimeout(hideTimer.current); }}
+                    onMouseLeave={() => { hideTimer.current = setTimeout(() => setShowPopover(false), 120); }}
+                    style={{
+                        position: 'fixed',
+                        top: pos.top - 8,
+                        left: pos.left,
+                        width: pos.width,
+                        zIndex: 'var(--z-modal)' as unknown as number,
+                        background: 'var(--surface)',
+                        border: '1px solid var(--line-2)',
+                        borderRadius: 'var(--r-3)',
+                        boxShadow: 'var(--shadow-3)',
+                        padding: '10px 12px',
+                        fontSize: 13, lineHeight: 1.45, color: 'var(--ink-1)',
+                        fontFamily: 'var(--font-body)',
+                        transform: 'translateY(-100%)',
+                        pointerEvents: 'auto',
+                    }}
+                >
+                    {name}
+                </div>
+            )}
+        </>
+    );
+};
 
 interface ProductCardProps {
     product: Product;
@@ -67,9 +139,10 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             style={{
+                width: 'var(--product-card-w)',
                 background: 'var(--surface)',
                 border: '1px solid var(--line-1)',
-                borderRadius: 8,
+                borderRadius: 'var(--r-4)',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
@@ -84,7 +157,7 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
                 {product.isFeatured && (
                     <span style={{
                         display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px',
-                        borderRadius: 10, fontSize: 11, fontWeight: 600,
+                        borderRadius: 'var(--r-full)', fontSize: 'var(--text-xs)', fontWeight: 600,
                         background: 'var(--brand-red)', color: '#fff',
                     }}>Хит</span>
                 )}
@@ -95,8 +168,8 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
                 onClick={(e) => { e.stopPropagation(); setIsFavored((f) => !f); }}
                 style={{
                     position: 'absolute', top: 10, right: 10, zIndex: 2,
-                    width: 30, height: 30, borderRadius: 15, border: 0,
-                    background: '#fff', cursor: 'pointer',
+                    width: 30, height: 30, borderRadius: 'var(--r-full)', border: 0,
+                    background: 'var(--surface)', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: isFavored ? 'var(--brand-red)' : 'var(--ink-3)',
                     boxShadow: '0 1px 3px rgba(0,0,0,.08)',
@@ -110,7 +183,7 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
             <div
                 onClick={onClick}
                 style={{
-                    height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    aspectRatio: '1 / 0.78', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: 'var(--surface-2)', overflow: 'hidden', position: 'relative', cursor: 'pointer',
                 }}
             >
@@ -140,30 +213,21 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
 
             {/* Инфо */}
             <div onClick={onClick} style={{ padding: '12px 14px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer' }}>
-                {/* Артикул */}
-                {product.sku && (
-                    <div style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: 'var(--font-mono)' }}>{product.sku}</div>
-                )}
-
-                <span
-                    title={product.name}
-                    style={{
-                        fontSize: 13.5, fontWeight: 500, lineHeight: 1.4, color: 'var(--ink-1)',
-                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden', minHeight: 38, fontFamily: 'var(--font-body)',
-                    }}
-                >
-                    {product.name}
-                </span>
+                    <NameWithPopover name={product.name} />
 
                 {/* Цена */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginTop: 'auto' }}>
                     <span style={{
                         fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 20,
                         color: 'var(--ink-1)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
                     }}>
                         {formatPrice(displayPrice)}
                     </span>
+                    {product.sku && (
+                        <span style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
+                            {product.sku}
+                        </span>
+                    )}
                 </div>
 
                 {/* Кнопка в корзину */}
@@ -174,7 +238,7 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
                             flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                             height: 34, padding: '0 12px',
                             background: 'var(--brand-red)', color: '#fff',
-                            border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500,
+                            border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500,
                             cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s',
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}

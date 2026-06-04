@@ -32,6 +32,7 @@ import {
     type RecipientDto,
     type RecipientAddressDto,
 } from '@/api/recipients';
+import { getPaymentSettings } from '@/api/paymentSettings';
 import {
     DeliveryMethod,
     PaymentMethod,
@@ -93,6 +94,12 @@ const CheckoutPage = () => {
         enabled: !!selectedRecipient,
     });
 
+    const { data: paymentSettings } = useQuery({
+        queryKey: ['paymentSettings'],
+        queryFn: getPaymentSettings,
+        staleTime: 60_000,
+    });
+
     useEffect(() => {
         if (recipients.length === 0) {
             setManualInput(true);
@@ -116,6 +123,23 @@ const CheckoutPage = () => {
         }
     }, [addresses]);
 
+    // Автовыбор метода оплаты
+    useEffect(() => {
+        if (user?.clientType === 'B2B') {
+            form.setFieldValue('paymentMethod', PaymentMethod.INVOICE);
+            return;
+        }
+        if (!paymentSettings) return;
+        const { cardEnabled, sbpEnabled } = paymentSettings;
+        if (!cardEnabled && !sbpEnabled) {
+            form.setFieldValue('paymentMethod', PaymentMethod.INVOICE);
+        } else if (cardEnabled && !sbpEnabled) {
+            form.setFieldValue('paymentMethod', PaymentMethod.CARD);
+        } else if (!cardEnabled && sbpEnabled) {
+            form.setFieldValue('paymentMethod', PaymentMethod.SBP);
+        }
+    }, [paymentSettings, user?.clientType]);
+
     const createRecipientMutation = useMutation({
         mutationFn: createRecipient,
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recipients'] }),
@@ -137,10 +161,28 @@ const CheckoutPage = () => {
     const handleSubmit = async (values: CheckoutFormValues) => {
         setLoading(true);
         try {
+            // Определяем имя и телефон заказчика
+            let customerName: string | undefined;
+            let customerPhone: string | undefined;
+            if (user?.clientType === 'B2B') {
+                customerName = user.companyName ?? undefined;
+            } else if (manualInput) {
+                customerName = values.newRecipientName;
+                customerPhone = values.newRecipientPhone;
+            } else if (selectedRecipient) {
+                customerName = selectedRecipient.name;
+                customerPhone = selectedRecipient.phone;
+            }
+            if (!customerName && user) {
+                customerName = [user.firstname, user.lastname].filter(Boolean).join(' ') || undefined;
+            }
+
             const request: CreateOrderRequest = {
                 paymentMethod: values.paymentMethod,
                 deliveryMethod: values.deliveryMethod,
                 comment: values.comment,
+                customerName,
+                customerPhone,
                 ...(user?.clientType === 'B2B' ? {
                     companyName: user.companyName ?? undefined,
                     inn: user.inn ?? undefined,
@@ -221,6 +263,7 @@ const CheckoutPage = () => {
                 }
             }
 
+            // INVOICE и CASH_ON_DELIVERY — просто переходим на /orders
             navigate('/orders');
         } catch (error) {
             const axiosError = error as AxiosError<{ message?: string }>;
@@ -265,6 +308,8 @@ const CheckoutPage = () => {
             />
         );
     }
+
+    const isB2C = user?.clientType !== 'B2B';
 
     return (
         <div>
@@ -357,7 +402,10 @@ const CheckoutPage = () => {
                             }
                             style={{ marginBottom: 16 }}
                         >
-                            <PaymentStep />
+                            <PaymentStep
+                                settings={paymentSettings}
+                                isB2C={isB2C}
+                            />
                         </Card>
                     </Col>
 

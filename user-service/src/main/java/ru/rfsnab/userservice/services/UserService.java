@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.rfsnab.userservice.exceptions.UserAlreadyExistsException;
 import ru.rfsnab.userservice.models.RoleEntity;
 import ru.rfsnab.userservice.models.UserEntity;
 import ru.rfsnab.userservice.models.kafka.UserEvent;
@@ -11,6 +12,7 @@ import ru.rfsnab.userservice.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.UUID;
 
 
 @Service
@@ -41,6 +43,9 @@ public class UserService {
     }
 
     public UserEntity registerUser(UserEntity user){
+        if (user.getPhone() != null && userRepository.existsByPhone(user.getPhone())) {
+            throw new UserAlreadyExistsException("Пользователь с таким номером телефона уже существует");
+        }
         user=setDefaultRole(user);
         UserEntity savedUser = userRepository.save(user);
         String verificationToken = UUID.randomUUID().toString();
@@ -110,6 +115,38 @@ public class UserService {
         UserEntity user = findById(id);
         user.setActive(active);
         return userRepository.save(user);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserEntity> findInactiveUsers(LocalDateTime loginThreshold, LocalDateTime emailThreshold) {
+        return userRepository
+                .findAllByLastLoginAtBeforeAndLastInactivityEmailAtIsNullOrLastInactivityEmailAtBefore(
+                        loginThreshold, emailThreshold);
+    }
+
+    @Transactional
+    public void markInactivityEmailSent(Long userId) {
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setLastInactivityEmailAt(LocalDateTime.now());
+            userRepository.save(user);
+        });
+    }
+
+    @Transactional
+    public void unsubscribeByToken(String token) {
+        UserEntity user = userRepository.findByUnsubscribeToken(token)
+                .orElseThrow(() -> new RuntimeException("Недействительная ссылка отписки"));
+        user.setNewsletterConsent(false);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void recordLogin(UserEntity user) {
+        user.setLastLoginAt(LocalDateTime.now());
+        if (user.getUnsubscribeToken() == null) {
+            user.setUnsubscribeToken(UUID.randomUUID().toString());
+        }
+        userRepository.save(user);
     }
 
     @Transactional

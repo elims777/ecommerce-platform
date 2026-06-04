@@ -12,7 +12,8 @@ import lombok.RequiredArgsConstructor;
 public enum PaymentMethod {
     CARD("Банковская карта"),
     SBP("Система быстрых платежей"),
-    CASH_ON_DELIVERY("Оплата при получении");
+    CASH_ON_DELIVERY("Оплата при получении"),
+    INVOICE("Выставить счёт");
 
     private final String displayName;
 

@@ -18,9 +18,9 @@ import java.util.List;
 @AllArgsConstructor
 public class BatchImportResponse {
 
-    private int totalProcessed;
-    private int createdCount;
-    private int updatedCount;
-    private int failedCount;
+    private int totalReceived;
+    private int created;
+    private int updated;
+    private int failed;
     private List<String> errors = new ArrayList<>();
 }

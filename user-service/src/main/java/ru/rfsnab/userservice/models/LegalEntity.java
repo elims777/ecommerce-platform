@@ -27,16 +27,24 @@ public class LegalEntity {
     @Column(nullable = false, unique = true, length = 12)
     private String inn;
 
-    @Column(nullable = false, length = 15)
+    @Column(length = 15)
     private String ogrn;
 
     @Column(nullable = false)
     private String fullName;
 
-    @Column(nullable = false)
     private String director;
 
-    @Column(nullable = false, length = 20)
+    @Column(length = 100)
+    private String directorTitle;
+
+    @Column(length = 200)
+    private String basisOfAuthority;
+
+    @Column(length = 50)
+    private String office;
+
+    @Column(length = 20)
     private String phone;
 
     @Column(nullable = false, unique = true)
@@ -45,13 +53,13 @@ public class LegalEntity {
     @Column(nullable = false)
     private String password;
 
-    @Column(nullable = false, length = 150)
+    @Column(length = 150)
     private String legalCity;
 
-    @Column(nullable = false, length = 150)
+    @Column(length = 150)
     private String legalStreet;
 
-    @Column(nullable = false, length = 20)
+    @Column(length = 20)
     private String legalBuilding;
 
     @Column(length = 10)

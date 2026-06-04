@@ -122,7 +122,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 .password(hashedPassword)
                 .firstname(firstName)
                 .lastname(lastName)
-                .emailVerified(true)  // OAuth2 users уже верифицированы
+                .phone("00000000000")  // placeholder — пользователь заполнит в профиле
+                .emailVerified(true)
                 .build();
 
         try {

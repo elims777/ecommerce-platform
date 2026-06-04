@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Form, Input, App } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
@@ -7,7 +7,7 @@ import { AxiosError } from 'axios';
 
 const BrandPanel = () => (
     <div style={{
-        background: 'linear-gradient(135deg, #1E3A5F 0%, #122943 100%)',
+        background: 'var(--gradient-brand-panel)',
         color: '#fff', padding: 48, position: 'relative', overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
     }}>
@@ -20,21 +20,21 @@ const BrandPanel = () => (
         />
 
         <div style={{ position: 'relative', zIndex: 1 }}>
-            <img src="/logo-light.png" alt="РФснаб" style={{ height: 56, display: 'block' }} />
+            <img src="/logo-light.png" alt="РФснаб" style={{ height: 'var(--logo-h-auth)', display: 'block' }} />
         </div>
 
         <div style={{ marginTop: 'auto', position: 'relative', zIndex: 1 }}>
-            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 36, fontWeight: 600, color: '#fff', letterSpacing: '-0.022em', lineHeight: 1.1, maxWidth: 400, marginBottom: 16 }}>
+            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-7xl)', fontWeight: 600, color: '#fff', letterSpacing: '-0.022em', lineHeight: 1.1, maxWidth: 400, marginBottom: 16 }}>
                 Один кабинет для всех заявок предприятия.
             </h1>
-            <p style={{ fontSize: 14.5, color: 'rgba(255,255,255,.7)', maxWidth: 380, lineHeight: 1.6, marginBottom: 32 }}>
+            <p style={{ fontSize: 'var(--text-md)', color: 'var(--overlay-white-70)', maxWidth: 380, lineHeight: 1.6, marginBottom: 32 }}>
                 Заявки, документы, согласования, ЭДО, история закупок — в одном защищённом аккаунте.
             </p>
             <div style={{ display: 'flex', gap: 28 }}>
                 {[['18 200', 'организаций'], ['12 480', 'товаров'], ['4.9 ★', 'рейтинг']].map(([n, l]) => (
                     <div key={l}>
-                        <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 22, color: '#fff', letterSpacing: '-0.01em' }}>{n}</div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', marginTop: 2 }}>{l}</div>
+                        <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-3xl)', color: '#fff', letterSpacing: '-0.01em' }}>{n}</div>
+                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-60)', marginTop: 2 }}>{l}</div>
                     </div>
                 ))}
             </div>
@@ -48,14 +48,29 @@ const LoginPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const login = useAuthStore((state) => state.login);
+    const loginLegal = useAuthStore((state) => state.loginLegal);
     const { message: messageApi } = App.useApp();
 
     const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
-    const handleSubmit = async (values: LoginRequest) => {
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const confirmed = params.get('legal_confirmed');
+        if (confirmed === 'true') {
+            messageApi.success('Email подтверждён. Ожидайте верификации от менеджера — это займёт до 1 рабочего дня.');
+        } else if (confirmed === 'error') {
+            messageApi.error('Ссылка подтверждения недействительна или уже была использована.');
+        }
+    }, []);
+
+    const handleSubmit = async (values: LoginRequest & { login?: string }) => {
         setLoading(true);
         try {
-            await login(values);
+            if (accountType === 'legal') {
+                await loginLegal(values.email, values.password);
+            } else {
+                await login(values);
+            }
             messageApi.success('Вы успешно вошли в систему');
             navigate(from, { replace: true });
         } catch (error) {
@@ -68,8 +83,8 @@ const LoginPage = () => {
     };
 
     const inputStyle: React.CSSProperties = {
-        height: 44, border: '1px solid var(--line-2)', borderRadius: 6,
-        fontFamily: 'var(--font-body)', fontSize: 14,
+        height: 'var(--input-h-lg)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)',
+        fontFamily: 'var(--font-body)', fontSize: 'var(--text-md)',
     };
 
     const labelStyle: React.CSSProperties = {
@@ -90,7 +105,7 @@ const LoginPage = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '100vh' }}>
             <BrandPanel />
 
-            <div style={{ background: '#fff', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'var(--surface)', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 13, color: 'var(--ink-3)' }}>
                     Ещё нет аккаунта?{' '}
                     <span onClick={() => navigate('/register')} style={{ color: 'var(--brand-red)', fontWeight: 600, marginLeft: 6, cursor: 'pointer' }}>
@@ -143,10 +158,10 @@ const LoginPage = () => {
                                 type="submit"
                                 disabled={loading}
                                 style={{
-                                    width: '100%', height: 48,
+                                    width: '100%', height: 'var(--btn-h-xl)',
                                     background: loading ? 'var(--surface-3)' : 'var(--brand-red)',
                                     color: loading ? 'var(--ink-3)' : '#fff',
-                                    border: 'none', borderRadius: 6, fontSize: 15, fontWeight: 500,
+                                    border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500,
                                     cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-body)',
                                     transition: 'background 0.12s',
                                 }}
@@ -168,18 +183,18 @@ const LoginPage = () => {
                         onClick={() => window.location.href = 'http://localhost:8080/oauth2/authorization/yandex'}
                         style={{
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                            width: '100%', height: 44, border: '1px solid var(--line-2)', background: '#fff',
-                            color: 'var(--ink-1)', borderRadius: 6, fontSize: 14, fontWeight: 500,
+                            width: '100%', height: 'var(--btn-h-lg)', border: '1px solid var(--line-2)', background: 'var(--surface)',
+                            color: 'var(--ink-1)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500,
                             cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s',
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface)'; }}
                     >
                         <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#FC3F1D" /><path d="M9.2 4.2v7.6h-1V8.4L6.3 12H5l2-3.8c-1-.3-1.6-.9-1.6-2.2 0-1.4 1-2.4 2.3-2.4z" fill="#fff" /></svg>
                         Войти через Яндекс
                     </button>
 
-                    <div style={{ marginTop: 24, padding: 14, background: 'var(--navy-tint)', borderRadius: 8, fontSize: 12.5, color: 'var(--brand-navy)', display: 'flex', gap: 10 }}>
+                    <div style={{ marginTop: 24, padding: 14, background: 'var(--navy-tint)', borderRadius: 'var(--r-4)', fontSize: 'var(--text-sm)', color: 'var(--brand-navy)', display: 'flex', gap: 10 }}>
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
                             <path d="M12 3 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-3z"/>
                         </svg>

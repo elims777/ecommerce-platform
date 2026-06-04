@@ -79,14 +79,14 @@ const HeaderAction = ({ icon, label, count, highlight, onClick }: { icon: React.
     <button onClick={onClick} style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
         background: 'transparent', border: 0, cursor: 'pointer',
-        padding: '6px 10px', borderRadius: 6, color: 'var(--ink-1)', fontFamily: 'inherit',
+        padding: '6px 10px', borderRadius: 'var(--r-3)', color: 'var(--ink-1)', fontFamily: 'inherit',
     }}>
         <span style={{ position: 'relative', color: highlight ? 'var(--brand-red)' : 'var(--ink-1)' }}>
             {icon}
             {count != null && count > 0 && (
                 <span style={{
                     position: 'absolute', top: -4, right: -8,
-                    minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8,
+                    minWidth: 16, height: 16, padding: '0 4px', borderRadius: 'var(--r-4)',
                     background: 'var(--brand-red)', color: '#fff',
                     fontSize: 10, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -140,7 +140,7 @@ const ContextSwitcher = () => {
 
     return (
         <>
-            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--line-2)', borderRadius: 6, overflow: 'hidden', opacity: loading ? 0.6 : 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', overflow: 'hidden', opacity: loading ? 0.6 : 1 }}>
                 {(['B2C', 'B2B'] as const).map((type) => (
                     <button key={type} onClick={() => handleSwitch(type)} disabled={loading} style={{
                         padding: '4px 10px', fontSize: 12, fontWeight: 600, border: 'none',
@@ -155,9 +155,9 @@ const ContextSwitcher = () => {
             </div>
 
             {showPasswordModal && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+                <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' as any }}
                     onClick={() => { setShowPasswordModal(false); setPassword(''); setError(''); }}>
-                    <div style={{ background: '#fff', borderRadius: 10, padding: 28, width: 360 }}
+                    <div style={{ background: 'var(--surface)', borderRadius: 'var(--r-5)', padding: 28, width: 360 }}
                         onClick={(e) => e.stopPropagation()}>
                         <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 8 }}>Переключение на личный аккаунт</div>
                         <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 16 }}>Введите пароль от личного аккаунта</div>
@@ -167,20 +167,20 @@ const ContextSwitcher = () => {
                             style={{
                                 width: '100%', height: 40, padding: '0 12px',
                                 border: `1px solid ${error ? 'var(--brand-red)' : 'var(--line-2)'}`,
-                                borderRadius: 6, fontSize: 14, fontFamily: 'var(--font-body)',
+                                borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontFamily: 'var(--font-body)',
                                 outline: 'none', boxSizing: 'border-box', marginBottom: error ? 6 : 16,
                             }} />
                         {error && <div style={{ fontSize: 12, color: 'var(--brand-red)', marginBottom: 12 }}>{error}</div>}
                         <div style={{ display: 'flex', gap: 8 }}>
                             <button onClick={handlePasswordSubmit} disabled={loading || !password} style={{
                                 flex: 1, height: 38, background: 'var(--brand-red)', color: '#fff',
-                                border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 500,
+                                border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500,
                                 cursor: loading || !password ? 'default' : 'pointer', fontFamily: 'var(--font-body)',
                                 opacity: !password ? 0.6 : 1,
                             }}>{loading ? 'Проверка...' : 'Войти'}</button>
                             <button onClick={() => { setShowPasswordModal(false); setPassword(''); setError(''); }} style={{
                                 height: 38, padding: '0 16px', border: '1px solid var(--line-2)',
-                                background: 'transparent', borderRadius: 6, fontSize: 14,
+                                background: 'transparent', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)',
                                 cursor: 'pointer', fontFamily: 'var(--font-body)', color: 'var(--ink-2)',
                             }}>Отмена</button>
                         </div>
@@ -251,12 +251,12 @@ const ClientLayout = () => {
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
-            <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000 }}>
+            <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 'var(--z-header)' as any }}>
                 {/* TopBar */}
                 <div style={{
-                    background: 'var(--brand-navy)', color: 'rgba(255,255,255,.85)',
-                    fontSize: 12.5, height: TOPBAR_H,
-                    display: 'flex', alignItems: 'center', padding: '0 40px', gap: 20,
+                    background: 'var(--brand-navy)', color: 'var(--overlay-white-85)',
+                    fontSize: 'var(--text-sm)', height: TOPBAR_H,
+                    display: 'flex', alignItems: 'center', padding: '0 var(--page-pad-x)', gap: 20,
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <PinIcon /> {company.address.full}
@@ -278,12 +278,12 @@ const ClientLayout = () => {
 
                 {/* Main header */}
                 <div style={{
-                    background: '#fff', borderBottom: '1px solid var(--line-1)',
+                    background: 'var(--surface)', borderBottom: '1px solid var(--line-1)',
                     height: MAIN_H, display: 'flex', alignItems: 'center',
-                    padding: '0 40px', gap: 28,
+                    padding: '0 var(--page-pad-x)', gap: 28,
                 }}>
                     <div onClick={() => navigate('/')} style={{ cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <img src="/logo-dark.png" alt="РФснаб" style={{ height: 52, display: 'block' }} />
+                        <img src="/logo-dark.png" alt="РФснаб" style={{ height: 'var(--logo-h-header)', display: 'block' }} />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             <span style={{
                                 fontFamily: 'var(--font-display)',
@@ -305,9 +305,9 @@ const ClientLayout = () => {
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Артикул, бренд или название товара"
                             style={{
-                                width: '100%', height: 44, padding: '0 120px 0 42px',
-                                border: '1px solid var(--line-2)', borderRadius: 8,
-                                fontSize: 14, fontFamily: 'var(--font-body)', outline: 'none',
+                                width: '100%', height: 'var(--input-h-lg)', padding: '0 120px 0 42px',
+                                border: '1px solid var(--line-2)', borderRadius: 'var(--r-4)',
+                                fontSize: 'var(--text-md)', fontFamily: 'var(--font-body)', outline: 'none',
                                 background: 'var(--surface)', color: 'var(--ink-1)',
                                 transition: 'border-color 0.12s',
                             }}
@@ -326,8 +326,8 @@ const ClientLayout = () => {
                             onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
                             style={{
                                 position: 'absolute', right: 4, top: 4, height: 36, padding: '0 18px',
-                                background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6,
-                                fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)',
+                                fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
                             }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
@@ -348,8 +348,8 @@ const ClientLayout = () => {
                                     <button style={{
                                         display: 'flex', alignItems: 'center', gap: 6,
                                         background: 'transparent', border: '1px solid var(--line-2)',
-                                        borderRadius: 6, padding: '6px 12px', cursor: 'pointer',
-                                        fontSize: 13.5, fontWeight: 500, color: 'var(--ink-1)', fontFamily: 'var(--font-body)',
+                                        borderRadius: 'var(--r-3)', padding: '6px 12px', cursor: 'pointer',
+                                        fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--ink-1)', fontFamily: 'var(--font-body)',
                                     }}>
                                         <UserIcon /> {user?.clientType === 'B2B' ? user.companyName : user?.firstname}
                                     </button>
@@ -362,8 +362,8 @@ const ClientLayout = () => {
                                     display: 'inline-flex', alignItems: 'center', gap: 6,
                                     height: 36, padding: '0 14px',
                                     background: 'transparent', color: 'var(--brand-navy)',
-                                    border: '1px solid var(--brand-navy)', borderRadius: 6,
-                                    fontSize: 13.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                    border: '1px solid var(--brand-navy)', borderRadius: 'var(--r-3)',
+                                    fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
                                     transition: 'background 0.12s',
                                 }}
                                 onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--navy-tint)'; }}
@@ -377,9 +377,9 @@ const ClientLayout = () => {
 
                 {/* Categories nav */}
                 <div style={{
-                    background: '#fff', borderBottom: '1px solid var(--line-1)',
+                    background: 'var(--surface)', borderBottom: '1px solid var(--line-1)',
                     height: CAT_H, display: 'flex', alignItems: 'center',
-                    padding: '0 40px', gap: 0,
+                    padding: '0 var(--page-pad-x)', gap: 0,
                 }}>
                     <button
                         onClick={() => navigate('/catalog')}
@@ -387,7 +387,7 @@ const ClientLayout = () => {
                             display: 'inline-flex', alignItems: 'center', gap: 8,
                             height: 36, padding: '0 14px', marginRight: 8,
                             background: 'var(--brand-red)', color: '#fff',
-                            border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600,
+                            border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 600,
                             cursor: 'pointer', fontFamily: 'var(--font-body)',
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
@@ -405,7 +405,7 @@ const ClientLayout = () => {
                         Акции
                     </a>
                     <div style={{ flex: 1 }} />
-                    <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
                         <span style={{ color: 'var(--brand-green)', fontWeight: 600 }}>●</span>{' '}
                         12 480 товаров в наличии · отгрузка от 1 часа
                     </span>
@@ -414,7 +414,7 @@ const ClientLayout = () => {
 
             <div style={{ height: HEADER_TOTAL }} />
 
-            <main style={{ flex: 1, maxWidth: 1440, margin: '0 auto', width: '100%', padding: '0 40px' }}>
+            <main style={{ flex: 1, maxWidth: 'var(--page-max-w)', margin: '0 auto', width: '100%', padding: '0 var(--page-pad-x)' }}>
                 <AnimatePresence mode="wait" initial={false}>
                     <motion.div
                         key={location.pathname}
@@ -428,12 +428,12 @@ const ClientLayout = () => {
                 </AnimatePresence>
             </main>
 
-            <footer style={{ background: '#1A1A1A', color: '#fff', padding: '40px 40px 28px', marginTop: 40 }}>
-                <div style={{ maxWidth: 1360, margin: '0 auto' }}>
+            <footer style={{ background: 'var(--footer-bg)', color: '#fff', padding: 'var(--sp-14) var(--page-pad-x) 28px', marginTop: 'var(--sp-14)' }}>
+                <div style={{ maxWidth: 'var(--footer-max-w)', margin: '0 auto' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr', gap: 40, marginBottom: 32 }}>
                         <div>
                             <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <img src="/logo-light.png" alt="РФснаб" style={{ height: 44, display: 'block' }} />
+                                <img src="/logo-light.png" alt="РФснаб" style={{ height: 'var(--logo-h-footer)', display: 'block' }} />
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                                     <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>РФснаб</span>
                                     <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 400, letterSpacing: '0.04em', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase' }}>комплексное снабжение</span>

@@ -1,0 +1,4 @@
+ALTER TABLE legal_entities
+    ADD COLUMN IF NOT EXISTS director_title VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS basis_of_authority VARCHAR(200),
+    ADD COLUMN IF NOT EXISTS office VARCHAR(50);

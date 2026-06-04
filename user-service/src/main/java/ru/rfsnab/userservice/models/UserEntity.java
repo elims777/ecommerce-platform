@@ -28,12 +28,22 @@ public class UserEntity {
     private String lastname;
     private String surname;
 
+    @Column(unique = true)
     private String phone;
 
     private boolean emailVerified;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean newsletterConsent = false;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime lastLoginAt;
+    private LocalDateTime lastInactivityEmailAt;
+
+    @Column(unique = true)
+    private String unsubscribeToken;
 
     @Builder.Default
     @Column(nullable = false)

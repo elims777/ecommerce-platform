@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.integrationservice.config.IntegrationProperties;
 import ru.rfsnab.integrationservice.model.ExchangeSession;
 import ru.rfsnab.integrationservice.model.ExchangeSession.ExchangeType;
+import ru.rfsnab.integrationservice.dto.ImportLogDto;
+import ru.rfsnab.integrationservice.repository.ImportLogRepository;
 import ru.rfsnab.integrationservice.service.auth.ExchangeAuthService;
 import ru.rfsnab.integrationservice.service.catalog.CatalogFileService;
 import ru.rfsnab.integrationservice.service.catalog.CatalogImportService;
@@ -16,6 +18,7 @@ import ru.rfsnab.integrationservice.service.order.OrderStatusImportService;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -48,6 +51,7 @@ public class CommerceMLExchangeController {
     private final OrderExportService orderExportService;
     private final OrderStatusImportService orderStatusImportService;
     private final IntegrationProperties properties;
+    private final ImportLogRepository importLogRepository;
 
     /**
      * Единая точка входа протокола CommerceML.
@@ -80,7 +84,7 @@ public class CommerceMLExchangeController {
 
         return switch (mode) {
             case "init" -> handleInit();
-            case "file" -> handleFile(filename, request);
+            case "file" -> handleFile(filename, sessionCookie, request);
             case "import" -> handleImport(exchangeType, sessionCookie);
             case "query" -> handleQuery(exchangeType);
             case "success" -> handleSuccess(sessionCookie);
@@ -130,13 +134,13 @@ public class CommerceMLExchangeController {
      * Для каталога: import.xml, offers.xml, import_files/...jpg
      * Для заказов: orders.xml (обновлённые статусы)
      */
-    private ResponseEntity<String> handleFile(String filename,
+    private ResponseEntity<String> handleFile(String filename, String sessionId,
                                               HttpServletRequest request) throws IOException {
         if (filename == null || filename.isBlank()) {
             return plainText("failure\nНе указано имя файла");
         }
 
-        catalogFileService.saveFile(filename, request.getInputStream());
+        catalogFileService.saveFile(filename, sessionId, request.getInputStream());
         return plainText("success");
     }
 
@@ -179,6 +183,13 @@ public class CommerceMLExchangeController {
         orderExportService.markOrdersAsExported();
         authService.completeSession(sessionCookie);
         return plainText("success");
+    }
+
+    /** Последние 20 записей лога обменов для admin-панели. */
+    @GetMapping(value = "/logs", produces = "application/json")
+    public List<ImportLogDto> getLogs() {
+        return importLogRepository.findTop20ByOrderByCreatedAtDesc()
+                .stream().map(ImportLogDto::from).toList();
     }
 
     // ===== Вспомогательные методы =====

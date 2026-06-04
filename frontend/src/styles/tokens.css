@@ -1,0 +1,212 @@
+/* ============================================================
+   DESIGN TOKENS — единый источник правды для всех стилей
+   Импортируется первым в main.tsx перед index.css и admin.css
+   ============================================================ */
+
+:root {
+
+  /* ----------------------------------------------------------
+     COLORS — Brand
+     ---------------------------------------------------------- */
+  --brand-red: #C0272D;               /* primary CTA, active nav, badges */
+  --brand-red-hover: #A8222A;         /* button hover */
+  --brand-red-pressed: #8E1C24;       /* button active/pressed */
+  --brand-navy: #1E3A5F;              /* secondary brand, topbar bg */
+  --brand-navy-hover: #16304F;        /* navy hover */
+  --brand-green: #1A6B3A;             /* success, in-stock */
+  --brand-green-soft: #E6F1EB;        /* success badge bg */
+  --brand-ink: #1A1A1A;               /* alias for --ink-1 */
+
+  /* ----------------------------------------------------------
+     COLORS — Backgrounds
+     ---------------------------------------------------------- */
+  --bg: oklch(0.985 0.003 245);           /* page background */
+  --surface: #ffffff;                      /* cards, panels, inputs */
+  --surface-2: oklch(0.968 0.005 245);    /* table header, hover bg */
+  --surface-3: oklch(0.945 0.008 245);    /* stronger hover, skeleton */
+  --footer-bg: #1A1A1A;                   /* footer, dark sections */
+
+  /* ----------------------------------------------------------
+     COLORS — Borders / Lines
+     ---------------------------------------------------------- */
+  --line-1: oklch(0.925 0.008 245);       /* card borders, table rows */
+  --line-2: oklch(0.88 0.012 245);        /* input borders */
+  --line-3: oklch(0.78 0.015 245);        /* strong borders */
+
+  /* ----------------------------------------------------------
+     COLORS — Text / Ink
+     ---------------------------------------------------------- */
+  --ink-1: #1A1A1A;                        /* primary text */
+  --ink-2: oklch(0.42 0.012 245);          /* secondary text */
+  --ink-3: oklch(0.58 0.014 245);          /* muted, labels, meta */
+  --ink-4: oklch(0.72 0.012 245);          /* placeholders, disabled */
+
+  /* ----------------------------------------------------------
+     COLORS — Status tints
+     ---------------------------------------------------------- */
+  --red-tint: oklch(0.955 0.022 28);       /* error badge bg */
+  --red-tint-2: oklch(0.91 0.045 28);      /* stronger red tint */
+  --navy-tint: oklch(0.955 0.018 245);     /* info badge bg */
+  --green-tint: oklch(0.955 0.022 152);    /* success tint */
+  --warn: #B5630E;                          /* warning text */
+  --warn-tint: oklch(0.96 0.030 75);       /* warning badge bg */
+  --color-error: #d32f2f;                   /* error text, unlink buttons */
+
+  /* ----------------------------------------------------------
+     COLORS — Overlay (modal backdrops, hero, dark sections)
+     ---------------------------------------------------------- */
+  --overlay-dark: rgba(0,0,0,.40);              /* modal backdrop */
+  --overlay-white-85: rgba(255,255,255,.85);    /* topbar text on dark */
+  --overlay-white-70: rgba(255,255,255,.70);    /* body text on dark */
+  --overlay-white-60: rgba(255,255,255,.60);    /* muted text on dark */
+  --overlay-white-45: rgba(255,255,255,.45);    /* very muted on dark */
+  --overlay-white-12: rgba(255,255,255,.12);    /* hero pill bg, arrow btn */
+  --overlay-white-14: rgba(255,255,255,.14);    /* hero CTA ghost bg */
+  --overlay-white-18: rgba(255,255,255,.18);    /* hero stat card border */
+
+  /* ----------------------------------------------------------
+     GRADIENTS
+     ---------------------------------------------------------- */
+  --gradient-brand-panel: linear-gradient(135deg, var(--brand-navy) 0%, #122943 100%);
+  --gradient-hero-navy: linear-gradient(98deg, var(--brand-navy) 0%, var(--brand-navy-hover) 100%);
+  --gradient-hero-red: linear-gradient(98deg, var(--brand-red) 0%, var(--brand-red-pressed) 100%);
+  --gradient-hero-green: linear-gradient(98deg, var(--brand-green) 0%, #134F2A 100%);
+
+  /* ----------------------------------------------------------
+     TYPOGRAPHY — Font families
+     ---------------------------------------------------------- */
+  --font-head: 'Geologica', system-ui, sans-serif;       /* headings, prices */
+  --font-body: 'Golos Text', system-ui, sans-serif;      /* body text, buttons */
+  --font-display: 'Unbounded', 'Geologica', sans-serif;  /* logo wordmark only */
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace; /* SKU, codes */
+
+  /* ----------------------------------------------------------
+     TYPOGRAPHY — Font sizes
+     ---------------------------------------------------------- */
+  --text-xs: 11px;     /* badge text, topbar links, captions */
+  --text-sm: 12px;     /* form labels, meta info, breadcrumbs */
+  --text-base: 13px;   /* table cells, secondary content */
+  --text-md: 14px;     /* main body text, button labels, form inputs */
+  --text-lg: 15px;     /* card titles, section subtitles */
+  --text-xl: 16px;     /* cart subtotal, emphasized text */
+  --text-2xl: 20px;    /* product card price, modal headings */
+  --text-3xl: 22px;    /* section h2, KPI values */
+  --text-4xl: 26px;    /* product page h1, cart page h1 */
+  --text-5xl: 28px;    /* profile/order page h1 */
+  --text-6xl: 32px;    /* hero h1, cart total, buybox price */
+  --text-7xl: 36px;    /* login brand panel h1 */
+
+  /* ----------------------------------------------------------
+     TYPOGRAPHY — Font weights
+     ---------------------------------------------------------- */
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* ----------------------------------------------------------
+     SPACING — 4px base grid
+     ---------------------------------------------------------- */
+  --sp-1: 4px;
+  --sp-2: 6px;
+  --sp-3: 8px;
+  --sp-4: 10px;
+  --sp-5: 12px;
+  --sp-6: 14px;
+  --sp-7: 16px;
+  --sp-8: 20px;
+  --sp-9: 24px;
+  --sp-10: 28px;
+  --sp-11: 32px;
+  --sp-12: 36px;
+  --sp-14: 40px;
+  --sp-16: 48px;
+  --sp-20: 60px;
+
+  /* ----------------------------------------------------------
+     BORDER RADIUS
+     ---------------------------------------------------------- */
+  --r-1: 2px;       /* tiny elements */
+  --r-2: 4px;       /* small badges, chips */
+  --r-3: 6px;       /* buttons, inputs, small cards */
+  --r-4: 8px;       /* cards, panels, containers */
+  --r-5: 12px;      /* hero slider, large cards, modals */
+  --r-full: 9999px; /* pill / round badges */
+
+  /* ----------------------------------------------------------
+     SHADOWS
+     ---------------------------------------------------------- */
+  --shadow-1: 0 1px 2px rgba(20,15,10,.04), 0 1px 0 rgba(20,15,10,.02);       /* card resting */
+  --shadow-2: 0 1px 2px rgba(20,15,10,.05), 0 4px 12px rgba(20,15,10,.06);    /* card hover */
+  --shadow-3: 0 6px 24px rgba(20,15,10,.10), 0 1px 2px rgba(20,15,10,.05);    /* dropdown */
+  --shadow-pop: 0 10px 40px rgba(20,15,10,.14), 0 2px 6px rgba(20,15,10,.06); /* floating bar, modal */
+
+  /* ----------------------------------------------------------
+     ANIMATION — Durations
+     ---------------------------------------------------------- */
+  --dur-fast: 0.10s;   /* nav hover, tab switch */
+  --dur-base: 0.12s;   /* button bg, input border */
+  --dur-slow: 0.15s;   /* card lift, category hover */
+  --dur-page: 0.20s;   /* page enter/exit (Framer Motion) */
+  --dur-hero: 0.25s;   /* slider dots expand */
+  --dur-slide: 0.35s;  /* hero background transition */
+
+  /* ----------------------------------------------------------
+     Z-INDEX layers
+     ---------------------------------------------------------- */
+  --z-header: 1000;   /* fixed header */
+  --z-bulk: 100;      /* floating bulk action bar */
+  --z-modal: 9999;    /* modal overlays */
+
+  /* ----------------------------------------------------------
+     LAYOUT — Header heights
+     ---------------------------------------------------------- */
+  --header-topbar-h: 36px;    /* navy topbar strip */
+  --header-main-h: 76px;      /* logo + search row */
+  --header-cat-h: 46px;       /* categories nav */
+  --header-total-h: 158px;    /* sum = 36 + 76 + 46 — spacer div height */
+
+  /* ----------------------------------------------------------
+     LAYOUT — Admin panel
+     ---------------------------------------------------------- */
+  --admin-sidebar-w: 232px;   /* admin sidebar width */
+  --admin-logo-area-h: 64px;  /* sidebar logo area */
+  --admin-content-pad: 24px;  /* admin main content padding */
+
+  /* ----------------------------------------------------------
+     LAYOUT — Page dimensions
+     ---------------------------------------------------------- */
+  --page-max-w: 1440px;   /* main content max-width */
+  --footer-max-w: 1360px; /* footer inner max-width */
+  --page-pad-x: 40px;     /* horizontal page padding */
+
+  /* ----------------------------------------------------------
+     COMPONENT SIZES — Buttons
+     ---------------------------------------------------------- */
+  --btn-h-sm: 32px;    /* small action buttons */
+  --btn-h-md: 36px;    /* medium buttons */
+  --btn-h-base: 40px;  /* default button height */
+  --btn-h-lg: 44px;    /* large CTA */
+  --btn-h-xl: 48px;    /* primary submit buttons */
+
+  /* ----------------------------------------------------------
+     COMPONENT SIZES — Inputs
+     ---------------------------------------------------------- */
+  --input-h-sm: 34px;  /* admin search */
+  --input-h-md: 40px;  /* default input, profile forms */
+  --input-h-lg: 44px;  /* login/register inputs */
+
+  /* ----------------------------------------------------------
+     COMPONENT SIZES — Product card
+     ---------------------------------------------------------- */
+  --product-card-w: 259px;  /* фиксированная ширина карточки товара — 4 колонки в каталоге (1440 - 80pad - 260sidebar - 20gap - 3×14gap) / 4 */
+
+  /* ----------------------------------------------------------
+     COMPONENT SIZES — Logo heights
+     ---------------------------------------------------------- */
+  --logo-h-header: 52px;  /* main header */
+  --logo-h-admin: 28px;   /* admin sidebar */
+  --logo-h-footer: 44px;  /* footer */
+  --logo-h-auth: 56px;    /* login brand panel */
+
+}
