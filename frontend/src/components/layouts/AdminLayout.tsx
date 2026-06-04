@@ -133,7 +133,7 @@ const AdminLayout = () => {
           onClick={() => navigate('/admin')}
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
         >
-          <img src="/logo-dark.png" alt="РФснаб" style={{ height: 28 }} />
+          <img src="/logo-dark.png" alt="РФснаб" style={{ height: 'var(--logo-h-admin)' }} />
           <span style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 15, color: 'var(--ink-1)', letterSpacing: '-0.01em' }}>
             РФснаб
           </span>

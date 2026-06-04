@@ -55,7 +55,7 @@ const ProductPage = () => {
                 <div>
                     <Skeleton active paragraph={{ rows: 6 }} title={{ width: '80%' }} />
                 </div>
-                <div style={{ background: '#fff', borderRadius: 10, padding: 20, border: '1px solid var(--line-1)', height: 280 }}>
+                <div style={{ background: 'var(--surface)', borderRadius: 'var(--r-5)', padding: 20, border: '1px solid var(--line-1)', height: 280 }}>
                     <Skeleton active paragraph={{ rows: 4 }} />
                 </div>
             </div>
@@ -68,7 +68,7 @@ const ProductPage = () => {
                 <div style={{ fontFamily: 'var(--font-head)', fontSize: 20, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>Товар не найден</div>
                 <button
                     onClick={() => navigate('/')}
-                    style={{ display: 'inline-flex', alignItems: 'center', height: 40, padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', height: 'var(--btn-h-base)', padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
                 >
                     Вернуться в каталог
                 </button>
@@ -82,7 +82,7 @@ const ProductPage = () => {
     return (
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
             {/* Хлебные крошки */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 16 }}>
                 <span onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>Каталог</span>
                 {product.categoryName && (
                     <>
@@ -109,7 +109,7 @@ const ProductPage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 320px', gap: 28 }}>
                 {/* Галерея */}
                 <div>
-                    <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line-1)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
+                    <div style={{ borderRadius: 'var(--r-5)', overflow: 'hidden', border: '1px solid var(--line-1)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
                         {sortedImages.length > 0 ? (
                             <Image.PreviewGroup>
                                 <Image
@@ -125,7 +125,7 @@ const ProductPage = () => {
                     {sortedImages.length > 1 && (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginTop: 10 }}>
                             {sortedImages.slice(1, 6).map((img, i) => (
-                                <div key={img.id} style={{ height: 80, borderRadius: 6, border: i === 0 ? '2px solid var(--brand-red)' : '1px solid var(--line-1)', overflow: 'hidden', background: 'var(--surface-2)' }}>
+                                <div key={img.id} style={{ height: 80, borderRadius: 'var(--r-3)', border: i === 0 ? '2px solid var(--brand-red)' : '1px solid var(--line-1)', overflow: 'hidden', background: 'var(--surface-2)' }}>
                                     <img src={img.fileUrl} alt={img.altText || product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
                             ))}
@@ -140,12 +140,12 @@ const ProductPage = () => {
                             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--brand-navy)' }}>{product.categoryName}</span>
                         )}
                         {inStock ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 11, fontSize: 12, fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>
                                 <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', flexShrink: 0 }} />
                                 В наличии {product.stockQuantity} {product.unitOfMeasure || 'шт.'}
                             </span>
                         ) : (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 11, fontSize: 12, fontWeight: 500, background: 'var(--red-tint)', color: 'var(--brand-red)' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--red-tint)', color: 'var(--brand-red)' }}>
                                 <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', flexShrink: 0 }} />
                                 Нет в наличии
                             </span>
@@ -162,7 +162,7 @@ const ProductPage = () => {
                     </h1>
 
                     {product.isFeatured && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 12, fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)', marginBottom: 12 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)', marginBottom: 12 }}>
                             Хит продаж
                         </span>
                     )}
@@ -200,13 +200,13 @@ const ProductPage = () => {
 
                 {/* Buy box */}
                 <div>
-                    <div style={{ border: '1px solid var(--line-1)', borderRadius: 8, padding: 20, position: 'sticky', top: 20, background: 'var(--surface)' }}>
+                    <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', padding: 20, position: 'sticky', top: 20, background: 'var(--surface)' }}>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
-                            <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 32, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink-1)' }}>
+                            <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-6xl)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink-1)' }}>
                                 {formatPrice(displayPrice)}
                             </span>
                         </div>
-                        <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 20 }}>
+                        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 20 }}>
                             за 1 {product.unitOfMeasure || 'шт.'} · НДС {product.vatRate ?? 20}% включён
                         </div>
 
@@ -214,7 +214,7 @@ const ProductPage = () => {
                             <>
                                 <div style={{ marginBottom: 14 }}>
                                     <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}>Количество</label>
-                                    <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 6, height: 44, alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', height: 'var(--input-h-lg)', alignItems: 'center' }}>
                                         <button
                                             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                                             style={{ width: 40, height: 42, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -240,7 +240,7 @@ const ProductPage = () => {
 
                                 <button
                                     onClick={handleAddToCart}
-                                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', height: 48, background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s', marginBottom: 10 }}
+                                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', height: 'var(--btn-h-xl)', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s', marginBottom: 10 }}
                                     onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}
                                     onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-red)')}
                                 >
@@ -253,7 +253,7 @@ const ProductPage = () => {
                         {!inStock && (
                             <button
                                 disabled
-                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 48, background: 'var(--surface-3)', color: 'var(--ink-3)', border: '1px solid var(--line-2)', borderRadius: 6, fontSize: 15, fontWeight: 500, cursor: 'not-allowed', fontFamily: 'var(--font-body)' }}
+                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 'var(--btn-h-xl)', background: 'var(--surface-3)', color: 'var(--ink-3)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500, cursor: 'not-allowed', fontFamily: 'var(--font-body)' }}
                             >
                                 Нет в наличии
                             </button>

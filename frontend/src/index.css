@@ -1,45 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600;700&family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap');
-
-:root {
-  --brand-red: #C0272D;
-  --brand-red-hover: #A8222A;
-  --brand-red-pressed: #8E1C24;
-  --brand-navy: #1E3A5F;
-  --brand-navy-hover: #16304F;
-  --brand-green: #1A6B3A;
-  --brand-green-soft: #E6F1EB;
-  --brand-ink: #1A1A1A;
-  --bg: oklch(0.985 0.003 245);
-  --surface: #ffffff;
-  --surface-2: oklch(0.968 0.005 245);
-  --surface-3: oklch(0.945 0.008 245);
-  --line-1: oklch(0.925 0.008 245);
-  --line-2: oklch(0.88 0.012 245);
-  --line-3: oklch(0.78 0.015 245);
-  --ink-1: #1A1A1A;
-  --ink-2: oklch(0.42 0.012 245);
-  --ink-3: oklch(0.58 0.014 245);
-  --ink-4: oklch(0.72 0.012 245);
-  --red-tint: oklch(0.955 0.022 28);
-  --red-tint-2: oklch(0.91 0.045 28);
-  --navy-tint: oklch(0.955 0.018 245);
-  --green-tint: oklch(0.955 0.022 152);
-  --warn: #B5630E;
-  --warn-tint: oklch(0.96 0.030 75);
-  --font-head: 'Geologica', system-ui, sans-serif;
-  --font-body: 'Golos Text', system-ui, sans-serif;
-  --font-display: 'Unbounded', 'Geologica', sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
-  --r-1: 2px;
-  --r-2: 4px;
-  --r-3: 6px;
-  --r-4: 8px;
-  --r-5: 12px;
-  --shadow-1: 0 1px 2px rgba(20,15,10,.04), 0 1px 0 rgba(20,15,10,.02);
-  --shadow-2: 0 1px 2px rgba(20,15,10,.05), 0 4px 12px rgba(20,15,10,.06);
-  --shadow-3: 0 6px 24px rgba(20,15,10,.10), 0 1px 2px rgba(20,15,10,.05);
-  --shadow-pop: 0 10px 40px rgba(20,15,10,.14), 0 2px 6px rgba(20,15,10,.06);
-}
+@import './styles/tokens.css';
 
 * {
   margin: 0;

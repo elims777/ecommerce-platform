@@ -272,7 +272,7 @@ const OrdersPage = () => {
     if (isLoading) return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '24px 0' }}>
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} style={{ background: '#fff', borderRadius: 10, padding: 20, border: '1px solid var(--line-1)' }}>
+          <div key={i} style={{ background: 'var(--surface)', borderRadius: 'var(--r-5)', padding: 20, border: '1px solid var(--line-1)' }}>
             <Skeleton active paragraph={{ rows: 2 }} title={{ width: '40%' }} />
           </div>
         ))}
@@ -310,7 +310,7 @@ const OrdersPage = () => {
                     onClick={() => navigate('/catalog')}
                     style={{
                         height: 44, padding: '0 28px', background: 'var(--brand-red)', color: '#fff',
-                        border: 'none', borderRadius: 6, fontSize: 15, fontWeight: 500,
+                        border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500,
                         cursor: 'pointer', fontFamily: 'var(--font-body)',
                     }}
                 >

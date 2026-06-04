@@ -59,7 +59,7 @@ const ChevRight = () => (
 // ── Hero slides data ──────────────────────────────────────────
 const HERO_SLIDES = [
     {
-        bg: 'linear-gradient(98deg, #1E3A5F 0%, #16304F 100%)',
+        bg: 'var(--gradient-hero-navy)',
         eyebrow: 'B2B-снабжение',
         eyebrowDot: '#1A6B3A',
         eyebrowText: 'Поставки от 1 часа по Москве',
@@ -70,7 +70,7 @@ const HERO_SLIDES = [
         sideType: 'jur' as const,
     },
     {
-        bg: 'linear-gradient(98deg, #C0272D 0%, #8E1C24 100%)',
+        bg: 'var(--gradient-hero-red)',
         eyebrow: 'Сезон противопожарной безопасности',
         eyebrowDot: '#FFE08A',
         eyebrowText: 'до 30 июня',
@@ -82,7 +82,7 @@ const HERO_SLIDES = [
         stats: { counts: ['1 842', '5 раб. дн.', '143', '100%'], labels: ['позиции', 'на оснащение', 'комплекта в мае', 'сертификатов'] },
     },
     {
-        bg: 'linear-gradient(98deg, #1A6B3A 0%, #134F2A 100%)',
+        bg: 'var(--gradient-hero-green)',
         eyebrow: 'Спецодежда и СИЗ',
         eyebrowDot: '#FFE08A',
         eyebrowText: 'к летнему сезону',
@@ -97,9 +97,9 @@ const HERO_SLIDES = [
 
 // ── Primary category colors (для первых 3 категорий из API) ──
 const PRIMARY_COLORS = [
-    { bg: '#C0272D', hover: '#A8222A' },
-    { bg: '#1A6B3A', hover: '#155930' },
-    { bg: '#1E3A5F', hover: '#16304F' },
+    { bg: 'var(--brand-red)', hover: 'var(--brand-red-hover)' },
+    { bg: 'var(--brand-green)', hover: '#155930' },
+    { bg: 'var(--brand-navy)', hover: 'var(--brand-navy-hover)' },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -117,7 +117,7 @@ const flattenCategories = (tree: CategoryTree[]): CategoryTree[] => {
 
 // ── Sub-components ────────────────────────────────────────────
 const SmallBul = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, lineHeight: 1.4 }}>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 'var(--text-sm)', lineHeight: 1.4 }}>
         <CheckIcon />
         <span>{children}</span>
     </div>
@@ -126,12 +126,12 @@ const SmallBul = ({ children }: { children: React.ReactNode }) => (
 const HeroSideJur = ({ onRegister }: { onRegister: () => void }) => (
     <div style={{
         background: 'rgba(255,255,255,.95)', color: 'var(--ink-1)',
-        borderRadius: 10, padding: '16px 18px',
+        borderRadius: 'var(--r-5)', padding: '16px 18px',
         width: '100%', maxWidth: 320,
     }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <BuildingIcon />
-            <span style={{ fontSize: 12.5, fontWeight: 600 }}>Для юридических лиц</span>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>Для юридических лиц</span>
             <span style={{
                 marginLeft: 'auto', display: 'inline-flex', alignItems: 'center',
                 height: 18, padding: '0 8px', borderRadius: 9,
@@ -150,7 +150,7 @@ const HeroSideJur = ({ onRegister }: { onRegister: () => void }) => (
                 style={{
                     flex: 1, height: 32,
                     background: 'var(--brand-red)', color: '#fff',
-                    border: 'none', borderRadius: 5, fontSize: 12.5, fontWeight: 600,
+                    border: 'none', borderRadius: 'var(--r-2)', fontSize: 'var(--text-sm)', fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'var(--font-body)',
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
@@ -161,7 +161,7 @@ const HeroSideJur = ({ onRegister }: { onRegister: () => void }) => (
             <button style={{
                 height: 32, padding: '0 12px',
                 background: 'transparent', color: 'var(--ink-3)',
-                border: '1px solid rgba(0,0,0,.12)', borderRadius: 5, fontSize: 12.5,
+                border: '1px solid rgba(0,0,0,.12)', borderRadius: 'var(--r-2)', fontSize: 'var(--text-sm)',
                 cursor: 'pointer', fontFamily: 'var(--font-body)',
             }}>
                 Я физлицо
@@ -173,23 +173,23 @@ const HeroSideJur = ({ onRegister }: { onRegister: () => void }) => (
 const HeroSideStats = ({ counts, labels }: { counts: string[]; labels: string[] }) => (
     <div style={{
         background: 'rgba(255,255,255,.10)', backdropFilter: 'blur(6px)',
-        border: '1px solid rgba(255,255,255,.18)',
-        borderRadius: 10, padding: 16,
+        border: '1px solid var(--overlay-white-18)',
+        borderRadius: 'var(--r-5)', padding: 16,
         width: '100%', maxWidth: 320,
         display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px',
     }}>
         {counts.map((c, i) => (
             <div key={i}>
-                <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 22, color: '#fff', letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums' }}>{c}</div>
-                <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.7)', marginTop: 2 }}>{labels[i]}</div>
+                <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-3xl)', color: '#fff', letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums' }}>{c}</div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-70)', marginTop: 2 }}>{labels[i]}</div>
             </div>
         ))}
     </div>
 );
 
 const arrowBtn: React.CSSProperties = {
-    width: 30, height: 30, borderRadius: 15,
-    background: 'rgba(255,255,255,.14)', color: '#fff',
+    width: 30, height: 30, borderRadius: 'var(--r-full)',
+    background: 'var(--overlay-white-14)', color: '#fff',
     border: 0, cursor: 'pointer',
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 };
@@ -218,7 +218,7 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
     return (
         <div style={{
             background: s.bg,
-            borderRadius: 12,
+            borderRadius: 'var(--r-5)',
             padding: '28px 36px 52px',
             color: '#fff',
             position: 'relative',
@@ -240,8 +240,8 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                     {/* Eyebrow */}
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: 8,
-                        background: 'rgba(255,255,255,.12)', padding: '5px 12px', borderRadius: 99,
-                        fontSize: 12, marginBottom: 14,
+                        background: 'var(--overlay-white-12)', padding: '5px 12px', borderRadius: 'var(--r-full)',
+                        fontSize: 'var(--text-sm)', marginBottom: 14,
                     }}>
                         <span style={{ width: 6, height: 6, borderRadius: 3, background: s.eyebrowDot, display: 'inline-block' }}/>
                         <span style={{ fontWeight: 600 }}>{s.eyebrow}</span>
@@ -249,13 +249,13 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                     </div>
 
                     <h1 style={{
-                        fontFamily: 'var(--font-head)', fontSize: 32, fontWeight: 600,
+                        fontFamily: 'var(--font-head)', fontSize: 'var(--text-6xl)', fontWeight: 600,
                         letterSpacing: '-0.022em', lineHeight: 1.12, color: '#fff',
                         maxWidth: 580, margin: '0 0 12px',
                     }}>
                         {s.title}
                     </h1>
-                    <p style={{ margin: '0 0 18px', fontSize: 14, lineHeight: 1.55, color: 'rgba(255,255,255,.78)', maxWidth: 520 }}>
+                    <p style={{ margin: '0 0 18px', fontSize: 'var(--text-md)', lineHeight: 1.55, color: 'var(--overlay-white-70)', maxWidth: 520 }}>
                         {s.text}
                     </p>
 
@@ -264,9 +264,9 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                             onClick={onCatalog}
                             style={{
                                 display: 'inline-flex', alignItems: 'center', gap: 6,
-                                background: '#fff', color: '#1A1A1A', fontWeight: 600,
-                                padding: '0 18px', height: 44, border: 'none', borderRadius: 6,
-                                fontSize: 14, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                background: 'var(--surface)', color: 'var(--ink-1)', fontWeight: 600,
+                                padding: '0 18px', height: 'var(--btn-h-lg)', border: 'none', borderRadius: 'var(--r-3)',
+                                fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
                                 transition: 'opacity .12s',
                             }}
                             onMouseEnter={(e) => { e.currentTarget.style.opacity = '.9'; }}
@@ -276,13 +276,13 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                         </button>
                         <button style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'rgba(255,255,255,.14)', color: '#fff',
-                            padding: '0 18px', height: 44, border: 0, borderRadius: 6,
-                            fontSize: 14, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                            background: 'var(--overlay-white-14)', color: '#fff',
+                            padding: '0 18px', height: 'var(--btn-h-lg)', border: 0, borderRadius: 'var(--r-3)',
+                            fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
                             transition: 'background .12s',
                         }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.22)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.14)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--overlay-white-14)'; }}
                         >
                             <DocIcon /> {s.cta2}
                         </button>
@@ -313,7 +313,7 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                     ))}
                 </div>
                 <div style={{ flex: 1 }}/>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-60)', fontVariantNumeric: 'tabular-nums' }}>
                     {String(idx + 1).padStart(2, '0')} / {String(HERO_SLIDES.length).padStart(2, '0')}
                 </span>
                 <button onClick={() => go((idx - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)} style={arrowBtn}>
@@ -344,7 +344,7 @@ const PrimaryGroupCard = ({ category, color, hoverColor, index, onClick }: {
             onMouseLeave={() => setHovered(false)}
             style={{
                 background: hovered ? hoverColor : color,
-                borderRadius: 10,
+                borderRadius: 'var(--r-5)',
                 padding: 20,
                 color: '#fff',
                 display: 'flex', flexDirection: 'column',
@@ -361,19 +361,19 @@ const PrimaryGroupCard = ({ category, color, hoverColor, index, onClick }: {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
                 <div style={{
-                    width: 38, height: 38, borderRadius: 8,
+                    width: 38, height: 38, borderRadius: 'var(--r-4)',
                     background: 'rgba(255,255,255,.15)',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                     <GridIcon />
                 </div>
-                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 99, background: 'rgba(255,255,255,.18)', fontWeight: 500 }}>
+                <span style={{ fontSize: 'var(--text-xs)', padding: '3px 8px', borderRadius: 'var(--r-full)', background: 'var(--overlay-white-18)', fontWeight: 500 }}>
                     {tags[index] ?? ''}
                 </span>
             </div>
 
             <h3 style={{
-                fontFamily: 'var(--font-head)', fontSize: 20, fontWeight: 600, color: '#fff',
+                fontFamily: 'var(--font-head)', fontSize: 'var(--text-2xl)', fontWeight: 600, color: '#fff',
                 letterSpacing: '-0.018em', lineHeight: 1.15,
                 marginBottom: 'auto',
             }}>
@@ -396,8 +396,8 @@ const SecondaryCatTile = ({ category, onClick }: { category: CategoryTree; onCli
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             style={{
-                background: '#fff', border: '1px solid var(--line-1)',
-                borderRadius: 8, padding: '14px 14px',
+                background: 'var(--surface)', border: '1px solid var(--line-1)',
+                borderRadius: 'var(--r-4)', padding: '14px 14px',
                 display: 'flex', alignItems: 'center', gap: 12,
                 cursor: 'pointer',
                 boxShadow: hovered ? 'var(--shadow-2)' : 'none',
@@ -406,7 +406,7 @@ const SecondaryCatTile = ({ category, onClick }: { category: CategoryTree; onCli
             }}
         >
             <div style={{
-                width: 36, height: 36, borderRadius: 6,
+                width: 36, height: 36, borderRadius: 'var(--r-3)',
                 background: 'var(--surface-2)', color: 'var(--brand-navy)',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 flex: '0 0 auto',
@@ -425,9 +425,9 @@ const ServiceCard = ({ icon, title, text, cta, accent }: { icon: React.ReactNode
     const color = accent === 'navy' ? 'var(--brand-navy)' : accent === 'green' ? 'var(--brand-green)' : 'var(--brand-red)';
     const tint  = accent === 'navy' ? 'var(--navy-tint)' : accent === 'green' ? 'var(--brand-green-soft)' : 'var(--red-tint)';
     return (
-        <div style={{ background: '#fff', border: '1px solid var(--line-1)', borderRadius: 10, padding: 22, display: 'flex', gap: 16 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-5)', padding: 22, display: 'flex', gap: 16 }}>
             <div style={{
-                width: 44, height: 44, borderRadius: 8,
+                width: 44, height: 44, borderRadius: 'var(--r-4)',
                 background: tint, color, flex: '0 0 auto',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             }}>{icon}</div>
@@ -605,7 +605,7 @@ const HomePage = () => {
             {/* TRUST STRIP */}
             <div style={{ paddingTop: 36 }}>
                 <div style={{
-                    background: '#fff', border: '1px solid var(--line-1)', borderRadius: 10,
+                    background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-5)',
                     padding: '22px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 32,
                 }}>
                     <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 15, maxWidth: 230, color: 'var(--ink-1)' }}>

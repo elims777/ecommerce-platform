@@ -23,11 +23,11 @@ interface LegalFormValues extends RegisterLegalRequest {
 }
 
 const inputStyle: React.CSSProperties = {
-    height: 44,
+    height: 'var(--input-h-lg)',
     border: '1px solid var(--line-2)',
-    borderRadius: 6,
+    borderRadius: 'var(--r-3)',
     fontFamily: 'var(--font-body)',
-    fontSize: 14,
+    fontSize: 'var(--text-md)',
 };
 
 const labelStyle: React.CSSProperties = {
@@ -102,10 +102,10 @@ const RegisterPage = () => {
             type="submit"
             disabled={loading}
             style={{
-                width: '100%', height: 48,
+                width: '100%', height: 'var(--btn-h-xl)',
                 background: loading ? 'var(--surface-3)' : 'var(--brand-red)',
                 color: loading ? 'var(--ink-3)' : '#fff',
-                border: 'none', borderRadius: 6, fontSize: 15, fontWeight: 500,
+                border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500,
                 cursor: loading ? 'not-allowed' : 'pointer',
                 fontFamily: 'var(--font-body)', transition: 'background 0.12s',
             }}
@@ -148,7 +148,7 @@ const RegisterPage = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '100vh' }}>
             {/* Левая колонка */}
             <div style={{
-                background: 'linear-gradient(135deg, #1E3A5F 0%, #122943 100%)',
+                background: 'var(--gradient-brand-panel)',
                 color: '#fff', padding: 48, position: 'relative', overflow: 'hidden',
                 display: 'flex', flexDirection: 'column',
             }}>
@@ -156,20 +156,20 @@ const RegisterPage = () => {
                     style={{ position: 'absolute', right: -40, bottom: -30, height: 360, width: 'auto', opacity: 0.14, pointerEvents: 'none' }}
                 />
                 <div style={{ position: 'relative', zIndex: 1 }}>
-                    <img src="/logo-light.png" alt="РФснаб" style={{ height: 56, display: 'block' }} />
+                    <img src="/logo-light.png" alt="РФснаб" style={{ height: 'var(--logo-h-auth)', display: 'block' }} />
                 </div>
                 <div style={{ marginTop: 'auto', position: 'relative', zIndex: 1 }}>
-                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 36, fontWeight: 600, color: '#fff', letterSpacing: '-0.022em', lineHeight: 1.1, maxWidth: 460, marginBottom: 16 }}>
+                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-7xl)', fontWeight: 600, color: '#fff', letterSpacing: '-0.022em', lineHeight: 1.1, maxWidth: 460, marginBottom: 16 }}>
                         Один кабинет для всех заявок предприятия.
                     </h1>
-                    <p style={{ fontSize: 14.5, color: 'rgba(255,255,255,.7)', maxWidth: 420, lineHeight: 1.6, marginBottom: 32 }}>
+                    <p style={{ fontSize: 'var(--text-md)', color: 'var(--overlay-white-70)', maxWidth: 420, lineHeight: 1.6, marginBottom: 32 }}>
                         Заявки, документы, согласования с менеджером, ЭДО, история закупок и аналитика — в одном защищённом аккаунте организации.
                     </p>
-                    <div style={{ display: 'flex', gap: 26, fontSize: 12.5 }}>
+                    <div style={{ display: 'flex', gap: 26, fontSize: 'var(--text-sm)' }}>
                         {[['18 200', 'организаций'], ['12 480', 'товаров в наличии'], ['4.9 ★', 'рейтинг']].map(([n, l]) => (
                             <div key={l}>
-                                <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 22, color: '#fff', letterSpacing: '-0.01em' }}>{n}</div>
-                                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.6)', marginTop: 2 }}>{l}</div>
+                                <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-3xl)', color: '#fff', letterSpacing: '-0.01em' }}>{n}</div>
+                                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-60)', marginTop: 2 }}>{l}</div>
                             </div>
                         ))}
                     </div>
@@ -177,7 +177,7 @@ const RegisterPage = () => {
             </div>
 
             {/* Правая колонка */}
-            <div style={{ background: '#fff', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'var(--surface)', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 13, color: 'var(--ink-3)' }}>
                     Уже зарегистрированы?{' '}
                     <span onClick={() => navigate('/login')} style={{ color: 'var(--brand-red)', fontWeight: 600, marginLeft: 6, cursor: 'pointer' }}>
@@ -356,12 +356,12 @@ const RegisterPage = () => {
                                 onClick={() => window.location.href = 'http://localhost:8080/auth/oauth2/register/yandex'}
                                 style={{
                                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                                    width: '100%', height: 44, border: '1px solid var(--line-2)', background: '#fff',
-                                    color: 'var(--ink-1)', borderRadius: 6, fontSize: 14, fontWeight: 500,
+                                    width: '100%', height: 'var(--btn-h-lg)', border: '1px solid var(--line-2)', background: 'var(--surface)',
+                                    color: 'var(--ink-1)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500,
                                     cursor: 'pointer', fontFamily: 'var(--font-body)',
                                 }}
                                 onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface)'; }}
                             >
                                 <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#FC3F1D" /><path d="M9.2 4.2v7.6h-1V8.4L6.3 12H5l2-3.8c-1-.3-1.6-.9-1.6-2.2 0-1.4 1-2.4 2.3-2.4z" fill="#fff" /></svg>
                                 Зарегистрироваться через Яндекс

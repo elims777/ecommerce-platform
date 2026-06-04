@@ -36,17 +36,17 @@ const formatPrice = (price: number): string =>
 
 // ── Confirm dialog (нативный) ─────────────────────────────────
 const ConfirmDialog = ({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) => (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' as any }}
         onClick={onCancel}>
-        <div style={{ background: '#fff', borderRadius: 10, padding: '24px 28px', width: 340, boxShadow: 'var(--shadow-pop)' }}
+        <div style={{ background: 'var(--surface)', borderRadius: 'var(--r-5)', padding: '24px 28px', width: 340, boxShadow: 'var(--shadow-pop)' }}
             onClick={(e) => e.stopPropagation()}>
             <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--ink-1)', marginBottom: 8 }}>Подтверждение</div>
             <div style={{ fontSize: 13.5, color: 'var(--ink-2)', marginBottom: 20 }}>{message}</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button onClick={onCancel} style={{ height: 36, padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                <button onClick={onCancel} style={{ height: 'var(--btn-h-md)', padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
                     Отмена
                 </button>
-                <button onClick={onConfirm} style={{ height: 36, padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                <button onClick={onConfirm} style={{ height: 'var(--btn-h-md)', padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
                     Удалить
                 </button>
             </div>
@@ -84,7 +84,7 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
                 </div>
 
                 {/* Qty stepper */}
-                <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 6, height: 36, alignItems: 'center' }}>
+                <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', height: 'var(--btn-h-md)', alignItems: 'center' }}>
                     <button
                         onClick={() => onUpdateQty(item.productId, Math.max(1, item.quantity - 1))}
                         style={{ width: 32, height: 34, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -136,7 +136,7 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
 // ── Skeleton ──────────────────────────────────────────────────
 const CartSkeleton = () => (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, paddingTop: 20 }}>
-        <div style={{ border: '1px solid var(--line-1)', borderRadius: 8, background: '#fff', overflow: 'hidden' }}>
+        <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', overflow: 'hidden' }}>
             {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} style={{ display: 'flex', gap: 16, padding: '18px 20px', borderBottom: '1px solid var(--line-1)' }}>
                     <div style={{ flex: 1, height: 14, background: 'var(--surface-3)', borderRadius: 4, animation: 'rf-pulse 1.5s ease-in-out infinite' }}/>
@@ -145,7 +145,7 @@ const CartSkeleton = () => (
                 </div>
             ))}
         </div>
-        <div style={{ border: '1px solid var(--line-1)', borderRadius: 8, background: '#fff', padding: 20, height: 200, animation: 'rf-pulse 1.5s ease-in-out infinite' }}/>
+        <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', padding: 20, height: 200, animation: 'rf-pulse 1.5s ease-in-out infinite' }}/>
     </div>
 );
 
@@ -211,7 +211,7 @@ const CartPage = () => {
                     style={{
                         display: 'inline-flex', alignItems: 'center', gap: 8,
                         height: 44, padding: '0 28px', background: 'var(--brand-red)', color: '#fff',
-                        border: 'none', borderRadius: 6, fontSize: 15, fontWeight: 500,
+                        border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500,
                         cursor: 'pointer', fontFamily: 'var(--font-body)',
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}
@@ -234,7 +234,7 @@ const CartPage = () => {
             )}
 
             {/* Breadcrumbs */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 12 }}>
                 <span onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>Главная</span>
                 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                 <span style={{ color: 'var(--ink-1)', fontWeight: 500 }}>Корзина</span>
@@ -248,7 +248,7 @@ const CartPage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24 }}>
                 {/* Items table */}
                 <div>
-                    <div style={{ border: '1px solid var(--line-1)', borderRadius: 8, background: '#fff', overflow: 'hidden' }}>
+                    <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', overflow: 'hidden' }}>
                         {/* Header */}
                         <div style={{
                             display: 'grid', gridTemplateColumns: '1fr 160px 130px 130px 36px',
@@ -277,7 +277,7 @@ const CartPage = () => {
                         <div style={{ padding: '12px 20px', background: 'var(--surface-2)', borderTop: '1px solid var(--line-1)', display: 'flex', justifyContent: 'flex-end' }}>
                             <button
                                 onClick={() => setClearConfirmOpen(true)}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--brand-red)', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 'var(--btn-h-sm)', padding: '0 12px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--brand-red)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
                                 onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--red-tint)'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                             >
@@ -288,7 +288,7 @@ const CartPage = () => {
 
                     <button
                         onClick={() => navigate('/catalog')}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 36, padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', marginTop: 16 }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 'var(--btn-h-md)', padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', marginTop: 16 }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                     >
@@ -298,7 +298,7 @@ const CartPage = () => {
 
                 {/* Summary sidebar */}
                 <aside>
-                    <div style={{ border: '1px solid var(--line-1)', borderRadius: 8, padding: 20, position: 'sticky', top: 20, background: '#fff' }}>
+                    <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', padding: 20, position: 'sticky', top: 20, background: 'var(--surface)' }}>
                         <h3 style={{ fontFamily: 'var(--font-head)', fontSize: 17, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 16 }}>
                             Итого по заявке
                         </h3>
@@ -332,8 +332,8 @@ const CartPage = () => {
                             style={{
                                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                                 width: '100%', height: 48, marginTop: 16,
-                                background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6,
-                                fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)',
+                                fontSize: 'var(--text-lg)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
                                 transition: 'background 0.12s',
                             }}
                             onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}

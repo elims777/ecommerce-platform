@@ -69,7 +69,7 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
             style={{
                 background: 'var(--surface)',
                 border: '1px solid var(--line-1)',
-                borderRadius: 8,
+                borderRadius: 'var(--r-4)',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
@@ -84,7 +84,7 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
                 {product.isFeatured && (
                     <span style={{
                         display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px',
-                        borderRadius: 10, fontSize: 11, fontWeight: 600,
+                        borderRadius: 'var(--r-full)', fontSize: 'var(--text-xs)', fontWeight: 600,
                         background: 'var(--brand-red)', color: '#fff',
                     }}>Хит</span>
                 )}
@@ -95,8 +95,8 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
                 onClick={(e) => { e.stopPropagation(); setIsFavored((f) => !f); }}
                 style={{
                     position: 'absolute', top: 10, right: 10, zIndex: 2,
-                    width: 30, height: 30, borderRadius: 15, border: 0,
-                    background: '#fff', cursor: 'pointer',
+                    width: 30, height: 30, borderRadius: 'var(--r-full)', border: 0,
+                    background: 'var(--surface)', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: isFavored ? 'var(--brand-red)' : 'var(--ink-3)',
                     boxShadow: '0 1px 3px rgba(0,0,0,.08)',
@@ -110,7 +110,7 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
             <div
                 onClick={onClick}
                 style={{
-                    height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    height: 'var(--product-img-h)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: 'var(--surface-2)', overflow: 'hidden', position: 'relative', cursor: 'pointer',
                 }}
             >
@@ -174,7 +174,7 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
                             flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                             height: 34, padding: '0 12px',
                             background: 'var(--brand-red)', color: '#fff',
-                            border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500,
+                            border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500,
                             cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s',
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}

@@ -338,7 +338,7 @@ const UnlinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResponse
                     <button
                         onClick={confirmUnlink}
                         disabled={unlinkMutation.isPending}
-                        style={{ height: 36, padding: '0 14px', background: 'transparent', color: 'var(--error, #d32f2f)', border: '1px solid var(--error, #d32f2f)', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: unlinkMutation.isPending ? 0.6 : 1 }}
+                        style={{ height: 'var(--btn-h-md)', padding: '0 14px', background: 'transparent', color: 'var(--color-error)', border: '1px solid var(--color-error)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', opacity: unlinkMutation.isPending ? 0.6 : 1 }}
                     >
                         {unlinkMutation.isPending ? 'Отвязка...' : 'Отвязать организацию'}
                     </button>
