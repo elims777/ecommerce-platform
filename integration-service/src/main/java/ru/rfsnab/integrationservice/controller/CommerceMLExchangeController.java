@@ -84,7 +84,7 @@ public class CommerceMLExchangeController {
 
         return switch (mode) {
             case "init" -> handleInit();
-            case "file" -> handleFile(filename, request);
+            case "file" -> handleFile(filename, sessionCookie, request);
             case "import" -> handleImport(exchangeType, sessionCookie);
             case "query" -> handleQuery(exchangeType);
             case "success" -> handleSuccess(sessionCookie);
@@ -134,13 +134,13 @@ public class CommerceMLExchangeController {
      * Для каталога: import.xml, offers.xml, import_files/...jpg
      * Для заказов: orders.xml (обновлённые статусы)
      */
-    private ResponseEntity<String> handleFile(String filename,
+    private ResponseEntity<String> handleFile(String filename, String sessionId,
                                               HttpServletRequest request) throws IOException {
         if (filename == null || filename.isBlank()) {
             return plainText("failure\nНе указано имя файла");
         }
 
-        catalogFileService.saveFile(filename, request.getInputStream());
+        catalogFileService.saveFile(filename, sessionId, request.getInputStream());
         return plainText("success");
     }
 
