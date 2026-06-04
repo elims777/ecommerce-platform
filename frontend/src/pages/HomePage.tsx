@@ -563,14 +563,21 @@ const HomePage = () => {
                 {productsLoading ? (
                     <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div>
                 ) : featuredPage && featuredPage.content.length > 0 ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-                        {featuredPage.content.slice(0, 4).map((product) => (
-                            <ProductCard
-                                key={product.id}
-                                product={product}
-                                onClick={() => navigate(`/products/${product.id}`)}
-                                onAddToCart={handleAddToCart}
-                            />
+                    <div style={{
+                        display: 'flex', gap: 14, overflowX: 'auto',
+                        scrollSnapType: 'x mandatory',
+                        paddingBottom: 8,
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: 'var(--line-2) transparent',
+                    }}>
+                        {featuredPage.content.map((product) => (
+                            <div key={product.id} style={{ flex: '0 0 auto', scrollSnapAlign: 'start' }}>
+                                <ProductCard
+                                    product={product}
+                                    onClick={() => navigate(`/products/${product.id}`)}
+                                    onAddToCart={handleAddToCart}
+                                />
+                            </div>
                         ))}
                     </div>
                 ) : null}
