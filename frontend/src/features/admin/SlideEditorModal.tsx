@@ -451,21 +451,6 @@ const SlideEditorModal = ({ open, initial, onSave, onClose }: Props) => {
                         <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ink-1)', flex: 1 }}>
                             {initial ? 'Редактировать слайд' : 'Новый слайд'}
                         </div>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>Видимость:</span>
-                            <button
-                                onClick={() => set('enabled', !slide.enabled)}
-                                style={{
-                                    height: 22, padding: '0 10px', border: '1px solid var(--line-1)',
-                                    borderRadius: 'var(--r-full)', fontSize: 11, fontWeight: 600,
-                                    cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                    background: slide.enabled ? 'var(--brand-green-soft)' : 'var(--surface-2)',
-                                    color: slide.enabled ? 'var(--brand-green)' : 'var(--ink-3)',
-                                }}
-                            >
-                                {slide.enabled ? 'Виден' : 'Скрыт'}
-                            </button>
-                        </div>
                         <button onClick={onClose} style={{
                             width: 32, height: 32, border: 0, borderRadius: 'var(--r-3)',
                             background: 'transparent', cursor: 'pointer', color: 'var(--ink-3)',
@@ -475,65 +460,37 @@ const SlideEditorModal = ({ open, initial, onSave, onClose }: Props) => {
                         </button>
                     </div>
 
-                    {/* Body: preview left, form right */}
-                    <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-
-                        {/* Left — interactive preview */}
-                        <div style={{
-                            width: 340, flexShrink: 0, padding: '16px 16px 16px 20px',
-                            borderRight: '1px solid var(--line-1)',
-                            display: 'flex', flexDirection: 'column', gap: 10,
-                            overflowY: 'auto',
-                        }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                Превью · перетащите текстовый блок
-                            </div>
-                            <DraggablePreview
-                                slide={slide}
-                                onPositionChange={(pos) => set('textPosition', pos)}
-                            />
-                            <div style={{
-                                fontSize: 11, color: 'var(--ink-4)', lineHeight: 1.4,
-                                padding: '8px 10px', background: 'var(--surface-2)',
-                                borderRadius: 'var(--r-2)', border: '1px solid var(--line-1)',
-                            }}>
-                                Тяните белую рамку с текстом для позиционирования. Позиция сохраняется вместе со слайдом.
-                            </div>
-
-                            {/* Image info when type = image */}
-                            {slide.type === 'image' && slide.imageUrl && (
-                                <div style={{
-                                    fontSize: 11, color: 'var(--ink-3)', lineHeight: 1.5,
-                                    padding: '8px 10px', background: 'var(--surface-2)',
-                                    borderRadius: 'var(--r-2)', border: '1px solid var(--line-1)',
-                                }}>
-                                    <div style={{ fontWeight: 700, marginBottom: 3, color: 'var(--ink-2)' }}>Рекомендуемый размер</div>
-                                    <div>1920 × 600 px (3.2:1)</div>
-                                    <div style={{ marginTop: 4 }}>
-                                        <span style={{ fontWeight: 600 }}>cover</span> — обрезает края<br/>
-                                        <span style={{ fontWeight: 600 }}>contain</span> — вписывает целиком (с пустотами)<br/>
-                                        <span style={{ fontWeight: 600 }}>fill</span> — растягивает до краёв
-                                    </div>
-                                </div>
-                            )}
+                    {/* Preview */}
+                    <div style={{ padding: '12px 20px 0', flexShrink: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                            Превью — перетащите текстовый блок
                         </div>
-
-                        {/* Right — tabs + form */}
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                            {/* Tabs */}
-                            <div style={{
-                                padding: '10px 20px', borderBottom: '1px solid var(--line-1)',
-                                display: 'flex', gap: 4, flexShrink: 0,
-                            }}>
-                                <TabBtn active={tab === 'background'} onClick={() => setTab('background')}>Фон</TabBtn>
-                                <TabBtn active={tab === 'text'} onClick={() => setTab('text')}>Текст и кнопки</TabBtn>
-                                <TabBtn active={tab === 'products'} onClick={() => setTab('products')}>
-                                    Товары{slide.products.length > 0 ? ` (${slide.products.length})` : ''}
-                                </TabBtn>
+                        <DraggablePreview
+                            slide={slide}
+                            onPositionChange={(pos) => set('textPosition', pos)}
+                        />
+                        {slide.type === 'image' && slide.imageUrl && (
+                            <div style={{ fontSize: 11, color: 'var(--ink-4)', marginTop: 5 }}>
+                                Рекомендуемый размер: 1920×600 px.&nbsp;
+                                <b>cover</b> — обрезает края, <b>contain</b> — вписывает целиком, <b>fill</b> — растягивает.
                             </div>
+                        )}
+                    </div>
 
-                            {/* Tab content */}
-                            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+                    {/* Tabs */}
+                    <div style={{
+                        padding: '10px 20px 0', borderBottom: '1px solid var(--line-1)',
+                        display: 'flex', gap: 4, flexShrink: 0, marginTop: 10,
+                    }}>
+                        <TabBtn active={tab === 'background'} onClick={() => setTab('background')}>Фон</TabBtn>
+                        <TabBtn active={tab === 'text'} onClick={() => setTab('text')}>Текст и кнопки</TabBtn>
+                        <TabBtn active={tab === 'products'} onClick={() => setTab('products')}>
+                            Товары{slide.products.length > 0 ? ` (${slide.products.length})` : ''}
+                        </TabBtn>
+                    </div>
+
+                    {/* Tab content */}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
 
                                 {/* ── TAB: Background ── */}
                                 {tab === 'background' && (
@@ -722,31 +679,44 @@ const SlideEditorModal = ({ open, initial, onSave, onClose }: Props) => {
                                         onOpenPicker={() => setPickerOpen(true)}
                                     />
                                 )}
-                            </div>
-
-                            {/* Footer */}
-                            <div style={{
-                                padding: '10px 20px', borderTop: '1px solid var(--line-1)',
-                                display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
-                            }}>
-                                <div style={{ flex: 1 }} />
-                                <button onClick={onClose} style={{
-                                    height: 36, padding: '0 16px', border: '1px solid var(--line-2)',
-                                    borderRadius: 'var(--r-3)', background: 'transparent', cursor: 'pointer',
-                                    fontSize: 13, color: 'var(--ink-2)', fontFamily: 'var(--font-body)',
-                                }}>
-                                    Отмена
-                                </button>
-                                <button onClick={handleSave} style={{
-                                    height: 36, padding: '0 22px', border: 0,
-                                    borderRadius: 'var(--r-3)', background: 'var(--brand-red)',
-                                    color: '#fff', fontWeight: 600, fontSize: 13,
-                                    cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                }}>
-                                    Сохранить слайд
-                                </button>
-                            </div>
                         </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div style={{
+                        padding: '10px 20px', borderTop: '1px solid var(--line-1)',
+                        display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
+                    }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>Видимость:</span>
+                            <button
+                                onClick={() => set('enabled', !slide.enabled)}
+                                style={{
+                                    height: 22, padding: '0 10px', border: '1px solid var(--line-1)',
+                                    borderRadius: 'var(--r-full)', fontSize: 11, fontWeight: 600,
+                                    cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                    background: slide.enabled ? 'var(--brand-green-soft)' : 'var(--surface-2)',
+                                    color: slide.enabled ? 'var(--brand-green)' : 'var(--ink-3)',
+                                }}
+                            >
+                                {slide.enabled ? 'Виден' : 'Скрыт'}
+                            </button>
+                        </div>
+                        <button onClick={onClose} style={{
+                            height: 36, padding: '0 16px', border: '1px solid var(--line-2)',
+                            borderRadius: 'var(--r-3)', background: 'transparent', cursor: 'pointer',
+                            fontSize: 13, color: 'var(--ink-2)', fontFamily: 'var(--font-body)',
+                        }}>
+                            Отмена
+                        </button>
+                        <button onClick={handleSave} style={{
+                            height: 36, padding: '0 22px', border: 0,
+                            borderRadius: 'var(--r-3)', background: 'var(--brand-red)',
+                            color: '#fff', fontWeight: 600, fontSize: 13,
+                            cursor: 'pointer', fontFamily: 'var(--font-body)',
+                        }}>
+                            Сохранить слайд
+                        </button>
                     </div>
                 </div>
             </div>
