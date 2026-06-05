@@ -165,7 +165,7 @@ const formatPrice = (p: number) =>
 
 const getSlideBgStyle = (slide: Slide): React.CSSProperties => {
     if (slide.type === 'image' && slide.imageUrl) {
-        const fit = slide.imageFit ?? 'cover';
+        const fit = (slide.imageFit as string | undefined) ?? 'cover';
         return {
             backgroundImage: `url(${slide.imageUrl})`,
             backgroundSize: fit === 'contain' ? 'contain' : fit === 'fill' ? '100% 100%' : 'cover',
@@ -208,7 +208,7 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
 
     const s = slides[activeIdx];
     const bgStyle = getSlideBgStyle(s);
-    const textPos = s.textPosition ?? { x: 5, y: 20 };
+    const textPos = s.textPosition ?? { x: 5, y: 15 };
 
     const handleCta1 = () => {
         if (!s.cta1Link) return;

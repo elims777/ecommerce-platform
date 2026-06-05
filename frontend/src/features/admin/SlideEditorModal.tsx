@@ -83,10 +83,11 @@ interface DraggablePreviewProps {
 
 const getSlideBgStyle = (slide: Slide): React.CSSProperties => {
     if (slide.type === 'image' && slide.imageUrl) {
+        const fit = (slide.imageFit as string | undefined) ?? 'cover';
         return {
             backgroundImage: `url(${slide.imageUrl})`,
-            backgroundSize: slide.imageFit === 'contain' ? 'contain'
-                : slide.imageFit === 'fill' ? '100% 100%'
+            backgroundSize: fit === 'contain' ? 'contain'
+                : fit === 'fill' ? '100% 100%'
                 : 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
@@ -100,9 +101,9 @@ const DraggablePreview = ({ slide, onPositionChange }: DraggablePreviewProps) =>
     const containerRef = useRef<HTMLDivElement>(null);
     const isDragging = useRef(false);
     const dragOffset = useRef({ dx: 0, dy: 0 });
-    const [pos, setPos] = useState<TextPosition>(slide.textPosition);
+    const [pos, setPos] = useState<TextPosition>(slide.textPosition ?? { x: 5, y: 20 });
 
-    useEffect(() => { setPos(slide.textPosition); }, [slide.textPosition]);
+    useEffect(() => { setPos(slide.textPosition ?? { x: 5, y: 20 }); }, [slide.textPosition]);
 
     const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
