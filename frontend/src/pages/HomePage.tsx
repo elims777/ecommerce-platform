@@ -8,6 +8,9 @@ import ProductCard from '@/features/catalog/ProductCard';
 import { useCartStore } from '@/store/cartStore';
 import { App } from 'antd';
 import type { CategoryTree } from '@/types/product';
+import { useSliderStore } from '@/store/sliderStore';
+import type { Slide } from '@/types/slider';
+import { GRADIENT_PRESETS } from '@/types/slider';
 
 // ── Icons ─────────────────────────────────────────────────────
 const ArrRight = ({ width = 16, height = 16 }: { width?: number; height?: number }) => (
@@ -56,44 +59,7 @@ const ChevRight = () => (
     </svg>
 );
 
-// ── Hero slides data ──────────────────────────────────────────
-const HERO_SLIDES = [
-    {
-        bg: 'var(--gradient-hero-navy)',
-        eyebrow: 'B2B-снабжение',
-        eyebrowDot: '#1A6B3A',
-        eyebrowText: 'Поставки от 1 часа по Москве',
-        title: 'Комплексное снабжение предприятий — в одном кабинете',
-        text: '12 000+ позиций со счёт-фактурой, ЭДО, отсрочкой по договору и закреплённым менеджером.',
-        cta1: 'Открыть каталог',
-        cta2: 'Запрос на снабжение',
-        sideType: 'jur' as const,
-    },
-    {
-        bg: 'var(--gradient-hero-red)',
-        eyebrow: 'Сезон противопожарной безопасности',
-        eyebrowDot: '#FFE08A',
-        eyebrowText: 'до 30 июня',
-        title: 'Оснащение объекта по 123-ФЗ под ключ — за 5 рабочих дней',
-        text: 'Огнетушители, шкафы, извещатели, знаки. Полный пакет сертификатов и паспортов в каждой накладной.',
-        cta1: 'Подобрать комплект',
-        cta2: 'Скачать спецификацию',
-        sideType: 'stats' as const,
-        stats: { counts: ['1 842', '5 раб. дн.', '143', '100%'], labels: ['позиции', 'на оснащение', 'комплекта в мае', 'сертификатов'] },
-    },
-    {
-        bg: 'var(--gradient-hero-green)',
-        eyebrow: 'Спецодежда и СИЗ',
-        eyebrowDot: '#FFE08A',
-        eyebrowText: 'к летнему сезону',
-        title: 'Экипировка персонала по типовым нормам выдачи',
-        text: 'Поможем подобрать ассортимент по профессиям и роли, отгрузим со склада в Москве и Казани.',
-        cta1: 'Подобрать по нормам',
-        cta2: 'Прислать образцы',
-        sideType: 'stats' as const,
-        stats: { counts: ['5 317', 'по нормам', '38', '24 ч'], labels: ['позиции', 'выдачи', 'отраслей', 'на сборку заказа'] },
-    },
-];
+// ── Hero slides: берутся из sliderStore ───────────────────────
 
 // ── Primary category colors (для первых 3 категорий из API) ──
 const PRIMARY_COLORS = [
@@ -194,30 +160,60 @@ const arrowBtn: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 };
 
+const formatPrice = (p: number) =>
+    new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(p);
+
+const getSlideBg = (slide: Slide): string => {
+    if (slide.type === 'image' && slide.imageUrl) return `url(${slide.imageUrl}) center/cover`;
+    return slide.gradientPreset === 'custom' ? slide.customGradient : GRADIENT_PRESETS[slide.gradientPreset];
+};
+
 const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatalog: () => void }) => {
+    const rawSlides = useSliderStore((s) => s.slides);
+    const slides = [...rawSlides]
+        .filter((s) => s.enabled)
+        .sort((a, b) => a.displayOrder - b.displayOrder);
+
     const [idx, setIdx] = useState(0);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const navigate = useNavigate();
+
+    const activeIdx = Math.min(idx, Math.max(slides.length - 1, 0));
 
     const resetTimer = () => {
         if (timerRef.current) clearInterval(timerRef.current);
-        timerRef.current = setInterval(() => setIdx((i) => (i + 1) % HERO_SLIDES.length), 7000);
+        if (slides.length > 1) {
+            timerRef.current = setInterval(() => setIdx((i) => (i + 1) % slides.length), 7000);
+        }
     };
 
     useEffect(() => {
         resetTimer();
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [slides.length]);
 
-    const go = (next: number) => {
-        setIdx(next);
-        resetTimer();
+    const go = (next: number) => { setIdx(next); resetTimer(); };
+
+    if (slides.length === 0) return null;
+
+    const s = slides[activeIdx];
+    const bg = getSlideBg(s);
+
+    const handleCta1 = () => {
+        if (!s.cta1Link) return;
+        if (s.cta1Link.startsWith('http')) window.open(s.cta1Link, '_blank');
+        else navigate(s.cta1Link);
     };
-
-    const s = HERO_SLIDES[idx];
+    const handleCta2 = () => {
+        if (!s.cta2Link) return;
+        if (s.cta2Link.startsWith('http')) window.open(s.cta2Link, '_blank');
+        else navigate(s.cta2Link);
+    };
 
     return (
         <div style={{
-            background: s.bg,
+            background: bg,
             borderRadius: 'var(--r-5)',
             padding: '28px 36px 52px',
             color: '#fff',
@@ -235,94 +231,147 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                 }}
             />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 28, alignItems: 'center', position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: s.products.length > 0 ? '1.2fr 1fr' : '1.4fr 1fr', gap: 28, alignItems: 'center', position: 'relative', zIndex: 1 }}>
                 <div>
-                    {/* Eyebrow */}
-                    <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 8,
-                        background: 'var(--overlay-white-12)', padding: '5px 12px', borderRadius: 'var(--r-full)',
-                        fontSize: 'var(--text-sm)', marginBottom: 14,
-                    }}>
-                        <span style={{ width: 6, height: 6, borderRadius: 3, background: s.eyebrowDot, display: 'inline-block' }}/>
-                        <span style={{ fontWeight: 600 }}>{s.eyebrow}</span>
-                        <span style={{ opacity: .65 }}>· {s.eyebrowText}</span>
-                    </div>
+                    {s.eyebrow && (
+                        <div style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 8,
+                            background: 'var(--overlay-white-12)', padding: '5px 12px', borderRadius: 'var(--r-full)',
+                            fontSize: 'var(--text-sm)', marginBottom: 14,
+                        }}>
+                            <span style={{ width: 6, height: 6, borderRadius: 3, background: '#FFE08A', display: 'inline-block' }}/>
+                            <span style={{ fontWeight: 600 }}>{s.eyebrow}</span>
+                        </div>
+                    )}
 
-                    <h1 style={{
-                        fontFamily: 'var(--font-head)', fontSize: 'var(--text-6xl)', fontWeight: 600,
-                        letterSpacing: '-0.022em', lineHeight: 1.12, color: '#fff',
-                        maxWidth: 580, margin: '0 0 12px',
-                    }}>
-                        {s.title}
-                    </h1>
-                    <p style={{ margin: '0 0 18px', fontSize: 'var(--text-md)', lineHeight: 1.55, color: 'var(--overlay-white-70)', maxWidth: 520 }}>
-                        {s.text}
-                    </p>
+                    {s.title && (
+                        <h1 style={{
+                            fontFamily: 'var(--font-head)', fontSize: 'var(--text-6xl)', fontWeight: 600,
+                            letterSpacing: '-0.022em', lineHeight: 1.12, color: '#fff',
+                            maxWidth: 580, margin: '0 0 12px',
+                        }}>
+                            {s.title}
+                        </h1>
+                    )}
+                    {s.text && (
+                        <p style={{ margin: '0 0 18px', fontSize: 'var(--text-md)', lineHeight: 1.55, color: 'var(--overlay-white-70)', maxWidth: 520 }}>
+                            {s.text}
+                        </p>
+                    )}
 
                     <div style={{ display: 'flex', gap: 10 }}>
-                        <button
-                            onClick={onCatalog}
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 6,
-                                background: 'var(--surface)', color: 'var(--ink-1)', fontWeight: 600,
-                                padding: '0 18px', height: 'var(--btn-h-lg)', border: 'none', borderRadius: 'var(--r-3)',
-                                fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                transition: 'opacity .12s',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.opacity = '.9'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-                        >
-                            {s.cta1} <ArrRight />
-                        </button>
-                        <button style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'var(--overlay-white-14)', color: '#fff',
-                            padding: '0 18px', height: 'var(--btn-h-lg)', border: 0, borderRadius: 'var(--r-3)',
-                            fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                            transition: 'background .12s',
-                        }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.22)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--overlay-white-14)'; }}
-                        >
-                            <DocIcon /> {s.cta2}
-                        </button>
+                        {s.cta1Label && (
+                            <button
+                                onClick={s.cta1Link === '/catalog' ? onCatalog : handleCta1}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    background: 'var(--surface)', color: 'var(--ink-1)', fontWeight: 600,
+                                    padding: '0 18px', height: 'var(--btn-h-lg)', border: 'none', borderRadius: 'var(--r-3)',
+                                    fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                    transition: 'opacity .12s',
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.opacity = '.9'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+                            >
+                                {s.cta1Label} <ArrRight />
+                            </button>
+                        )}
+                        {s.cta2Label && (
+                            <button
+                                onClick={handleCta2}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    background: 'var(--overlay-white-14)', color: '#fff',
+                                    padding: '0 18px', height: 'var(--btn-h-lg)', border: 0, borderRadius: 'var(--r-3)',
+                                    fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                    transition: 'background .12s',
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.22)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--overlay-white-14)'; }}
+                            >
+                                <DocIcon /> {s.cta2Label}
+                            </button>
+                        )}
                     </div>
                 </div>
 
+                {/* Right side */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    {s.sideType === 'jur'
-                        ? <HeroSideJur onRegister={onRegister} />
-                        : s.stats && <HeroSideStats counts={s.stats.counts} labels={s.stats.labels} />
-                    }
+                    {s.products.length > 0 ? (
+                        <div style={{
+                            display: 'flex', flexDirection: 'column', gap: 8,
+                            width: '100%', maxWidth: 300,
+                        }}>
+                            {s.products.slice(0, 3).map((p) => (
+                                <div
+                                    key={p.id}
+                                    onClick={() => navigate(`/products/${p.id}`)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        background: 'rgba(255,255,255,.12)', backdropFilter: 'blur(6px)',
+                                        border: '1px solid rgba(255,255,255,.2)',
+                                        borderRadius: 'var(--r-3)', padding: '8px 10px',
+                                        cursor: 'pointer', transition: 'background .12s',
+                                    }}
+                                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.2)'; }}
+                                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.12)'; }}
+                                >
+                                    {p.imageUrl && (
+                                        <div style={{
+                                            width: 40, height: 40, borderRadius: 'var(--r-2)',
+                                            background: 'rgba(255,255,255,.9)', flexShrink: 0,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            overflow: 'hidden',
+                                        }}>
+                                            <img src={p.imageUrl} alt={p.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                        </div>
+                                    )}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 12, fontWeight: 500, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {p.name}
+                                        </div>
+                                        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.9)', fontVariantNumeric: 'tabular-nums' }}>
+                                            {formatPrice(p.price)}
+                                        </div>
+                                    </div>
+                                    <ArrRight width={12} height={12} />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <HeroSideJur onRegister={onRegister} />
+                    )}
                 </div>
             </div>
 
             {/* Slider controls */}
-            <div style={{
-                position: 'absolute', left: 36, bottom: 14, right: 36,
-                display: 'flex', alignItems: 'center', gap: 14, zIndex: 2,
-            }}>
-                <div style={{ display: 'flex', gap: 6 }}>
-                    {HERO_SLIDES.map((_, i) => (
-                        <button key={i} onClick={() => go(i)} style={{
-                            width: i === idx ? 28 : 8, height: 4, borderRadius: 2,
-                            background: i === idx ? '#fff' : 'rgba(255,255,255,.4)',
-                            border: 0, padding: 0, cursor: 'pointer',
-                            transition: 'width .25s, background .25s',
-                        }}/>
-                    ))}
+            {slides.length > 1 && (
+                <div style={{
+                    position: 'absolute', left: 36, bottom: 14, right: 36,
+                    display: 'flex', alignItems: 'center', gap: 14, zIndex: 2,
+                }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                        {slides.map((_, i) => (
+                            <button key={i} onClick={() => go(i)} style={{
+                                width: i === activeIdx ? 28 : 8, height: 4, borderRadius: 2,
+                                background: i === activeIdx ? '#fff' : 'rgba(255,255,255,.4)',
+                                border: 0, padding: 0, cursor: 'pointer',
+                                transition: 'width .25s, background .25s',
+                            }}/>
+                        ))}
+                    </div>
+                    <div style={{ flex: 1 }}/>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-60)', fontVariantNumeric: 'tabular-nums' }}>
+                        {String(activeIdx + 1).padStart(2, '0')} / {String(slides.length).padStart(2, '0')}
+                    </span>
+                    <button onClick={() => go((activeIdx - 1 + slides.length) % slides.length)} style={arrowBtn}>
+                        <ChevLeft />
+                    </button>
+                    <button onClick={() => go((activeIdx + 1) % slides.length)} style={arrowBtn}>
+                        <ChevRight />
+                    </button>
                 </div>
-                <div style={{ flex: 1 }}/>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-60)', fontVariantNumeric: 'tabular-nums' }}>
-                    {String(idx + 1).padStart(2, '0')} / {String(HERO_SLIDES.length).padStart(2, '0')}
-                </span>
-                <button onClick={() => go((idx - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)} style={arrowBtn}>
-                    <ChevLeft />
-                </button>
-                <button onClick={() => go((idx + 1) % HERO_SLIDES.length)} style={arrowBtn}>
-                    <ChevRight />
-                </button>
-            </div>
+            )}
         </div>
     );
 };
