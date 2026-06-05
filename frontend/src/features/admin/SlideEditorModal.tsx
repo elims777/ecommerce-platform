@@ -335,9 +335,12 @@ const ProductsTab = ({ products, onChange, onOpenPicker }: ProductsTabProps) => 
                                 <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {p.name}
                                 </div>
-                                <div style={{ fontSize: 11, color: 'var(--ink-3)', display: 'flex', gap: 8, marginTop: 1 }}>
+                                <div style={{ fontSize: 11, color: 'var(--ink-3)', display: 'flex', gap: 6, marginTop: 1, flexWrap: 'wrap' }}>
                                     {p.sku && <span style={{ fontFamily: 'var(--font-mono)' }}>{p.sku}</span>}
-                                    <span style={{ fontWeight: 600 }}>{formatPrice(p.price)}</span>
+                                    {p.fields?.showPrice !== false && <span style={{ fontWeight: 600 }}>{formatPrice(p.price)}</span>}
+                                    {p.fields?.showName === false && <span style={{ color: 'var(--ink-4)' }}>без названия</span>}
+                                    {p.fields?.showShortDescription && <span>+ краткое</span>}
+                                    {p.fields?.showDescription && <span>+ описание</span>}
                                 </div>
                             </div>
                             <button onClick={() => remove(p.id)} style={{
@@ -373,11 +376,10 @@ const SlideEditorModal = ({ open, initial, onSave, onClose }: Props) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        if (open) {
-            setSlide(initial ? { ...initial } : makeSlide());
-            setTab('background');
-        }
-    }, [open, initial]);
+        if (!open) return;
+        setSlide(initial ? { ...initial } : makeSlide());
+        setTab('background');
+    }, [open, initial?.id]);
 
     const set = <K extends keyof Slide>(key: K, value: Slide[K]) =>
         setSlide((prev) => ({ ...prev, [key]: value }));
@@ -403,11 +405,13 @@ const SlideEditorModal = ({ open, initial, onSave, onClose }: Props) => {
     };
 
     const handleProductsConfirm = (products: SlideProduct[]) => {
-        const existingMap = new Map(slide.products.map((p) => [p.id, p]));
-        set('products', [
-            ...slide.products,
-            ...products.filter((p) => !existingMap.has(p.id)),
-        ]);
+        if (products.length > 0) {
+            const existingMap = new Map(slide.products.map((p) => [p.id, p]));
+            set('products', [
+                ...slide.products,
+                ...products.filter((p) => !existingMap.has(p.id)),
+            ]);
+        }
         setPickerOpen(false);
     };
 

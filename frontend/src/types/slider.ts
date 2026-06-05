@@ -2,12 +2,32 @@ export type SlideType = 'gradient' | 'image' | 'products';
 export type GradientPreset = 'navy' | 'red' | 'green' | 'custom';
 export type ImageFit = 'cover' | 'contain' | 'fill';
 
+export interface SlideProductFields {
+    showName: boolean;
+    showPrice: boolean;
+    showShortDescription: boolean;
+    showDescription: boolean;
+    selectedImageIndex: number;
+}
+
+export const defaultProductFields = (): SlideProductFields => ({
+    showName: true,
+    showPrice: true,
+    showShortDescription: false,
+    showDescription: false,
+    selectedImageIndex: 0,
+});
+
 export interface SlideProduct {
     id: number;
     name: string;
     sku: string | null;
     price: number;
+    shortDescription: string | null;
+    description: string | null;
+    images: Array<{ fileUrl: string; isPrimary: boolean; displayOrder: number }>;
     imageUrl: string | null;
+    fields: SlideProductFields;
 }
 
 /** Позиция текстового блока в % от размеров превью */

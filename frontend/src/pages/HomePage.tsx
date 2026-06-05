@@ -342,12 +342,26 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                                 </div>
                             )}
                             <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 12, fontWeight: 500, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {p.name}
-                                </div>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.9)', fontVariantNumeric: 'tabular-nums' }}>
-                                    {formatPrice(p.price)}
-                                </div>
+                                {p.fields?.showName !== false && (
+                                    <div style={{ fontSize: 12, fontWeight: 500, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {p.name}
+                                    </div>
+                                )}
+                                {p.fields?.showShortDescription && p.shortDescription && (
+                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.7)', lineHeight: 1.3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {p.shortDescription}
+                                    </div>
+                                )}
+                                {p.fields?.showDescription && p.description && !p.fields?.showShortDescription && (
+                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.7)', lineHeight: 1.3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {p.description}
+                                    </div>
+                                )}
+                                {p.fields?.showPrice !== false && (
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.9)', fontVariantNumeric: 'tabular-nums' }}>
+                                        {formatPrice(p.price)}
+                                    </div>
+                                )}
                             </div>
                             <ArrRight width={12} height={12} />
                         </div>
