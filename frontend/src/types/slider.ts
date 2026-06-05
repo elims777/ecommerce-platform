@@ -1,10 +1,6 @@
 export type SlideType = 'gradient' | 'image' | 'products';
-
-export type GradientPreset =
-    | 'navy'
-    | 'red'
-    | 'green'
-    | 'custom';
+export type GradientPreset = 'navy' | 'red' | 'green' | 'custom';
+export type ImageFit = 'cover' | 'contain' | 'fill';
 
 export interface SlideProduct {
     id: number;
@@ -12,6 +8,12 @@ export interface SlideProduct {
     sku: string | null;
     price: number;
     imageUrl: string | null;
+}
+
+/** Позиция текстового блока в % от размеров превью */
+export interface TextPosition {
+    x: number;
+    y: number;
 }
 
 export interface Slide {
@@ -24,6 +26,7 @@ export interface Slide {
     gradientPreset: GradientPreset;
     customGradient: string;
     imageUrl: string;
+    imageFit: ImageFit;
 
     // Текст
     eyebrow: string;
@@ -33,8 +36,9 @@ export interface Slide {
     cta1Link: string;
     cta2Label: string;
     cta2Link: string;
+    textPosition: TextPosition;
 
-    // Товары
+    // Товары (упорядочены по индексу массива)
     products: SlideProduct[];
 }
 
@@ -56,6 +60,12 @@ export const GRADIENT_LABELS: Record<GradientPreset, string> = {
     custom: 'Свой CSS',
 };
 
+export const IMAGE_FIT_LABELS: Record<ImageFit, string> = {
+    cover:   'Обрезать (cover)',
+    contain: 'Вписать (contain)',
+    fill:    'Растянуть (fill)',
+};
+
 export const makeSlide = (overrides: Partial<Slide> = {}): Slide => ({
     id: crypto.randomUUID(),
     type: 'gradient',
@@ -64,6 +74,7 @@ export const makeSlide = (overrides: Partial<Slide> = {}): Slide => ({
     gradientPreset: 'navy',
     customGradient: 'linear-gradient(135deg, #1E3A5F 0%, #0d2240 100%)',
     imageUrl: '',
+    imageFit: 'cover',
     eyebrow: '',
     title: '',
     text: '',
@@ -71,6 +82,7 @@ export const makeSlide = (overrides: Partial<Slide> = {}): Slide => ({
     cta1Link: '/catalog',
     cta2Label: '',
     cta2Link: '',
+    textPosition: { x: 5, y: 20 },
     products: [],
     ...overrides,
 });

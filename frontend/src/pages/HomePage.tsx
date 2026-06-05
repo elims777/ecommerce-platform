@@ -163,9 +163,18 @@ const arrowBtn: React.CSSProperties = {
 const formatPrice = (p: number) =>
     new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(p);
 
-const getSlideBg = (slide: Slide): string => {
-    if (slide.type === 'image' && slide.imageUrl) return `url(${slide.imageUrl}) center/cover`;
-    return slide.gradientPreset === 'custom' ? slide.customGradient : GRADIENT_PRESETS[slide.gradientPreset];
+const getSlideBgStyle = (slide: Slide): React.CSSProperties => {
+    if (slide.type === 'image' && slide.imageUrl) {
+        const fit = slide.imageFit ?? 'cover';
+        return {
+            backgroundImage: `url(${slide.imageUrl})`,
+            backgroundSize: fit === 'contain' ? 'contain' : fit === 'fill' ? '100% 100%' : 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+        };
+    }
+    const grad = slide.gradientPreset === 'custom' ? slide.customGradient : GRADIENT_PRESETS[slide.gradientPreset];
+    return { background: grad };
 };
 
 const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatalog: () => void }) => {
@@ -198,7 +207,8 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
     if (slides.length === 0) return null;
 
     const s = slides[activeIdx];
-    const bg = getSlideBg(s);
+    const bgStyle = getSlideBgStyle(s);
+    const textPos = s.textPosition ?? { x: 5, y: 20 };
 
     const handleCta1 = () => {
         if (!s.cta1Link) return;
@@ -213,142 +223,146 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
 
     return (
         <div style={{
-            background: bg,
+            ...bgStyle,
             borderRadius: 'var(--r-5)',
-            padding: '28px 36px 52px',
             color: '#fff',
             position: 'relative',
             overflow: 'hidden',
-            minHeight: 280,
+            minHeight: 300,
             transition: 'background .35s ease',
         }}>
             {/* Watermark */}
             <img src="/logo-light.png" alt=""
                 style={{
                     position: 'absolute', right: -24, bottom: -28,
-                    height: 280, width: 'auto', opacity: .12,
+                    height: 300, width: 'auto', opacity: .12,
                     pointerEvents: 'none',
                 }}
             />
 
-            <div style={{ display: 'grid', gridTemplateColumns: s.products.length > 0 ? '1.2fr 1fr' : '1.4fr 1fr', gap: 28, alignItems: 'center', position: 'relative', zIndex: 1 }}>
-                <div>
-                    {s.eyebrow && (
-                        <div style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 8,
-                            background: 'var(--overlay-white-12)', padding: '5px 12px', borderRadius: 'var(--r-full)',
-                            fontSize: 'var(--text-sm)', marginBottom: 14,
-                        }}>
-                            <span style={{ width: 6, height: 6, borderRadius: 3, background: '#FFE08A', display: 'inline-block' }}/>
-                            <span style={{ fontWeight: 600 }}>{s.eyebrow}</span>
-                        </div>
-                    )}
-
-                    {s.title && (
-                        <h1 style={{
-                            fontFamily: 'var(--font-head)', fontSize: 'var(--text-6xl)', fontWeight: 600,
-                            letterSpacing: '-0.022em', lineHeight: 1.12, color: '#fff',
-                            maxWidth: 580, margin: '0 0 12px',
-                        }}>
-                            {s.title}
-                        </h1>
-                    )}
-                    {s.text && (
-                        <p style={{ margin: '0 0 18px', fontSize: 'var(--text-md)', lineHeight: 1.55, color: 'var(--overlay-white-70)', maxWidth: 520 }}>
-                            {s.text}
-                        </p>
-                    )}
-
-                    <div style={{ display: 'flex', gap: 10 }}>
-                        {s.cta1Label && (
-                            <button
-                                onClick={s.cta1Link === '/catalog' ? onCatalog : handleCta1}
-                                style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                                    background: 'var(--surface)', color: 'var(--ink-1)', fontWeight: 600,
-                                    padding: '0 18px', height: 'var(--btn-h-lg)', border: 'none', borderRadius: 'var(--r-3)',
-                                    fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                    transition: 'opacity .12s',
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.opacity = '.9'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-                            >
-                                {s.cta1Label} <ArrRight />
-                            </button>
-                        )}
-                        {s.cta2Label && (
-                            <button
-                                onClick={handleCta2}
-                                style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                                    background: 'var(--overlay-white-14)', color: '#fff',
-                                    padding: '0 18px', height: 'var(--btn-h-lg)', border: 0, borderRadius: 'var(--r-3)',
-                                    fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                    transition: 'background .12s',
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.22)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--overlay-white-14)'; }}
-                            >
-                                <DocIcon /> {s.cta2Label}
-                            </button>
-                        )}
+            {/* Text block — абсолютно позиционирован по textPosition */}
+            <div style={{
+                position: 'absolute',
+                left: `${textPos.x}%`,
+                top: `${textPos.y}%`,
+                maxWidth: 580,
+                zIndex: 2,
+                padding: '28px 0 60px',
+            }}>
+                {s.eyebrow && (
+                    <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 8,
+                        background: 'var(--overlay-white-12)', padding: '5px 12px', borderRadius: 'var(--r-full)',
+                        fontSize: 'var(--text-sm)', marginBottom: 14,
+                    }}>
+                        <span style={{ width: 6, height: 6, borderRadius: 3, background: '#FFE08A', display: 'inline-block' }}/>
+                        <span style={{ fontWeight: 600 }}>{s.eyebrow}</span>
                     </div>
-                </div>
-
-                {/* Right side */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    {s.products.length > 0 ? (
-                        <div style={{
-                            display: 'flex', flexDirection: 'column', gap: 8,
-                            width: '100%', maxWidth: 300,
-                        }}>
-                            {s.products.slice(0, 3).map((p) => (
-                                <div
-                                    key={p.id}
-                                    onClick={() => navigate(`/products/${p.id}`)}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: 10,
-                                        background: 'rgba(255,255,255,.12)', backdropFilter: 'blur(6px)',
-                                        border: '1px solid rgba(255,255,255,.2)',
-                                        borderRadius: 'var(--r-3)', padding: '8px 10px',
-                                        cursor: 'pointer', transition: 'background .12s',
-                                    }}
-                                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.2)'; }}
-                                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.12)'; }}
-                                >
-                                    {p.imageUrl && (
-                                        <div style={{
-                                            width: 40, height: 40, borderRadius: 'var(--r-2)',
-                                            background: 'rgba(255,255,255,.9)', flexShrink: 0,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            overflow: 'hidden',
-                                        }}>
-                                            <img src={p.imageUrl} alt={p.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                                        </div>
-                                    )}
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontSize: 12, fontWeight: 500, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {p.name}
-                                        </div>
-                                        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.9)', fontVariantNumeric: 'tabular-nums' }}>
-                                            {formatPrice(p.price)}
-                                        </div>
-                                    </div>
-                                    <ArrRight width={12} height={12} />
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <HeroSideJur onRegister={onRegister} />
+                )}
+                {s.title && (
+                    <h1 style={{
+                        fontFamily: 'var(--font-head)', fontSize: 'var(--text-6xl)', fontWeight: 600,
+                        letterSpacing: '-0.022em', lineHeight: 1.12, color: '#fff',
+                        margin: '0 0 12px',
+                    }}>
+                        {s.title}
+                    </h1>
+                )}
+                {s.text && (
+                    <p style={{ margin: '0 0 18px', fontSize: 'var(--text-md)', lineHeight: 1.55, color: 'var(--overlay-white-70)' }}>
+                        {s.text}
+                    </p>
+                )}
+                <div style={{ display: 'flex', gap: 10 }}>
+                    {s.cta1Label && (
+                        <button
+                            onClick={s.cta1Link === '/catalog' ? onCatalog : handleCta1}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                background: 'var(--surface)', color: 'var(--ink-1)', fontWeight: 600,
+                                padding: '0 18px', height: 'var(--btn-h-lg)', border: 'none', borderRadius: 'var(--r-3)',
+                                fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                transition: 'opacity .12s',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.opacity = '.9'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+                        >
+                            {s.cta1Label} <ArrRight />
+                        </button>
+                    )}
+                    {s.cta2Label && (
+                        <button
+                            onClick={handleCta2}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                background: 'var(--overlay-white-14)', color: '#fff',
+                                padding: '0 18px', height: 'var(--btn-h-lg)', border: 0, borderRadius: 'var(--r-3)',
+                                fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                transition: 'background .12s',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.22)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--overlay-white-14)'; }}
+                        >
+                            <DocIcon /> {s.cta2Label}
+                        </button>
                     )}
                 </div>
             </div>
+
+            {/* Products block — right side, fixed */}
+            {s.products.length > 0 && (
+                <div style={{
+                    position: 'absolute', right: 36, top: '50%',
+                    transform: 'translateY(-50%)',
+                    display: 'flex', flexDirection: 'column', gap: 8,
+                    width: 280, zIndex: 2,
+                }}>
+                    {s.products.slice(0, 3).map((p) => (
+                        <div
+                            key={p.id}
+                            onClick={() => navigate(`/products/${p.id}`)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 10,
+                                background: 'rgba(255,255,255,.12)', backdropFilter: 'blur(6px)',
+                                border: '1px solid rgba(255,255,255,.2)',
+                                borderRadius: 'var(--r-3)', padding: '8px 10px',
+                                cursor: 'pointer', transition: 'background .12s',
+                            }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.2)'; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.12)'; }}
+                        >
+                            {p.imageUrl && (
+                                <div style={{
+                                    width: 40, height: 40, borderRadius: 'var(--r-2)',
+                                    background: 'rgba(255,255,255,.9)', flexShrink: 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    overflow: 'hidden',
+                                }}>
+                                    <img src={p.imageUrl} alt={p.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                </div>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 12, fontWeight: 500, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {p.name}
+                                </div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.9)', fontVariantNumeric: 'tabular-nums' }}>
+                                    {formatPrice(p.price)}
+                                </div>
+                            </div>
+                            <ArrRight width={12} height={12} />
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Invisible spacer to give slide height */}
+            <div style={{ height: 300, visibility: 'hidden' }} />
 
             {/* Slider controls */}
             {slides.length > 1 && (
                 <div style={{
                     position: 'absolute', left: 36, bottom: 14, right: 36,
-                    display: 'flex', alignItems: 'center', gap: 14, zIndex: 2,
+                    display: 'flex', alignItems: 'center', gap: 14, zIndex: 3,
                 }}>
                     <div style={{ display: 'flex', gap: 6 }}>
                         {slides.map((_, i) => (
