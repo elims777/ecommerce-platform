@@ -35,6 +35,7 @@ const AdminLegalEntityDetailPage = lazy(() => import('@/features/admin/AdminLega
 const AdminSettingsPage = lazy(() => import('@/features/admin/AdminSettingsPage'));
 const AdminSliderPage = lazy(() => import('@/features/admin/AdminSliderPage'));
 const LogisticsPage = lazy(() => import('@/features/admin/LogisticsPage'));
+const FavouritesPage = lazy(() => import('@/features/favourites/FavouritesPage'));
 const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage'));
 
 const queryClient = new QueryClient({
@@ -135,6 +136,7 @@ const AppRoutes = () => {
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/favourites" element={<FavouritesPage />} />
             </Route>
           </Route>
 

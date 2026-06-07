@@ -101,7 +101,7 @@ const ProductPage = () => {
 
             <button
                 onClick={() => navigate(-1)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 0', background: 'none', border: 'none', color: 'var(--brand-navy)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', marginBottom: 20 }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 0', background: 'none', border: 'none', color: 'var(--brand-navy)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', marginBottom: 20 }}
             >
                 <ArrowLeftOutlined /> Назад
             </button>
@@ -137,7 +137,7 @@ const ProductPage = () => {
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                         {product.categoryName && (
-                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--brand-navy)' }}>{product.categoryName}</span>
+                            <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--brand-navy)' }}>{product.categoryName}</span>
                         )}
                         {inStock ? (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>
@@ -151,13 +151,13 @@ const ProductPage = () => {
                             </span>
                         )}
                         {product.sku && (
-                            <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--ink-3)', fontFamily: 'var(--font-mono)' }}>
+                            <span style={{ marginLeft: 'auto', fontSize: 'var(--text-sm)', color: 'var(--ink-3)', fontFamily: 'var(--font-mono)' }}>
                                 Арт. {product.sku}
                             </span>
                         )}
                     </div>
 
-                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 26, fontWeight: 600, letterSpacing: '-0.018em', lineHeight: 1.2, color: 'var(--ink-1)', marginBottom: 16 }}>
+                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-4xl)', fontWeight: 600, letterSpacing: '-0.018em', lineHeight: 1.2, color: 'var(--ink-1)', marginBottom: 16 }}>
                         {product.name}
                     </h1>
 
@@ -168,7 +168,7 @@ const ProductPage = () => {
                     )}
 
                     {product.shortDescription && (
-                        <p style={{ fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 20 }}>{product.shortDescription}</p>
+                        <p style={{ fontSize: 'var(--text-md)', color: 'var(--ink-2)', lineHeight: 1.6, marginBottom: 20 }}>{product.shortDescription}</p>
                     )}
 
                     {/* Характеристики */}
@@ -176,7 +176,7 @@ const ProductPage = () => {
                         <div style={{ borderTop: '1px solid var(--line-1)', paddingTop: 20, marginBottom: 20 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px' }}>
                                 {product.attributes.map((attr) => (
-                                    <div key={attr.id} style={{ display: 'flex', fontSize: 13, padding: '5px 0', borderBottom: '1px dashed var(--line-1)' }}>
+                                    <div key={attr.id} style={{ display: 'flex', fontSize: 'var(--text-base)', padding: '5px 0', borderBottom: '1px dashed var(--line-1)' }}>
                                         <span style={{ color: 'var(--ink-3)', flex: 1 }}>{attr.attributeName}</span>
                                         <span style={{ fontWeight: 500 }}>{attr.attributeValue}</span>
                                     </div>
@@ -189,11 +189,11 @@ const ProductPage = () => {
                     {product.description && (
                         <div style={{ borderTop: '1px solid var(--line-1)', paddingTop: 20 }}>
                             <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--line-1)', marginBottom: 16 }}>
-                                <div style={{ padding: '10px 18px', fontSize: 13.5, fontWeight: 600, color: 'var(--ink-1)', borderBottom: '2px solid var(--brand-red)', marginBottom: -1 }}>
+                                <div style={{ padding: '10px 18px', fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--ink-1)', borderBottom: '2px solid var(--brand-red)', marginBottom: -1 }}>
                                     Описание
                                 </div>
                             </div>
-                            <p style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{product.description}</p>
+                            <p style={{ fontSize: 'var(--text-base)', color: 'var(--ink-2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{product.description}</p>
                         </div>
                     )}
                 </div>
@@ -213,7 +213,7 @@ const ProductPage = () => {
                         {inStock && (
                             <>
                                 <div style={{ marginBottom: 14 }}>
-                                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}>Количество</label>
+                                    <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}>Количество</label>
                                     <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', height: 'var(--input-h-lg)', alignItems: 'center' }}>
                                         <button
                                             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -227,7 +227,7 @@ const ProductPage = () => {
                                             max={product.stockQuantity}
                                             value={quantity}
                                             onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-                                            style={{ flex: 1, textAlign: 'center', border: 0, background: 'transparent', fontSize: 16, fontWeight: 600, outline: 'none', fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
+                                            style={{ flex: 1, textAlign: 'center', border: 0, background: 'transparent', fontSize: 'var(--text-xl)', fontWeight: 600, outline: 'none', fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
                                         />
                                         <button
                                             onClick={() => setQuantity((q) => Math.min(product.stockQuantity, q + 1))}
@@ -260,7 +260,7 @@ const ProductPage = () => {
                         )}
 
                         {product.externalCode && (
-                            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line-1)', fontSize: 12, color: 'var(--ink-3)' }}>
+                            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line-1)', fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
                                 Код 1С: <span style={{ fontFamily: 'var(--font-mono)' }}>{product.externalCode}</span>
                             </div>
                         )}

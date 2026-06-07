@@ -80,9 +80,9 @@ const CategoryTreeNode = ({ categories, selectedId, onSelect, depth = 0 }: Categ
                             alignItems: 'center',
                             gap: 6,
                             padding: '6px 10px',
-                            borderRadius: 5,
+                            borderRadius: 'var(--r-3)',
                             cursor: 'pointer',
-                            fontSize: 13,
+                            fontSize: 'var(--text-base)',
                             fontWeight: selectedId === cat.id ? 600 : 400,
                             background: selectedId === cat.id ? 'var(--red-tint)' : 'transparent',
                             color: selectedId === cat.id ? 'var(--brand-red)' : 'var(--ink-1)',
@@ -100,7 +100,7 @@ const CategoryTreeNode = ({ categories, selectedId, onSelect, depth = 0 }: Categ
                             <span style={{
                                 fontSize: 10,
                                 padding: '1px 5px',
-                                borderRadius: 4,
+                                borderRadius: 'var(--r-2)',
                                 background: 'var(--surface-3)',
                                 color: 'var(--ink-3)',
                                 flexShrink: 0,
@@ -498,7 +498,7 @@ const AdminCatalogPage = () => {
         <div>
             {/* Page header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h2 style={{ margin: 0, fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, color: 'var(--ink-1)', letterSpacing: '-0.01em' }}>
+                <h2 style={{ margin: 0, fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, color: 'var(--ink-1)', letterSpacing: '-0.01em' }}>
                     Каталог
                 </h2>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -665,7 +665,7 @@ const AdminCatalogPage = () => {
                             </button>
 
                             {treeLoading ? (
-                                <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--ink-3)', fontSize: 13 }}>
+                                <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--ink-3)', fontSize: 'var(--text-base)' }}>
                                     Загрузка…
                                 </div>
                             ) : (
@@ -689,11 +689,11 @@ const AdminCatalogPage = () => {
                         {/* Table */}
                         <div className="rf-admin-table-wrap">
                             {productsLoading ? (
-                                <div style={{ padding: 32, textAlign: 'center', color: 'var(--ink-3)', fontSize: 13 }}>
+                                <div style={{ padding: 32, textAlign: 'center', color: 'var(--ink-3)', fontSize: 'var(--text-base)' }}>
                                     Загрузка…
                                 </div>
                             ) : displayProducts.length === 0 ? (
-                                <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 13 }}>
+                                <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 'var(--text-base)' }}>
                                     Товары не найдены
                                 </div>
                             ) : (
@@ -741,12 +741,12 @@ const AdminCatalogPage = () => {
                                                                 src={imageUrl}
                                                                 width={36}
                                                                 height={36}
-                                                                style={{ objectFit: 'contain', borderRadius: 4, display: 'block' }}
+                                                                style={{ objectFit: 'contain', borderRadius: 'var(--r-2)', display: 'block' }}
                                                                 alt=""
                                                             />
                                                         ) : (
                                                             <div style={{
-                                                                width: 36, height: 36, borderRadius: 4,
+                                                                width: 36, height: 36, borderRadius: 'var(--r-2)',
                                                                 background: 'var(--surface-2)',
                                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                             }}>
@@ -764,7 +764,7 @@ const AdminCatalogPage = () => {
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                             <a
                                                                 onClick={() => navigate(`/admin/products/${product.id}/edit`)}
-                                                                style={{ color: 'var(--brand-navy)', cursor: 'pointer', textDecoration: 'none', fontSize: 13 }}
+                                                                style={{ color: 'var(--brand-navy)', cursor: 'pointer', textDecoration: 'none', fontSize: 'var(--text-base)' }}
                                                             >
                                                                 {product.name}
                                                             </a>
@@ -780,7 +780,7 @@ const AdminCatalogPage = () => {
                                                     <td style={{ position: 'relative' }}>
                                                         <button
                                                             className="rf-btn rf-btn-ghost"
-                                                            style={{ height: 24, padding: '0 6px', fontSize: 12, gap: 4, color: 'var(--ink-2)' }}
+                                                            style={{ height: 24, padding: '0 6px', fontSize: 'var(--text-sm)', gap: 4, color: 'var(--ink-2)' }}
                                                             onClick={() => {
                                                                 setMoveProductId(isMovingThis ? null : product.id);
                                                                 setMoveProductTarget('');
@@ -804,12 +804,12 @@ const AdminCatalogPage = () => {
                                                                 width: 240,
                                                                 boxShadow: 'var(--shadow-pop)',
                                                             }}>
-                                                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 8 }}>
+                                                                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 8 }}>
                                                                     Переместить в категорию:
                                                                 </div>
                                                                 <select
                                                                     style={{
-                                                                        width: '100%', height: 32, fontSize: 13,
+                                                                        width: '100%', height: 32, fontSize: 'var(--text-base)',
                                                                         border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
                                                                         background: 'var(--surface)', color: 'var(--ink-1)',
                                                                         padding: '0 8px', marginBottom: 10, outline: 'none',
@@ -850,7 +850,7 @@ const AdminCatalogPage = () => {
                                                     </td>
 
                                                     {/* SKU */}
-                                                    <td className="rf-mono" style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                                                    <td className="rf-mono" style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
                                                         {product.sku || '—'}
                                                     </td>
 
@@ -913,8 +913,8 @@ const AdminCatalogPage = () => {
                                         value={pageSize}
                                         onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
                                         style={{
-                                            height: 26, fontSize: 12, border: '1px solid var(--line-2)',
-                                            borderRadius: 4, background: 'var(--surface)', color: 'var(--ink-1)',
+                                            height: 26, fontSize: 'var(--text-sm)', border: '1px solid var(--line-2)',
+                                            borderRadius: 'var(--r-2)', background: 'var(--surface)', color: 'var(--ink-1)',
                                             padding: '0 6px', fontFamily: 'var(--font-body)', cursor: 'pointer',
                                         }}
                                     >
@@ -1000,23 +1000,23 @@ const AdminCatalogPage = () => {
                 }}
             >
                 <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 15 }}>
+                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)' }}>
                         Переместить {selectedRowKeys.length} товаров
                     </span>
                     <button
                         className="rf-btn rf-btn-ghost"
-                        style={{ height: 28, width: 28, padding: 0, fontSize: 16, color: 'var(--ink-3)' }}
+                        style={{ height: 28, width: 28, padding: 0, fontSize: 'var(--text-xl)', color: 'var(--ink-3)' }}
                         onClick={() => { batchMoveDialogRef.current?.close(); setBatchTargetCategory(''); }}
                     >✕</button>
                 </div>
                 <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Целевая категория <span style={{ color: 'var(--brand-red)' }}>*</span>
                         </label>
                         <select
                             style={{
-                                width: '100%', height: 34, fontSize: 13,
+                                width: '100%', height: 34, fontSize: 'var(--text-base)',
                                 border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
                                 background: 'var(--surface)', color: 'var(--ink-1)',
                                 padding: '0 8px', outline: 'none', fontFamily: 'var(--font-body)', boxSizing: 'border-box',
@@ -1075,12 +1075,12 @@ const AdminCatalogPage = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                 }}>
-                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 15 }}>
+                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)' }}>
                         {editingCatId ? 'Редактировать категорию' : 'Новая категория'}
                     </span>
                     <button
                         className="rf-btn rf-btn-ghost"
-                        style={{ height: 28, width: 28, padding: 0, fontSize: 16, color: 'var(--ink-3)' }}
+                        style={{ height: 28, width: 28, padding: 0, fontSize: 'var(--text-xl)', color: 'var(--ink-3)' }}
                         onClick={() => {
                             catDialogRef.current?.close();
                             setEditingCatId(null);
@@ -1095,7 +1095,7 @@ const AdminCatalogPage = () => {
                 <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {/* Name */}
                     <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Название <span style={{ color: 'var(--brand-red)' }}>*</span>
                         </label>
                         <input
@@ -1105,14 +1105,14 @@ const AdminCatalogPage = () => {
                             onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleCatSubmit(); }}
                             style={{
-                                width: '100%', height: 34, padding: '0 10px', fontSize: 13,
+                                width: '100%', height: 34, padding: '0 10px', fontSize: 'var(--text-base)',
                                 border: `1px solid ${catFormErrors.name ? 'var(--brand-red)' : 'var(--line-2)'}`,
                                 borderRadius: 'var(--r-2)', background: 'var(--surface)', color: 'var(--ink-1)',
                                 outline: 'none', fontFamily: 'var(--font-body)', boxSizing: 'border-box',
                             }}
                         />
                         {catFormErrors.name && (
-                            <span style={{ fontSize: 11, color: 'var(--brand-red)', marginTop: 3, display: 'block' }}>
+                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--brand-red)', marginTop: 3, display: 'block' }}>
                                 {catFormErrors.name}
                             </span>
                         )}
@@ -1120,7 +1120,7 @@ const AdminCatalogPage = () => {
 
                     {/* Description */}
                     <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Описание
                         </label>
                         <textarea
@@ -1129,7 +1129,7 @@ const AdminCatalogPage = () => {
                             onChange={(e) => setCatForm((f) => ({ ...f, description: e.target.value }))}
                             rows={3}
                             style={{
-                                width: '100%', padding: '8px 10px', fontSize: 13,
+                                width: '100%', padding: '8px 10px', fontSize: 'var(--text-base)',
                                 border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
                                 background: 'var(--surface)', color: 'var(--ink-1)',
                                 outline: 'none', fontFamily: 'var(--font-body)', resize: 'vertical',
@@ -1140,14 +1140,14 @@ const AdminCatalogPage = () => {
 
                     {/* Parent category */}
                     <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Родительская категория
                         </label>
                         <select
                             value={catForm.parentId}
                             onChange={(e) => setCatForm((f) => ({ ...f, parentId: e.target.value ? Number(e.target.value) : '' }))}
                             style={{
-                                width: '100%', height: 34, padding: '0 8px', fontSize: 13,
+                                width: '100%', height: 34, padding: '0 8px', fontSize: 'var(--text-base)',
                                 border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
                                 background: 'var(--surface)', color: 'var(--ink-1)',
                                 outline: 'none', fontFamily: 'var(--font-body)', boxSizing: 'border-box',

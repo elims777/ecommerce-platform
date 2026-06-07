@@ -102,7 +102,7 @@ const HeroSideJur = ({ onRegister }: { onRegister: () => void }) => (
                 marginLeft: 'auto', display: 'inline-flex', alignItems: 'center',
                 height: 18, padding: '0 8px', borderRadius: 9,
                 background: 'var(--brand-green-soft)', color: 'var(--brand-green)',
-                fontSize: 11, fontWeight: 600,
+                fontSize: 'var(--text-xs)', fontWeight: 600,
             }}>−7% к прайсу</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
@@ -208,7 +208,6 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
 
     const s = slides[activeIdx];
     const bgStyle = getSlideBgStyle(s);
-    const textPos = s.textPosition ?? { x: 5, y: 15 };
 
     const handleCta1 = () => {
         if (!s.cta1Link) return;
@@ -240,73 +239,101 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                 }}
             />
 
-            {/* Text block — абсолютно позиционирован по textPosition */}
-            <div style={{
-                position: 'absolute',
-                left: `${textPos.x}%`,
-                top: `${textPos.y}%`,
-                maxWidth: 580,
-                zIndex: 2,
-                padding: '28px 0 60px',
-            }}>
-                {s.eyebrow && (
-                    <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 8,
-                        background: 'var(--overlay-white-12)', padding: '5px 12px', borderRadius: 'var(--r-full)',
-                        fontSize: 'var(--text-sm)', marginBottom: 14,
-                    }}>
-                        <span style={{ width: 6, height: 6, borderRadius: 3, background: '#FFE08A', display: 'inline-block' }}/>
-                        <span style={{ fontWeight: 600 }}>{s.eyebrow}</span>
-                    </div>
-                )}
-                {s.title && (
-                    <h1 style={{
-                        fontFamily: 'var(--font-head)', fontSize: 'var(--text-6xl)', fontWeight: 600,
-                        letterSpacing: '-0.022em', lineHeight: 1.12, color: '#fff',
-                        margin: '0 0 12px',
-                    }}>
-                        {s.title}
-                    </h1>
-                )}
-                {s.text && (
-                    <p style={{ margin: '0 0 18px', fontSize: 'var(--text-md)', lineHeight: 1.55, color: 'var(--overlay-white-70)' }}>
-                        {s.text}
-                    </p>
-                )}
-                <div style={{ display: 'flex', gap: 10 }}>
-                    {s.cta1Label && (
-                        <button
-                            onClick={s.cta1Link === '/catalog' ? onCatalog : handleCta1}
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 6,
-                                background: 'var(--surface)', color: 'var(--ink-1)', fontWeight: 600,
-                                padding: '0 18px', height: 'var(--btn-h-lg)', border: 'none', borderRadius: 'var(--r-3)',
-                                fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                transition: 'opacity .12s',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.opacity = '.9'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-                        >
-                            {s.cta1Label} <ArrRight />
-                        </button>
+            {/* Text blocks */}
+            {s.textBlocks?.map((block) => (
+                <div key={block.id} style={{
+                    position: 'absolute',
+                    left: `${block.x}%`,
+                    top: `${block.y}%`,
+                    width: `${block.width}%`,
+                    height: `${block.height}%`,
+                    background: block.background || 'transparent',
+                    borderRadius: block.borderRadius,
+                    padding: '8px 10px',
+                    boxSizing: 'border-box',
+                    zIndex: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-start',
+                }}>
+                    {block.heading && (
+                        <div style={{
+                            fontFamily: 'var(--font-head)',
+                            fontSize: block.headingStyle.size,
+                            fontWeight: block.headingStyle.bold ? 700 : 400,
+                            fontStyle: block.headingStyle.italic ? 'italic' : 'normal',
+                            textDecoration: [
+                                block.headingStyle.underline ? 'underline' : '',
+                                block.headingStyle.strikethrough ? 'line-through' : '',
+                            ].filter(Boolean).join(' ') || 'none',
+                            color: block.headingStyle.color,
+                            lineHeight: 1.15,
+                            letterSpacing: '-0.02em',
+                            margin: '0 0 8px',
+                        }}>
+                            {block.heading}
+                        </div>
                     )}
-                    {s.cta2Label && (
-                        <button
-                            onClick={handleCta2}
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 6,
-                                background: 'var(--overlay-white-14)', color: '#fff',
-                                padding: '0 18px', height: 'var(--btn-h-lg)', border: 0, borderRadius: 'var(--r-3)',
-                                fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                transition: 'background .12s',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.22)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--overlay-white-14)'; }}
-                        >
-                            <DocIcon /> {s.cta2Label}
-                        </button>
+                    {block.body && (
+                        <div style={{
+                            fontSize: block.bodyStyle.size,
+                            fontWeight: block.bodyStyle.bold ? 700 : 400,
+                            fontStyle: block.bodyStyle.italic ? 'italic' : 'normal',
+                            textDecoration: [
+                                block.bodyStyle.underline ? 'underline' : '',
+                                block.bodyStyle.strikethrough ? 'line-through' : '',
+                            ].filter(Boolean).join(' ') || 'none',
+                            color: block.bodyStyle.color,
+                            lineHeight: 1.5,
+                            margin: 0,
+                        }}>
+                            {block.body}
+                        </div>
                     )}
                 </div>
+            ))}
+
+            {/* CTA buttons — позиция под textBlocks, снизу слева */}
+            <div style={{
+                position: 'absolute',
+                left: `${s.textBlocks?.[0]?.x ?? 5}%`,
+                bottom: 52,
+                display: 'flex',
+                gap: 10,
+                zIndex: 3,
+            }}>
+                {s.cta1Label && (
+                    <button
+                        onClick={s.cta1Link === '/catalog' ? onCatalog : handleCta1}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'var(--surface)', color: 'var(--ink-1)', fontWeight: 600,
+                            padding: '0 18px', height: 'var(--btn-h-lg)', border: 'none', borderRadius: 'var(--r-3)',
+                            fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                            transition: 'opacity .12s',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '.9'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+                    >
+                        {s.cta1Label} <ArrRight />
+                    </button>
+                )}
+                {s.cta2Label && (
+                    <button
+                        onClick={handleCta2}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: 'var(--overlay-white-14)', color: '#fff',
+                            padding: '0 18px', height: 'var(--btn-h-lg)', border: 0, borderRadius: 'var(--r-3)',
+                            fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                            transition: 'background .12s',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.22)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--overlay-white-14)'; }}
+                    >
+                        <DocIcon /> {s.cta2Label}
+                    </button>
+                )}
             </div>
 
             {/* Products block — right side, fixed */}
@@ -343,22 +370,22 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                             )}
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 {p.fields?.showName !== false && (
-                                    <div style={{ fontSize: 12, fontWeight: 500, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {p.name}
                                     </div>
                                 )}
                                 {p.fields?.showShortDescription && p.shortDescription && (
-                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.7)', lineHeight: 1.3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <div style={{ fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,.7)', lineHeight: 1.3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {p.shortDescription}
                                     </div>
                                 )}
                                 {p.fields?.showDescription && p.description && !p.fields?.showShortDescription && (
-                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.7)', lineHeight: 1.3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <div style={{ fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,.7)', lineHeight: 1.3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {p.description}
                                     </div>
                                 )}
                                 {p.fields?.showPrice !== false && (
-                                    <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.9)', fontVariantNumeric: 'tabular-nums' }}>
+                                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'rgba(255,255,255,.9)', fontVariantNumeric: 'tabular-nums' }}>
                                         {formatPrice(p.price)}
                                     </div>
                                 )}
@@ -458,7 +485,7 @@ const PrimaryGroupCard = ({ category, color, hoverColor, index, onClick }: {
             </h3>
 
             <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,.18)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, fontWeight: 500 }}>Перейти в раздел</span>
+                <span style={{ fontSize: 'var(--text-base)', fontWeight: 500 }}>Перейти в раздел</span>
                 <ArrRight />
             </div>
         </div>
@@ -491,7 +518,7 @@ const SecondaryCatTile = ({ category, onClick }: { category: CategoryTree; onCli
                 <GridIcon />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-1)', lineHeight: 1.3 }}>{category.name}</div>
+                <div style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--ink-1)', lineHeight: 1.3 }}>{category.name}</div>
             </div>
             <ArrRight width={14} height={14} />
         </div>
@@ -509,9 +536,9 @@ const ServiceCard = ({ icon, title, text, cta, accent }: { icon: React.ReactNode
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             }}>{icon}</div>
             <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4, color: 'var(--ink-1)' }}>{title}</div>
-                <p style={{ fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.5, margin: 0 }}>{text}</p>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 13, fontWeight: 600, color, cursor: 'pointer' }}>
+                <div style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: 4, color: 'var(--ink-1)' }}>{title}</div>
+                <p style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)', lineHeight: 1.5, margin: 0 }}>{text}</p>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 'var(--text-base)', fontWeight: 600, color, cursor: 'pointer' }}>
                     {cta} <ArrRight width={14} height={14} />
                 </div>
             </div>
@@ -555,7 +582,7 @@ const HomePage = () => {
     };
 
     return (
-        <div style={{ paddingBottom: 60 }}>
+        <div style={{ paddingBottom: 'var(--sp-20)' }}>
             {/* HERO SLIDER */}
             <div style={{ padding: '20px 0 0' }}>
                 <HeroSlider
@@ -568,16 +595,16 @@ const HomePage = () => {
             <div style={{ paddingTop: 36 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
                     <div>
-                        <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
+                        <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
                             Основные направления
                         </h2>
-                        <p style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 4, marginBottom: 0 }}>
+                        <p style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)', marginTop: 4, marginBottom: 0 }}>
                             Три направления, которые закрывают 80% заявок снабженца
                         </p>
                     </div>
                     <span
                         onClick={() => navigate('/catalog')}
-                        style={{ fontSize: 13, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        style={{ fontSize: 'var(--text-base)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
                     >
                         Все разделы каталога →
                     </span>
@@ -599,7 +626,7 @@ const HomePage = () => {
                         ))}
                     </div>
                 ) : (
-                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-3)', fontSize: 14 }}>
+                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-3)', fontSize: 'var(--text-md)' }}>
                         Категории загружаются...
                     </div>
                 )}
@@ -608,7 +635,7 @@ const HomePage = () => {
             {/* SECONDARY CATEGORIES */}
             {secondaryCategories.length > 0 && (
                 <div style={{ paddingTop: 20 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
                         Сопутствующие категории
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
@@ -626,12 +653,12 @@ const HomePage = () => {
             {/* FEATURED PRODUCTS */}
             <div style={{ paddingTop: 40 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
-                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
+                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
                         Хиты снабжения
                     </h2>
                     <span
                         onClick={() => navigate('/catalog')}
-                        style={{ fontSize: 13, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
+                        style={{ fontSize: 'var(--text-base)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
                     >
                         Смотреть все →
                     </span>
@@ -692,10 +719,10 @@ const HomePage = () => {
                     background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-5)',
                     padding: '22px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 32,
                 }}>
-                    <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 15, maxWidth: 230, color: 'var(--ink-1)' }}>
+                    <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)', maxWidth: 230, color: 'var(--ink-1)' }}>
                         Нам доверяют 18 200+ организаций
                     </div>
-                    <div style={{ display: 'flex', gap: 36, fontSize: 13, fontWeight: 600, color: 'var(--ink-3)', flex: 1, justifyContent: 'space-around' }}>
+                    <div style={{ display: 'flex', gap: 36, fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--ink-3)', flex: 1, justifyContent: 'space-around' }}>
                         {['РЖД', 'Газпром-нефть', 'Северсталь', 'Магнит', 'Сибур', 'Х5 Group'].map((b) => (
                             <span key={b} style={{ letterSpacing: '0.05em' }}>{b}</span>
                         ))}
