@@ -125,6 +125,12 @@ public class ProductImportService {
             product.setName(item.getName());
             product.setSlug(slugService.generateUniqueSlug(product.getName(), reservedSlugs));
             product.setShortDescription(item.getShortDescription());
+            if (item.getDescription() != null) {
+                product.setDescription(item.getDescription());
+            }
+            if (item.getMaterial() != null) {
+                product.setMaterial(item.getMaterial());
+            }
             product.setExternalCode(item.getExternalCode());
             product.setSku(item.getSku());
             product.setUnitOfMeasure(item.getUnitOfMeasure());

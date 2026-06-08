@@ -1,11 +1,10 @@
 package ru.rfsnab.integrationservice.service.ftk;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.stereotype.Component;
 import ru.rfsnab.integrationservice.model.ftk.FtkProduct;
 import ru.rfsnab.integrationservice.model.ftk.FtkProduct.FtkVariant;
@@ -13,96 +12,104 @@ import ru.rfsnab.integrationservice.model.ftk.FtkProduct.FtkVariant;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Парсер XLS-выгрузки ФТК (HSSF формат — .xls, не .xlsx).
+ * Парсер XLS-выгрузки ФТК (HSSF формат — .xls).
  *
- * Структура файла:
- *   - Строка категории:  A="01 Спецодежда", остальные пустые  → уровень определяется по числовому префиксу или отступу
- *   - Строка товара:     A=артикул (без точки), B=наименование, C=цена, D=URL изображения
- *   - Строка варианта:   A=артикул.NNN,         B=характеристики (JSON или ключ:значение), C=цена, D=URL
+ * Колонки:
+ *   A(0) — наименование товара или название группы/категории
+ *   B(1) — артикул (пустой у категорий; содержит точку у вариантов: "87490974.001")
+ *   C(2) — цена
+ *   D(3) — единица измерения
+ *   E(4) — наименование для печати
+ *   F(5) — текстовое описание
+ *   I(8) — основной материал
+ *   M(12) — ссылка на изображение (FTP URL)
  *
- * Если у товара нет вариантов (нет строк .NNN) — создаётся без явных вариантов.
+ * Строки 0-6 (1-7 в Excel) — заголовки, пропускаются.
+ *
+ * Иерархия категорий определяется по числовому префиксу в колонке A:
+ *   "01 Спецодежда"          → уровень 1
+ *   "01.01 Спецодежда летняя" → уровень 2
+ *   "01.01.1 Костюмы летние"  → уровень 3
  */
 @Component
 @Slf4j
 public class FtkXlsParser {
 
-    /**
-     * Индексы колонок в XLS-выгрузке ФТК.
-     * Уточняются под реальную структуру файла.
-     */
-    private static final int COL_ARTICLE  = 0;  // Артикул / наименование категории
-    private static final int COL_NAME     = 1;  // Наименование товара
-    private static final int COL_PRICE    = 2;  // Цена (розничная)
-    private static final int COL_IMAGE    = 3;  // URL изображения
-    private static final int COL_ATTR1_KEY   = 4;  // Ключ первого атрибута (например "Размер")
-    private static final int COL_ATTR1_VAL   = 5;  // Значение первого атрибута (например "XL")
-    private static final int COL_ATTR2_KEY   = 6;  // Ключ второго атрибута (например "Рост")
-    private static final int COL_ATTR2_VAL   = 7;  // Значение второго атрибута (например "170-176")
+    private static final int HEADER_ROWS   = 7;   // строки 1-7 в Excel — пропустить
 
-    /**
-     * Парсит XLS из InputStream.
-     * Stream не закрывается здесь — ответственность вызывающего.
-     *
-     * @param xls входной поток XLS файла
-     * @return список товаров ФТК с вариантами
-     */
+    private static final int COL_NAME      = 0;   // A-C (merged) — наименование / группа / характеристика
+    private static final int COL_ARTICLE   = 3;   // D — артикул
+    private static final int COL_PRICE     = 4;   // E — цена
+    private static final int COL_PRINT     = 6;   // G-H (merged) — наименование для печати
+    private static final int COL_DESC      = 8;   // I — текстовое описание
+    private static final int COL_MATERIAL  = 9;   // J — основной материал
+    private static final int COL_IMAGE     = 12;  // M — ссылка на изображение
+
     public List<FtkProduct> parse(InputStream xls) throws IOException {
         List<FtkProduct> result = new ArrayList<>();
 
-        try (HSSFWorkbook workbook = new HSSFWorkbook(xls)) {
+        try (var workbook = WorkbookFactory.create(xls)) {
             Sheet sheet = workbook.getSheetAt(0);
-            log.info("Парсинг XLS ФТК: {} строк на листе '{}'", sheet.getLastRowNum(), sheet.getSheetName());
+            log.info("Парсинг XLS ФТК: {} строк", sheet.getLastRowNum());
 
-            // Стек текущего пути категорий
-            Deque<String> categoryStack = new ArrayDeque<>();
-            // Текущий товар (родитель) и его варианты-накопители
+            // Стек категорий: индекс = уровень (1-based), значение = название
+            // categoryStack[0] не используется; [1] = уровень1, [2] = уровень2, [3] = уровень3
+            String[] categoryStack = new String[10];
+            int currentDepth = 0;
+
             BuildContext ctx = null;
 
-            for (int rowIdx = sheet.getFirstRowNum(); rowIdx <= sheet.getLastRowNum(); rowIdx++) {
+            for (int rowIdx = HEADER_ROWS; rowIdx <= sheet.getLastRowNum(); rowIdx++) {
                 Row row = sheet.getRow(rowIdx);
                 if (row == null) continue;
 
+                String nameCell    = getStringValue(row, COL_NAME).trim();
                 String articleCell = getStringValue(row, COL_ARTICLE).trim();
-                if (articleCell.isEmpty()) continue;
 
-                if (isCategoryRow(row)) {
-                    // Завершаем предыдущий товар перед переходом к новой категории
+                if (nameCell.isEmpty() && articleCell.isEmpty()) continue;
+
+                // Категория: артикул пустой, в A есть текст
+                if (articleCell.isEmpty()) {
                     if (ctx != null) {
                         result.add(ctx.build());
                         ctx = null;
                     }
-                    updateCategoryStack(categoryStack, articleCell);
+                    int depth = detectCategoryDepth(nameCell);
+                    String catName = stripPrefix(nameCell);
+                    categoryStack[depth] = catName;
+                    // Обнуляем все уровни глубже текущего
+                    for (int i = depth + 1; i < categoryStack.length; i++) {
+                        categoryStack[i] = null;
+                    }
+                    currentDepth = depth;
+                    log.debug("Категория уровень {}: {}", depth, catName);
                     continue;
                 }
 
-                if (isVariantRow(articleCell)) {
-                    // Строка варианта — добавляем к текущему родителю
+                // Вариант: артикул содержит точку
+                if (articleCell.contains(".")) {
                     if (ctx != null) {
-                        FtkVariant variant = parseVariant(row, articleCell);
-                        if (variant != null) ctx.addVariant(variant);
+                        FtkVariant variant = parseVariant(row, articleCell, nameCell);
+                        ctx.addVariant(variant);
                     } else {
-                        log.warn("Строка варианта без родителя: {}, row={}", articleCell, rowIdx);
+                        log.warn("Вариант без родителя: {}, row={}", articleCell, rowIdx);
                     }
                     continue;
                 }
 
-                // Строка товара — завершаем предыдущий, начинаем новый
+                // Товар
                 if (ctx != null) {
                     result.add(ctx.build());
                 }
-                ctx = parseProductRow(row, articleCell, buildCategoryPath(categoryStack));
+                ctx = parseProductRow(row, articleCell, nameCell, buildCategoryPath(categoryStack, currentDepth));
             }
 
-            // Последний незакрытый товар
             if (ctx != null) {
                 result.add(ctx.build());
             }
@@ -112,121 +119,97 @@ public class FtkXlsParser {
         return result;
     }
 
-    // ===== Category =====
-
     /**
-     * Строка категории: первая ячейка не пустая, все остальные значимые ячейки (B-D) — пустые.
-     * Дополнительный признак: артикул начинается с цифры и содержит пробел (например "01 Спецодежда").
+     * Определяет уровень вложенности категории по числовому префиксу.
+     * "01 ..."       → 1
+     * "01.01 ..."    → 2
+     * "01.01.1 ..."  → 3
      */
-    private boolean isCategoryRow(Row row) {
-        String article = getStringValue(row, COL_ARTICLE).trim();
-        if (article.isEmpty()) return false;
-        // Нет цены и нет имени в B-колонке
-        boolean noName = getStringValue(row, COL_NAME).isBlank();
-        boolean noPrice = getStringValue(row, COL_PRICE).isBlank();
-        // Категория выглядит как "NN Название" или просто "Название" без точки
-        boolean looksLikeCategory = noName && noPrice;
-        return looksLikeCategory;
+    private int detectCategoryDepth(String nameCell) {
+        String prefix = nameCell.split("\\s+")[0];
+        if (!prefix.matches("[\\d.]+")) return 1;
+        // Количество точек в префиксе + 1 = уровень
+        long dots = prefix.chars().filter(c -> c == '.').count();
+        return (int) dots + 1;
     }
 
     /**
-     * Строка варианта: артикул содержит точку ("87490974.001").
+     * Убирает числовой префикс: "01.01 Спецодежда летняя" → "Спецодежда летняя".
      */
-    private boolean isVariantRow(String article) {
-        return article.contains(".");
+    private String stripPrefix(String nameCell) {
+        return nameCell.replaceFirst("^[\\d.]+\\s*", "").trim();
     }
 
-    /**
-     * Обновляет стек категорий. Простая эвристика: новая категория — сброс стека,
-     * поскольку ФТК выгружает плоский список с иерархическими заголовками.
-     * TODO: доработать под реальную вложенность после просмотра файла.
-     */
-    private void updateCategoryStack(Deque<String> stack, String categoryCell) {
-        // Убираем числовой префикс ("01 Спецодежда" → "Спецодежда")
-        String categoryName = categoryCell.replaceFirst("^\\d+\\s+", "").trim();
-        if (categoryName.isEmpty()) return;
-        // Определяем уровень вложенности по отступу (пробелы в начале оригинала)
-        // или по количеству пробелов перед текстом — простой вариант: просто используем плоский стек
-        stack.clear();
-        stack.push(categoryName);
-        log.debug("Категория: {}", categoryName);
-    }
-
-    private String buildCategoryPath(Deque<String> stack) {
-        if (stack.isEmpty()) return "";
-        // Стек — LIFO, нам нужен порядок от корня к листу
-        List<String> path = new ArrayList<>(stack);
-        java.util.Collections.reverse(path);
-        return String.join(" > ", path);
-    }
-
-    // ===== Product =====
-
-    private BuildContext parseProductRow(Row row, String article, String categoryPath) {
-        String name = getStringValue(row, COL_NAME).trim();
-        if (name.isEmpty()) {
-            // Иногда наименование совпадает с категорией — пропускаем
-            log.debug("Пропуск строки без наименования: article={}", article);
-            return null;
+    private String buildCategoryPath(String[] stack, int depth) {
+        List<String> parts = new ArrayList<>();
+        for (int i = 1; i <= depth; i++) {
+            if (stack[i] != null) parts.add(stack[i]);
         }
-        BigDecimal price = parseBigDecimal(getStringValue(row, COL_PRICE), article);
-        String imageUrl = getStringValue(row, COL_IMAGE).trim();
+        return String.join(" > ", parts);
+    }
+
+    private BuildContext parseProductRow(Row row, String article, String name, String categoryPath) {
+        BigDecimal price   = parseBigDecimal(getStringValue(row, COL_PRICE), article);
+        String printName   = getStringValue(row, COL_PRINT).trim();
+        String description = getStringValue(row, COL_DESC).trim();
+        String material    = getStringValue(row, COL_MATERIAL).trim();
+        String imageUrl    = getStringValue(row, COL_IMAGE).trim();
 
         return new BuildContext(
-                article, name, categoryPath, price, imageUrl.isEmpty() ? null : imageUrl
+                article,
+                name,
+                printName.isEmpty() ? null : printName,
+                description.isEmpty() ? null : description,
+                material.isEmpty() ? null : material,
+                categoryPath,
+                price,
+                imageUrl.isEmpty() ? null : imageUrl
         );
     }
 
-    // ===== Variant =====
-
-    private FtkVariant parseVariant(Row row, String article) {
+    private FtkVariant parseVariant(Row row, String article, String characteristic) {
         BigDecimal price = parseBigDecimal(getStringValue(row, COL_PRICE), article);
-        String imageUrl = getStringValue(row, COL_IMAGE).trim();
-
-        Map<String, String> attrs = new LinkedHashMap<>();
-        addAttr(attrs, row, COL_ATTR1_KEY, COL_ATTR1_VAL);
-        addAttr(attrs, row, COL_ATTR2_KEY, COL_ATTR2_VAL);
-
-        if (attrs.isEmpty()) {
-            // Вариант без атрибутов — пропускаем, он не несёт информации для покупателя
-            log.debug("Вариант без атрибутов: {}", article);
-            return null;
-        }
+        Map<String, String> attrs = parseCharacteristic(characteristic);
 
         return FtkVariant.builder()
                 .article(article)
+                .characteristic(characteristic)
                 .price(price)
-                .imageUrl(imageUrl.isEmpty() ? null : imageUrl)
                 .attributes(attrs)
                 .build();
     }
 
-    private void addAttr(Map<String, String> attrs, Row row, int keyCol, int valCol) {
-        String key = getStringValue(row, keyCol).trim();
-        String val = getStringValue(row, valCol).trim();
-        if (!key.isEmpty() && !val.isEmpty()) {
-            attrs.put(key, val);
-        }
-    }
+    /**
+     * Разбирает характеристику варианта из колонки A.
+     * Формат: "44-46; 170-176" → {"Размер": "44-46", "Рост": "170-176"}
+     * Если не удаётся разобрать — возвращает {"Характеристика": originalValue}.
+     */
+    private Map<String, String> parseCharacteristic(String characteristic) {
+        Map<String, String> attrs = new LinkedHashMap<>();
+        if (characteristic == null || characteristic.isBlank()) return attrs;
 
-    // ===== Utilities =====
+        String[] parts = characteristic.split(";");
+        if (parts.length == 2) {
+            attrs.put("Размер", parts[0].trim());
+            attrs.put("Рост",   parts[1].trim());
+        } else {
+            attrs.put("Характеристика", characteristic.trim());
+        }
+        return attrs;
+    }
 
     private String getStringValue(Row row, int col) {
         Cell cell = row.getCell(col);
         if (cell == null) return "";
         return switch (cell.getCellType()) {
-            case STRING -> cell.getStringCellValue();
+            case STRING  -> cell.getStringCellValue();
             case NUMERIC -> {
                 double d = cell.getNumericCellValue();
-                // Целое число — без дробной части
                 yield (d == Math.floor(d)) ? String.valueOf((long) d) : String.valueOf(d);
             }
             case FORMULA -> {
-                try {
-                    yield cell.getStringCellValue();
-                } catch (Exception e) {
-                    yield String.valueOf(cell.getNumericCellValue());
-                }
+                try { yield cell.getStringCellValue(); }
+                catch (Exception e) { yield String.valueOf(cell.getNumericCellValue()); }
             }
             default -> "";
         };
@@ -235,40 +218,45 @@ public class FtkXlsParser {
     private BigDecimal parseBigDecimal(String value, String context) {
         if (value == null || value.isBlank()) return null;
         try {
-            return new BigDecimal(value.trim().replace(",", ".").replace(" ", ""));
+            return new BigDecimal(value.trim().replace(",", ".").replace(" ", "").replace(" ", ""));
         } catch (NumberFormatException e) {
             log.warn("Невалидная цена '{}' для {}", value, context);
             return null;
         }
     }
 
-    // ===== Builder context =====
-
     private static class BuildContext {
         private final String article;
         private final String name;
+        private final String printName;
+        private final String description;
+        private final String material;
         private final String categoryPath;
         private final BigDecimal price;
         private final String imageUrl;
         private final List<FtkVariant> variants = new ArrayList<>();
 
-        BuildContext(String article, String name, String categoryPath,
-                     BigDecimal price, String imageUrl) {
-            this.article = article;
-            this.name = name;
+        BuildContext(String article, String name, String printName, String description,
+                     String material, String categoryPath, BigDecimal price, String imageUrl) {
+            this.article      = article;
+            this.name         = name;
+            this.printName    = printName;
+            this.description  = description;
+            this.material     = material;
             this.categoryPath = categoryPath;
-            this.price = price;
-            this.imageUrl = imageUrl;
+            this.price        = price;
+            this.imageUrl     = imageUrl;
         }
 
-        void addVariant(FtkVariant v) {
-            variants.add(v);
-        }
+        void addVariant(FtkVariant v) { variants.add(v); }
 
         FtkProduct build() {
             return FtkProduct.builder()
                     .article(article)
                     .name(name)
+                    .printName(printName)
+                    .description(description)
+                    .material(material)
                     .categoryPath(categoryPath)
                     .price(price)
                     .imageUrl(imageUrl)

@@ -31,7 +31,10 @@ public class ProductImportItem {
     @Size(min = 3, max = 255)
     private String name;
 
-    // Описание из 1С - shortDescription
+    // Полное описание (из ФТК — колонка F)
+    private String description;
+
+    // Краткое описание из 1С
     @Size(max = 1000)
     private String shortDescription;
 
@@ -44,6 +47,10 @@ public class ProductImportItem {
 
     @Min(value = 0)
     private Integer stockQuantity;
+
+    // Основной материал (из ФТК)
+    @Size(max = 500)
+    private String material;
 
     // Единица измерения
     private String unitOfMeasure;

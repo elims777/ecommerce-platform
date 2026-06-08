@@ -7,11 +7,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Промежуточная модель товара ФТК, извлечённая из XLS.
- * Родительская строка (без точки в артикуле) → parent product.
- * Дочерние строки (артикул.001, .002, ...) → variants.
- */
 @Getter
 @Builder
 public class FtkProduct {
@@ -19,16 +14,25 @@ public class FtkProduct {
     /** Артикул родителя (без суффикса, например "87490974") */
     private final String article;
 
-    /** Наименование товара */
+    /** Наименование товара (колонка A) */
     private final String name;
 
-    /** Путь категории ("Спецодежда > Костюмы > ...") */
+    /** Наименование для печати (колонка E) */
+    private final String printName;
+
+    /** Текстовое описание (колонка F) */
+    private final String description;
+
+    /** Основной материал (колонка I) */
+    private final String material;
+
+    /** Путь категории ("Спецодежда > Спецодежда летняя > Костюмы летние") */
     private final String categoryPath;
 
-    /** Розничная цена родителя (используется если нет вариантов) */
+    /** Розничная цена родителя */
     private final BigDecimal price;
 
-    /** URL изображения родителя на FTP */
+    /** URL изображения на FTP (колонка M) */
     private final String imageUrl;
 
     /** Варианты (размер/рост) — пустой список если товар без вариантов */
@@ -40,13 +44,13 @@ public class FtkProduct {
         /** Артикул варианта, например "87490974.001" */
         private final String article;
 
+        /** Характеристика варианта из колонки A, например "44-46; 170-176" */
+        private final String characteristic;
+
         /** Розничная цена варианта */
         private final BigDecimal price;
 
-        /** URL изображения варианта (может совпадать с родителем) */
-        private final String imageUrl;
-
-        /** Атрибуты: {"Размер": "XL", "Рост": "170-176"} */
+        /** Атрибуты, разобранные из characteristic: {"Размер": "44-46", "Рост": "170-176"} */
         private final Map<String, String> attributes;
     }
 }

@@ -1,6 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
+
+interface FtkImportResult {
+    totalProducts: number;
+    created: number;
+    updated: number;
+    failed: number;
+    imagesOk: number;
+    imagesFailed: number;
+}
 
 interface ImportLogEntry {
     id: number;
@@ -39,6 +48,35 @@ const IntegrationPage = () => {
     const [logs, setLogs] = useState<ImportLogEntry[]>([]);
     const [logsLoading, setLogsLoading] = useState(true);
 
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [ftkFile, setFtkFile] = useState<File | null>(null);
+    const [ftkLoading, setFtkLoading] = useState(false);
+    const [ftkResult, setFtkResult] = useState<FtkImportResult | null>(null);
+    const [ftkError, setFtkError] = useState<string | null>(null);
+
+    const handleFtkImport = async () => {
+        if (!ftkFile) return;
+        setFtkLoading(true);
+        setFtkResult(null);
+        setFtkError(null);
+        try {
+            const formData = new FormData();
+            formData.append('file', ftkFile);
+            const r = await apiClient.post<FtkImportResult>(
+                '/v1/integration/ftk/import',
+                formData,
+                { headers: { 'Content-Type': 'multipart/form-data' } }
+            );
+            setFtkResult(r.data);
+            setFtkFile(null);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        } catch (e: any) {
+            setFtkError(e?.response?.data?.message ?? 'Ошибка импорта');
+        } finally {
+            setFtkLoading(false);
+        }
+    };
+
     useEffect(() => {
         apiClient.get<ImportLogEntry[]>('/v1/admin/integration/logs')
             .then(r => setLogs(r.data))
@@ -58,6 +96,97 @@ const IntegrationPage = () => {
                     <path d="M8 7v4M8 5.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                 </svg>
                 <span>Обмен данными с 1С настроен через протокол CommerceML 2.10. Товары из 1С попадают в категорию «Импорт из 1С» и требуют ручного распределения по категориям и активации.</span>
+            </div>
+
+            {/* Импорт ФТК */}
+            <div className="rf-card" style={{ marginBottom: 24 }}>
+                <div className="rf-card-header">
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ marginRight: 6 }}>
+                        <path d="M7.5 13V3M3 7l4.5-4.5L12 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <h3>Импорт каталога ФТК (Факел)</h3>
+                </div>
+                <div className="rf-card-body">
+                    <p style={{ margin: '0 0 14px', fontSize: 'var(--text-base)', color: 'var(--ink-2)', lineHeight: 1.6 }}>
+                        Загрузите файл <code className="rf-mono" style={{ fontSize: 'var(--text-sm)', background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 'var(--r-1)' }}>ВОФ_номенклатура.xls</code> с FTP ФТК. Товары попадут в категорию <strong>ФТК — Факел</strong>.
+                    </p>
+
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <label style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 7,
+                            padding: '7px 14px', borderRadius: 'var(--r-2)',
+                            border: '1px solid var(--line-1)', background: 'var(--surface-2)',
+                            cursor: 'pointer', fontSize: 'var(--text-base)', color: 'var(--ink-1)',
+                            whiteSpace: 'nowrap',
+                        }}>
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                <path d="M2 10v2h10v-2M7 2v7M4 5l3-3 3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            {ftkFile ? ftkFile.name : 'Выбрать XLS'}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".xls,.xlsx"
+                                style={{ display: 'none' }}
+                                onChange={e => {
+                                    setFtkResult(null);
+                                    setFtkError(null);
+                                    setFtkFile(e.target.files?.[0] ?? null);
+                                }}
+                            />
+                        </label>
+
+                        <button
+                            className="rf-btn rf-btn-primary"
+                            onClick={handleFtkImport}
+                            disabled={!ftkFile || ftkLoading}
+                            style={{ opacity: (!ftkFile || ftkLoading) ? 0.6 : 1 }}
+                        >
+                            {ftkLoading ? 'Импорт...' : 'Запустить импорт'}
+                        </button>
+
+                        {ftkFile && !ftkLoading && (
+                            <button
+                                className="rf-btn"
+                                onClick={() => {
+                                    setFtkFile(null);
+                                    setFtkResult(null);
+                                    setFtkError(null);
+                                    if (fileInputRef.current) fileInputRef.current.value = '';
+                                }}
+                                style={{ color: 'var(--ink-3)' }}
+                            >
+                                Сбросить
+                            </button>
+                        )}
+                    </div>
+
+                    {ftkLoading && (
+                        <div style={{ marginTop: 14, fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
+                            Идёт импорт, это может занять несколько минут...
+                        </div>
+                    )}
+
+                    {ftkError && (
+                        <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 'var(--r-2)', background: 'var(--red-tint)', border: '1px solid var(--brand-red)', color: 'var(--brand-red)', fontSize: 'var(--text-base)' }}>
+                            {ftkError}
+                        </div>
+                    )}
+
+                    {ftkResult && (
+                        <div style={{ marginTop: 14, padding: '12px 16px', borderRadius: 'var(--r-2)', background: 'var(--green-tint)', border: '1px solid var(--success)', fontSize: 'var(--text-base)' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--success)', marginBottom: 8 }}>Импорт завершён</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px 24px', color: 'var(--ink-2)' }}>
+                                <span>Товаров обработано: <strong>{ftkResult.totalProducts}</strong></span>
+                                <span>Создано: <strong style={{ color: 'var(--success)' }}>{ftkResult.created}</strong></span>
+                                <span>Обновлено: <strong>{ftkResult.updated}</strong></span>
+                                <span>Ошибок: <strong style={{ color: ftkResult.failed > 0 ? 'var(--brand-red)' : 'inherit' }}>{ftkResult.failed}</strong></span>
+                                <span>Изображений: <strong style={{ color: 'var(--success)' }}>{ftkResult.imagesOk}</strong></span>
+                                <span>Ошибок фото: <strong style={{ color: ftkResult.imagesFailed > 0 ? 'var(--brand-red)' : 'inherit' }}>{ftkResult.imagesFailed}</strong></span>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="rf-card" style={{ marginBottom: 24 }}>

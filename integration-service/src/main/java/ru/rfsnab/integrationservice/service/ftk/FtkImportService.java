@@ -118,6 +118,8 @@ public class FtkImportService {
                 .externalId(externalId)
                 .name(p.getName())
                 .sku(p.getArticle())
+                .description(p.getDescription())
+                .material(p.getMaterial())
                 .price(basePrice)
                 .wholesalePrice(basePrice)   // FTK: нет оптовой цены
                 .source(SOURCE)

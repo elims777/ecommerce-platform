@@ -25,6 +25,8 @@ public class ProductResponse {
     private Boolean isActive;
     private Boolean isFeatured;
 
+    private String material;
+
     //интеграция с 1с
     private String externalId;
     private String sku;

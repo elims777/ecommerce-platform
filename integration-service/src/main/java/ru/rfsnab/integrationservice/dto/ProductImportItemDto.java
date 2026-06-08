@@ -24,7 +24,9 @@ public class ProductImportItemDto {
     private String externalId;
     private String name;
     private String sku;
+    private String description;
     private String shortDescription;
+    private String material;
     private String unitOfMeasure;
     private BigDecimal price;
     private BigDecimal wholesalePrice;

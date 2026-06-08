@@ -70,6 +70,9 @@ public class Product {
     @Column(length = 50)
     private String externalCode;
 
+    @Column(length = 500)
+    private String material;
+
     @Column(length = 20)
     private String unitOfMeasure;
 

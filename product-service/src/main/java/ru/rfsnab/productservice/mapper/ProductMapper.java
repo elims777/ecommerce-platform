@@ -37,6 +37,7 @@ public class ProductMapper {
                 .slug(product.getSlug())
                 .description(product.getDescription())
                 .shortDescription(product.getShortDescription())
+                .material(product.getMaterial())
                 .price(product.getPrice())
                 .wholesalePrice(product.getWholesalePrice())
                 .stockQuantity(product.getStockQuantity())

@@ -86,11 +86,15 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
             String email = claims.get("email", String.class);
             String clientType = claims.get("clientType", String.class);
-            String role = claims.get("role", String.class);
             String subject = claims.getSubject();
 
+            @SuppressWarnings("unchecked")
+            List<String> roles = claims.get("roles", List.class);
+            boolean isAdmin = roles != null && roles.contains("ROLE_ADMIN");
+            String primaryRole = roles != null && !roles.isEmpty() ? roles.get(0) : "";
+
             // Маршруты интеграции и admin — только ROLE_ADMIN
-            if (isAdminOnlyPath(path) && !"ROLE_ADMIN".equals(role)) {
+            if (isAdminOnlyPath(path) && !isAdmin) {
                 log.warn("Отказ доступа (не ROLE_ADMIN): {} {}", method, path);
                 return rejectRequest(exchange, HttpStatus.FORBIDDEN);
             }
@@ -100,7 +104,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     .header("X-User-Email", email != null ? email : "")
                     .header("X-User-Id", subject != null ? subject : "")
                     .header("X-Client-Type", clientType != null ? clientType : "B2C")
-                    .header("X-User-Role", role != null ? role : "")
+                    .header("X-User-Role", primaryRole)
                     .build();
             log.debug("JWT валиден: clientType={}, sub={}, {} {}", clientType, subject, method, path);
 
