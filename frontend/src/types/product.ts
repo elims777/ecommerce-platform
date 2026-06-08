@@ -25,6 +25,18 @@ export interface ProductAttribute {
     attributeValue: string;
 }
 
+/** Вариант товара (размер, рост, цвет и т.д.) */
+export interface ProductVariant {
+    id: number;
+    sku: string | null;
+    price: number | null;
+    wholesalePrice: number | null;
+    stockQuantity: number;
+    attributes: Record<string, string> | null;
+    isActive: boolean;
+    externalId: string | null;
+}
+
 /** Товар — полный ответ от product-service */
 export interface Product {
     id: number;
@@ -47,7 +59,10 @@ export interface Product {
     unitOfMeasure: string | null;
     vatRate: number | null;
 
+    source: string | null;
+
     // Вложенные данные
+    variants: ProductVariant[];
     images: ProductImage[];
     videos: ProductVideo[];
     attributes: ProductAttribute[];

@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Image, App, Skeleton } from 'antd';
 import { ShoppingCartOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProductById } from '@/api/products';
-import type { ProductImage } from '@/types/product';
+import type { ProductImage, ProductVariant } from '@/types/product';
 import { useCartStore } from '@/store/cartStore';
 import { useDisplayPrice } from '@/utils/priceUtils';
 
@@ -23,11 +23,23 @@ const sortImages = (images: ProductImage[]): ProductImage[] =>
         return a.displayOrder - b.displayOrder;
     });
 
+// Извлекает уникальные значения атрибута из списка вариантов
+const getAttributeValues = (variants: ProductVariant[], key: string): string[] =>
+    [...new Set(variants.map(v => v.attributes?.[key]).filter(Boolean) as string[])];
+
+// Находит вариант по выбранным атрибутам
+const findVariant = (variants: ProductVariant[], selected: Record<string, string>): ProductVariant | null => {
+    return variants.find(v =>
+        v.isActive && Object.entries(selected).every(([k, val]) => v.attributes?.[k] === val)
+    ) ?? null;
+};
+
 const ProductPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { message: messageApi } = App.useApp();
     const [quantity, setQuantity] = useState(1);
+    const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>({});
     const addItem = useCartStore((state) => state.addItem);
 
     const { data: product, isLoading, isError } = useQuery({
@@ -36,12 +48,37 @@ const ProductPage = () => {
         enabled: !!id,
     });
 
-    const displayPrice = useDisplayPrice(product ?? { price: 0, wholesalePrice: null });
+    const hasVariants = (product?.variants?.length ?? 0) > 1;
+
+    // Ключи атрибутов вариантов (размер, рост и т.д.)
+    const attrKeys = useMemo(() => {
+        if (!hasVariants || !product?.variants) return [];
+        const keys = new Set<string>();
+        product.variants.forEach(v => v.attributes && Object.keys(v.attributes).forEach(k => keys.add(k)));
+        return [...keys];
+    }, [product?.variants, hasVariants]);
+
+    // Выбранный вариант
+    const selectedVariant = useMemo(() => {
+        if (!hasVariants || !product?.variants) return null;
+        return findVariant(product.variants, selectedAttrs);
+    }, [product?.variants, selectedAttrs, hasVariants]);
+
+    // Цена: из выбранного варианта или с товара
+    const activePrice = selectedVariant?.price ?? product?.price ?? 0;
+    const activeWholesalePrice = selectedVariant?.wholesalePrice ?? product?.wholesalePrice ?? null;
+    const activeStock = selectedVariant?.stockQuantity ?? product?.stockQuantity ?? 0;
+
+    const displayPrice = useDisplayPrice({ price: activePrice, wholesalePrice: activeWholesalePrice });
 
     const handleAddToCart = async () => {
         if (!product) return;
+        if (hasVariants && !selectedVariant) {
+            messageApi.warning('Выберите все параметры товара');
+            return;
+        }
         try {
-            await addItem(product.id, quantity);
+            await addItem(product.id, quantity, selectedVariant?.id ?? null);
             messageApi.success(`${product.name} (${quantity} шт.) добавлен в корзину`);
         } catch {
             messageApi.error('Ошибка при добавлении в корзину');
@@ -77,7 +114,7 @@ const ProductPage = () => {
     }
 
     const sortedImages = sortImages(product.images || []);
-    const inStock = product.stockQuantity > 0;
+    const inStock = activeStock > 0;
 
     return (
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
@@ -142,7 +179,7 @@ const ProductPage = () => {
                         {inStock ? (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>
                                 <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', flexShrink: 0 }} />
-                                В наличии {product.stockQuantity} {product.unitOfMeasure || 'шт.'}
+                                В наличии {activeStock} {product.unitOfMeasure || 'шт.'}
                             </span>
                         ) : (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--red-tint)', color: 'var(--brand-red)' }}>
@@ -206,9 +243,56 @@ const ProductPage = () => {
                                 {formatPrice(displayPrice)}
                             </span>
                         </div>
-                        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 20 }}>
+                        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: hasVariants ? 16 : 20 }}>
                             за 1 {product.unitOfMeasure || 'шт.'} · НДС {product.vatRate ?? 20}% включён
                         </div>
+
+                        {/* Селектор вариантов */}
+                        {hasVariants && attrKeys.map(attrKey => (
+                            <div key={attrKey} style={{ marginBottom: 14 }}>
+                                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}>
+                                    {attrKey}
+                                    {selectedAttrs[attrKey] && (
+                                        <span style={{ fontWeight: 400, color: 'var(--ink-1)', marginLeft: 6 }}>{selectedAttrs[attrKey]}</span>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {getAttributeValues(product.variants, attrKey).map(val => {
+                                        const isSelected = selectedAttrs[attrKey] === val;
+                                        const testAttrs = { ...selectedAttrs, [attrKey]: val };
+                                        const available = findVariant(product.variants, testAttrs) !== null
+                                            || attrKeys.filter(k => k !== attrKey).every(k => !selectedAttrs[k]);
+                                        return (
+                                            <button
+                                                key={val}
+                                                onClick={() => setSelectedAttrs(prev => ({ ...prev, [attrKey]: val }))}
+                                                style={{
+                                                    height: 32, padding: '0 12px',
+                                                    border: isSelected ? '2px solid var(--brand-red)' : '1px solid var(--line-2)',
+                                                    borderRadius: 'var(--r-3)',
+                                                    background: isSelected ? 'var(--red-tint)' : 'var(--surface)',
+                                                    color: isSelected ? 'var(--brand-red)' : available ? 'var(--ink-1)' : 'var(--ink-4)',
+                                                    fontSize: 'var(--text-sm)', fontWeight: isSelected ? 600 : 400,
+                                                    cursor: available ? 'pointer' : 'not-allowed',
+                                                    fontFamily: 'var(--font-body)',
+                                                    textDecoration: available ? 'none' : 'line-through',
+                                                    opacity: available ? 1 : 0.5,
+                                                    transition: 'border-color 0.1s, background 0.1s',
+                                                }}
+                                            >
+                                                {val}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+
+                        {hasVariants && attrKeys.length > 0 && !selectedVariant && (
+                            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 14 }}>
+                                Выберите {attrKeys.join(' и ')}
+                            </div>
+                        )}
 
                         {inStock && (
                             <>
@@ -224,13 +308,13 @@ const ProductPage = () => {
                                         <input
                                             type="number"
                                             min={1}
-                                            max={product.stockQuantity}
+                                            max={activeStock}
                                             value={quantity}
                                             onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
                                             style={{ flex: 1, textAlign: 'center', border: 0, background: 'transparent', fontSize: 'var(--text-xl)', fontWeight: 600, outline: 'none', fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
                                         />
                                         <button
-                                            onClick={() => setQuantity((q) => Math.min(product.stockQuantity, q + 1))}
+                                            onClick={() => setQuantity((q) => Math.min(activeStock, q + 1))}
                                             style={{ width: 40, height: 42, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                         >
                                             +

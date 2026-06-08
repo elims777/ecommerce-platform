@@ -12,7 +12,7 @@ interface CartState {
     fetchCart: () => Promise<void>;
 
     /** Добавить товар в корзину */
-    addItem: (productId: number, quantity: number) => Promise<void>;
+    addItem: (productId: number, quantity: number, variantId?: number | null) => Promise<void>;
 
     /** Обновить количество товара */
     updateQuantity: (productId: number, quantity: number) => Promise<void>;
@@ -48,12 +48,13 @@ export const useCartStore = create<CartState>((set, get) => ({
         }
     },
 
-    addItem: async (productId, quantity) => {
+    addItem: async (productId, quantity, variantId) => {
         const prev = get();
-        const existing = prev.items.find(i => i.productId === productId);
+        const key = variantId ?? productId;
+        const existing = prev.items.find(i => (i.variantId ?? i.productId) === key);
         if (existing) {
             const updatedItems = prev.items.map(i =>
-                i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i
+                (i.variantId ?? i.productId) === key ? { ...i, quantity: i.quantity + quantity } : i
             );
             set({
                 items: updatedItems,
@@ -62,7 +63,7 @@ export const useCartStore = create<CartState>((set, get) => ({
             });
         }
         try {
-            await cartApi.addToCart({ productId, quantity });
+            await cartApi.addToCart({ productId, variantId, quantity });
             await get().fetchCart();
         } catch {
             set({ items: prev.items, totalItems: prev.totalItems, totalAmount: prev.totalAmount });

@@ -3,6 +3,8 @@ import apiClient from './client';
 /** Элемент корзины — CartItemDto из Swagger */
 export interface CartItemDto {
     productId: number;
+    variantId: number | null;
+    variantAttributes: string | null;
     productName: string;
     quantity: number;
     price: number;
@@ -20,6 +22,7 @@ export interface CartDto {
 /** Запрос на добавление — AddToCartRequest */
 export interface AddToCartRequest {
     productId: number;
+    variantId?: number | null;
     quantity: number;
 }
 

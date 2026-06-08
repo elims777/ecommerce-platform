@@ -81,6 +81,11 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
                     <div style={{ fontSize: 'var(--text-md)', fontWeight: 500, lineHeight: 1.35, color: 'var(--ink-1)' }}>
                         {item.productName}
                     </div>
+                    {item.variantAttributes && (
+                        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginTop: 2 }}>
+                            {item.variantAttributes}
+                        </div>
+                    )}
                 </div>
 
                 {/* Qty stepper */}
