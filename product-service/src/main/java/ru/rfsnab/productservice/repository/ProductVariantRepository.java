@@ -15,4 +15,6 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     List<ProductVariant> findByProductIdIn(List<Long> productIds);
 
     boolean existsByExternalId(String externalId);
+
+    List<ProductVariant> findByExternalIdIn(List<String> externalIds);
 }

@@ -8,6 +8,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Getter
 @Setter
@@ -50,8 +51,13 @@ public class ProductImportItem {
     // Ставка НДС
     private Integer vatRate;
 
+    // Источник товара: INTERNAL (1С), FTK и т.д.
+    private String source;
 
     private List<ProductAttributeImportItem> attributes;
+
+    // Варианты (размер/цвет/рост) — если пусто, используется default-вариант
+    private List<VariantImportItem> variants;
 
     @Getter
     @Setter
@@ -63,5 +69,22 @@ public class ProductImportItem {
         private String name;
         @NotBlank
         private String value;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class VariantImportItem {
+        // Уникальный идентификатор варианта у источника (артикул.001 у ФТК)
+        @NotBlank
+        private String externalId;
+        private String sku;
+        private BigDecimal price;
+        private BigDecimal wholesalePrice;
+        private Integer stockQuantity;
+        // {"Размер": "XL", "Рост": "170-176"}
+        private Map<String, String> attributes;
     }
 }

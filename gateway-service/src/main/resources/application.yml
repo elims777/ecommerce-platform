@@ -251,6 +251,18 @@ spring:
               uri: http://localhost:8085
               predicates:
                 - Path=/1c-exchange/**
+            # FTK import — только ROLE_ADMIN (проверяется в AuthGatewayFilter)
+            - id: integration-ftk
+              uri: http://localhost:8085
+              predicates:
+                - Path=/api/v1/integration/ftk/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 2
+                    redis-rate-limiter.burstCapacity: 3
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
 # JWT
 jwt:

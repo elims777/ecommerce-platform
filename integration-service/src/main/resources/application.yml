@@ -75,6 +75,15 @@ integration:
     poll-interval-ms: 5000
     max-retries: 3
 
+# ===== Настройки интеграции с ФТК =====
+  ftk:
+    # Лимит товаров на один запуск (0 = без лимита)
+    import-limit: ${FTK_IMPORT_LIMIT:100}
+    # Категория-корень для товаров ФТК в нашем каталоге
+    root-category-slug: ${FTK_ROOT_CATEGORY_SLUG:ftk}
+    # Таймаут скачивания изображения (сек)
+    image-download-timeout-sec: ${FTK_IMAGE_TIMEOUT:30}
+
 # ===== Kafka topics =====
 app:
   kafka:

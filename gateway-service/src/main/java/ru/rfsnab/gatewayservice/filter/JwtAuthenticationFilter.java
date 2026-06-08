@@ -86,13 +86,21 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
             String email = claims.get("email", String.class);
             String clientType = claims.get("clientType", String.class);
+            String role = claims.get("role", String.class);
             String subject = claims.getSubject();
+
+            // Маршруты интеграции и admin — только ROLE_ADMIN
+            if (isAdminOnlyPath(path) && !"ROLE_ADMIN".equals(role)) {
+                log.warn("Отказ доступа (не ROLE_ADMIN): {} {}", method, path);
+                return rejectRequest(exchange, HttpStatus.FORBIDDEN);
+            }
 
             // Пробрасываем данные пользователя в заголовках для downstream сервисов
             ServerHttpRequest modifiedRequest = request.mutate()
                     .header("X-User-Email", email != null ? email : "")
                     .header("X-User-Id", subject != null ? subject : "")
                     .header("X-Client-Type", clientType != null ? clientType : "B2C")
+                    .header("X-User-Role", role != null ? role : "")
                     .build();
             log.debug("JWT валиден: clientType={}, sub={}, {} {}", clientType, subject, method, path);
 
@@ -109,6 +117,15 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             log.error("Ошибка при валидации JWT: {} {} — {}", method, path, e.getMessage());
             return rejectRequest(exchange, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private static final List<String> ADMIN_ONLY_PATHS = List.of(
+            "/api/v1/integration/",
+            "/api/v1/admin/"
+    );
+
+    private boolean isAdminOnlyPath(String path) {
+        return ADMIN_ONLY_PATHS.stream().anyMatch(path::startsWith);
     }
 
     /**

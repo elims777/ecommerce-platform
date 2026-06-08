@@ -20,6 +20,7 @@ import ru.rfsnab.productservice.repository.ProductRepository;
 import ru.rfsnab.productservice.repository.ProductVariantRepository;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -128,6 +129,9 @@ public class ProductImportService {
             product.setSku(item.getSku());
             product.setUnitOfMeasure(item.getUnitOfMeasure());
             product.setVatRate(item.getVatRate());
+            if (item.getSource() != null) {
+                product.setSource(item.getSource());
+            }
 
             // Цена и остаток — обновляем только если переданы (могут прийти отдельно через offers.xml)
             if(item.getPrice() != null){
@@ -144,8 +148,10 @@ public class ProductImportService {
 
             Product savedProduct = productRepository.save(product);
 
-            // Для новых товаров из 1С создаём вариант-по-умолчанию
-            if (isNew) {
+            boolean hasExplicitVariants = item.getVariants() != null && !item.getVariants().isEmpty();
+            if (hasExplicitVariants) {
+                upsertExplicitVariants(savedProduct, item.getVariants());
+            } else if (isNew) {
                 createDefaultVariant(savedProduct, item);
             } else {
                 updateDefaultVariant(savedProduct, item);
@@ -164,6 +170,42 @@ public class ProductImportService {
                     .success(false)
                     .errorMessage(e.getMessage())
                     .build();
+        }
+    }
+
+    /**
+     * Создаёт или обновляет явно переданные варианты (FTK и другие поставщики с размерной сеткой).
+     * Матчинг по externalId варианта. Новые — создаются, существующие — обновляются.
+     */
+    private void upsertExplicitVariants(Product product,
+                                        List<ProductImportItem.VariantImportItem> variantItems) {
+        List<String> externalIds = variantItems.stream()
+                .map(ProductImportItem.VariantImportItem::getExternalId)
+                .filter(id -> id != null)
+                .toList();
+
+        Map<String, ProductVariant> existing = externalIds.isEmpty()
+                ? Collections.emptyMap()
+                : variantRepository.findByExternalIdIn(externalIds).stream()
+                        .collect(Collectors.toMap(ProductVariant::getExternalId, Function.identity()));
+
+        for (ProductImportItem.VariantImportItem vi : variantItems) {
+            if (vi.getExternalId() == null) continue;
+            ProductVariant variant = existing.get(vi.getExternalId());
+            if (variant == null) {
+                variant = ProductVariant.builder()
+                        .product(product)
+                        .externalId(vi.getExternalId())
+                        .isActive(true)
+                        .stockQuantity(0)
+                        .build();
+            }
+            if (vi.getSku() != null) variant.setSku(vi.getSku());
+            if (vi.getPrice() != null) variant.setPrice(vi.getPrice());
+            if (vi.getWholesalePrice() != null) variant.setWholesalePrice(vi.getWholesalePrice());
+            if (vi.getStockQuantity() != null) variant.setStockQuantity(vi.getStockQuantity());
+            if (vi.getAttributes() != null) variant.setAttributes(vi.getAttributes());
+            variantRepository.save(variant);
         }
     }
 
