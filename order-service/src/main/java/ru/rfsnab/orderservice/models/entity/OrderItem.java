@@ -37,4 +37,10 @@ public class OrderItem {
 
     @Column(name = "external_id", length = 50)
     private String externalId;
+
+    @Column(name = "variant_id")
+    private Long variantId;
+
+    @Column(name = "variant_attributes", length = 500)
+    private String variantAttributes;
 }

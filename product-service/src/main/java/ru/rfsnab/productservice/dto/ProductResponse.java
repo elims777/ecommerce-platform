@@ -32,7 +32,10 @@ public class ProductResponse {
     private String unitOfMeasure;
     private Integer vatRate;
 
+    private String source;
+
     // Вложенные данные
+    private List<ProductVariantDto> variants;
     private List<ProductImageResponse> images;
     private List<ProductVideoResponse> videos;
     private List<ProductAttributeResponse> attributes;

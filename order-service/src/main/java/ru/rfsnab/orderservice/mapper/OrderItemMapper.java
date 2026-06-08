@@ -23,8 +23,10 @@ public class OrderItemMapper {
                 item.getQuantity(),
                 item.getPrice(),
                 subtotal,
-                item.getExternalId()
-                );
+                item.getExternalId(),
+                item.getVariantId(),
+                item.getVariantAttributes()
+        );
     }
 
     /**

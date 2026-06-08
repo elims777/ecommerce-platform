@@ -244,7 +244,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("B2B: снапшот компании — customerType, companyName, inn")
         void createOrder_B2B_snapshotsCompanyData() {
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 1);
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
@@ -260,7 +260,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("B2C: поля компании не заполняются — customerType B2C, companyName null, inn null")
         void createOrder_B2C_noSnapshotFields() {
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 1);
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
@@ -283,7 +283,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
             when(productServiceClient.getProduct(productId)).thenReturn(product);
 
-            cartService.addItemToCart(USER_ID, productId, 2);
+            cartService.addItemToCart(USER_ID, productId, null, 2);
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
@@ -307,7 +307,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
             when(productServiceClient.getProduct(productId)).thenReturn(product);
 
-            cartService.addItemToCart(USER_ID, productId, 2);
+            cartService.addItemToCart(USER_ID, productId, null, 2);
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
@@ -324,7 +324,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("B2B без inn: выбрасывает InvalidOrderStateException")
         void createOrder_B2B_missingInn_throws() {
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 1);
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
@@ -351,8 +351,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .deliveryMethod(DeliveryMethod.PICKUP)
                     .warehousePointId(savedWarehousePoint.getId())
                     .items(List.of(
-                            new OrderItemDto(
-                                    PRODUCT_ID_1, null, 20, null, null, null)))
+                            new OrderItemDto(PRODUCT_ID_1, null, 20, null, null, null, null, null)))
                     .comment("Обновлённый комментарий")
                     .build();
 
@@ -379,8 +378,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .paymentMethod(PaymentMethod.CARD)
                     .deliveryMethod(DeliveryMethod.PICKUP)
                     .warehousePointId(savedWarehousePoint.getId())
-                    .items(List.of(new OrderItemDto(
-                            PRODUCT_ID_1, null, 5, null, null, null)))
+                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null)))
                     .build();
 
             assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, request))
@@ -397,8 +395,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .paymentMethod(PaymentMethod.CARD)
                     .deliveryMethod(DeliveryMethod.PICKUP)
                     .warehousePointId(savedWarehousePoint.getId())
-                    .items(List.of(new OrderItemDto(
-                            PRODUCT_ID_1, null, 5, null, null, null)))
+                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null)))
                     .build();
 
             assertThatThrownBy(() -> orderService.updateOrder(order.getId(), 999L, request))
@@ -487,7 +484,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             s.setSbpEnabled(false);
             paymentMethodSettingsRepository.save(s);
 
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.INVOICE, DeliveryMethod.SUPPLIER_DELIVERY,
                     buildAddressDto(), null, null, null, null, null, null, null, null);
@@ -505,7 +502,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             s.setSbpEnabled(false);
             paymentMethodSettingsRepository.save(s);
 
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
                     buildAddressDto(), null, null, null, null, null, null, null, null);
@@ -525,7 +522,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             s.setSbpEnabled(false);
             paymentMethodSettingsRepository.save(s);
 
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.SBP, DeliveryMethod.SUPPLIER_DELIVERY,
                     buildAddressDto(), null, null, null, null, null, null, null, null);
@@ -545,7 +542,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             s.setSbpEnabled(false);
             paymentMethodSettingsRepository.save(s);
 
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.INVOICE, DeliveryMethod.SUPPLIER_DELIVERY,
                     buildAddressDto(), null, null, null, null, "ООО Тест", "1234567890", null, null);
@@ -824,8 +821,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
     }
 
     private void addItemsToCart() {
-        cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 10);
-        cartService.addItemToCart(USER_ID, PRODUCT_ID_2, 10);
+        cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 10);
+        cartService.addItemToCart(USER_ID, PRODUCT_ID_2, null, 10);
     }
 
     private Order createTestOrder() {

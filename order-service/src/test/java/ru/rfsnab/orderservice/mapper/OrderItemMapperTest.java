@@ -99,7 +99,7 @@ class OrderItemMapperTest {
         void shouldMapDtoToEntity() {
             Order order = Order.builder().build();
             OrderItemDto dto = new OrderItemDto(1L, "Доска", 10,
-                    new BigDecimal("1500.00"), new BigDecimal("15000.00"), "ext-001");
+                    new BigDecimal("1500.00"), new BigDecimal("15000.00"), "ext-001", null, null);
 
             OrderItem entity = OrderItemMapper.toEntity(dto, order);
 
@@ -121,9 +121,9 @@ class OrderItemMapperTest {
             Order order = Order.builder().build();
             List<OrderItemDto> dtos = List.of(
                     new OrderItemDto(1L, "Товар 1", 2,
-                            new BigDecimal("100.00"), new BigDecimal("200.00"), "ext-001"),
+                            new BigDecimal("100.00"), new BigDecimal("200.00"), "ext-001", null, null),
                     new OrderItemDto(2L, "Товар 2", 3,
-                            new BigDecimal("300.00"), new BigDecimal("900.00"), "ext-002")
+                            new BigDecimal("300.00"), new BigDecimal("900.00"), "ext-002", null, null)
             );
 
             List<OrderItem> entities = OrderItemMapper.toEntityList(dtos, order);

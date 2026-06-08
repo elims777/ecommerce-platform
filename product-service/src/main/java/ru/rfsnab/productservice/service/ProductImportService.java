@@ -14,8 +14,10 @@ import ru.rfsnab.productservice.exception.CategoryNotFoundException;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.model.ProductAttribute;
+import ru.rfsnab.productservice.model.ProductVariant;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
+import ru.rfsnab.productservice.repository.ProductVariantRepository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +45,7 @@ public class ProductImportService {
     private int chunkSize;
 
     private final ProductRepository productRepository;
+    private final ProductVariantRepository variantRepository;
     private final CategoryRepository categoryRepository;
     private final PlatformTransactionManager transactionManager;
     private final SlugGeneratorService slugService;
@@ -141,6 +144,13 @@ public class ProductImportService {
 
             Product savedProduct = productRepository.save(product);
 
+            // Для новых товаров из 1С создаём вариант-по-умолчанию
+            if (isNew) {
+                createDefaultVariant(savedProduct, item);
+            } else {
+                updateDefaultVariant(savedProduct, item);
+            }
+
             return ImportItemResult.builder()
                     .externalId(item.getExternalId())
                     .productId(savedProduct.getId())
@@ -155,6 +165,32 @@ public class ProductImportService {
                     .errorMessage(e.getMessage())
                     .build();
         }
+    }
+
+    private void createDefaultVariant(Product product, ProductImportItem item) {
+        String variantExternalId = item.getExternalId() != null ? item.getExternalId() + "#default" : null;
+        ProductVariant variant = ProductVariant.builder()
+                .product(product)
+                .sku(item.getSku())
+                .price(item.getPrice())
+                .wholesalePrice(item.getWholesalePrice())
+                .stockQuantity(item.getStockQuantity() != null ? item.getStockQuantity() : 0)
+                .isActive(true)
+                .externalId(variantExternalId)
+                .build();
+        variantRepository.save(variant);
+    }
+
+    private void updateDefaultVariant(Product product, ProductImportItem item) {
+        String variantExternalId = item.getExternalId() != null ? item.getExternalId() + "#default" : null;
+        if (variantExternalId == null) return;
+        variantRepository.findByExternalId(variantExternalId).ifPresent(variant -> {
+            if (item.getPrice() != null) variant.setPrice(item.getPrice());
+            if (item.getWholesalePrice() != null) variant.setWholesalePrice(item.getWholesalePrice());
+            if (item.getStockQuantity() != null) variant.setStockQuantity(item.getStockQuantity());
+            if (item.getSku() != null) variant.setSku(item.getSku());
+            variantRepository.save(variant);
+        });
     }
 
     private Map<String, Product> loadExistingProducts(List<ProductImportItem> items){

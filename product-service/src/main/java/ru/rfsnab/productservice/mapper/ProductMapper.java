@@ -2,8 +2,10 @@ package ru.rfsnab.productservice.mapper;
 
 import ru.rfsnab.productservice.dto.ProductRequest;
 import ru.rfsnab.productservice.dto.ProductResponse;
+import ru.rfsnab.productservice.dto.ProductVariantDto;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
+import ru.rfsnab.productservice.model.ProductVariant;
 
 public class ProductMapper {
 
@@ -47,6 +49,8 @@ public class ProductMapper {
                 .vatRate(product.getVatRate())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
+                .source(product.getSource())
+                .variants(product.getVariants().stream().map(ProductMapper::mapVariantToDto).toList())
                 .images(product.getImages().stream().map(ImageMapper::mapToResponse).toList())
                 .videos(product.getVideos().stream().map(VideoMapper::mapToResponse).toList())
                 .attributes(product.getAttributes().stream().map(AttributeMapper::mapToResponse).toList());
@@ -58,5 +62,18 @@ public class ProductMapper {
         }
 
         return builder.build();
+    }
+
+    public static ProductVariantDto mapVariantToDto(ProductVariant variant) {
+        return ProductVariantDto.builder()
+                .id(variant.getId())
+                .sku(variant.getSku())
+                .price(variant.getPrice())
+                .wholesalePrice(variant.getWholesalePrice())
+                .stockQuantity(variant.getStockQuantity())
+                .attributes(variant.getAttributes())
+                .isActive(variant.getIsActive())
+                .externalId(variant.getExternalId())
+                .build();
     }
 }
