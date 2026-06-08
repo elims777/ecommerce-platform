@@ -404,7 +404,7 @@ const ClientLayout = () => {
                     >
                         <MenuIcon /> Каталог товаров
                     </button>
-                    {navLink('/about', 'О компании', true)}
+                    {navLink('/about', 'О компании')}
                     {navLink('/contacts', 'Контакты')}
                     <a style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4,

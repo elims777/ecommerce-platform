@@ -95,24 +95,30 @@ const SlideCard = ({ slide, index, onEdit, onDelete, onToggle, isDragging, onDra
                     position: 'absolute', inset: 0, padding: '6px 8px',
                     display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
                 }}>
-                    {slide.title && (
+                    {slide.textBlocks[0]?.heading && (
                         <div style={{ fontSize: 9, fontWeight: 700, color: '#fff', lineHeight: 1.3,
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {slide.title}
+                            {slide.textBlocks[0].heading}
                         </div>
                     )}
                 </div>
             </div>
 
             {/* Info */}
+            {(() => {
+                const firstBlock = slide.textBlocks[0];
+                const title = firstBlock?.heading || '';
+                const sub = firstBlock?.body || '';
+                return (
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 3,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {slide.title || <span style={{ color: 'var(--ink-4)', fontStyle: 'italic' }}>Без заголовка</span>}
+                    {title || <span style={{ color: 'var(--ink-4)', fontStyle: 'italic' }}>Без заголовка</span>}
                 </div>
-                {slide.eyebrow && (
-                    <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 4 }}>
-                        {slide.eyebrow}
+                {sub && (
+                    <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 4,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {sub.slice(0, 60)}{sub.length > 60 ? '…' : ''}
                     </div>
                 )}
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -143,6 +149,8 @@ const SlideCard = ({ slide, index, onEdit, onDelete, onToggle, isDragging, onDra
                     )}
                 </div>
             </div>
+                );
+            })()}
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
@@ -217,9 +225,10 @@ const AdminSliderPage = () => {
     };
 
     const handleDelete = (slide: Slide) => {
+        const heading = slide.textBlocks[0]?.heading || '';
         modal.confirm({
             title: 'Удалить слайд?',
-            content: slide.title ? `«${slide.title}»` : 'Этот слайд будет удалён.',
+            content: heading ? `«${heading}»` : 'Этот слайд будет удалён.',
             okText: 'Удалить',
             okButtonProps: { danger: true },
             cancelText: 'Отмена',

@@ -209,15 +209,10 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
     const s = slides[activeIdx];
     const bgStyle = getSlideBgStyle(s);
 
-    const handleCta1 = () => {
-        if (!s.cta1Link) return;
-        if (s.cta1Link.startsWith('http')) window.open(s.cta1Link, '_blank');
-        else navigate(s.cta1Link);
-    };
-    const handleCta2 = () => {
-        if (!s.cta2Link) return;
-        if (s.cta2Link.startsWith('http')) window.open(s.cta2Link, '_blank');
-        else navigate(s.cta2Link);
+    const handleCtaClick = (link: string) => {
+        if (!link) return;
+        if (link.startsWith('http')) window.open(link, '_blank');
+        else navigate(link);
     };
 
     return (
@@ -293,56 +288,54 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                 </div>
             ))}
 
-            {/* CTA buttons — позиция под textBlocks, снизу слева */}
-            <div style={{
-                position: 'absolute',
-                left: `${s.textBlocks?.[0]?.x ?? 5}%`,
-                bottom: 52,
-                display: 'flex',
-                gap: 10,
-                zIndex: 3,
-            }}>
-                {s.cta1Label && (
-                    <button
-                        onClick={s.cta1Link === '/catalog' ? onCatalog : handleCta1}
-                        style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'var(--surface)', color: 'var(--ink-1)', fontWeight: 600,
-                            padding: '0 18px', height: 'var(--btn-h-lg)', border: 'none', borderRadius: 'var(--r-3)',
-                            fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                            transition: 'opacity .12s',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '.9'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-                    >
-                        {s.cta1Label} <ArrRight />
-                    </button>
-                )}
-                {s.cta2Label && (
-                    <button
-                        onClick={handleCta2}
-                        style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'var(--overlay-white-14)', color: '#fff',
-                            padding: '0 18px', height: 'var(--btn-h-lg)', border: 0, borderRadius: 'var(--r-3)',
-                            fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                            transition: 'background .12s',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.22)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--overlay-white-14)'; }}
-                    >
-                        <DocIcon /> {s.cta2Label}
-                    </button>
-                )}
-            </div>
+            {/* CTA buttons */}
+            {s.cta?.length > 0 && (
+                <div style={{
+                    position: 'absolute',
+                    left: `${s.textBlocks?.[0]?.x ?? 5}%`,
+                    bottom: 52,
+                    display: 'flex', gap: 10, zIndex: 3,
+                }}>
+                    {s.cta.map((btn, i) => (
+                        btn.label ? (
+                            <button
+                                key={btn.id}
+                                onClick={() => handleCtaClick(btn.link)}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    background: btn.variant === 'primary' ? 'var(--surface)' : 'var(--overlay-white-14)',
+                                    color: btn.variant === 'primary' ? 'var(--ink-1)' : '#fff',
+                                    fontWeight: 600,
+                                    padding: '0 18px', height: 'var(--btn-h-lg)',
+                                    border: 'none', borderRadius: 'var(--r-3)',
+                                    fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                    transition: btn.variant === 'primary' ? 'opacity .12s' : 'background .12s',
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (btn.variant === 'primary') e.currentTarget.style.opacity = '.9';
+                                    else e.currentTarget.style.background = 'rgba(255,255,255,.22)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (btn.variant === 'primary') e.currentTarget.style.opacity = '1';
+                                    else e.currentTarget.style.background = 'var(--overlay-white-14)';
+                                }}
+                            >
+                                {btn.label} {btn.variant === 'primary' && <ArrRight />}
+                            </button>
+                        ) : null
+                    ))}
+                </div>
+            )}
 
-            {/* Products block — right side, fixed */}
+            {/* Products block */}
             {s.products.length > 0 && (
                 <div style={{
-                    position: 'absolute', right: 36, top: '50%',
-                    transform: 'translateY(-50%)',
+                    position: 'absolute',
+                    right: `${s.productsRight}%`,
+                    top: `${s.productsTop}%`,
+                    width: `${s.productsWidth}%`,
                     display: 'flex', flexDirection: 'column', gap: 8,
-                    width: 280, zIndex: 2,
+                    zIndex: 2,
                 }}>
                     {s.products.slice(0, 3).map((p) => (
                         <div
@@ -354,6 +347,8 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                                 border: '1px solid rgba(255,255,255,.2)',
                                 borderRadius: 'var(--r-3)', padding: '8px 10px',
                                 cursor: 'pointer', transition: 'background .12s',
+                                height: s.productsItemHeight ?? 56,
+                                boxSizing: 'border-box', overflow: 'hidden',
                             }}
                             onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.2)'; }}
                             onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.12)'; }}
