@@ -59,6 +59,7 @@ export interface Product {
     unitOfMeasure: string | null;
     vatRate: number | null;
 
+    material: string | null;
     source: string | null;
 
     // Вложенные данные

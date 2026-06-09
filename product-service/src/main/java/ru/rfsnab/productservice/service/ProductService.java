@@ -71,8 +71,13 @@ public class ProductService {
         existing.setName(updatedProduct.getName());
         existing.setDescription(updatedProduct.getDescription());
         existing.setShortDescription(updatedProduct.getShortDescription());
+        existing.setMaterial(updatedProduct.getMaterial());
         existing.setPrice(updatedProduct.getPrice());
+        existing.setWholesalePrice(updatedProduct.getWholesalePrice());
         existing.setStockQuantity(updatedProduct.getStockQuantity());
+        existing.setSku(updatedProduct.getSku());
+        existing.setUnitOfMeasure(updatedProduct.getUnitOfMeasure());
+        existing.setVatRate(updatedProduct.getVatRate());
         existing.setIsActive(updatedProduct.getIsActive());
         existing.setIsFeatured(updatedProduct.getIsFeatured());
 

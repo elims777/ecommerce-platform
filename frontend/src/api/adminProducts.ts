@@ -16,6 +16,7 @@ export interface ProductRequest {
     externalCode?: string;
     unitOfMeasure?: string;
     vatRate?: number;
+    material?: string;
 }
 
 /** Создать товар */

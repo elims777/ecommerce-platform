@@ -233,6 +233,16 @@ const ProductPage = () => {
                             <p style={{ fontSize: 'var(--text-base)', color: 'var(--ink-2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{product.description}</p>
                         </div>
                     )}
+
+                    {/* Материал */}
+                    {product.material && (
+                        <div style={{ borderTop: '1px solid var(--line-1)', paddingTop: 16, marginTop: product.description ? 16 : 0 }}>
+                            <div style={{ display: 'flex', fontSize: 'var(--text-base)', padding: '5px 0' }}>
+                                <span style={{ color: 'var(--ink-3)', flex: '0 0 120px' }}>Материал</span>
+                                <span style={{ fontWeight: 500, color: 'var(--ink-1)' }}>{product.material}</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Buy box */}

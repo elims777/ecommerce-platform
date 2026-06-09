@@ -44,7 +44,7 @@ const AdminProductEditPage = () => {
     const [form, setForm] = useState<ProductRequest>({
         name: '', description: '', shortDescription: '', price: 0,
         stockQuantity: 0, categoryId: undefined, isActive: true,
-        isFeatured: false, sku: '', unitOfMeasure: '',
+        isFeatured: false, sku: '', unitOfMeasure: '', material: '',
     });
     const [formTouched, setFormTouched] = useState(false);
 
@@ -76,6 +76,7 @@ const AdminProductEditPage = () => {
                 isFeatured: product.isFeatured,
                 sku: product.sku || '',
                 unitOfMeasure: product.unitOfMeasure || '',
+                material: product.material || '',
             });
         }
     }, [product]);
@@ -283,6 +284,17 @@ const AdminProductEditPage = () => {
                                     style={{ ...inputStyle, height: 'auto', padding: '8px 10px', resize: 'vertical' }}
                                     value={form.description ?? ''}
                                     onChange={(e) => { setForm((f) => ({ ...f, description: e.target.value })); setFormTouched(true); }}
+                                />
+                            </label>
+
+                            <label style={labelStyle}>
+                                <span style={labelTextStyle}>Материал</span>
+                                <input
+                                    type="text"
+                                    style={inputStyle}
+                                    placeholder="Например: хлопок 65%, полиэстер 35%"
+                                    value={form.material ?? ''}
+                                    onChange={(e) => { setForm((f) => ({ ...f, material: e.target.value })); setFormTouched(true); }}
                                 />
                             </label>
 

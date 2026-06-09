@@ -14,6 +14,7 @@ public class ProductMapper {
                 .name(productRequest.getName())
                 .description(productRequest.getDescription())
                 .shortDescription(productRequest.getShortDescription())
+                .material(productRequest.getMaterial())
                 .price(productRequest.getPrice())
                 .wholesalePrice(productRequest.getWholesalePrice())
                 .stockQuantity(productRequest.getStockQuantity())
