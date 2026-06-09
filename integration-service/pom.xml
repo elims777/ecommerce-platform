@@ -66,6 +66,13 @@
             <groupId>org.glassfish.jaxb</groupId>
             <artifactId>jaxb-runtime</artifactId>
         </dependency>
+        <!-- Apache Commons Net для FTP-клиента (пассивный режим) -->
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.10.0</version>
+        </dependency>
+
         <!-- Apache POI для чтения XLS/XLSX -->
         <dependency>
             <groupId>org.apache.poi</groupId>

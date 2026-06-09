@@ -83,6 +83,12 @@ integration:
     root-category-slug: ${FTK_ROOT_CATEGORY_SLUG:ftk}
     # Таймаут скачивания изображения (сек)
     image-download-timeout-sec: ${FTK_IMAGE_TIMEOUT:30}
+    ftp:
+      host: ${FTK_FTP_HOST:31.44.91.154}
+      port: ${FTK_FTP_PORT:21}
+      username: ${FTK_FTP_USERNAME}
+      password: ${FTK_FTP_PASSWORD}
+      passive-port-start: ${FTK_FTP_PASSIVE_PORT_START:65000}
 
 # ===== Kafka topics =====
 app:

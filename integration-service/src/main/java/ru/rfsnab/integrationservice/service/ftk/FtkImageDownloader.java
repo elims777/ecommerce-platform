@@ -3,6 +3,8 @@ package ru.rfsnab.integrationservice.service.ftk;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
+import org.apache.commons.net.ftp.FTP;
+import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -12,6 +14,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.integrationservice.config.IntegrationProperties;
+import ru.rfsnab.integrationservice.config.IntegrationProperties.FtpProperties;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -27,8 +30,8 @@ import java.time.Duration;
 /**
  * Скачивает изображение с FTP/HTTP URL ФТК, конвертирует в WebP и загружает в product-service.
  *
- * URL изображений ФТК: ftp://fakelftp:poiPOI098@195.133.242.197/GoodsPictures/UUID.jpg
- * Java HttpClient умеет работать с ftp:// через JDK URL handler.
+ * URL изображений ФТК содержит только путь к файлу — хост, порт и учётные данные
+ * берутся из конфигурации (env-переменные FTK_FTP_*).
  */
 @Component
 @RequiredArgsConstructor
@@ -41,20 +44,13 @@ public class FtkImageDownloader {
     private final RestTemplate productServiceRestTemplate;
     private final IntegrationProperties properties;
 
-    /**
-     * Скачивает изображение по URL, конвертирует в WebP, загружает в product-service.
-     *
-     * @param imageUrl   URL изображения (ftp:// или http://)
-     * @param externalId externalId товара в product-service
-     * @return true если успешно
-     */
     public boolean downloadAndUpload(String imageUrl, String externalId) {
         if (imageUrl == null || imageUrl.isBlank()) return false;
 
         try {
             byte[] imageBytes = downloadImage(imageUrl);
             if (imageBytes == null || imageBytes.length == 0) {
-                log.warn("Пустое изображение: {}", imageUrl);
+                log.warn("Пустое изображение: externalId={}", externalId);
                 return false;
             }
 
@@ -62,26 +58,21 @@ public class FtkImageDownloader {
             String fileName = buildFileName(imageUrl, externalId);
             uploadToProductService(externalId, webpBytes, fileName);
 
-            log.debug("Изображение загружено: externalId={}, url={}, size={}KB",
-                    externalId, imageUrl, webpBytes.length / 1024);
+            log.debug("Изображение загружено: externalId={}, size={}KB", externalId, webpBytes.length / 1024);
             return true;
 
         } catch (Exception e) {
-            log.warn("Ошибка загрузки изображения: externalId={}, url={}: {}",
-                    externalId, imageUrl, e.getMessage());
+            log.warn("Ошибка загрузки изображения: externalId={}: {}", externalId, e.getMessage());
             return false;
         }
     }
 
     private byte[] downloadImage(String imageUrl) throws IOException, InterruptedException {
-        int timeoutSec = properties.getFtk().getImageDownloadTimeoutSec();
-
-        // java.net.http.HttpClient поддерживает ftp:// через URL handler JDK
-        // Для FTP с логином/паролем в URL используем java.net.URL как fallback
         if (imageUrl.startsWith("ftp://")) {
-            return downloadViaUrl(imageUrl, timeoutSec);
+            return downloadViaFtp(extractFtpPath(imageUrl));
         }
 
+        int timeoutSec = properties.getFtk().getImageDownloadTimeoutSec();
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(timeoutSec))
                 .build();
@@ -94,19 +85,54 @@ public class FtkImageDownloader {
 
         HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
         if (response.statusCode() != 200) {
-            throw new IOException("HTTP " + response.statusCode() + " при скачивании " + imageUrl);
+            throw new IOException("HTTP " + response.statusCode());
         }
         return response.body();
     }
 
-    @SuppressWarnings("deprecation")
-    private byte[] downloadViaUrl(String ftpUrl, int timeoutSec) throws IOException {
-        java.net.URL url = new java.net.URL(ftpUrl);
-        java.net.URLConnection conn = url.openConnection();
-        conn.setConnectTimeout(timeoutSec * 1000);
-        conn.setReadTimeout(timeoutSec * 1000);
-        try (InputStream is = conn.getInputStream()) {
-            return is.readAllBytes();
+    /**
+     * Извлекает путь из FTP URL, отбрасывая схему, учётные данные и хост.
+     * ftp://user:pass@host/GoodsPictures/UUID.jpg → /GoodsPictures/UUID.jpg
+     */
+    private String extractFtpPath(String ftpUrl) {
+        try {
+            URI uri = URI.create(ftpUrl);
+            return uri.getPath();
+        } catch (Exception e) {
+            // fallback: всё после третьего слеша
+            int idx = ftpUrl.indexOf('/', ftpUrl.indexOf("//") + 2);
+            return idx >= 0 ? ftpUrl.substring(idx) : ftpUrl;
+        }
+    }
+
+    private byte[] downloadViaFtp(String remotePath) throws IOException {
+        FtpProperties cfg = properties.getFtk().getFtp();
+        int timeoutMs = properties.getFtk().getImageDownloadTimeoutSec() * 1000;
+
+        FTPClient ftp = new FTPClient();
+        ftp.setConnectTimeout(timeoutMs);
+        ftp.setDefaultTimeout(timeoutMs);
+        ftp.setDataTimeout(Duration.ofMillis(timeoutMs));
+
+        try {
+            ftp.connect(cfg.getHost(), cfg.getPort());
+            ftp.login(cfg.getUsername(), cfg.getPassword());
+            ftp.enterLocalPassiveMode();
+            ftp.setFileType(FTP.BINARY_FILE_TYPE);
+
+            try (InputStream is = ftp.retrieveFileStream(remotePath)) {
+                if (is == null) {
+                    throw new IOException("Файл не найден на FTP: " + remotePath);
+                }
+                byte[] data = is.readAllBytes();
+                ftp.completePendingCommand();
+                return data;
+            }
+        } finally {
+            if (ftp.isConnected()) {
+                try { ftp.logout(); } catch (Exception ignored) {}
+                try { ftp.disconnect(); } catch (Exception ignored) {}
+            }
         }
     }
 
@@ -149,7 +175,6 @@ public class FtkImageDownloader {
     }
 
     private String buildFileName(String imageUrl, String externalId) {
-        // "ftp://.../.../UUID.jpg" → "ftk-UUID.webp"
         String[] parts = imageUrl.split("/");
         String lastPart = parts[parts.length - 1];
         int dot = lastPart.lastIndexOf('.');

@@ -91,5 +91,18 @@ public class IntegrationProperties {
         private String rootCategorySlug = "ftk";
         /** Таймаут скачивания одного изображения в секундах */
         private int imageDownloadTimeoutSec = 30;
+        /** Параметры FTP-сервера ФТК */
+        @NestedConfigurationProperty
+        private FtpProperties ftp = new FtpProperties();
+    }
+
+    @Getter
+    @Setter
+    public static class FtpProperties {
+        private String host;
+        private int port = 21;
+        private String username;
+        private String password;
+        private int passivePortStart = 65000;
     }
 }
