@@ -150,20 +150,16 @@ public class FtkXlsParser {
 
     private BuildContext parseProductRow(Row row, String article, String name, String categoryPath) {
         BigDecimal price   = parseBigDecimal(getStringValue(row, COL_PRICE), article);
-        String printName   = getStringValue(row, COL_PRINT).trim();
         String description = getStringValue(row, COL_DESC).trim();
-        String material    = getStringValue(row, COL_MATERIAL).trim();
-        String imageUrl    = getStringValue(row, COL_IMAGE).trim();
+        String imagePath   = getStringValue(row, COL_IMAGE).trim();
 
         return new BuildContext(
                 article,
                 name,
-                printName.isEmpty() ? null : printName,
                 description.isEmpty() ? null : description,
-                material.isEmpty() ? null : material,
                 categoryPath,
                 price,
-                imageUrl.isEmpty() ? null : imageUrl
+                imagePath.isEmpty() ? null : imagePath
         );
     }
 
@@ -172,10 +168,12 @@ public class FtkXlsParser {
         Map<String, String> attrs = parseCharacteristic(characteristic);
 
         return FtkVariant.builder()
+                .offerUuid(null)
                 .article(article)
-                .characteristic(characteristic)
                 .price(price)
+                .stockQuantity(0)
                 .attributes(attrs)
+                .vatRate(null)
                 .build();
     }
 
@@ -228,39 +226,45 @@ public class FtkXlsParser {
     private static class BuildContext {
         private final String article;
         private final String name;
-        private final String printName;
         private final String description;
-        private final String material;
         private final String categoryPath;
         private final BigDecimal price;
-        private final String imageUrl;
+        private final String imagePath;
         private final List<FtkVariant> variants = new ArrayList<>();
 
-        BuildContext(String article, String name, String printName, String description,
-                     String material, String categoryPath, BigDecimal price, String imageUrl) {
+        BuildContext(String article, String name, String description,
+                     String categoryPath, BigDecimal price, String imagePath) {
             this.article      = article;
             this.name         = name;
-            this.printName    = printName;
             this.description  = description;
-            this.material     = material;
             this.categoryPath = categoryPath;
             this.price        = price;
-            this.imageUrl     = imageUrl;
+            this.imagePath    = imagePath;
         }
 
         void addVariant(FtkVariant v) { variants.add(v); }
 
         FtkProduct build() {
+            // Если вариантов нет — создаём default-вариант с ценой из строки товара
+            List<FtkVariant> effectiveVariants = variants.isEmpty()
+                    ? List.of(FtkVariant.builder()
+                            .offerUuid(null)
+                            .article(article)
+                            .price(price)
+                            .stockQuantity(0)
+                            .attributes(Map.of())
+                            .vatRate(null)
+                            .build())
+                    : new ArrayList<>(variants);
+
             return FtkProduct.builder()
+                    .productUuid(null)
                     .article(article)
                     .name(name)
-                    .printName(printName)
                     .description(description)
-                    .material(material)
                     .categoryPath(categoryPath)
-                    .price(price)
-                    .imageUrl(imageUrl)
-                    .variants(new ArrayList<>(variants))
+                    .imagePath(imagePath)
+                    .variants(effectiveVariants)
                     .build();
         }
     }

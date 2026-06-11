@@ -37,6 +37,8 @@ import static org.mockito.Mockito.when;
 class FtkImportServiceTest {
 
     @Mock private FtkXlsParser xlsParser;
+    @Mock private FtkXmlParser xmlParser;
+    @Mock private FtkFtpClient ftpClient;
     @Mock private FtkCategoryMapper categoryMapper;
     @Mock private FtkImageDownloader imageDownloader;
     @Mock private RestTemplate productServiceRestTemplate;
@@ -52,23 +54,28 @@ class FtkImportServiceTest {
         properties.getImportConfig().setChunkSize(100);
 
         service = new FtkImportService(
-                xlsParser, categoryMapper, imageDownloader,
+                xlsParser, xmlParser, ftpClient, categoryMapper, imageDownloader,
                 productServiceRestTemplate, properties
         );
     }
 
+    /** Строит FtkProduct с одним default-вариантом для тестов importFromXls. */
     private FtkProduct product(String article, String name, BigDecimal price,
-                                String description, String material, String imageUrl,
+                                String description, String imagePath,
                                 List<FtkVariant> variants) {
+        List<FtkVariant> effectiveVariants = variants.isEmpty()
+                ? List.of(FtkVariant.builder()
+                        .offerUuid(null).article(article).price(price)
+                        .stockQuantity(0).attributes(Map.of()).vatRate(null).build())
+                : variants;
         return FtkProduct.builder()
+                .productUuid(null)
                 .article(article)
                 .name(name)
-                .price(price)
                 .description(description)
-                .material(material)
-                .imageUrl(imageUrl)
+                .imagePath(imagePath)
                 .categoryPath("Спецодежда")
-                .variants(variants)
+                .variants(effectiveVariants)
                 .build();
     }
 
@@ -86,11 +93,10 @@ class FtkImportServiceTest {
     class MappingTests {
 
         @Test
-        @DisplayName("description и material передаются в DTO")
-        void shouldMapDescriptionAndMaterial() throws IOException {
+        @DisplayName("description передаётся в DTO")
+        void shouldMapDescription() throws IOException {
             FtkProduct p = product("12345", "Костюм", new BigDecimal("9267"),
-                    "Полное описание костюма", "Ткань Твил 65% хлопок",
-                    null, List.of());
+                    "Полное описание костюма", null, List.of());
             when(xlsParser.parse(any())).thenReturn(List.of(p));
             when(categoryMapper.resolveSlug(anyString())).thenReturn("specodezhda");
             when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
@@ -103,7 +109,6 @@ class FtkImportServiceTest {
 
             ProductImportItemDto dto = captor.getValue().getItems().get(0);
             assertThat(dto.getDescription()).isEqualTo("Полное описание костюма");
-            assertThat(dto.getMaterial()).isEqualTo("Ткань Твил 65% хлопок");
             assertThat(dto.getSource()).isEqualTo("FTK");
         }
 
@@ -111,7 +116,7 @@ class FtkImportServiceTest {
         @DisplayName("externalId = 'FTK-{article}'")
         void shouldBuildCorrectExternalId() throws IOException {
             FtkProduct p = product("87490974", "Товар", new BigDecimal("1000"),
-                    null, null, null, List.of());
+                    null, null, List.of());
             when(xlsParser.parse(any())).thenReturn(List.of(p));
             when(categoryMapper.resolveSlug(anyString())).thenReturn("ftk");
             when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
@@ -129,7 +134,7 @@ class FtkImportServiceTest {
         @DisplayName("wholesalePrice = price (у ФТК нет оптовой цены)")
         void shouldSetWholesalePriceEqualToPrice() throws IOException {
             BigDecimal price = new BigDecimal("4660");
-            FtkProduct p = product("111", "Товар", price, null, null, null, List.of());
+            FtkProduct p = product("111", "Товар", price, null, null, List.of());
             when(xlsParser.parse(any())).thenReturn(List.of(p));
             when(categoryMapper.resolveSlug(anyString())).thenReturn("ftk");
             when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
@@ -150,14 +155,16 @@ class FtkImportServiceTest {
         void shouldMapVariantsWithCorrectExternalId() throws IOException {
             List<FtkVariant> variants = List.of(
                     FtkVariant.builder()
+                            .offerUuid(null)
                             .article("87486380.001")
-                            .characteristic("44-46; 170-176")
                             .price(new BigDecimal("4660"))
+                            .stockQuantity(10)
                             .attributes(Map.of("Размер", "44-46", "Рост", "170-176"))
+                            .vatRate(20)
                             .build()
             );
             FtkProduct p = product("87486380", "Жилет", new BigDecimal("4660"),
-                    null, null, null, variants);
+                    null, null, variants);
             when(xlsParser.parse(any())).thenReturn(List.of(p));
             when(categoryMapper.resolveSlug(anyString())).thenReturn("ftk");
             when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
@@ -171,6 +178,7 @@ class FtkImportServiceTest {
             ProductImportItemDto dto = captor.getValue().getItems().get(0);
             assertThat(dto.getVariants()).hasSize(1);
             assertThat(dto.getVariants().get(0).getExternalId()).isEqualTo("FTK-87486380.001");
+            assertThat(dto.getVariants().get(0).getStockQuantity()).isEqualTo(10);
             assertThat(dto.getVariants().get(0).getAttributes())
                     .containsEntry("Размер", "44-46")
                     .containsEntry("Рост", "170-176");
@@ -186,9 +194,9 @@ class FtkImportServiceTest {
         void shouldImportAllWhenLimitIsZero() throws IOException {
             properties.getFtk().setImportLimit(0);
             List<FtkProduct> products = List.of(
-                    product("1", "Товар 1", BigDecimal.ONE, null, null, null, List.of()),
-                    product("2", "Товар 2", BigDecimal.ONE, null, null, null, List.of()),
-                    product("3", "Товар 3", BigDecimal.ONE, null, null, null, List.of())
+                    product("1", "Товар 1", BigDecimal.ONE, null, null, List.of()),
+                    product("2", "Товар 2", BigDecimal.ONE, null, null, List.of()),
+                    product("3", "Товар 3", BigDecimal.ONE, null, null, List.of())
             );
             when(xlsParser.parse(any())).thenReturn(products);
             when(categoryMapper.resolveSlug(anyString())).thenReturn("ftk");
@@ -205,9 +213,9 @@ class FtkImportServiceTest {
         void shouldRespectImportLimit() throws IOException {
             properties.getFtk().setImportLimit(2);
             List<FtkProduct> products = List.of(
-                    product("1", "Товар 1", BigDecimal.ONE, null, null, null, List.of()),
-                    product("2", "Товар 2", BigDecimal.ONE, null, null, null, List.of()),
-                    product("3", "Товар 3", BigDecimal.ONE, null, null, null, List.of())
+                    product("1", "Товар 1", BigDecimal.ONE, null, null, List.of()),
+                    product("2", "Товар 2", BigDecimal.ONE, null, null, List.of()),
+                    product("3", "Товар 3", BigDecimal.ONE, null, null, List.of())
             );
             when(xlsParser.parse(any())).thenReturn(products);
             when(categoryMapper.resolveSlug(anyString())).thenReturn("ftk");
@@ -225,10 +233,10 @@ class FtkImportServiceTest {
     class ImageTests {
 
         @Test
-        @DisplayName("изображение загружается для товара с imageUrl")
-        void shouldDownloadImageWhenUrlPresent() throws IOException {
+        @DisplayName("изображение загружается для товара с imagePath")
+        void shouldDownloadImageWhenPathPresent() throws IOException {
             FtkProduct p = product("111", "Товар", BigDecimal.ONE,
-                    null, null, "ftp://fakelftp:poiPOI098@31.44.91.154/GoodsPictures/img.jpg", List.of());
+                    null, "ftp://fakelftp:poiPOI098@31.44.91.154/GoodsPictures/img.jpg", List.of());
             when(xlsParser.parse(any())).thenReturn(List.of(p));
             when(categoryMapper.resolveSlug(anyString())).thenReturn("ftk");
             when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
@@ -246,9 +254,9 @@ class FtkImportServiceTest {
         }
 
         @Test
-        @DisplayName("изображение не загружается если imageUrl = null")
-        void shouldSkipImageWhenUrlAbsent() throws IOException {
-            FtkProduct p = product("222", "Товар", BigDecimal.ONE, null, null, null, List.of());
+        @DisplayName("изображение не загружается если imagePath = null")
+        void shouldSkipImageWhenPathAbsent() throws IOException {
+            FtkProduct p = product("222", "Товар", BigDecimal.ONE, null, null, List.of());
             when(xlsParser.parse(any())).thenReturn(List.of(p));
             when(categoryMapper.resolveSlug(anyString())).thenReturn("ftk");
             when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
@@ -280,7 +288,7 @@ class FtkImportServiceTest {
         @Test
         @DisplayName("ошибка product-service → failed увеличивается")
         void shouldCountFailedOnProductServiceError() throws IOException {
-            FtkProduct p = product("111", "Товар", BigDecimal.ONE, null, null, null, List.of());
+            FtkProduct p = product("111", "Товар", BigDecimal.ONE, null, null, List.of());
             when(xlsParser.parse(any())).thenReturn(List.of(p));
             when(categoryMapper.resolveSlug(anyString())).thenReturn("ftk");
             when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))

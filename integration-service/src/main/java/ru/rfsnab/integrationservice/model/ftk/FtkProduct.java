@@ -11,46 +11,46 @@ import java.util.Map;
 @Builder
 public class FtkProduct {
 
-    /** Артикул родителя (без суффикса, например "87490974") */
+    /** UUID товара из import (Товар.Ид) */
+    private final String productUuid;
+
+    /** Артикул товара без точки, например "87490974" */
     private final String article;
 
-    /** Наименование товара (колонка A) */
+    /** Наименование товара */
     private final String name;
 
-    /** Наименование для печати (колонка E) */
-    private final String printName;
-
-    /** Текстовое описание (колонка F) */
+    /** Текстовое описание */
     private final String description;
-
-    /** Основной материал (колонка I) */
-    private final String material;
 
     /** Путь категории ("Спецодежда > Спецодежда летняя > Костюмы летние") */
     private final String categoryPath;
 
-    /** Розничная цена родителя */
-    private final BigDecimal price;
+    /** Относительный путь к картинке от goods/1/, например "import_files/b5/UUID.jpg" */
+    private final String imagePath;
 
-    /** URL изображения на FTP (колонка M) */
-    private final String imageUrl;
-
-    /** Варианты (размер/рост) — пустой список если товар без вариантов */
+    /** Варианты — пустой список если товар без вариантов */
     private final List<FtkVariant> variants;
 
     @Getter
     @Builder
     public static class FtkVariant {
-        /** Артикул варианта, например "87490974.001" */
+        /** Составной Ид предложения: UUID_товара#UUID_варианта или просто UUID для простого товара */
+        private final String offerUuid;
+
+        /** Артикул варианта: "87490974.001"; для простого товара = article без точки */
         private final String article;
 
-        /** Характеристика варианта из колонки A, например "44-46; 170-176" */
-        private final String characteristic;
-
-        /** Розничная цена варианта */
+        /** Розничная цена (из prices, ИдТипаЦены = fdf5831f-...) */
         private final BigDecimal price;
 
-        /** Атрибуты, разобранные из characteristic: {"Размер": "44-46", "Рост": "170-176"} */
+        /** Количество в наличии (из rests) */
+        private final int stockQuantity;
+
+        /** Атрибуты из ХарактеристикиТовара: {"Размер": "9", "Основной цвет": "синий"} — только непустые */
         private final Map<String, String> attributes;
+
+        /** Ставка НДС в процентах (из offers, СтавкиНалогов) */
+        private final Integer vatRate;
     }
 }

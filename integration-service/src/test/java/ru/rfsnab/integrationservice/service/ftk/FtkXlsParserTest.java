@@ -20,10 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Unit-тесты FtkXlsParser.
  * XLS строится программно через POI — нет зависимости от файла на диске.
  *
- * Структура реального файла ФТК:
- *   строки 0-6 — заголовки (пропускаются)
- *   A — наименование / группа, B — артикул, C — цена,
- *   E — наименование для печати, F — описание, I — материал, M — изображение
+ * Структура реального файла ФТК (колонки):
+ *   A(0)=наименование/группа, D(3)=артикул, E(4)=цена, I(8)=описание, M(12)=изображение
  */
 @DisplayName("FtkXlsParser")
 class FtkXlsParserTest {
@@ -43,22 +41,19 @@ class FtkXlsParserTest {
         private int rowIdx = 0;
 
         XlsBuilder() {
-            // 7 строк заголовков (0-6)
             for (int i = 0; i < 7; i++) {
                 sheet.createRow(rowIdx++);
             }
         }
 
-        /** Строка категории: только колонка A, B пустая */
         XlsBuilder category(String name) {
             Row row = sheet.createRow(rowIdx++);
             row.createCell(0).setCellValue(name);
             return this;
         }
 
-        /** Строка товара: A-C(0) merged=название, D(3)=артикул, E(4)=цена, G(6)=печать, I(8)=описание, J(9)=материал, M(12)=фото */
         XlsBuilder product(String article, String name, double price,
-                           String printName, String description, String material, String imageUrl) {
+                           String printName, String description, String material, String imagePath) {
             Row row = sheet.createRow(rowIdx++);
             row.createCell(0).setCellValue(name);
             row.createCell(3).setCellValue(article);
@@ -66,11 +61,10 @@ class FtkXlsParserTest {
             if (printName != null)   row.createCell(6).setCellValue(printName);
             if (description != null) row.createCell(8).setCellValue(description);
             if (material != null)    row.createCell(9).setCellValue(material);
-            if (imageUrl != null)    row.createCell(12).setCellValue(imageUrl);
+            if (imagePath != null)   row.createCell(12).setCellValue(imagePath);
             return this;
         }
 
-        /** Строка варианта: A-C(0) merged=характеристика, D(3)=артикул с точкой, E(4)=цена */
         XlsBuilder variant(String article, String characteristic, double price) {
             Row row = sheet.createRow(rowIdx++);
             row.createCell(0).setCellValue(characteristic);
@@ -168,8 +162,8 @@ class FtkXlsParserTest {
     class ProductTests {
 
         @Test
-        @DisplayName("парсит все поля товара")
-        void shouldParseAllProductFields() throws IOException {
+        @DisplayName("парсит основные поля товара")
+        void shouldParseProductFields() throws IOException {
             var xls = new XlsBuilder()
                     .category("01 Спецодежда")
                     .product("87490974", "Костюм летний",
@@ -186,11 +180,11 @@ class FtkXlsParserTest {
             FtkProduct p = result.get(0);
             assertThat(p.getArticle()).isEqualTo("87490974");
             assertThat(p.getName()).isEqualTo("Костюм летний");
-            assertThat(p.getPrice()).isEqualByComparingTo("9267");
-            assertThat(p.getPrintName()).isEqualTo("Костюм ProfLineBase-1");
             assertThat(p.getDescription()).isEqualTo("Описание костюма");
-            assertThat(p.getMaterial()).isEqualTo("Ткань Твил 65% хлопок");
-            assertThat(p.getImageUrl()).isEqualTo("ftp://fakelftp:poiPOI098@31.44.91.154/GoodsPictures/img.jpg");
+            assertThat(p.getImagePath()).isEqualTo("ftp://fakelftp:poiPOI098@31.44.91.154/GoodsPictures/img.jpg");
+            // товар без вариантов → default-вариант с ценой
+            assertThat(p.getVariants()).hasSize(1);
+            assertThat(p.getVariants().get(0).getPrice()).isEqualByComparingTo("9267");
         }
 
         @Test
@@ -243,7 +237,6 @@ class FtkXlsParserTest {
 
             FtkProduct.FtkVariant v1 = p.getVariants().get(0);
             assertThat(v1.getArticle()).isEqualTo("87486380.001");
-            assertThat(v1.getCharacteristic()).isEqualTo("44-46; 170-176");
             assertThat(v1.getAttributes()).containsEntry("Размер", "44-46");
             assertThat(v1.getAttributes()).containsEntry("Рост", "170-176");
             assertThat(v1.getPrice()).isEqualByComparingTo("4660");
@@ -265,8 +258,8 @@ class FtkXlsParserTest {
         }
 
         @Test
-        @DisplayName("товар без вариантов имеет пустой список вариантов")
-        void shouldHaveEmptyVariantsWhenNoVariantRows() throws IOException {
+        @DisplayName("товар без вариантов получает default-вариант")
+        void shouldCreateDefaultVariantWhenNoVariantRows() throws IOException {
             var xls = new XlsBuilder()
                     .category("01 Спецодежда")
                     .product("99999", "Товар без вариантов", 500, null, null, null, null)
@@ -275,7 +268,10 @@ class FtkXlsParserTest {
             List<FtkProduct> result = parser.parse(xls);
 
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).getVariants()).isEmpty();
+            FtkProduct p = result.get(0);
+            assertThat(p.getVariants()).hasSize(1);
+            assertThat(p.getVariants().get(0).getArticle()).isEqualTo("99999");
+            assertThat(p.getVariants().get(0).getPrice()).isEqualByComparingTo("500");
         }
 
         @Test
@@ -292,7 +288,9 @@ class FtkXlsParserTest {
 
             assertThat(result).hasSize(2);
             assertThat(result.get(0).getVariants()).hasSize(1);
-            assertThat(result.get(1).getVariants()).isEmpty();
+            // Товар 2 без вариантов → один default-вариант
+            assertThat(result.get(1).getVariants()).hasSize(1);
+            assertThat(result.get(1).getVariants().get(0).getArticle()).isEqualTo("222");
         }
     }
 }
