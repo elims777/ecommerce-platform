@@ -221,6 +221,30 @@ const AdminCatalogPage = () => {
         return items;
     }, [searchQuery, searchResults, productsPage, activeLetter]);
 
+    // Grouped rows: parents first, children inserted right after their parent
+    const groupedRows = useMemo(() => {
+        const childrenByParent = new Map<number, Product[]>();
+        const roots: Product[] = [];
+        for (const p of displayProducts) {
+            if (p.isVariantChild && p.parentProductId != null) {
+                const arr = childrenByParent.get(p.parentProductId) ?? [];
+                arr.push(p);
+                childrenByParent.set(p.parentProductId, arr);
+            } else {
+                roots.push(p);
+            }
+        }
+        const result: { product: Product; isChild: boolean; childCount: number }[] = [];
+        for (const root of roots) {
+            const children = childrenByParent.get(root.id) ?? [];
+            result.push({ product: root, isChild: false, childCount: children.length });
+            for (const child of children) {
+                result.push({ product: child, isChild: true, childCount: 0 });
+            }
+        }
+        return result;
+    }, [displayProducts]);
+
     const invalidateAll = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
         queryClient.invalidateQueries({ queryKey: ['adminCategoryTree'] });
@@ -764,13 +788,16 @@ const AdminCatalogPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {displayProducts.map((product) => {
+                                        {groupedRows.map(({ product, isChild, childCount }) => {
                                             const imageUrl = getPrimaryImageUrl(product);
                                             const isMovingThis = moveProductId === product.id;
                                             return (
-                                                <tr key={product.id}>
+                                                <tr
+                                                    key={product.id}
+                                                    style={isChild ? { background: 'var(--surface-2)' } : undefined}
+                                                >
                                                     {/* Checkbox */}
-                                                    <td style={{ paddingLeft: 16 }}>
+                                                    <td style={{ paddingLeft: isChild ? 36 : 16 }}>
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedRowKeys.includes(product.id)}
@@ -780,22 +807,22 @@ const AdminCatalogPage = () => {
                                                     </td>
 
                                                     {/* Image */}
-                                                    <td>
+                                                    <td style={{ paddingLeft: isChild ? 4 : 0 }}>
                                                         {imageUrl ? (
                                                             <img
                                                                 src={imageUrl}
-                                                                width={36}
-                                                                height={36}
-                                                                style={{ objectFit: 'contain', borderRadius: 'var(--r-2)', display: 'block' }}
+                                                                width={isChild ? 28 : 36}
+                                                                height={isChild ? 28 : 36}
+                                                                style={{ objectFit: 'contain', borderRadius: 'var(--r-2)', display: 'block', opacity: isChild ? 0.8 : 1 }}
                                                                 alt=""
                                                             />
                                                         ) : (
                                                             <div style={{
-                                                                width: 36, height: 36, borderRadius: 'var(--r-2)',
-                                                                background: 'var(--surface-2)',
+                                                                width: isChild ? 28 : 36, height: isChild ? 28 : 36, borderRadius: 'var(--r-2)',
+                                                                background: isChild ? 'var(--surface-3)' : 'var(--surface-2)',
                                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                             }}>
-                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                                                                     <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" stroke="var(--ink-3)" strokeWidth="1.5" />
                                                                     <path d="M16 3H8" stroke="var(--ink-3)" strokeWidth="1.5" strokeLinecap="round" />
                                                                     <circle cx="12" cy="13" r="2.5" stroke="var(--ink-3)" strokeWidth="1.5" />
@@ -807,12 +834,25 @@ const AdminCatalogPage = () => {
                                                     {/* Name */}
                                                     <td>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                            {isChild && (
+                                                                <span style={{ width: 2, height: 18, background: 'var(--line-2)', borderRadius: 2, flexShrink: 0 }} />
+                                                            )}
                                                             <a
                                                                 onClick={() => navigate(`/admin/products/${product.id}/edit`)}
-                                                                style={{ color: 'var(--brand-navy)', cursor: 'pointer', textDecoration: 'none', fontSize: 'var(--text-base)' }}
+                                                                style={{ color: isChild ? 'var(--ink-2)' : 'var(--brand-navy)', cursor: 'pointer', textDecoration: 'none', fontSize: 'var(--text-base)' }}
                                                             >
                                                                 {product.name}
                                                             </a>
+                                                            {childCount > 0 && (
+                                                                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 'var(--r-2)', background: 'var(--brand-navy)', color: '#fff', fontWeight: 600, flexShrink: 0 }}>
+                                                                    {childCount} вар.
+                                                                </span>
+                                                            )}
+                                                            {isChild && (
+                                                                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 'var(--r-2)', background: 'var(--surface-3)', color: 'var(--ink-3)', flexShrink: 0 }}>
+                                                                    вариант
+                                                                </span>
+                                                            )}
                                                             {!product.isActive && (
                                                                 <span className="rf-badge rf-badge-neutral" style={{ fontSize: 10, height: 18 }}>
                                                                     неактивен
@@ -1100,7 +1140,7 @@ const AdminCatalogPage = () => {
             {/* Batch set parent dialog */}
             <dialog
                 ref={batchParentDialogRef}
-                style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', color: 'var(--ink-1)', padding: 0, width: 420, maxWidth: '90vw', boxShadow: 'var(--shadow-pop)' }}
+                style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', color: 'var(--ink-1)', padding: 0, width: 420, maxWidth: '90vw', boxShadow: 'var(--shadow-pop)', margin: 'auto', overflow: 'visible' }}
                 onKeyDown={(e) => { if (e.key === 'Escape') { batchParentDialogRef.current?.close(); } }}
             >
                 <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1113,7 +1153,7 @@ const AdminCatalogPage = () => {
                         onClick={() => batchParentDialogRef.current?.close()}
                     >✕</button>
                 </div>
-                <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 12, overflow: 'visible' }}>
                     <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
                         Найдите родительский товар — выбранные товары станут его вариантами
                     </div>
@@ -1126,7 +1166,7 @@ const AdminCatalogPage = () => {
                             style={{ width: '100%', height: 34, padding: '0 10px', boxSizing: 'border-box', borderRadius: 'var(--r-2)', border: '1px solid var(--line-2)', fontSize: 13, background: 'var(--surface)', color: 'var(--ink-1)', outline: 'none' }}
                         />
                         {parentSearchResults.length > 0 && !selectedParentId && (
-                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', boxShadow: '0 4px 12px rgba(0,0,0,.08)', maxHeight: 200, overflowY: 'auto' }}>
+                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999, background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', boxShadow: '0 4px 12px rgba(0,0,0,.08)', maxHeight: 200, overflowY: 'auto' }}>
                                 {parentSearchResults.map(p => (
                                     <div
                                         key={p.id}
