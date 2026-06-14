@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <property name="LOG_PATH" value="/var/log/rfsnab/order-service"/>
+    <property name="LOG_PATH" value="${LOG_PATH:-${java.io.tmpdir}/rfsnab/order-service}"/>
     <property name="APP_NAME" value="order-service"/>
 
     <property name="CONSOLE_LOG_PATTERN"
