@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://integration-db:5432/${INTEGRATION_DB_NAME}
+    username: ${INTEGRATION_DB_USER}
+    password: ${INTEGRATION_DB_PASSWORD}
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  kafka:
+    bootstrap-servers: kafka:29092
+
+integration:
+  product-service:
+    url: http://product-service:8083
+  order-service:
+    url: http://order-service:8084
+
+logging:
+  level:
+    ru.rfsnab.integrationservice: INFO
+    reactor.netty: WARN
+    io.netty: WARN
+    ru.rfsnab.integrationservice.service.ftk: INFO

@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://order-db:5432/${ORDER_DB_NAME}
+    username: ${ORDER_DB_USER}
+    password: ${ORDER_DB_PASSWORD}
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+
+  kafka:
+    bootstrap-servers: kafka:29092
+
+services:
+  product:
+    url: http://product-service:8083
+  payment:
+    url: http://payment-service:8090
+
+logging:
+  level:
+    ru.rfsnab.orderservice: INFO
+    org.springframework: WARN
+    org.hibernate.SQL: WARN
+    org.apache.kafka: WARN

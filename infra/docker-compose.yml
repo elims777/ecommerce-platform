@@ -187,6 +187,40 @@ services:
 
   # ==================== SERVICES ====================
 
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway-service
+    networks:
+      - ecommerce-net
+
+  gateway-service:
+    build:
+      context: ../gateway-service
+      dockerfile: Dockerfile
+    container_name: gateway-service
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SECRET_JWT: ${SECRET_JWT}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - /var/log/rfsnab/gateway-service:/var/log/rfsnab/gateway-service
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+
   user-service:
     build:
       context: ../user-service
@@ -197,7 +231,7 @@ services:
       - "8081:8081"
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
@@ -222,7 +256,7 @@ services:
     ports:
       - "9000:9000"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
@@ -256,7 +290,7 @@ services:
     ports:
       - "8082:8082"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://notification-db:5432/${NOTIFICATION_DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${NOTIFICATION_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${NOTIFICATION_DB_PASSWORD}
@@ -287,7 +321,7 @@ services:
     ports:
       - "8083:8083"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5432/${PRODUCT_DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${PRODUCT_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${PRODUCT_DB_PASSWORD}
@@ -313,7 +347,7 @@ services:
     ports:
       - "8084:8084"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5432/${ORDER_DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${ORDER_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${ORDER_DB_PASSWORD}
@@ -345,7 +379,7 @@ services:
     ports:
       - "8090:8090"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://payment-db:5432/${PAYMENT_DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${PAYMENT_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${PAYMENT_DB_PASSWORD}
@@ -379,7 +413,7 @@ services:
     ports:
       - "8085:8085"
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://integration-db:5432/${INTEGRATION_DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${INTEGRATION_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${INTEGRATION_DB_PASSWORD}
