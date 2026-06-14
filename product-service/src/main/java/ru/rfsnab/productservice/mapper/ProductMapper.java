@@ -5,7 +5,12 @@ import ru.rfsnab.productservice.dto.ProductResponse;
 import ru.rfsnab.productservice.dto.ProductVariantDto;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
+import ru.rfsnab.productservice.model.ProductAttribute;
 import ru.rfsnab.productservice.model.ProductVariant;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ProductMapper {
 
@@ -32,6 +37,39 @@ public class ProductMapper {
     }
 
     public static ProductResponse mapToResponse(Product product) {
+        return mapToResponse(product, List.of());
+    }
+
+    public static ProductResponse mapToResponse(Product product, List<Product> children) {
+        // Варианты из таблицы product_variants
+        List<ProductVariantDto> variants = product.getVariants().stream()
+                .map(ProductMapper::mapVariantToDto)
+                .collect(Collectors.toList());
+
+        // Дочерние товары-варианты: маппим default-вариант каждого дочернего в ProductVariantDto
+        for (Product child : children) {
+            child.getVariants().stream()
+                    .filter(v -> v.getExternalId() != null && v.getExternalId().endsWith("#default"))
+                    .findFirst()
+                    .ifPresent(defaultVariant -> {
+                        Map<String, String> attrs = child.getAttributes().stream()
+                                .collect(Collectors.toMap(
+                                        ProductAttribute::getAttributeName,
+                                        ProductAttribute::getAttributeValue,
+                                        (a, b) -> a));
+                        variants.add(ProductVariantDto.builder()
+                                .id(defaultVariant.getId())
+                                .sku(child.getSku())
+                                .price(defaultVariant.getPrice() != null ? defaultVariant.getPrice() : child.getPrice())
+                                .wholesalePrice(defaultVariant.getWholesalePrice() != null ? defaultVariant.getWholesalePrice() : child.getWholesalePrice())
+                                .stockQuantity(defaultVariant.getStockQuantity())
+                                .attributes(attrs.isEmpty() ? null : attrs)
+                                .isActive(child.getIsActive())
+                                .externalId(defaultVariant.getExternalId())
+                                .build());
+                    });
+        }
+
         ProductResponse.ProductResponseBuilder builder = ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())
@@ -49,15 +87,16 @@ public class ProductMapper {
                 .externalCode(product.getExternalCode())
                 .unitOfMeasure(product.getUnitOfMeasure())
                 .vatRate(product.getVatRate())
+                .isVariantChild(product.getIsVariantChild())
+                .parentProductId(product.getParentProductId())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .source(product.getSource())
-                .variants(product.getVariants().stream().map(ProductMapper::mapVariantToDto).toList())
+                .variants(variants)
                 .images(product.getImages().stream().map(ImageMapper::mapToResponse).toList())
                 .videos(product.getVideos().stream().map(VideoMapper::mapToResponse).toList())
                 .attributes(product.getAttributes().stream().map(AttributeMapper::mapToResponse).toList());
 
-        // Добавляем категорию если есть
         if (product.getCategory() != null) {
             builder.categoryId(product.getCategory().getId());
             builder.categoryName(product.getCategory().getName());

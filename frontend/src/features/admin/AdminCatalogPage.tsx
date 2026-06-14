@@ -11,7 +11,7 @@ import {
     getCategoryById,
     setCategoryParent,
 } from '@/api/adminCategories';
-import { batchUpdateActive, changeProductCategory, bulkDeleteProducts } from '@/api/adminProducts';
+import { batchUpdateActive, changeProductCategory, bulkDeleteProducts, setParentProduct, searchProducts as searchProductsApi } from '@/api/adminProducts';
 import apiClient from '@/api/client';
 import type { CategoryRequest } from '@/api/adminCategories';
 import type { Product, CategoryTree } from '@/types/product';
@@ -162,7 +162,23 @@ const AdminCatalogPage = () => {
     const batchMoveDialogRef = useRef<HTMLDialogElement>(null);
     const [batchTargetCategory, setBatchTargetCategory] = useState<number | ''>('');
 
-    const [pageSize, setPageSize] = useState(20);
+    // Batch set parent
+    const batchParentDialogRef = useRef<HTMLDialogElement>(null);
+    const [parentSearch, setParentSearch] = useState('');
+    const [parentSearchResults, setParentSearchResults] = useState<{ id: number; name: string }[]>([]);
+    const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
+    const [selectedParentName, setSelectedParentName] = useState('');
+
+    const [pageSize, setPageSize] = useState(() => {
+        const saved = localStorage.getItem('adminCatalogPageSize');
+        return saved ? Number(saved) : 20;
+    });
+
+    const handlePageSizeChange = (size: number) => {
+        setPageSize(size);
+        localStorage.setItem('adminCatalogPageSize', String(size));
+        setCurrentPage(1);
+    };
 
     // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -311,6 +327,35 @@ const AdminCatalogPage = () => {
         },
         onError: () => messageApi.error('Ошибка при удалении'),
     });
+
+    const batchSetParentMutation = useMutation({
+        mutationFn: (parentId: number) =>
+            Promise.all(selectedRowKeys.map(id => setParentProduct(id, parentId))),
+        onSuccess: () => {
+            messageApi.success(`${selectedRowKeys.length} товаров назначены дочерними`);
+            setSelectedRowKeys([]);
+            batchParentDialogRef.current?.close();
+            setSelectedParentId(null);
+            setSelectedParentName('');
+            setParentSearch('');
+            setParentSearchResults([]);
+            invalidateAll();
+        },
+        onError: () => messageApi.error('Ошибка при назначении родителя'),
+    });
+
+    const handleParentSearch = async (query: string) => {
+        setParentSearch(query);
+        setSelectedParentId(null);
+        setSelectedParentName('');
+        if (query.trim().length < 2) { setParentSearchResults([]); return; }
+        try {
+            const results = await searchProductsApi(query);
+            setParentSearchResults(results.map(p => ({ id: p.id, name: p.name })));
+        } catch {
+            setParentSearchResults([]);
+        }
+    };
 
     const toggleProductMutation = useMutation({
         mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
@@ -911,7 +956,7 @@ const AdminCatalogPage = () => {
                                     {' · '}
                                     <select
                                         value={pageSize}
-                                        onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                                        onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                                         style={{
                                             height: 26, fontSize: 'var(--text-sm)', border: '1px solid var(--line-2)',
                                             borderRadius: 'var(--r-2)', background: 'var(--surface)', color: 'var(--ink-1)',
@@ -963,6 +1008,12 @@ const AdminCatalogPage = () => {
                         onClick={openBatchMoveDialog}
                     >
                         Переместить
+                    </button>
+                    <button
+                        className="rf-bulk-btn"
+                        onClick={() => { setSelectedParentId(null); setSelectedParentName(''); setParentSearch(''); setParentSearchResults([]); batchParentDialogRef.current?.showModal(); }}
+                    >
+                        Назначить родителя
                     </button>
                     <div className="rf-bulk-bar-divider" />
                     <button className="rf-bulk-btn danger" onClick={handleBatchDelete}>
@@ -1042,6 +1093,68 @@ const AdminCatalogPage = () => {
                         onClick={handleBatchMove}
                     >
                         {batchMoveMutation.isPending ? 'Перемещение…' : 'Переместить'}
+                    </button>
+                </div>
+            </dialog>
+
+            {/* Batch set parent dialog */}
+            <dialog
+                ref={batchParentDialogRef}
+                style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', color: 'var(--ink-1)', padding: 0, width: 420, maxWidth: '90vw', boxShadow: 'var(--shadow-pop)' }}
+                onKeyDown={(e) => { if (e.key === 'Escape') { batchParentDialogRef.current?.close(); } }}
+            >
+                <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)' }}>
+                        Назначить родителя для {selectedRowKeys.length} товаров
+                    </span>
+                    <button
+                        className="rf-btn rf-btn-ghost"
+                        style={{ height: 28, width: 28, padding: 0, fontSize: 'var(--text-xl)', color: 'var(--ink-3)' }}
+                        onClick={() => batchParentDialogRef.current?.close()}
+                    >✕</button>
+                </div>
+                <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+                        Найдите родительский товар — выбранные товары станут его вариантами
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                        <input
+                            type="text"
+                            placeholder="Начните вводить название..."
+                            value={parentSearch}
+                            onChange={(e) => handleParentSearch(e.target.value)}
+                            style={{ width: '100%', height: 34, padding: '0 10px', boxSizing: 'border-box', borderRadius: 'var(--r-2)', border: '1px solid var(--line-2)', fontSize: 13, background: 'var(--surface)', color: 'var(--ink-1)', outline: 'none' }}
+                        />
+                        {parentSearchResults.length > 0 && !selectedParentId && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', boxShadow: '0 4px 12px rgba(0,0,0,.08)', maxHeight: 200, overflowY: 'auto' }}>
+                                {parentSearchResults.map(p => (
+                                    <div
+                                        key={p.id}
+                                        onClick={() => { setSelectedParentId(p.id); setSelectedParentName(p.name); setParentSearch(p.name); setParentSearchResults([]); }}
+                                        style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--line-1)', color: 'var(--ink-1)' }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                                        onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--surface)')}
+                                    >
+                                        {p.name}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    {selectedParentId && (
+                        <div style={{ padding: '8px 12px', background: 'var(--brand-green-soft)', borderRadius: 'var(--r-2)', fontSize: 13, color: 'var(--brand-green)', fontWeight: 500 }}>
+                            Родитель: {selectedParentName}
+                        </div>
+                    )}
+                </div>
+                <div style={{ padding: '14px 22px', borderTop: '1px solid var(--line-1)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button className="rf-btn rf-btn-sm rf-btn-quiet" onClick={() => batchParentDialogRef.current?.close()}>Отмена</button>
+                    <button
+                        className="rf-btn rf-btn-sm rf-btn-primary"
+                        disabled={!selectedParentId || batchSetParentMutation.isPending}
+                        onClick={() => { if (selectedParentId) batchSetParentMutation.mutate(selectedParentId); }}
+                    >
+                        {batchSetParentMutation.isPending ? 'Назначение…' : 'Назначить'}
                     </button>
                 </div>
             </dialog>

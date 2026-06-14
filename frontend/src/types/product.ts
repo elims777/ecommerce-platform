@@ -61,6 +61,8 @@ export interface Product {
 
     material: string | null;
     source: string | null;
+    isVariantChild: boolean;
+    parentProductId: number | null;
 
     // Вложенные данные
     variants: ProductVariant[];

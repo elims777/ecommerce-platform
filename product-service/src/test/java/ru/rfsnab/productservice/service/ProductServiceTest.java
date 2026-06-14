@@ -358,7 +358,7 @@ class ProductServiceTest {
             // Given
             Pageable pageable = PageRequest.of(0, 10);
             Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 1);
-            when(productRepository.findByIsActiveTrue(pageable)).thenReturn(page);
+            when(productRepository.findByIsActiveTrueAndIsVariantChildFalse(pageable)).thenReturn(page);
 
             // When
             Page<Product> result = productService.getProductsPage(pageable);

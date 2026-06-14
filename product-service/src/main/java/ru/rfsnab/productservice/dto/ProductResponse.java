@@ -36,6 +36,9 @@ public class ProductResponse {
 
     private String source;
 
+    private Boolean isVariantChild;
+    private Long parentProductId;
+
     // Вложенные данные
     private List<ProductVariantDto> variants;
     private List<ProductImageResponse> images;

@@ -6,7 +6,7 @@ import { getProductById } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
 import {
     updateProduct, uploadImage, deleteImage, setPrimaryImage,
-    addAttribute, updateAttribute, deleteAttribute,
+    addAttribute, updateAttribute, deleteAttribute, setParentProduct, searchProducts,
 } from '@/api/adminProducts';
 import type { ProductRequest, ProductAttributeRequest } from '@/api/adminProducts';
 import type { CategoryTree, ProductImage } from '@/types/product';
@@ -50,6 +50,9 @@ const AdminProductEditPage = () => {
 
     const [attrForm, setAttrForm] = useState<ProductAttributeRequest>({ attributeName: '', attributeValue: '' });
     const [editingAttrId, setEditingAttrId] = useState<number | null>(null);
+
+    const [parentSearch, setParentSearch] = useState('');
+    const [parentSearchResults, setParentSearchResults] = useState<{ id: number; name: string }[]>([]);
 
     const { data: product, isLoading } = useQuery({
         queryKey: ['adminProduct', productId],
@@ -140,6 +143,23 @@ const AdminProductEditPage = () => {
         onError: () => messageApi.error('Ошибка при удалении'),
     });
 
+    const setParentMutation = useMutation({
+        mutationFn: (parentId: number | null) => setParentProduct(productId, parentId),
+        onSuccess: () => { messageApi.success('Сохранено'); invalidateProduct(); setParentSearchResults([]); setParentSearch(''); },
+        onError: () => messageApi.error('Ошибка при сохранении'),
+    });
+
+    const handleParentSearch = async (query: string) => {
+        setParentSearch(query);
+        if (query.trim().length < 2) { setParentSearchResults([]); return; }
+        try {
+            const results = await searchProducts(query);
+            setParentSearchResults(results.filter(p => p.id !== productId).map(p => ({ id: p.id, name: p.name })));
+        } catch {
+            setParentSearchResults([]);
+        }
+    };
+
     const handleAttrSubmit = () => {
         if (!attrForm.attributeName.trim() || !attrForm.attributeValue.trim()) {
             messageApi.error('Заполните название и значение');
@@ -174,7 +194,7 @@ const AdminProductEditPage = () => {
     return (
         <div>
             {/* Header */}
-            <div className="rf-admin-back" onClick={() => navigate('/admin/products')}>
+            <div className="rf-admin-back" onClick={() => navigate(-1)}>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M10 4L6 8l4 4"/>
                 </svg>
@@ -502,6 +522,61 @@ const AdminProductEditPage = () => {
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Parent product card */}
+                    <div className="rf-card" style={{ overflow: 'visible', marginTop: 16 }}>
+                        <div className="rf-card-header"><h3>Группировка вариантов</h3></div>
+                        <div className="rf-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {product.isVariantChild && product.parentProductId ? (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: 'var(--brand-green-soft)', borderRadius: 'var(--r-2)' }}>
+                                    <span style={{ fontSize: 13, color: 'var(--brand-green)', fontWeight: 500 }}>
+                                        Дочерний вариант · ID родителя: {product.parentProductId}
+                                    </span>
+                                    <button
+                                        className="rf-btn rf-btn-sm rf-btn-ghost"
+                                        style={{ height: 24, padding: '0 8px', fontSize: 12, color: 'var(--brand-red)', flexShrink: 0 }}
+                                        disabled={setParentMutation.isPending}
+                                        onClick={() => { if (window.confirm('Снять привязку к родительскому товару?')) setParentMutation.mutate(null); }}
+                                    >
+                                        Снять
+                                    </button>
+                                </div>
+                            ) : (
+                                <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 4 }}>
+                                    Найдите родительский товар чтобы сделать этот товар его вариантом
+                                </div>
+                            )}
+
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="text"
+                                    style={{ ...inputStyle, width: '100%' }}
+                                    placeholder="Найти родительский товар..."
+                                    value={parentSearch}
+                                    onChange={(e) => handleParentSearch(e.target.value)}
+                                />
+                                {parentSearchResults.length > 0 && (
+                                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', boxShadow: '0 4px 12px rgba(0,0,0,.08)', maxHeight: 200, overflowY: 'auto' }}>
+                                        {parentSearchResults.map(p => (
+                                            <div
+                                                key={p.id}
+                                                onClick={() => {
+                                                    if (window.confirm(`Назначить родителем: «${p.name}»?`)) {
+                                                        setParentMutation.mutate(p.id);
+                                                    }
+                                                }}
+                                                style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--line-1)', color: 'var(--ink-1)' }}
+                                                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                                                onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--surface)')}
+                                            >
+                                                {p.name}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 

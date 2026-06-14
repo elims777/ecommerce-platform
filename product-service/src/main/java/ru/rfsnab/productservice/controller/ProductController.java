@@ -16,6 +16,7 @@ import ru.rfsnab.productservice.service.ProductService;
 
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
@@ -45,20 +46,34 @@ public class ProductController {
     }
 
     /**
-     * Получить товар по ID
+     * Получить товар по ID (с дочерними вариантами если есть)
      */
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id){
         Product product = productService.getProductById(id);
-        return ResponseEntity.ok(ProductMapper.mapToResponse(product));
+        List<Product> children = productService.getChildren(id);
+        return ResponseEntity.ok(ProductMapper.mapToResponse(product, children));
     }
 
     /**
-     * Получить товар по slug
+     * Получить товар по slug (с дочерними вариантами если есть)
      */
     @GetMapping("/slug/{slug}")
     public ResponseEntity<ProductResponse> getProductBySlug(@PathVariable String slug){
         Product product = productService.getProductBySlug(slug);
+        List<Product> children = productService.getChildren(product.getId());
+        return ResponseEntity.ok(ProductMapper.mapToResponse(product, children));
+    }
+
+    /**
+     * Назначить/снять родительский товар (объединение в варианты)
+     */
+    @PatchMapping("/{id}/set-parent")
+    public ResponseEntity<ProductResponse> setParent(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long parentProductId
+    ) {
+        Product product = productService.setParent(id, parentProductId);
         return ResponseEntity.ok(ProductMapper.mapToResponse(product));
     }
 

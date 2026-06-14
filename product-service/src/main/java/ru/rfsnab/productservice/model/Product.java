@@ -78,6 +78,13 @@ public class Product {
 
     private Integer vatRate;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isVariantChild = false;
+
+    @Column(name = "parent_product_id")
+    private Long parentProductId;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ProductVariant> variants = new ArrayList<>();
