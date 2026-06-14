@@ -203,6 +203,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       LOGGING_FILE_NAME: ""
       SECRET_JWT: ${SECRET_JWT}
+    volumes:
+      - /var/log/rfsnab/user-service:/var/log/rfsnab/user-service
     depends_on:
       user-db:
         condition: service_healthy
@@ -235,6 +237,8 @@ services:
       USER_SERVICE_URL: http://user-service:8081
       NOTIFICATION_SERVICE_URL: http://notification-service:8082
       LOGGING_FILE_NAME: ""
+    volumes:
+      - /var/log/rfsnab/auth-service:/var/log/rfsnab/auth-service
     depends_on:
       user-db:
         condition: service_healthy
@@ -264,6 +268,8 @@ services:
       SPRING_MAIL_USERNAME: ${MAIL_USER}
       SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
       LOGGING_FILE_NAME: ""
+    volumes:
+      - /var/log/rfsnab/notification-service:/var/log/rfsnab/notification-service
     depends_on:
       notification-db:
         condition: service_healthy
@@ -290,6 +296,8 @@ services:
       YANDEX_STORAGE_SECRET_KEY: ${YANDEX_STORAGE_SECRET_KEY}
       LOGGING_FILE_NAME: ""
       SECRET_JWT: ${SECRET_JWT}
+    volumes:
+      - /var/log/rfsnab/product-service:/var/log/rfsnab/product-service
     depends_on:
       product-db:
         condition: service_healthy
@@ -316,6 +324,8 @@ services:
       INTERNAL_SECRET: ${INTERNAL_SECRET}
       LOGGING_FILE_NAME: ""
       SECRET_JWT: ${SECRET_JWT}
+    volumes:
+      - /var/log/rfsnab/order-service:/var/log/rfsnab/order-service
     depends_on:
       order-db:
         condition: service_healthy
@@ -389,6 +399,7 @@ services:
       ORDER_SERVICE_URL: http://order-service:8084
     volumes:
       - integration_exchange_data:/app/1c-exchange
+      - /var/log/rfsnab/integration-service:/var/log/rfsnab/integration-service
     depends_on:
       integration-db:
         condition: service_healthy
