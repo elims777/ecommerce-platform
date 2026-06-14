@@ -261,7 +261,7 @@ const ProductPage = () => {
                             </span>
                         </div>
                         <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 20 }}>
-                            за 1 {product.unitOfMeasure || 'шт.'} · НДС {product.vatRate ?? 20}% включён
+                            за 1 {product.unitOfMeasure || 'шт.'}
                         </div>
 
                         {/* Таблица вариантов */}
