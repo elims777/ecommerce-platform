@@ -23,15 +23,23 @@ const sortImages = (images: ProductImage[]): ProductImage[] =>
         return a.displayOrder - b.displayOrder;
     });
 
-// Извлекает уникальные значения атрибута из списка вариантов
-const getAttributeValues = (variants: ProductVariant[], key: string): string[] =>
-    [...new Set(variants.map(v => v.attributes?.[key]).filter(Boolean) as string[])];
+const ATTR_ORDER = ['Размер', 'Рост'];
 
-// Находит вариант по выбранным атрибутам
-const findVariant = (variants: ProductVariant[], selected: Record<string, string>): ProductVariant | null => {
-    return variants.find(v =>
-        v.isActive && Object.entries(selected).every(([k, val]) => v.attributes?.[k] === val)
-    ) ?? null;
+const VariantAttrs = ({ variant }: { variant: ProductVariant }) => {
+    if (!variant.attributes) return <span>—</span>;
+    const parts = ATTR_ORDER.filter(k => variant.attributes![k]);
+    if (parts.length === 0) return <span>{Object.values(variant.attributes).join(' / ')}</span>;
+    return (
+        <span>
+            {parts.map((k, i) => (
+                <span key={k}>
+                    {i > 0 && <br />}
+                    <span style={{ color: 'var(--ink-3)', fontSize: 'var(--text-xs)' }}>{k}: </span>
+                    {variant.attributes![k]}
+                </span>
+            ))}
+        </span>
+    );
 };
 
 const ProductPage = () => {
@@ -39,7 +47,7 @@ const ProductPage = () => {
     const navigate = useNavigate();
     const { message: messageApi } = App.useApp();
     const [quantity, setQuantity] = useState(1);
-    const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>({});
+    const [variantQtys, setVariantQtys] = useState<Record<number, number>>({});
     const addItem = useCartStore((state) => state.addItem);
 
     const { data: product, isLoading, isError } = useQuery({
@@ -49,39 +57,38 @@ const ProductPage = () => {
     });
 
     const hasVariants = (product?.variants?.length ?? 0) > 1;
+    const activeVariants = useMemo(
+        () => (product?.variants ?? []).filter(v => v.isActive),
+        [product?.variants],
+    );
 
-    // Ключи атрибутов вариантов (размер, рост и т.д.)
-    const attrKeys = useMemo(() => {
-        if (!hasVariants || !product?.variants) return [];
-        const keys = new Set<string>();
-        product.variants.forEach(v => v.attributes && Object.keys(v.attributes).forEach(k => keys.add(k)));
-        return [...keys];
-    }, [product?.variants, hasVariants]);
+    const activeStock = product?.stockQuantity ?? 0;
+    const displayPrice = useDisplayPrice({ price: product?.price ?? 0, wholesalePrice: product?.wholesalePrice ?? null });
 
-    // Выбранный вариант
-    const selectedVariant = useMemo(() => {
-        if (!hasVariants || !product?.variants) return null;
-        return findVariant(product.variants, selectedAttrs);
-    }, [product?.variants, selectedAttrs, hasVariants]);
-
-    // Цена: из выбранного варианта или с товара
-    const activePrice = selectedVariant?.price ?? product?.price ?? 0;
-    const activeWholesalePrice = selectedVariant?.wholesalePrice ?? product?.wholesalePrice ?? null;
-    const activeStock = selectedVariant?.stockQuantity ?? product?.stockQuantity ?? 0;
-
-    const displayPrice = useDisplayPrice({ price: activePrice, wholesalePrice: activeWholesalePrice });
+    const setVariantQty = (variantId: number, qty: number) =>
+        setVariantQtys(prev => ({ ...prev, [variantId]: qty }));
 
     const handleAddToCart = async () => {
         if (!product) return;
-        if (hasVariants && !selectedVariant) {
-            messageApi.warning('Выберите все параметры товара');
-            return;
-        }
-        try {
-            await addItem(product.id, quantity, selectedVariant?.id ?? null);
-            messageApi.success(`${product.name} (${quantity} шт.) добавлен в корзину`);
-        } catch {
-            messageApi.error('Ошибка при добавлении в корзину');
+        if (hasVariants) {
+            const toAdd = activeVariants.filter(v => (variantQtys[v.id] ?? 0) > 0);
+            if (toAdd.length === 0) {
+                messageApi.warning('Укажите количество хотя бы для одного варианта');
+                return;
+            }
+            try {
+                await Promise.all(toAdd.map(v => addItem(product.id, variantQtys[v.id], v.id)));
+                messageApi.success(`${product.name} добавлен в корзину`);
+            } catch {
+                messageApi.error('Ошибка при добавлении в корзину');
+            }
+        } else {
+            try {
+                await addItem(product.id, quantity, null);
+                messageApi.success(`${product.name} (${quantity} шт.) добавлен в корзину`);
+            } catch {
+                messageApi.error('Ошибка при добавлении в корзину');
+            }
         }
     };
 
@@ -143,7 +150,7 @@ const ProductPage = () => {
                 <ArrowLeftOutlined /> Назад
             </button>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 320px', gap: 28 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 360px', gap: 28 }}>
                 {/* Галерея */}
                 <div>
                     <div style={{ borderRadius: 'var(--r-5)', overflow: 'hidden', border: '1px solid var(--line-1)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
@@ -253,68 +260,81 @@ const ProductPage = () => {
                                 {formatPrice(displayPrice)}
                             </span>
                         </div>
-                        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: hasVariants ? 16 : 20 }}>
+                        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 20 }}>
                             за 1 {product.unitOfMeasure || 'шт.'} · НДС {product.vatRate ?? 20}% включён
                         </div>
 
-                        {/* Селектор вариантов */}
-                        {hasVariants && attrKeys.map(attrKey => (
-                            <div key={attrKey} style={{ marginBottom: 14 }}>
-                                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}>
-                                    {attrKey}
-                                    {selectedAttrs[attrKey] && (
-                                        <span style={{ fontWeight: 400, color: 'var(--ink-1)', marginLeft: 6 }}>{selectedAttrs[attrKey]}</span>
-                                    )}
-                                </div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                    {getAttributeValues(product.variants, attrKey).map(val => {
-                                        const isSelected = selectedAttrs[attrKey] === val;
-                                        const testAttrs = { ...selectedAttrs, [attrKey]: val };
-                                        const available = findVariant(product.variants, testAttrs) !== null
-                                            || attrKeys.filter(k => k !== attrKey).every(k => !selectedAttrs[k]);
-                                        return (
-                                            <button
-                                                key={val}
-                                                onClick={() => setSelectedAttrs(prev => ({ ...prev, [attrKey]: val }))}
-                                                style={{
-                                                    height: 32, padding: '0 12px',
-                                                    border: isSelected ? '2px solid var(--brand-red)' : '1px solid var(--line-2)',
-                                                    borderRadius: 'var(--r-3)',
-                                                    background: isSelected ? 'var(--red-tint)' : 'var(--surface)',
-                                                    color: isSelected ? 'var(--brand-red)' : available ? 'var(--ink-1)' : 'var(--ink-4)',
-                                                    fontSize: 'var(--text-sm)', fontWeight: isSelected ? 600 : 400,
-                                                    cursor: available ? 'pointer' : 'not-allowed',
-                                                    fontFamily: 'var(--font-body)',
-                                                    textDecoration: available ? 'none' : 'line-through',
-                                                    opacity: available ? 1 : 0.5,
-                                                    transition: 'border-color 0.1s, background 0.1s',
-                                                }}
-                                            >
-                                                {val}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                        {/* Таблица вариантов */}
+                        {hasVariants ? (
+                            <div style={{ marginBottom: 16 }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '1px solid var(--line-1)' }}>
+                                            <th style={{ textAlign: 'left', padding: '4px 6px 6px 0', color: 'var(--ink-3)', fontWeight: 500 }}>Параметры</th>
+                                            <th style={{ textAlign: 'right', padding: '4px 6px 6px', color: 'var(--ink-3)', fontWeight: 500 }}>Цена</th>
+                                            <th style={{ textAlign: 'right', padding: '4px 6px 6px', color: 'var(--ink-3)', fontWeight: 500 }}>Остаток</th>
+                                            <th style={{ textAlign: 'center', padding: '4px 0 6px 6px', color: 'var(--ink-3)', fontWeight: 500 }}>Кол-во</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {activeVariants.map(v => {
+                                            const qty = variantQtys[v.id] ?? 0;
+                                            const inStockV = v.stockQuantity > 0;
+                                            const variantPrice = v.price ?? product.price;
+                                            return (
+                                                <tr key={v.id} style={{ borderBottom: '1px solid var(--line-1)', opacity: inStockV ? 1 : 0.45 }}>
+                                                    <td style={{ padding: '7px 6px 7px 0', color: 'var(--ink-1)', fontWeight: 500, lineHeight: 1.5 }}>
+                                                        <VariantAttrs variant={v} />
+                                                    </td>
+                                                    <td style={{ padding: '7px 6px', textAlign: 'right', color: 'var(--ink-2)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                                                        {formatPrice(variantPrice)}
+                                                    </td>
+                                                    <td style={{ padding: '7px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: inStockV ? 'var(--brand-green)' : 'var(--brand-red)', fontVariantNumeric: 'tabular-nums' }}>
+                                                        {inStockV ? `${v.stockQuantity} ${product.unitOfMeasure || 'шт.'}` : 'нет'}
+                                                    </td>
+                                                    <td style={{ padding: '7px 0 7px 6px' }}>
+                                                        {inStockV ? (
+                                                            <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', height: 28, alignItems: 'center', minWidth: 80 }}>
+                                                                <button
+                                                                    onClick={() => setVariantQty(v.id, Math.max(0, qty - 1))}
+                                                                    style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                                                >−</button>
+                                                                <input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    max={v.stockQuantity}
+                                                                    value={qty === 0 ? '' : qty}
+                                                                    placeholder="0"
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value === '' ? 0 : Math.min(v.stockQuantity, Math.max(0, Number(e.target.value)));
+                                                                        setVariantQty(v.id, val);
+                                                                    }}
+                                                                    style={{ flex: 1, width: 0, textAlign: 'center', border: 0, background: 'transparent', fontSize: 13, fontWeight: 600, outline: 'none', fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
+                                                                />
+                                                                <button
+                                                                    onClick={() => setVariantQty(v.id, Math.min(v.stockQuantity, qty + 1))}
+                                                                    style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                                                >+</button>
+                                                            </div>
+                                                        ) : (
+                                                            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-4)' }}>—</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
                             </div>
-                        ))}
-
-                        {hasVariants && attrKeys.length > 0 && !selectedVariant && (
-                            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 14 }}>
-                                Выберите {attrKeys.join(' и ')}
-                            </div>
-                        )}
-
-                        {inStock && (
-                            <>
+                        ) : (
+                            activeStock > 0 && (
                                 <div style={{ marginBottom: 14 }}>
                                     <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}>Количество</label>
                                     <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', height: 'var(--input-h-lg)', alignItems: 'center' }}>
                                         <button
                                             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                                             style={{ width: 40, height: 42, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        >
-                                            −
-                                        </button>
+                                        >−</button>
                                         <input
                                             type="number"
                                             min={1}
@@ -326,25 +346,23 @@ const ProductPage = () => {
                                         <button
                                             onClick={() => setQuantity((q) => Math.min(activeStock, q + 1))}
                                             style={{ width: 40, height: 42, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        >
-                                            +
-                                        </button>
+                                        >+</button>
                                     </div>
                                 </div>
-
-                                <button
-                                    onClick={handleAddToCart}
-                                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', height: 'var(--btn-h-xl)', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s', marginBottom: 10 }}
-                                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}
-                                    onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-red)')}
-                                >
-                                    <ShoppingCartOutlined style={{ fontSize: 18 }} />
-                                    Добавить в корзину
-                                </button>
-                            </>
+                            )
                         )}
 
-                        {!inStock && (
+                        {(hasVariants ? activeVariants.some(v => v.stockQuantity > 0) : activeStock > 0) ? (
+                            <button
+                                onClick={handleAddToCart}
+                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', height: 'var(--btn-h-xl)', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s', marginBottom: 10 }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-red)')}
+                            >
+                                <ShoppingCartOutlined style={{ fontSize: 18 }} />
+                                Добавить в корзину
+                            </button>
+                        ) : (
                             <button
                                 disabled
                                 style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 'var(--btn-h-xl)', background: 'var(--surface-3)', color: 'var(--ink-3)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500, cursor: 'not-allowed', fontFamily: 'var(--font-body)' }}

@@ -420,10 +420,11 @@ const AdminProductEditPage = () => {
                             </div>
                         </div>
                     </div>
+
                 </div>
 
-                {/* Right column: images */}
-                <div style={{ flex: '0 0 320px' }}>
+                {/* Right column: images + variants */}
+                <div style={{ flex: '0 0 360px' }}>
                     <div className="rf-card" style={{ overflow: 'hidden' }}>
                         <div className="rf-card-header"><h3>Изображения</h3></div>
                         <div className="rf-card-body">
@@ -503,6 +504,57 @@ const AdminProductEditPage = () => {
                             )}
                         </div>
                     </div>
+
+                    {/* Variants card */}
+                    {product.variants && product.variants.length > 0 && (
+                        <div className="rf-card" style={{ overflow: 'hidden', marginTop: 16 }}>
+                            <div className="rf-card-header"><h3>Варианты ({product.variants.length})</h3></div>
+                            <div className="rf-admin-table-wrap">
+                                <table className="rf-admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Параметры</th>
+                                            <th style={{ textAlign: 'right' }}>Остаток</th>
+                                            <th style={{ textAlign: 'center', width: 60 }}>Акт.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {product.variants.map((v) => {
+                                            const ATTR_ORDER = ['Размер', 'Рост'];
+                                            const attrParts = v.attributes
+                                                ? ATTR_ORDER.filter(k => v.attributes![k])
+                                                : [];
+                                            const inStock = v.stockQuantity > 0;
+                                            return (
+                                                <tr key={v.id}>
+                                                    <td style={{ fontWeight: 500, lineHeight: 1.5 }}>
+                                                        {attrParts.length > 0
+                                                            ? attrParts.map((k, i) => (
+                                                                <span key={k}>
+                                                                    {i > 0 && <br />}
+                                                                    <span style={{ color: 'var(--ink-3)', fontSize: 12, fontWeight: 400 }}>{k}: </span>
+                                                                    {v.attributes![k]}
+                                                                </span>
+                                                            ))
+                                                            : (v.attributes ? Object.values(v.attributes).join(' / ') : '—')
+                                                        }
+                                                    </td>
+                                                    <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: inStock ? 'var(--brand-green)' : 'var(--brand-red)', fontWeight: 500 }}>
+                                                        {v.stockQuantity}
+                                                    </td>
+                                                    <td style={{ textAlign: 'center' }}>
+                                                        <span className={`rf-badge ${v.isActive ? 'rf-badge-success' : 'rf-badge-neutral'}`}>
+                                                            {v.isActive ? 'да' : 'нет'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

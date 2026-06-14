@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Form, Input, App } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { useCartStore } from '@/store/cartStore';
 import type { LoginRequest } from '@/types/auth';
 import { AxiosError } from 'axios';
 
@@ -60,6 +61,7 @@ const LoginPage = () => {
     const location = useLocation();
     const login = useAuthStore((state) => state.login);
     const loginLegal = useAuthStore((state) => state.loginLegal);
+    const mergeGuestCart = useCartStore((state) => state.mergeGuestCart);
     const { message: messageApi } = App.useApp();
 
     const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
@@ -82,6 +84,7 @@ const LoginPage = () => {
             } else {
                 await login(values);
             }
+            await mergeGuestCart();
             messageApi.success('Вы успешно вошли в систему');
             navigate(from, { replace: true });
         } catch (error) {
