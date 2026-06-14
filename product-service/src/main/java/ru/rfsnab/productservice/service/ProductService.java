@@ -71,8 +71,13 @@ public class ProductService {
         existing.setName(updatedProduct.getName());
         existing.setDescription(updatedProduct.getDescription());
         existing.setShortDescription(updatedProduct.getShortDescription());
+        existing.setMaterial(updatedProduct.getMaterial());
         existing.setPrice(updatedProduct.getPrice());
+        existing.setWholesalePrice(updatedProduct.getWholesalePrice());
         existing.setStockQuantity(updatedProduct.getStockQuantity());
+        existing.setSku(updatedProduct.getSku());
+        existing.setUnitOfMeasure(updatedProduct.getUnitOfMeasure());
+        existing.setVatRate(updatedProduct.getVatRate());
         existing.setIsActive(updatedProduct.getIsActive());
         existing.setIsFeatured(updatedProduct.getIsFeatured());
 
@@ -157,10 +162,10 @@ public class ProductService {
     }
 
     /**
-     * Пагинация товаров
+     * Пагинация товаров (дочерние варианты скрыты)
      */
     public Page<Product> getProductsPage(Pageable pageable) {
-        return productRepository.findByIsActiveTrue(pageable);
+        return productRepository.findByIsActiveTrueAndIsVariantChildFalse(pageable);
     }
 
     public Page<Product> getAllProductsPage(Pageable pageable) {
@@ -184,8 +189,7 @@ public class ProductService {
         if (!categoryRepository.existsById(categoryId)) {
             throw new CategoryNotFoundException(categoryId);
         }
-
-        return productRepository.findByCategoryIdAndIsActiveTrue(categoryId, pageable);
+        return productRepository.findByCategoryIdAndIsActiveTrueAndIsVariantChildFalse(categoryId, pageable);
     }
 
     /**
@@ -379,6 +383,44 @@ public class ProductService {
             product.setCategory(category);
             product.setUpdatedAt(LocalDateTime.now());
         });
+    }
+
+    /**
+     * Установить/снять родительский товар (объединение в варианты)
+     */
+    @Transactional
+    public Product setParent(Long productId, Long parentProductId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException(productId));
+
+        if (parentProductId == null) {
+            product.setIsVariantChild(false);
+            product.setParentProductId(null);
+        } else {
+            Product parent = productRepository.findById(parentProductId)
+                    .orElseThrow(() -> new ProductNotFoundException(parentProductId));
+            if (parent.getIsVariantChild()) {
+                throw new BusinessException("Нельзя назначить дочерний товар родителем");
+            }
+            if (parentProductId.equals(productId)) {
+                throw new BusinessException("Товар не может быть родителем самого себя");
+            }
+            product.setIsVariantChild(true);
+            product.setParentProductId(parentProductId);
+        }
+
+        return productRepository.save(product);
+    }
+
+    /**
+     * Получить дочерние товары-варианты родителя
+     */
+    @Transactional(readOnly = true)
+    public List<Product> getChildren(Long parentId) {
+        List<Product> children = productRepository.findChildrenWithVariantsAndAttributes(parentId);
+        // Инициализируем attributes в рамках транзакции
+        children.forEach(c -> c.getAttributes().size());
+        return children;
     }
 
     public Product findByExternalId(String externalId) {

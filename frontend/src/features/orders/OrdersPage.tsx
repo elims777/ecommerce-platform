@@ -38,7 +38,7 @@ const StatusBadge = ({ status }: { status: string }) => {
         <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
             height: 22, padding: '0 8px', borderRadius: 11,
-            fontSize: 12, fontWeight: 500,
+            fontSize: 'var(--text-sm)', fontWeight: 500,
             background: bg, color,
         }}>
             <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', flexShrink: 0 }} />
@@ -105,7 +105,7 @@ const OrdersPage = () => {
             dataIndex: 'orderNumber',
             key: 'orderNumber',
             render: (orderNumber: string) => (
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: 'var(--ink-1)' }}>{orderNumber}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--ink-1)' }}>{orderNumber}</span>
             ),
         },
         {
@@ -113,7 +113,7 @@ const OrdersPage = () => {
             dataIndex: 'createdAt',
             key: 'createdAt',
             width: 180,
-            render: (date: string) => <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>{formatDate(date)}</span>,
+            render: (date: string) => <span style={{ fontSize: 'var(--text-base)', color: 'var(--ink-2)' }}>{formatDate(date)}</span>,
         },
         {
             title: 'Статус',
@@ -130,7 +130,7 @@ const OrdersPage = () => {
             dataIndex: 'itemsCount',
             key: 'itemsCount',
             width: 100,
-            render: (n: number) => <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>{n}</span>,
+            render: (n: number) => <span style={{ fontSize: 'var(--text-base)', color: 'var(--ink-2)' }}>{n}</span>,
         },
         {
             title: 'Сумма',
@@ -138,7 +138,7 @@ const OrdersPage = () => {
             key: 'totalAmount',
             width: 160,
             render: (amount: number) => (
-                <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 15, color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}>
                     {formatPrice(amount)}
                 </span>
             ),
@@ -187,7 +187,7 @@ const OrdersPage = () => {
         const deliveryCode = extractEnumCode(order.deliveryMethod);
 
         return (
-            <div style={{ padding: '12px 16px', background: 'var(--surface-2)', borderRadius: 6 }}>
+            <div style={{ padding: '12px 16px', background: 'var(--surface-2)', borderRadius: 'var(--r-3)' }}>
                 <Table<OrderItemDto>
                     columns={itemColumns}
                     dataSource={order.items}
@@ -196,7 +196,7 @@ const OrdersPage = () => {
                     size="small"
                     style={{ marginBottom: 16 }}
                 />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 24px', fontSize: 13 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 24px', fontSize: 'var(--text-base)' }}>
                     <div style={{ display: 'flex', gap: 8 }}>
                         <span style={{ color: 'var(--ink-3)' }}>Оплата:</span>
                         <span style={{ fontWeight: 500 }}>{PaymentMethodLabels[paymentCode as keyof typeof PaymentMethodLabels] || extractEnumDisplayName(order.paymentMethod)}</span>
@@ -300,16 +300,16 @@ const OrdersPage = () => {
                 <div style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>
                     Заказов пока нет
                 </div>
-                <div style={{ fontSize: 14, color: 'var(--ink-3)', maxWidth: 360, margin: '0 auto 8px' }}>
+                <div style={{ fontSize: 'var(--text-md)', color: 'var(--ink-3)', maxWidth: 360, margin: '0 auto 8px' }}>
                     После оформления заказа он появится здесь. Можно отслеживать статус, скачивать документы и повторять заказы.
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--ink-4)', marginBottom: 24 }}>
+                <div style={{ fontSize: 'var(--text-base)', color: 'var(--ink-4)', marginBottom: 24 }}>
                     Работаем по 44-ФЗ и 223-ФЗ, участвуем в тендерах.
                 </div>
                 <button
                     onClick={() => navigate('/catalog')}
                     style={{
-                        height: 44, padding: '0 28px', background: 'var(--brand-red)', color: '#fff',
+                        height: 'var(--btn-h-base)', padding: '0 28px', background: 'var(--brand-red)', color: '#fff',
                         border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500,
                         cursor: 'pointer', fontFamily: 'var(--font-body)',
                     }}
@@ -337,20 +337,20 @@ const OrdersPage = () => {
                 centered
             >
                 <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                    <div style={{ marginBottom: 16, fontSize: 14, color: 'rgba(0,0,0,0.45)' }}>
+                    <div style={{ marginBottom: 16, fontSize: 'var(--text-md)', color: 'rgba(0,0,0,0.45)' }}>
                         Отсканируйте QR-кодом в банковском приложении
                     </div>
                     {sbpModal && <QRCode value={sbpModal.paymentLink} size={220} />}
-                    <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(0,0,0,0.35)' }}>
+                    <div style={{ marginTop: 12, fontSize: 'var(--text-sm)', color: 'rgba(0,0,0,0.35)' }}>
                         Сумма уже указана — вводить вручную не нужно
                     </div>
                 </div>
             </Modal>
-            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', marginBottom: 24 }}>
+            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-5xl)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', marginBottom: 24 }}>
                 Мои заказы
             </h1>
 
-            <div style={{ border: '1px solid var(--line-1)', borderRadius: 8, background: 'var(--surface)', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', overflow: 'hidden' }}>
                 <Table<OrderSummaryDto>
                     columns={columns}
                     dataSource={ordersPage.content}

@@ -11,7 +11,7 @@ import {
     getCategoryById,
     setCategoryParent,
 } from '@/api/adminCategories';
-import { batchUpdateActive, changeProductCategory, bulkDeleteProducts } from '@/api/adminProducts';
+import { batchUpdateActive, changeProductCategory, bulkDeleteProducts, setParentProduct, searchProducts as searchProductsApi } from '@/api/adminProducts';
 import apiClient from '@/api/client';
 import type { CategoryRequest } from '@/api/adminCategories';
 import type { Product, CategoryTree } from '@/types/product';
@@ -80,9 +80,9 @@ const CategoryTreeNode = ({ categories, selectedId, onSelect, depth = 0 }: Categ
                             alignItems: 'center',
                             gap: 6,
                             padding: '6px 10px',
-                            borderRadius: 5,
+                            borderRadius: 'var(--r-3)',
                             cursor: 'pointer',
-                            fontSize: 13,
+                            fontSize: 'var(--text-base)',
                             fontWeight: selectedId === cat.id ? 600 : 400,
                             background: selectedId === cat.id ? 'var(--red-tint)' : 'transparent',
                             color: selectedId === cat.id ? 'var(--brand-red)' : 'var(--ink-1)',
@@ -100,7 +100,7 @@ const CategoryTreeNode = ({ categories, selectedId, onSelect, depth = 0 }: Categ
                             <span style={{
                                 fontSize: 10,
                                 padding: '1px 5px',
-                                borderRadius: 4,
+                                borderRadius: 'var(--r-2)',
                                 background: 'var(--surface-3)',
                                 color: 'var(--ink-3)',
                                 flexShrink: 0,
@@ -162,7 +162,23 @@ const AdminCatalogPage = () => {
     const batchMoveDialogRef = useRef<HTMLDialogElement>(null);
     const [batchTargetCategory, setBatchTargetCategory] = useState<number | ''>('');
 
-    const [pageSize, setPageSize] = useState(20);
+    // Batch set parent
+    const batchParentDialogRef = useRef<HTMLDialogElement>(null);
+    const [parentSearch, setParentSearch] = useState('');
+    const [parentSearchResults, setParentSearchResults] = useState<{ id: number; name: string }[]>([]);
+    const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
+    const [selectedParentName, setSelectedParentName] = useState('');
+
+    const [pageSize, setPageSize] = useState(() => {
+        const saved = localStorage.getItem('adminCatalogPageSize');
+        return saved ? Number(saved) : 20;
+    });
+
+    const handlePageSizeChange = (size: number) => {
+        setPageSize(size);
+        localStorage.setItem('adminCatalogPageSize', String(size));
+        setCurrentPage(1);
+    };
 
     // ── Queries ──────────────────────────────────────────────────────────────
 
@@ -204,6 +220,30 @@ const AdminCatalogPage = () => {
         }
         return items;
     }, [searchQuery, searchResults, productsPage, activeLetter]);
+
+    // Grouped rows: parents first, children inserted right after their parent
+    const groupedRows = useMemo(() => {
+        const childrenByParent = new Map<number, Product[]>();
+        const roots: Product[] = [];
+        for (const p of displayProducts) {
+            if (p.isVariantChild && p.parentProductId != null) {
+                const arr = childrenByParent.get(p.parentProductId) ?? [];
+                arr.push(p);
+                childrenByParent.set(p.parentProductId, arr);
+            } else {
+                roots.push(p);
+            }
+        }
+        const result: { product: Product; isChild: boolean; childCount: number }[] = [];
+        for (const root of roots) {
+            const children = childrenByParent.get(root.id) ?? [];
+            result.push({ product: root, isChild: false, childCount: children.length });
+            for (const child of children) {
+                result.push({ product: child, isChild: true, childCount: 0 });
+            }
+        }
+        return result;
+    }, [displayProducts]);
 
     const invalidateAll = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
@@ -311,6 +351,35 @@ const AdminCatalogPage = () => {
         },
         onError: () => messageApi.error('Ошибка при удалении'),
     });
+
+    const batchSetParentMutation = useMutation({
+        mutationFn: (parentId: number) =>
+            Promise.all(selectedRowKeys.map(id => setParentProduct(id, parentId))),
+        onSuccess: () => {
+            messageApi.success(`${selectedRowKeys.length} товаров назначены дочерними`);
+            setSelectedRowKeys([]);
+            batchParentDialogRef.current?.close();
+            setSelectedParentId(null);
+            setSelectedParentName('');
+            setParentSearch('');
+            setParentSearchResults([]);
+            invalidateAll();
+        },
+        onError: () => messageApi.error('Ошибка при назначении родителя'),
+    });
+
+    const handleParentSearch = async (query: string) => {
+        setParentSearch(query);
+        setSelectedParentId(null);
+        setSelectedParentName('');
+        if (query.trim().length < 2) { setParentSearchResults([]); return; }
+        try {
+            const results = await searchProductsApi(query);
+            setParentSearchResults(results.map(p => ({ id: p.id, name: p.name })));
+        } catch {
+            setParentSearchResults([]);
+        }
+    };
 
     const toggleProductMutation = useMutation({
         mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
@@ -498,7 +567,7 @@ const AdminCatalogPage = () => {
         <div>
             {/* Page header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h2 style={{ margin: 0, fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, color: 'var(--ink-1)', letterSpacing: '-0.01em' }}>
+                <h2 style={{ margin: 0, fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, color: 'var(--ink-1)', letterSpacing: '-0.01em' }}>
                     Каталог
                 </h2>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -665,7 +734,7 @@ const AdminCatalogPage = () => {
                             </button>
 
                             {treeLoading ? (
-                                <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--ink-3)', fontSize: 13 }}>
+                                <div style={{ padding: '16px 0', textAlign: 'center', color: 'var(--ink-3)', fontSize: 'var(--text-base)' }}>
                                     Загрузка…
                                 </div>
                             ) : (
@@ -689,11 +758,11 @@ const AdminCatalogPage = () => {
                         {/* Table */}
                         <div className="rf-admin-table-wrap">
                             {productsLoading ? (
-                                <div style={{ padding: 32, textAlign: 'center', color: 'var(--ink-3)', fontSize: 13 }}>
+                                <div style={{ padding: 32, textAlign: 'center', color: 'var(--ink-3)', fontSize: 'var(--text-base)' }}>
                                     Загрузка…
                                 </div>
                             ) : displayProducts.length === 0 ? (
-                                <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 13 }}>
+                                <div style={{ padding: 40, textAlign: 'center', color: 'var(--ink-3)', fontSize: 'var(--text-base)' }}>
                                     Товары не найдены
                                 </div>
                             ) : (
@@ -719,13 +788,16 @@ const AdminCatalogPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {displayProducts.map((product) => {
+                                        {groupedRows.map(({ product, isChild, childCount }) => {
                                             const imageUrl = getPrimaryImageUrl(product);
                                             const isMovingThis = moveProductId === product.id;
                                             return (
-                                                <tr key={product.id}>
+                                                <tr
+                                                    key={product.id}
+                                                    style={isChild ? { background: 'var(--surface-2)' } : undefined}
+                                                >
                                                     {/* Checkbox */}
-                                                    <td style={{ paddingLeft: 16 }}>
+                                                    <td style={{ paddingLeft: isChild ? 36 : 16 }}>
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedRowKeys.includes(product.id)}
@@ -735,22 +807,22 @@ const AdminCatalogPage = () => {
                                                     </td>
 
                                                     {/* Image */}
-                                                    <td>
+                                                    <td style={{ paddingLeft: isChild ? 4 : 0 }}>
                                                         {imageUrl ? (
                                                             <img
                                                                 src={imageUrl}
-                                                                width={36}
-                                                                height={36}
-                                                                style={{ objectFit: 'contain', borderRadius: 4, display: 'block' }}
+                                                                width={isChild ? 28 : 36}
+                                                                height={isChild ? 28 : 36}
+                                                                style={{ objectFit: 'contain', borderRadius: 'var(--r-2)', display: 'block', opacity: isChild ? 0.8 : 1 }}
                                                                 alt=""
                                                             />
                                                         ) : (
                                                             <div style={{
-                                                                width: 36, height: 36, borderRadius: 4,
-                                                                background: 'var(--surface-2)',
+                                                                width: isChild ? 28 : 36, height: isChild ? 28 : 36, borderRadius: 'var(--r-2)',
+                                                                background: isChild ? 'var(--surface-3)' : 'var(--surface-2)',
                                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                             }}>
-                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                                                                     <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" stroke="var(--ink-3)" strokeWidth="1.5" />
                                                                     <path d="M16 3H8" stroke="var(--ink-3)" strokeWidth="1.5" strokeLinecap="round" />
                                                                     <circle cx="12" cy="13" r="2.5" stroke="var(--ink-3)" strokeWidth="1.5" />
@@ -762,12 +834,25 @@ const AdminCatalogPage = () => {
                                                     {/* Name */}
                                                     <td>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                            {isChild && (
+                                                                <span style={{ width: 2, height: 18, background: 'var(--line-2)', borderRadius: 2, flexShrink: 0 }} />
+                                                            )}
                                                             <a
                                                                 onClick={() => navigate(`/admin/products/${product.id}/edit`)}
-                                                                style={{ color: 'var(--brand-navy)', cursor: 'pointer', textDecoration: 'none', fontSize: 13 }}
+                                                                style={{ color: isChild ? 'var(--ink-2)' : 'var(--brand-navy)', cursor: 'pointer', textDecoration: 'none', fontSize: 'var(--text-base)' }}
                                                             >
                                                                 {product.name}
                                                             </a>
+                                                            {childCount > 0 && (
+                                                                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 'var(--r-2)', background: 'var(--brand-navy)', color: '#fff', fontWeight: 600, flexShrink: 0 }}>
+                                                                    {childCount} вар.
+                                                                </span>
+                                                            )}
+                                                            {isChild && (
+                                                                <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 'var(--r-2)', background: 'var(--surface-3)', color: 'var(--ink-3)', flexShrink: 0 }}>
+                                                                    вариант
+                                                                </span>
+                                                            )}
                                                             {!product.isActive && (
                                                                 <span className="rf-badge rf-badge-neutral" style={{ fontSize: 10, height: 18 }}>
                                                                     неактивен
@@ -780,7 +865,7 @@ const AdminCatalogPage = () => {
                                                     <td style={{ position: 'relative' }}>
                                                         <button
                                                             className="rf-btn rf-btn-ghost"
-                                                            style={{ height: 24, padding: '0 6px', fontSize: 12, gap: 4, color: 'var(--ink-2)' }}
+                                                            style={{ height: 24, padding: '0 6px', fontSize: 'var(--text-sm)', gap: 4, color: 'var(--ink-2)' }}
                                                             onClick={() => {
                                                                 setMoveProductId(isMovingThis ? null : product.id);
                                                                 setMoveProductTarget('');
@@ -804,12 +889,12 @@ const AdminCatalogPage = () => {
                                                                 width: 240,
                                                                 boxShadow: 'var(--shadow-pop)',
                                                             }}>
-                                                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 8 }}>
+                                                                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 8 }}>
                                                                     Переместить в категорию:
                                                                 </div>
                                                                 <select
                                                                     style={{
-                                                                        width: '100%', height: 32, fontSize: 13,
+                                                                        width: '100%', height: 32, fontSize: 'var(--text-base)',
                                                                         border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
                                                                         background: 'var(--surface)', color: 'var(--ink-1)',
                                                                         padding: '0 8px', marginBottom: 10, outline: 'none',
@@ -850,7 +935,7 @@ const AdminCatalogPage = () => {
                                                     </td>
 
                                                     {/* SKU */}
-                                                    <td className="rf-mono" style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                                                    <td className="rf-mono" style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
                                                         {product.sku || '—'}
                                                     </td>
 
@@ -911,10 +996,10 @@ const AdminCatalogPage = () => {
                                     {' · '}
                                     <select
                                         value={pageSize}
-                                        onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                                        onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                                         style={{
-                                            height: 26, fontSize: 12, border: '1px solid var(--line-2)',
-                                            borderRadius: 4, background: 'var(--surface)', color: 'var(--ink-1)',
+                                            height: 26, fontSize: 'var(--text-sm)', border: '1px solid var(--line-2)',
+                                            borderRadius: 'var(--r-2)', background: 'var(--surface)', color: 'var(--ink-1)',
                                             padding: '0 6px', fontFamily: 'var(--font-body)', cursor: 'pointer',
                                         }}
                                     >
@@ -964,6 +1049,12 @@ const AdminCatalogPage = () => {
                     >
                         Переместить
                     </button>
+                    <button
+                        className="rf-bulk-btn"
+                        onClick={() => { setSelectedParentId(null); setSelectedParentName(''); setParentSearch(''); setParentSearchResults([]); batchParentDialogRef.current?.showModal(); }}
+                    >
+                        Назначить родителя
+                    </button>
                     <div className="rf-bulk-bar-divider" />
                     <button className="rf-bulk-btn danger" onClick={handleBatchDelete}>
                         Удалить
@@ -1000,23 +1091,23 @@ const AdminCatalogPage = () => {
                 }}
             >
                 <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 15 }}>
+                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)' }}>
                         Переместить {selectedRowKeys.length} товаров
                     </span>
                     <button
                         className="rf-btn rf-btn-ghost"
-                        style={{ height: 28, width: 28, padding: 0, fontSize: 16, color: 'var(--ink-3)' }}
+                        style={{ height: 28, width: 28, padding: 0, fontSize: 'var(--text-xl)', color: 'var(--ink-3)' }}
                         onClick={() => { batchMoveDialogRef.current?.close(); setBatchTargetCategory(''); }}
                     >✕</button>
                 </div>
                 <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Целевая категория <span style={{ color: 'var(--brand-red)' }}>*</span>
                         </label>
                         <select
                             style={{
-                                width: '100%', height: 34, fontSize: 13,
+                                width: '100%', height: 34, fontSize: 'var(--text-base)',
                                 border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
                                 background: 'var(--surface)', color: 'var(--ink-1)',
                                 padding: '0 8px', outline: 'none', fontFamily: 'var(--font-body)', boxSizing: 'border-box',
@@ -1042,6 +1133,68 @@ const AdminCatalogPage = () => {
                         onClick={handleBatchMove}
                     >
                         {batchMoveMutation.isPending ? 'Перемещение…' : 'Переместить'}
+                    </button>
+                </div>
+            </dialog>
+
+            {/* Batch set parent dialog */}
+            <dialog
+                ref={batchParentDialogRef}
+                style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', color: 'var(--ink-1)', padding: 0, width: 420, maxWidth: '90vw', boxShadow: 'var(--shadow-pop)', margin: 'auto', overflow: 'visible' }}
+                onKeyDown={(e) => { if (e.key === 'Escape') { batchParentDialogRef.current?.close(); } }}
+            >
+                <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)' }}>
+                        Назначить родителя для {selectedRowKeys.length} товаров
+                    </span>
+                    <button
+                        className="rf-btn rf-btn-ghost"
+                        style={{ height: 28, width: 28, padding: 0, fontSize: 'var(--text-xl)', color: 'var(--ink-3)' }}
+                        onClick={() => batchParentDialogRef.current?.close()}
+                    >✕</button>
+                </div>
+                <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 12, overflow: 'visible' }}>
+                    <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+                        Найдите родительский товар — выбранные товары станут его вариантами
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                        <input
+                            type="text"
+                            placeholder="Начните вводить название..."
+                            value={parentSearch}
+                            onChange={(e) => handleParentSearch(e.target.value)}
+                            style={{ width: '100%', height: 34, padding: '0 10px', boxSizing: 'border-box', borderRadius: 'var(--r-2)', border: '1px solid var(--line-2)', fontSize: 13, background: 'var(--surface)', color: 'var(--ink-1)', outline: 'none' }}
+                        />
+                        {parentSearchResults.length > 0 && !selectedParentId && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999, background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', boxShadow: '0 4px 12px rgba(0,0,0,.08)', maxHeight: 200, overflowY: 'auto' }}>
+                                {parentSearchResults.map(p => (
+                                    <div
+                                        key={p.id}
+                                        onClick={() => { setSelectedParentId(p.id); setSelectedParentName(p.name); setParentSearch(p.name); setParentSearchResults([]); }}
+                                        style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--line-1)', color: 'var(--ink-1)' }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                                        onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--surface)')}
+                                    >
+                                        {p.name}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    {selectedParentId && (
+                        <div style={{ padding: '8px 12px', background: 'var(--brand-green-soft)', borderRadius: 'var(--r-2)', fontSize: 13, color: 'var(--brand-green)', fontWeight: 500 }}>
+                            Родитель: {selectedParentName}
+                        </div>
+                    )}
+                </div>
+                <div style={{ padding: '14px 22px', borderTop: '1px solid var(--line-1)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button className="rf-btn rf-btn-sm rf-btn-quiet" onClick={() => batchParentDialogRef.current?.close()}>Отмена</button>
+                    <button
+                        className="rf-btn rf-btn-sm rf-btn-primary"
+                        disabled={!selectedParentId || batchSetParentMutation.isPending}
+                        onClick={() => { if (selectedParentId) batchSetParentMutation.mutate(selectedParentId); }}
+                    >
+                        {batchSetParentMutation.isPending ? 'Назначение…' : 'Назначить'}
                     </button>
                 </div>
             </dialog>
@@ -1075,12 +1228,12 @@ const AdminCatalogPage = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                 }}>
-                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 15 }}>
+                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)' }}>
                         {editingCatId ? 'Редактировать категорию' : 'Новая категория'}
                     </span>
                     <button
                         className="rf-btn rf-btn-ghost"
-                        style={{ height: 28, width: 28, padding: 0, fontSize: 16, color: 'var(--ink-3)' }}
+                        style={{ height: 28, width: 28, padding: 0, fontSize: 'var(--text-xl)', color: 'var(--ink-3)' }}
                         onClick={() => {
                             catDialogRef.current?.close();
                             setEditingCatId(null);
@@ -1095,7 +1248,7 @@ const AdminCatalogPage = () => {
                 <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {/* Name */}
                     <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Название <span style={{ color: 'var(--brand-red)' }}>*</span>
                         </label>
                         <input
@@ -1105,14 +1258,14 @@ const AdminCatalogPage = () => {
                             onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleCatSubmit(); }}
                             style={{
-                                width: '100%', height: 34, padding: '0 10px', fontSize: 13,
+                                width: '100%', height: 34, padding: '0 10px', fontSize: 'var(--text-base)',
                                 border: `1px solid ${catFormErrors.name ? 'var(--brand-red)' : 'var(--line-2)'}`,
                                 borderRadius: 'var(--r-2)', background: 'var(--surface)', color: 'var(--ink-1)',
                                 outline: 'none', fontFamily: 'var(--font-body)', boxSizing: 'border-box',
                             }}
                         />
                         {catFormErrors.name && (
-                            <span style={{ fontSize: 11, color: 'var(--brand-red)', marginTop: 3, display: 'block' }}>
+                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--brand-red)', marginTop: 3, display: 'block' }}>
                                 {catFormErrors.name}
                             </span>
                         )}
@@ -1120,7 +1273,7 @@ const AdminCatalogPage = () => {
 
                     {/* Description */}
                     <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Описание
                         </label>
                         <textarea
@@ -1129,7 +1282,7 @@ const AdminCatalogPage = () => {
                             onChange={(e) => setCatForm((f) => ({ ...f, description: e.target.value }))}
                             rows={3}
                             style={{
-                                width: '100%', padding: '8px 10px', fontSize: 13,
+                                width: '100%', padding: '8px 10px', fontSize: 'var(--text-base)',
                                 border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
                                 background: 'var(--surface)', color: 'var(--ink-1)',
                                 outline: 'none', fontFamily: 'var(--font-body)', resize: 'vertical',
@@ -1140,14 +1293,14 @@ const AdminCatalogPage = () => {
 
                     {/* Parent category */}
                     <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Родительская категория
                         </label>
                         <select
                             value={catForm.parentId}
                             onChange={(e) => setCatForm((f) => ({ ...f, parentId: e.target.value ? Number(e.target.value) : '' }))}
                             style={{
-                                width: '100%', height: 34, padding: '0 8px', fontSize: 13,
+                                width: '100%', height: 34, padding: '0 8px', fontSize: 'var(--text-base)',
                                 border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
                                 background: 'var(--surface)', color: 'var(--ink-1)',
                                 outline: 'none', fontFamily: 'var(--font-body)', boxSizing: 'border-box',

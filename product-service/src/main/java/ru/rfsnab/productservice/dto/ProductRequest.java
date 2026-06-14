@@ -47,4 +47,7 @@ public class ProductRequest {
     private String externalCode;
     private String unitOfMeasure;
     private Integer vatRate;
+
+    @Size(max = 500)
+    private String material;
 }

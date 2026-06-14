@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Form, Input, App } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { useCartStore } from '@/store/cartStore';
 import type { LoginRequest } from '@/types/auth';
 import { AxiosError } from 'axios';
 
@@ -19,9 +20,20 @@ const BrandPanel = () => (
             }}
         />
 
-        <div style={{ position: 'relative', zIndex: 1 }}>
-            <img src="/logo-light.png" alt="РФснаб" style={{ height: 'var(--logo-h-auth)', display: 'block' }} />
-        </div>
+        <img
+            src="/logo-light.png"
+            alt="РФснаб"
+            onClick={() => window.location.href = '/'}
+            style={{
+                position: 'absolute',
+                top: 48,
+                left: 'var(--page-pad-x)',
+                height: 'var(--logo-h-header)',
+                display: 'block',
+                cursor: 'pointer',
+                zIndex: 2,
+            }}
+        />
 
         <div style={{ marginTop: 'auto', position: 'relative', zIndex: 1 }}>
             <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-7xl)', fontWeight: 600, color: '#fff', letterSpacing: '-0.022em', lineHeight: 1.1, maxWidth: 400, marginBottom: 16 }}>
@@ -49,6 +61,7 @@ const LoginPage = () => {
     const location = useLocation();
     const login = useAuthStore((state) => state.login);
     const loginLegal = useAuthStore((state) => state.loginLegal);
+    const mergeGuestCart = useCartStore((state) => state.mergeGuestCart);
     const { message: messageApi } = App.useApp();
 
     const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
@@ -71,6 +84,7 @@ const LoginPage = () => {
             } else {
                 await login(values);
             }
+            await mergeGuestCart();
             messageApi.success('Вы успешно вошли в систему');
             navigate(from, { replace: true });
         } catch (error) {
@@ -88,13 +102,13 @@ const LoginPage = () => {
     };
 
     const labelStyle: React.CSSProperties = {
-        display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6,
+        display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6,
     };
 
     const tabBtn = (active: boolean): React.CSSProperties => ({
-        flex: 1, padding: '9px 0', fontWeight: active ? 600 : 500, fontSize: 13,
+        flex: 1, padding: '9px 0', fontWeight: active ? 600 : 500, fontSize: 'var(--text-base)',
         background: active ? '#fff' : 'transparent',
-        borderRadius: 5, border: 0,
+        borderRadius: 'var(--r-3)', border: 0,
         boxShadow: active ? '0 1px 2px rgba(0,0,0,.06)' : 'none',
         color: active ? 'var(--brand-navy)' : 'var(--ink-3)',
         fontFamily: 'var(--font-body)', cursor: 'pointer',
@@ -106,7 +120,7 @@ const LoginPage = () => {
             <BrandPanel />
 
             <div style={{ background: 'var(--surface)', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 13, color: 'var(--ink-3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
                     Ещё нет аккаунта?{' '}
                     <span onClick={() => navigate('/register')} style={{ color: 'var(--brand-red)', fontWeight: 600, marginLeft: 6, cursor: 'pointer' }}>
                         Регистрация
@@ -114,13 +128,13 @@ const LoginPage = () => {
                 </div>
 
                 <div style={{ maxWidth: 380, margin: '60px auto auto', width: '100%' }}>
-                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.018em', color: 'var(--ink-1)', marginBottom: 6 }}>
+                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-5xl)', fontWeight: 600, letterSpacing: '-0.018em', color: 'var(--ink-1)', marginBottom: 6 }}>
                         Вход в личный кабинет
                     </h2>
-                    <p style={{ fontSize: 14, color: 'var(--ink-3)', marginBottom: 22 }}>Войдите по e-mail и паролю</p>
+                    <p style={{ fontSize: 'var(--text-md)', color: 'var(--ink-3)', marginBottom: 22 }}>Войдите по e-mail и паролю</p>
 
                     {/* Юр / Физ toggle */}
-                    <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 8, padding: 4, border: '1px solid var(--line-1)', marginBottom: 22 }}>
+                    <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--r-4)', padding: 4, border: '1px solid var(--line-1)', marginBottom: 22 }}>
                         <button style={tabBtn(accountType === 'legal')} onClick={() => setAccountType('legal')}>
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="4" y="4" width="16" height="16" rx="1"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M9 16h6"/>
@@ -146,7 +160,7 @@ const LoginPage = () => {
                         <div style={{ marginBottom: 14 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                                 <label style={{ ...labelStyle, marginBottom: 0 }}>Пароль</label>
-                                <a style={{ fontSize: 12, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}>Забыли пароль?</a>
+                                <a style={{ fontSize: 'var(--text-sm)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}>Забыли пароль?</a>
                             </div>
                             <Form.Item name="password" noStyle rules={[{ required: true, message: 'Введите пароль' }, { min: 8, message: 'Минимум 8 символов' }]}>
                                 <Input.Password style={inputStyle} placeholder="••••••••" />
@@ -173,7 +187,7 @@ const LoginPage = () => {
                         </Form.Item>
                     </Form>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0 16px', fontSize: 12, color: 'var(--ink-3)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0 16px', fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
                         <div style={{ flex: 1, height: 1, background: 'var(--line-1)' }} />
                         <span>или</span>
                         <div style={{ flex: 1, height: 1, background: 'var(--line-1)' }} />

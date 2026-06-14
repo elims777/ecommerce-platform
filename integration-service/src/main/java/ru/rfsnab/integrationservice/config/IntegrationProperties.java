@@ -16,6 +16,7 @@ public class IntegrationProperties {
     private ServiceProperties productService = new ServiceProperties();
     private ServiceProperties orderService = new ServiceProperties();
     private ImageProcessingProperties imageProcessing = new ImageProcessingProperties();
+    private FtkProperties ftk = new FtkProperties();
 
     @NestedConfigurationProperty
     private ImportConfig importConfig = new ImportConfig();
@@ -79,5 +80,29 @@ public class IntegrationProperties {
     public static class ImportConfig {
         private int chunkSize = 100;
         private int maxConcurrentRequests = 4;
+    }
+
+    @Getter
+    @Setter
+    public static class FtkProperties {
+        /** Лимит товаров (родителей) на один запуск. 0 = без лимита */
+        private int importLimit = 100;
+        /** Slug корневой категории ФТК (должна существовать в product-service) */
+        private String rootCategorySlug = "ftk";
+        /** Таймаут скачивания одного изображения в секундах */
+        private int imageDownloadTimeoutSec = 30;
+        /** Параметры FTP-сервера ФТК */
+        @NestedConfigurationProperty
+        private FtpProperties ftp = new FtpProperties();
+    }
+
+    @Getter
+    @Setter
+    public static class FtpProperties {
+        private String host;
+        private int port = 21;
+        private String username;
+        private String password;
+        private int passivePortStart = 65000;
     }
 }

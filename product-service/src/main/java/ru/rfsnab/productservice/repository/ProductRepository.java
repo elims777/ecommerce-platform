@@ -40,4 +40,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT p.slug FROM Product p")
     List<String> findAllSlugs();
+
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.variants WHERE p.parentProductId = :parentId AND p.isActive = true ORDER BY p.name ASC")
+    List<Product> findChildrenWithVariantsAndAttributes(@Param("parentId") Long parentId);
+
+    Page<Product> findByIsActiveTrueAndIsVariantChildFalse(Pageable pageable);
+
+    Page<Product> findByCategoryIdAndIsActiveTrueAndIsVariantChildFalse(Long categoryId, Pageable pageable);
 }

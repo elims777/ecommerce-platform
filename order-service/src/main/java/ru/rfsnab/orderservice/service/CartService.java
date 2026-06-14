@@ -80,23 +80,24 @@ public class CartService {
      * @throws ProductNotFoundException если товар не найден или неактивен
      * @throws InsufficientStockException если недостаточно товара на складе
      */
-    public Cart addItemToCart(Long userId, Long productId, int quantity){
+    public Cart addItemToCart(Long userId, Long productId, Long variantId, int quantity){
         ProductDto product = productServiceClient.getProduct(productId);
 
         if(!product.isActive()){
             throw new ProductNotFoundException("Product is not available " + productId);
         }
 
-        // Гарантируем, что корзина загружена в Redis (если была только в БД)
         ensureCartInRedis(userId);
 
+        // Ключ корзины: productId если нет варианта, productId:variantId если есть
+        Long cartKey = variantId != null ? variantId : productId;
         Map<Long, Integer> currentCart = cartRedisRepository.getCart(userId);
-        int currentQuantity = currentCart.getOrDefault(productId, 0);
+        int currentQuantity = currentCart.getOrDefault(cartKey, 0);
         int newQuantity = currentQuantity + quantity;
 
-        cartRedisRepository.addItem(userId,productId,newQuantity);
-        log.debug("Товар {} добавлен в корзину пользователя {}, количество: {}",
-                productId, userId, newQuantity);
+        cartRedisRepository.addItem(userId, cartKey, newQuantity);
+        log.debug("Товар {} (вариант {}) добавлен в корзину пользователя {}, количество: {}",
+                productId, variantId, userId, newQuantity);
         return getCart(userId);
     }
 

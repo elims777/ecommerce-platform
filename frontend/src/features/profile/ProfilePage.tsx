@@ -20,7 +20,7 @@ import {
 
 // ─── Общие стили ──────────────────────────────────────────────
 const sectionStyle: React.CSSProperties = {
-    border: '1px solid var(--line-1)', borderRadius: 8,
+    border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)',
     background: 'var(--surface)', overflow: 'hidden', marginBottom: 16,
 };
 const headerStyle: React.CSSProperties = {
@@ -28,14 +28,14 @@ const headerStyle: React.CSSProperties = {
     padding: '14px 20px', borderBottom: '1px solid var(--line-1)', background: 'var(--surface-2)',
 };
 const inputStyle: React.CSSProperties = {
-    height: 40, border: '1px solid var(--line-2)', borderRadius: 6,
-    fontFamily: 'var(--font-body)', fontSize: 14,
+    height: 'var(--input-h-md)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)',
+    fontFamily: 'var(--font-body)', fontSize: 'var(--text-md)',
 };
 const labelStyle: React.CSSProperties = {
-    fontSize: 12, fontWeight: 500, color: 'var(--ink-2)', marginBottom: 4, display: 'block',
+    fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-2)', marginBottom: 4, display: 'block',
 };
 const rowStyle: React.CSSProperties = {
-    display: 'flex', fontSize: 14, padding: '10px 0', borderBottom: '1px solid var(--line-1)',
+    display: 'flex', fontSize: 'var(--text-md)', padding: '10px 0', borderBottom: '1px solid var(--line-1)',
 };
 const rowLast: React.CSSProperties = { ...rowStyle, borderBottom: 'none' };
 
@@ -108,7 +108,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
         : { bg: 'var(--warn-tint)', color: 'var(--warn)', label: 'На проверке' };
 
     const editBtn = (
-        <button onClick={startEdit} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 30, padding: '0 12px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+        <button onClick={startEdit} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 30, padding: '0 12px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
             <EditOutlined style={{ fontSize: 12 }} /> Редактировать
         </button>
     );
@@ -117,14 +117,14 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
         return (
             <div style={{ maxWidth: 700, margin: '0 auto', paddingTop: 20, paddingBottom: 60 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', margin: 0 }}>
+                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-5xl)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', margin: 0 }}>
                         Профиль организации
                     </h1>
                     <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => setEditing(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 36, padding: '0 14px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                        <button onClick={() => setEditing(false)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 36, padding: '0 14px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
                             <CloseOutlined style={{ fontSize: 11 }} /> Отмена
                         </button>
-                        <button onClick={() => form.submit()} disabled={updateMutation.isPending} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 36, padding: '0 16px', border: 'none', background: 'var(--brand-navy)', color: '#fff', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: updateMutation.isPending ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-body)', opacity: updateMutation.isPending ? 0.7 : 1 }}>
+                        <button onClick={() => form.submit()} disabled={updateMutation.isPending} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 'var(--btn-h-md)', padding: '0 16px', border: 'none', background: 'var(--brand-navy)', color: '#fff', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: updateMutation.isPending ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-body)', opacity: updateMutation.isPending ? 0.7 : 1 }}>
                             <SaveOutlined style={{ fontSize: 12 }} /> {updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
                         </button>
                     </div>
@@ -134,7 +134,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                     {/* Организация */}
                     <div style={sectionStyle}>
                         <div style={headerStyle}>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)' }}>Организация</span>
+                            <span style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--ink-1)' }}>Организация</span>
                         </div>
                         <div style={{ padding: 20 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -169,7 +169,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                     {/* Юридический адрес */}
                     <div style={sectionStyle}>
                         <div style={headerStyle}>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)' }}>Юридический адрес</span>
+                            <span style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--ink-1)' }}>Юридический адрес</span>
                         </div>
                         <div style={{ padding: 20 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -210,7 +210,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                     {/* Контакты */}
                     <div style={sectionStyle}>
                         <div style={headerStyle}>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)' }}>Контакты</span>
+                            <span style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--ink-1)' }}>Контакты</span>
                         </div>
                         <div style={{ padding: 20 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -235,7 +235,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
     return (
         <div style={{ maxWidth: 700, margin: '0 auto', paddingTop: 20, paddingBottom: 60 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-                <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', margin: 0 }}>
+                <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-5xl)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', margin: 0 }}>
                     Профиль организации
                 </h1>
                 {editBtn}
@@ -244,10 +244,10 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
             {/* Основные данные */}
             <div style={sectionStyle}>
                 <div style={headerStyle}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)' }}>Организация</span>
+                    <span style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--ink-1)' }}>Организация</span>
                     <span style={{
                         display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px',
-                        borderRadius: 11, fontSize: 12, fontWeight: 500,
+                        borderRadius: 11, fontSize: 'var(--text-sm)', fontWeight: 500,
                         background: statusBadge.bg, color: statusBadge.color,
                     }}>
                         {statusBadge.label}
@@ -266,7 +266,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
             {/* Юридический адрес */}
             <div style={sectionStyle}>
                 <div style={headerStyle}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)' }}>Юридический адрес</span>
+                    <span style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--ink-1)' }}>Юридический адрес</span>
                 </div>
                 <div style={{ padding: 20 }}>
                     <Row label="Адрес" value={address} last />
@@ -276,7 +276,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
             {/* Контакты */}
             <div style={sectionStyle}>
                 <div style={headerStyle}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)' }}>Контакты</span>
+                    <span style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--ink-1)' }}>Контакты</span>
                 </div>
                 <div style={{ padding: 20 }}>
                     <Row label="Email" value={entity.email} />
@@ -287,7 +287,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
             {/* Аккаунт */}
             <div style={sectionStyle}>
                 <div style={headerStyle}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)' }}>Аккаунт</span>
+                    <span style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--ink-1)' }}>Аккаунт</span>
                 </div>
                 <div style={{ padding: 20 }}>
                     <Row label="Дата регистрации" value={formatDate(entity.createdAt)} />
@@ -327,8 +327,8 @@ const UnlinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResponse
     return (
         <div style={sectionStyle}>
             <div style={headerStyle}>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>Организация</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 12, fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>Верифицирована</span>
+                <span style={{ fontSize: 'var(--text-md)', fontWeight: 600 }}>Организация</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>Верифицирована</span>
             </div>
             <div style={{ padding: 20 }}>
                 <Row label="Организация" value={legalEntity.fullName} />
@@ -367,22 +367,22 @@ const ResendLinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResp
     return (
         <>
             <div style={headerStyle}>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>Организация</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 12, fontWeight: 500, background: 'var(--warn-tint)', color: 'var(--warn)' }}>
+                <span style={{ fontSize: 'var(--text-md)', fontWeight: 600 }}>Организация</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--warn-tint)', color: 'var(--warn)' }}>
                     Ожидает подтверждения
                 </span>
             </div>
             <div style={{ padding: 20 }}>
                 <Row label="Организация" value={legalEntity?.fullName} />
                 <Row label="ИНН" value={legalEntity?.inn} last />
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line-1)', fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line-1)', fontSize: 'var(--text-base)', color: 'var(--ink-3)', lineHeight: 1.5 }}>
                     На email организации отправлено письмо со ссылкой подтверждения. Если письмо не дошло — отправьте его повторно.
                 </div>
                 <div style={{ marginTop: 12 }}>
                     <button
                         onClick={() => resendMutation.mutate()}
                         disabled={resendMutation.isPending}
-                        style={{ height: 36, padding: '0 14px', background: 'transparent', color: 'var(--brand-navy)', border: '1px solid var(--brand-navy)', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: resendMutation.isPending ? 'not-allowed' : 'pointer', opacity: resendMutation.isPending ? 0.6 : 1, fontFamily: 'var(--font-body)' }}
+                        style={{ height: 'var(--btn-h-md)', padding: '0 14px', background: 'transparent', color: 'var(--brand-navy)', border: '1px solid var(--brand-navy)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: resendMutation.isPending ? 'not-allowed' : 'pointer', opacity: resendMutation.isPending ? 0.6 : 1, fontFamily: 'var(--font-body)' }}
                     >
                         {resendMutation.isPending ? 'Отправка...' : 'Отправить письмо повторно'}
                     </button>
@@ -427,7 +427,7 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
     if (linkLoading || legalLoading) {
         return (
             <div style={sectionStyle}>
-                <div style={headerStyle}><span style={{ fontSize: 14, fontWeight: 600 }}>Организация</span></div>
+                <div style={headerStyle}><span style={{ fontSize: 'var(--text-md)', fontWeight: 600 }}>Организация</span></div>
                 <div style={{ padding: 20, color: 'var(--ink-3)' }}>Загрузка...</div>
             </div>
         );
@@ -437,21 +437,21 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
         return (
             <div style={sectionStyle}>
                 <div style={headerStyle}>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>Организация</span>
+                    <span style={{ fontSize: 'var(--text-md)', fontWeight: 600 }}>Организация</span>
                     {!showForm && (
-                        <button onClick={() => setShowForm(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                        <button onClick={() => setShowForm(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
                             Подключить организацию
                         </button>
                     )}
                 </div>
                 <div style={{ padding: 20 }}>
                     {!showForm ? (
-                        <div style={{ fontSize: 14, color: 'var(--ink-3)', lineHeight: 1.6 }}>
+                        <div style={{ fontSize: 'var(--text-md)', color: 'var(--ink-3)', lineHeight: 1.6 }}>
                             Работаете от юридического лица? Подключите организацию для доступа к оптовым ценам и B2B-документообороту.
                         </div>
                     ) : (
                         <div>
-                            <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 16, lineHeight: 1.5 }}>
+                            <div style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)', marginBottom: 16, lineHeight: 1.5 }}>
                                 Введите ИНН вашей организации. На её email придёт письмо для подтверждения привязки.
                             </div>
                             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
@@ -468,13 +468,13 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
                                 <button
                                     disabled={inn.length < 10 || linkMutation.isPending}
                                     onClick={() => linkMutation.mutate()}
-                                    style={{ height: 40, padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: inn.length < 10 ? 'not-allowed' : 'pointer', opacity: inn.length < 10 ? 0.5 : 1, fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}
+                                    style={{ height: 'var(--input-h-md)', padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500, cursor: inn.length < 10 ? 'not-allowed' : 'pointer', opacity: inn.length < 10 ? 0.5 : 1, fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' }}
                                 >
                                     {linkMutation.isPending ? 'Отправка...' : 'Отправить заявку'}
                                 </button>
                                 <button
                                     onClick={() => { setShowForm(false); setInn(''); }}
-                                    style={{ height: 40, padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
+                                    style={{ height: 'var(--input-h-md)', padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
                                 >
                                     Отмена
                                 </button>
@@ -538,16 +538,16 @@ const B2CProfilePage = () => {
 
     return (
         <div style={{ maxWidth: 700, margin: '0 auto', paddingTop: 20, paddingBottom: 60 }}>
-            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', marginBottom: 24 }}>
+            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-5xl)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', marginBottom: 24 }}>
                 Профиль
             </h1>
 
             {/* Личные данные */}
             <div style={sectionStyle}>
                 <div style={headerStyle}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)' }}>Личные данные</span>
+                    <span style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--ink-1)' }}>Личные данные</span>
                     {!editing && (
-                        <button onClick={handleEdit} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                        <button onClick={handleEdit} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 12px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
                             <EditOutlined /> Редактировать
                         </button>
                     )}
@@ -578,10 +578,10 @@ const B2CProfilePage = () => {
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: 8 }}>
-                                <button type="submit" disabled={updateMutation.isPending} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 40, padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                                <button type="submit" disabled={updateMutation.isPending} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 'var(--input-h-md)', padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
                                     <SaveOutlined /> {updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
                                 </button>
-                                <button type="button" onClick={() => { setEditing(false); form.resetFields(); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 40, padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                                <button type="button" onClick={() => { setEditing(false); form.resetFields(); }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 'var(--input-h-md)', padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
                                     <CloseOutlined /> Отмена
                                 </button>
                             </div>
@@ -602,13 +602,13 @@ const B2CProfilePage = () => {
             {/* Аккаунт */}
             <div style={sectionStyle}>
                 <div style={headerStyle}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink-1)' }}>Аккаунт</span>
+                    <span style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--ink-1)' }}>Аккаунт</span>
                 </div>
                 <div style={{ padding: 20 }}>
                     <Row label="Email" value={
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <span>{user.email}</span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 12, fontWeight: 500, background: user.emailVerified ? 'var(--brand-green-soft)' : 'var(--warn-tint)', color: user.emailVerified ? 'var(--brand-green)' : 'var(--warn)' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 'var(--text-sm)', fontWeight: 500, background: user.emailVerified ? 'var(--brand-green-soft)' : 'var(--warn-tint)', color: user.emailVerified ? 'var(--brand-green)' : 'var(--warn)' }}>
                                 {user.emailVerified ? 'Подтверждён' : 'Не подтверждён'}
                             </span>
                         </div>

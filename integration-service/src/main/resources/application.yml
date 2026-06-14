@@ -75,6 +75,21 @@ integration:
     poll-interval-ms: 5000
     max-retries: 3
 
+# ===== Настройки интеграции с ФТК =====
+  ftk:
+    # Лимит товаров на один запуск (0 = без лимита)
+    import-limit: ${FTK_IMPORT_LIMIT:100}
+    # Категория-корень для товаров ФТК в нашем каталоге
+    root-category-slug: ${FTK_ROOT_CATEGORY_SLUG:ftk}
+    # Таймаут скачивания изображения (сек)
+    image-download-timeout-sec: ${FTK_IMAGE_TIMEOUT:30}
+    ftp:
+      host: ${FTK_FTP_HOST:31.44.91.154}
+      port: ${FTK_FTP_PORT:21}
+      username: ${FTK_FTP_USERNAME}
+      password: ${FTK_FTP_PASSWORD}
+      passive-port-start: ${FTK_FTP_PASSIVE_PORT_START:65000}
+
 # ===== Kafka topics =====
 app:
   kafka:
@@ -93,3 +108,4 @@ logging:
   level:
     reactor.netty: DEBUG
     io.netty: DEBUG
+    ru.rfsnab.integrationservice.service.ftk: DEBUG

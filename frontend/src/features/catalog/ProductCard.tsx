@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ShoppingOutlined } from '@ant-design/icons';
 import type { Product, ProductImage } from '@/types/product';
 import { useDisplayPrice } from '@/utils/priceUtils';
+import { useFavouritesStore } from '@/store/favouritesStore';
 
 const formatPrice = (price: number): string =>
     new Intl.NumberFormat('ru-RU', {
@@ -18,8 +19,8 @@ const sortImages = (images: ProductImage[]): ProductImage[] =>
         return a.displayOrder - b.displayOrder;
     });
 
-const HeartIcon = () => (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+const HeartIcon = ({ filled }: { filled?: boolean }) => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>
     </svg>
 );
@@ -64,7 +65,7 @@ const NameWithPopover = ({ name }: { name: string }) => {
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
                 style={{
-                    fontSize: 13.5, fontWeight: 500, lineHeight: 1.4, color: 'var(--ink-1)',
+                    fontSize: 'var(--text-base)', fontWeight: 500, lineHeight: 1.4, color: 'var(--ink-1)',
                     display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical',
                     overflow: 'hidden', minHeight: 76, fontFamily: 'var(--font-body)',
                     textAlign: 'justify', hyphens: 'auto',
@@ -115,8 +116,10 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
 
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isHovered, setIsHovered] = useState(false);
-    const [isFavored, setIsFavored] = useState(false);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const isFavourite = useFavouritesStore((s) => s.isFavourite(product.id));
+    const toggleFavourite = useFavouritesStore((s) => s.toggle);
 
     useEffect(() => {
         if (isHovered && hasMultipleImages) {
@@ -165,18 +168,18 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
 
             {/* Кнопка избранного */}
             <button
-                onClick={(e) => { e.stopPropagation(); setIsFavored((f) => !f); }}
+                onClick={(e) => { e.stopPropagation(); toggleFavourite(product.id); }}
                 style={{
                     position: 'absolute', top: 10, right: 10, zIndex: 2,
                     width: 30, height: 30, borderRadius: 'var(--r-full)', border: 0,
                     background: 'var(--surface)', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: isFavored ? 'var(--brand-red)' : 'var(--ink-3)',
+                    color: isFavourite ? 'var(--brand-red)' : 'var(--ink-3)',
                     boxShadow: '0 1px 3px rgba(0,0,0,.08)',
                     transition: 'color 0.12s',
                 }}
             >
-                <HeartIcon />
+                <HeartIcon filled={isFavourite} />
             </button>
 
             {/* Изображение */}
@@ -218,13 +221,13 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
                 {/* Цена */}
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginTop: 'auto' }}>
                     <span style={{
-                        fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 20,
+                        fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-2xl)',
                         color: 'var(--ink-1)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
                     }}>
                         {formatPrice(displayPrice)}
                     </span>
                     {product.sku && (
-                        <span style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
                             {product.sku}
                         </span>
                     )}

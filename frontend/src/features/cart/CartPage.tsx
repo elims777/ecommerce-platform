@@ -78,9 +78,14 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
                 padding: '18px 20px', borderBottom: '1px solid var(--line-1)',
             }}>
                 <div>
-                    <div style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.35, color: 'var(--ink-1)' }}>
+                    <div style={{ fontSize: 'var(--text-md)', fontWeight: 500, lineHeight: 1.35, color: 'var(--ink-1)' }}>
                         {item.productName}
                     </div>
+                    {item.variantAttributes && (
+                        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginTop: 2 }}>
+                            {item.variantAttributes}
+                        </div>
+                    )}
                 </div>
 
                 {/* Qty stepper */}
@@ -96,7 +101,7 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
                         min={1}
                         value={item.quantity}
                         onChange={(e) => onUpdateQty(item.productId, Math.max(1, Number(e.target.value)))}
-                        style={{ flex: 1, textAlign: 'center', border: 0, background: 'transparent', fontSize: 14, fontWeight: 600, outline: 'none', minWidth: 0, fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
+                        style={{ flex: 1, textAlign: 'center', border: 0, background: 'transparent', fontSize: 'var(--text-md)', fontWeight: 600, outline: 'none', minWidth: 0, fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
                     />
                     <button
                         onClick={() => onUpdateQty(item.productId, item.quantity + 1)}
@@ -108,13 +113,13 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
 
                 {/* Unit price */}
                 <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums', color: 'var(--ink-2)' }}>{formatPrice(item.price)}</div>
-                    <div style={{ fontSize: 11, color: 'var(--ink-3)' }}>за шт.</div>
+                    <div style={{ fontSize: 'var(--text-base)', fontVariantNumeric: 'tabular-nums', color: 'var(--ink-2)' }}>{formatPrice(item.price)}</div>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)' }}>за шт.</div>
                 </div>
 
                 {/* Subtotal */}
                 <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'var(--font-head)', fontSize: 16, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--ink-1)' }}>
+                    <div style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-xl)', fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--ink-1)' }}>
                         {formatPrice(item.subtotal)}
                     </div>
                 </div>
@@ -200,17 +205,17 @@ const CartPage = () => {
                 <div style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>
                     Корзина пуста
                 </div>
-                <div style={{ fontSize: 14, color: 'var(--ink-3)', maxWidth: 340, margin: '0 auto 8px' }}>
+                <div style={{ fontSize: 'var(--text-md)', color: 'var(--ink-3)', maxWidth: 340, margin: '0 auto 8px' }}>
                     Найдите нужный товар в каталоге — добавляйте прямо с карточки товара.
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--ink-4)', marginBottom: 28 }}>
+                <div style={{ fontSize: 'var(--text-base)', color: 'var(--ink-4)', marginBottom: 28 }}>
                     Для юридических лиц доступна оплата по счёту и работа по договору.
                 </div>
                 <button
                     onClick={() => navigate('/catalog')}
                     style={{
                         display: 'inline-flex', alignItems: 'center', gap: 8,
-                        height: 44, padding: '0 28px', background: 'var(--brand-red)', color: '#fff',
+                        height: 'var(--btn-h-base)', padding: '0 28px', background: 'var(--brand-red)', color: '#fff',
                         border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500,
                         cursor: 'pointer', fontFamily: 'var(--font-body)',
                     }}
@@ -241,8 +246,8 @@ const CartPage = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 24 }}>
-                <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', margin: 0 }}>Корзина</h1>
-                <span style={{ fontSize: 14, color: 'var(--ink-3)' }}>{items.length} {items.length === 1 ? 'товар' : 'товара'}</span>
+                <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-6xl)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', margin: 0 }}>Корзина</h1>
+                <span style={{ fontSize: 'var(--text-md)', color: 'var(--ink-3)' }}>{items.length} {items.length === 1 ? 'товар' : 'товара'}</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24 }}>
@@ -304,15 +309,15 @@ const CartPage = () => {
                         </h3>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ink-2)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-base)', color: 'var(--ink-2)' }}>
                                 <span>Товары ({items.length} поз.)</span>
                                 <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(totalAmount)}</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--brand-green)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-base)', color: 'var(--brand-green)' }}>
                                 <span>Доставка по графику</span>
                                 <span style={{ fontWeight: 500 }}>Бесплатно</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--ink-3)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
                                 <span>НДС 20% (в т.ч.)</span>
                                 <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(totalAmount / 1.2 * 0.2)}</span>
                             </div>
@@ -321,8 +326,8 @@ const CartPage = () => {
                         <div style={{ height: 1, background: 'var(--line-1)', margin: '16px 0' }} />
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                            <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>К оплате</span>
-                            <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 26, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink-1)' }}>
+                            <span style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>К оплате</span>
+                            <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-6xl)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink-1)' }}>
                                 {formatPrice(totalAmount)}
                             </span>
                         </div>
@@ -331,7 +336,7 @@ const CartPage = () => {
                             onClick={() => navigate('/checkout')}
                             style={{
                                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                                width: '100%', height: 48, marginTop: 16,
+                                width: '100%', height: 'var(--btn-h-xl)', marginTop: 16,
                                 background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)',
                                 fontSize: 'var(--text-lg)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
                                 transition: 'background 0.12s',

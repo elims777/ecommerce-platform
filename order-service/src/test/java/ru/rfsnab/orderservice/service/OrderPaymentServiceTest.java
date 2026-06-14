@@ -337,7 +337,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
     // ============================================================
 
     private Order createOrder(PaymentMethod paymentMethod, String clientType) {
-        cartService.addItemToCart(USER_ID, PRODUCT_ID, 2);
+        cartService.addItemToCart(USER_ID, PRODUCT_ID, null, 2);
         CreateOrderRequest request = new CreateOrderRequest(
                 paymentMethod, DeliveryMethod.SUPPLIER_DELIVERY,
                 AddressDto.builder()
@@ -355,3 +355,4 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
         return orderService.confirmOrder(order.getId(), USER_ID);
     }
 }
+

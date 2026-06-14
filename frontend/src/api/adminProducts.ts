@@ -16,6 +16,7 @@ export interface ProductRequest {
     externalCode?: string;
     unitOfMeasure?: string;
     vatRate?: number;
+    material?: string;
 }
 
 /** Создать товар */
@@ -117,6 +118,20 @@ export const deleteAttribute = async (
     attributeId: number,
 ): Promise<void> => {
     await apiClient.delete(`/v1/products/${productId}/attributes/${attributeId}`);
+};
+
+/** Назначить/снять родительский товар */
+export const setParentProduct = async (id: number, parentProductId: number | null): Promise<Product> => {
+    const { data } = await apiClient.patch<Product>(`/v1/products/${id}/set-parent`, null, {
+        params: parentProductId != null ? { parentProductId } : {},
+    });
+    return data;
+};
+
+/** Поиск товаров по имени (для выбора родителя) */
+export const searchProducts = async (query: string): Promise<Product[]> => {
+    const { data } = await apiClient.get<Product[]>('/v1/products/search', { params: { query } });
+    return data;
 };
 
 /** Массовая активация/деактивация товаров */

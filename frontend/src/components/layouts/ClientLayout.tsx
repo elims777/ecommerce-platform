@@ -5,6 +5,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
+import { useFavouritesStore } from '@/store/favouritesStore';
 import { isAdmin } from '@/types/auth';
 import type { ClientType } from '@/types/auth';
 import type { MenuProps } from 'antd';
@@ -94,7 +95,7 @@ const HeaderAction = ({ icon, label, count, highlight, onClick }: { icon: React.
                 }}>{count}</span>
             )}
         </span>
-        <span style={{ fontSize: 11, color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{label}</span>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{label}</span>
     </button>
 );
 
@@ -143,7 +144,7 @@ const ContextSwitcher = () => {
             <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', overflow: 'hidden', opacity: loading ? 0.6 : 1 }}>
                 {(['B2C', 'B2B'] as const).map((type) => (
                     <button key={type} onClick={() => handleSwitch(type)} disabled={loading} style={{
-                        padding: '4px 10px', fontSize: 12, fontWeight: 600, border: 'none',
+                        padding: '4px 10px', fontSize: 'var(--text-sm)', fontWeight: 600, border: 'none',
                         cursor: loading ? 'default' : 'pointer', fontFamily: 'var(--font-body)',
                         background: active === type ? 'var(--brand-red)' : 'transparent',
                         color: active === type ? '#fff' : 'var(--ink-2)',
@@ -157,10 +158,10 @@ const ContextSwitcher = () => {
             {showPasswordModal && (
                 <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' as any }}
                     onClick={() => { setShowPasswordModal(false); setPassword(''); setError(''); }}>
-                    <div style={{ background: 'var(--surface)', borderRadius: 'var(--r-5)', padding: 28, width: 360 }}
+                    <div style={{ background: 'var(--surface)', borderRadius: 'var(--r-5)', padding: 'var(--sp-10)', width: 360 }}
                         onClick={(e) => e.stopPropagation()}>
-                        <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 8 }}>Переключение на личный аккаунт</div>
-                        <div style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 16 }}>Введите пароль от личного аккаунта</div>
+                        <div style={{ fontWeight: 600, fontSize: 'var(--text-xl)', marginBottom: 8 }}>Переключение на личный аккаунт</div>
+                        <div style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)', marginBottom: 16 }}>Введите пароль от личного аккаунта</div>
                         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                             onKeyDown={(e) => { if (e.key === 'Enter') handlePasswordSubmit(); }}
                             placeholder="Пароль" autoFocus
@@ -170,7 +171,7 @@ const ContextSwitcher = () => {
                                 borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontFamily: 'var(--font-body)',
                                 outline: 'none', boxSizing: 'border-box', marginBottom: error ? 6 : 16,
                             }} />
-                        {error && <div style={{ fontSize: 12, color: 'var(--brand-red)', marginBottom: 12 }}>{error}</div>}
+                        {error && <div style={{ fontSize: 'var(--text-sm)', color: 'var(--brand-red)', marginBottom: 12 }}>{error}</div>}
                         <div style={{ display: 'flex', gap: 8 }}>
                             <button onClick={handlePasswordSubmit} disabled={loading || !password} style={{
                                 flex: 1, height: 38, background: 'var(--brand-red)', color: '#fff',
@@ -197,12 +198,20 @@ const ClientLayout = () => {
     const { isAuthenticated, user, logout } = useAuthStore();
     const totalItems = useCartStore((state) => state.totalItems);
     const fetchCart = useCartStore((state) => state.fetchCart);
+    const fetchFavouriteIds = useFavouritesStore((s) => s.fetchIds);
+    const clearFavourites = useFavouritesStore((s) => s.clear);
+    const totalFavourites = useFavouritesStore((s) => s.ids.size);
     const [searchQuery, setSearchQuery] = useState('');
     const prevIndexRef = useRef(getPageIndex(location.pathname));
 
     useEffect(() => {
-        if (isAuthenticated) fetchCart();
-    }, [isAuthenticated, fetchCart]);
+        if (isAuthenticated) {
+            fetchCart();
+            fetchFavouriteIds();
+        } else {
+            clearFavourites();
+        }
+    }, [isAuthenticated, fetchCart, fetchFavouriteIds, clearFavourites]);
 
     const handleLogout = async () => {
         await logout();
@@ -235,7 +244,7 @@ const ClientLayout = () => {
             onClick={() => navigate(path)}
             style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: '0 14px', height: '100%', fontSize: 14, fontWeight: 500,
+                padding: '0 14px', height: '100%', fontSize: 'var(--text-md)', fontWeight: 500,
                 color: isActive(path) ? 'var(--brand-red)' : 'var(--ink-1)',
                 borderBottom: isActive(path) ? '2px solid var(--brand-red)' : '2px solid transparent',
                 marginBottom: -1, cursor: 'pointer', textDecoration: 'none',
@@ -292,7 +301,7 @@ const ClientLayout = () => {
                             }}>РФснаб</span>
                             <span style={{
                                 fontFamily: 'var(--font-body)',
-                                fontSize: 11, fontWeight: 400, letterSpacing: '0.04em',
+                                fontSize: 'var(--text-xs)', fontWeight: 400, letterSpacing: '0.04em',
                                 color: 'var(--ink-3)', lineHeight: 1.2, textTransform: 'uppercase',
                             }}>комплексное снабжение</span>
                         </div>
@@ -338,7 +347,7 @@ const ClientLayout = () => {
 
                     {/* User actions */}
                     <div style={{ display: 'flex', gap: 2, alignItems: 'center', marginLeft: 'auto', flexShrink: 0 }}>
-                        <HeaderAction icon={<HeartIcon />} label="Избранное" />
+                        <HeaderAction icon={<HeartIcon />} label="Избранное" count={totalFavourites || undefined} onClick={() => navigate('/favourites')} />
                         <HeaderAction icon={<CartIcon />} label="Корзина" count={totalItems} highlight onClick={() => navigate('/cart')} />
                         <div style={{ width: 1, height: 28, background: 'var(--line-1)', margin: '0 4px' }} />
                         {isAuthenticated ? (
@@ -395,11 +404,11 @@ const ClientLayout = () => {
                     >
                         <MenuIcon /> Каталог товаров
                     </button>
-                    {navLink('/about', 'О компании', true)}
+                    {navLink('/about', 'О компании')}
                     {navLink('/contacts', 'Контакты')}
                     <a style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4,
-                        padding: '0 14px', height: '100%', fontSize: 14, fontWeight: 500,
+                        padding: '0 14px', height: '100%', fontSize: 'var(--text-md)', fontWeight: 500,
                         color: 'var(--ink-1)', cursor: 'pointer', textDecoration: 'none',
                     }}>
                         Акции
@@ -430,7 +439,7 @@ const ClientLayout = () => {
 
             <footer style={{ background: 'var(--footer-bg)', color: '#fff', padding: 'var(--sp-14) var(--page-pad-x) 28px', marginTop: 'var(--sp-14)' }}>
                 <div style={{ maxWidth: 'var(--footer-max-w)', margin: '0 auto' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr', gap: 40, marginBottom: 32 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr', gap: 'var(--sp-14)', marginBottom: 32 }}>
                         <div>
                             <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <img src="/logo-light.png" alt="РФснаб" style={{ height: 'var(--logo-h-footer)', display: 'block' }} />
@@ -439,7 +448,7 @@ const ClientLayout = () => {
                                     <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 400, letterSpacing: '0.04em', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase' }}>комплексное снабжение</span>
                                 </div>
                             </div>
-                            <p style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', lineHeight: 1.6 }}>
+                            <p style={{ fontSize: 'var(--text-base)', color: 'rgba(255,255,255,.6)', lineHeight: 1.6 }}>
                                 Комплексное снабжение предприятий и организаций. Работаем с {company.founded} года.
                             </p>
                         </div>
@@ -450,8 +459,8 @@ const ClientLayout = () => {
                             ['Контакты', [company.phone.free, company.email.sales, company.workHours, company.address.city]],
                         ].map(([heading, items]) => (
                             <div key={heading as string}>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 14 }}>{heading}</div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, color: 'rgba(255,255,255,.6)' }}>
+                                <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: '#fff', marginBottom: 14 }}>{heading}</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 'var(--text-base)', color: 'rgba(255,255,255,.6)' }}>
                                     {(items as string[]).map((item) => (
                                         <a key={item} style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none', transition: 'color 0.12s' }}
                                             onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.9)'; }}
@@ -464,7 +473,7 @@ const ClientLayout = () => {
                     </div>
                     <div style={{
                         paddingTop: 20, borderTop: '1px solid rgba(255,255,255,.1)',
-                        display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'rgba(255,255,255,.45)',
+                        display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)', color: 'rgba(255,255,255,.45)',
                     }}>
                         <span>© {company.founded}–{new Date().getFullYear()} {company.legalName} · ИНН {company.inn}</span>
                         <span style={{ display: 'flex', gap: 18 }}>

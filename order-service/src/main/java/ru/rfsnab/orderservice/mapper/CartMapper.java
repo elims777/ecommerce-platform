@@ -47,6 +47,8 @@ public class CartMapper {
 
         return new CartItemDto(
                 product.id(),
+                item.getVariantId(),
+                null,
                 product.name(),
                 item.getQuantity(),
                 product.price(),

@@ -57,6 +57,10 @@ public class Product {
     @Builder.Default
     private Boolean isFeatured = false;
 
+    @Column(length = 20)
+    @Builder.Default
+    private String source = "INTERNAL";
+
     @Column(length = 50)
     private String externalId;
 
@@ -66,10 +70,24 @@ public class Product {
     @Column(length = 50)
     private String externalCode;
 
+    @Column(length = 500)
+    private String material;
+
     @Column(length = 20)
     private String unitOfMeasure;
 
     private Integer vatRate;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isVariantChild = false;
+
+    @Column(name = "parent_product_id")
+    private Long parentProductId;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ProductVariant> variants = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC")

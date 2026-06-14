@@ -25,6 +25,8 @@ public class ProductResponse {
     private Boolean isActive;
     private Boolean isFeatured;
 
+    private String material;
+
     //интеграция с 1с
     private String externalId;
     private String sku;
@@ -32,7 +34,13 @@ public class ProductResponse {
     private String unitOfMeasure;
     private Integer vatRate;
 
+    private String source;
+
+    private Boolean isVariantChild;
+    private Long parentProductId;
+
     // Вложенные данные
+    private List<ProductVariantDto> variants;
     private List<ProductImageResponse> images;
     private List<ProductVideoResponse> videos;
     private List<ProductAttributeResponse> attributes;

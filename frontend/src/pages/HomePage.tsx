@@ -8,6 +8,9 @@ import ProductCard from '@/features/catalog/ProductCard';
 import { useCartStore } from '@/store/cartStore';
 import { App } from 'antd';
 import type { CategoryTree } from '@/types/product';
+import { useSliderStore } from '@/store/sliderStore';
+import type { Slide } from '@/types/slider';
+import { GRADIENT_PRESETS } from '@/types/slider';
 
 // ── Icons ─────────────────────────────────────────────────────
 const ArrRight = ({ width = 16, height = 16 }: { width?: number; height?: number }) => (
@@ -56,44 +59,7 @@ const ChevRight = () => (
     </svg>
 );
 
-// ── Hero slides data ──────────────────────────────────────────
-const HERO_SLIDES = [
-    {
-        bg: 'var(--gradient-hero-navy)',
-        eyebrow: 'B2B-снабжение',
-        eyebrowDot: '#1A6B3A',
-        eyebrowText: 'Поставки от 1 часа по Москве',
-        title: 'Комплексное снабжение предприятий — в одном кабинете',
-        text: '12 000+ позиций со счёт-фактурой, ЭДО, отсрочкой по договору и закреплённым менеджером.',
-        cta1: 'Открыть каталог',
-        cta2: 'Запрос на снабжение',
-        sideType: 'jur' as const,
-    },
-    {
-        bg: 'var(--gradient-hero-red)',
-        eyebrow: 'Сезон противопожарной безопасности',
-        eyebrowDot: '#FFE08A',
-        eyebrowText: 'до 30 июня',
-        title: 'Оснащение объекта по 123-ФЗ под ключ — за 5 рабочих дней',
-        text: 'Огнетушители, шкафы, извещатели, знаки. Полный пакет сертификатов и паспортов в каждой накладной.',
-        cta1: 'Подобрать комплект',
-        cta2: 'Скачать спецификацию',
-        sideType: 'stats' as const,
-        stats: { counts: ['1 842', '5 раб. дн.', '143', '100%'], labels: ['позиции', 'на оснащение', 'комплекта в мае', 'сертификатов'] },
-    },
-    {
-        bg: 'var(--gradient-hero-green)',
-        eyebrow: 'Спецодежда и СИЗ',
-        eyebrowDot: '#FFE08A',
-        eyebrowText: 'к летнему сезону',
-        title: 'Экипировка персонала по типовым нормам выдачи',
-        text: 'Поможем подобрать ассортимент по профессиям и роли, отгрузим со склада в Москве и Казани.',
-        cta1: 'Подобрать по нормам',
-        cta2: 'Прислать образцы',
-        sideType: 'stats' as const,
-        stats: { counts: ['5 317', 'по нормам', '38', '24 ч'], labels: ['позиции', 'выдачи', 'отраслей', 'на сборку заказа'] },
-    },
-];
+// ── Hero slides: берутся из sliderStore ───────────────────────
 
 // ── Primary category colors (для первых 3 категорий из API) ──
 const PRIMARY_COLORS = [
@@ -136,7 +102,7 @@ const HeroSideJur = ({ onRegister }: { onRegister: () => void }) => (
                 marginLeft: 'auto', display: 'inline-flex', alignItems: 'center',
                 height: 18, padding: '0 8px', borderRadius: 9,
                 background: 'var(--brand-green-soft)', color: 'var(--brand-green)',
-                fontSize: 11, fontWeight: 600,
+                fontSize: 'var(--text-xs)', fontWeight: 600,
             }}>−7% к прайсу</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
@@ -194,135 +160,268 @@ const arrowBtn: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 };
 
+const formatPrice = (p: number) =>
+    new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(p);
+
+const getSlideBgStyle = (slide: Slide): React.CSSProperties => {
+    if (slide.type === 'image' && slide.imageUrl) {
+        const fit = (slide.imageFit as string | undefined) ?? 'cover';
+        return {
+            backgroundImage: `url(${slide.imageUrl})`,
+            backgroundSize: fit === 'contain' ? 'contain' : fit === 'fill' ? '100% 100%' : 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+        };
+    }
+    const grad = slide.gradientPreset === 'custom' ? slide.customGradient : GRADIENT_PRESETS[slide.gradientPreset];
+    return { background: grad };
+};
+
 const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatalog: () => void }) => {
+    const rawSlides = useSliderStore((s) => s.slides);
+    const slides = [...rawSlides]
+        .filter((s) => s.enabled)
+        .sort((a, b) => a.displayOrder - b.displayOrder);
+
     const [idx, setIdx] = useState(0);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const navigate = useNavigate();
+
+    const activeIdx = Math.min(idx, Math.max(slides.length - 1, 0));
 
     const resetTimer = () => {
         if (timerRef.current) clearInterval(timerRef.current);
-        timerRef.current = setInterval(() => setIdx((i) => (i + 1) % HERO_SLIDES.length), 7000);
+        if (slides.length > 1) {
+            timerRef.current = setInterval(() => setIdx((i) => (i + 1) % slides.length), 7000);
+        }
     };
 
     useEffect(() => {
         resetTimer();
         return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [slides.length]);
 
-    const go = (next: number) => {
-        setIdx(next);
-        resetTimer();
+    const go = (next: number) => { setIdx(next); resetTimer(); };
+
+    if (slides.length === 0) return null;
+
+    const s = slides[activeIdx];
+    const bgStyle = getSlideBgStyle(s);
+
+    const handleCtaClick = (link: string) => {
+        if (!link) return;
+        if (link.startsWith('http')) window.open(link, '_blank');
+        else navigate(link);
     };
-
-    const s = HERO_SLIDES[idx];
 
     return (
         <div style={{
-            background: s.bg,
+            ...bgStyle,
             borderRadius: 'var(--r-5)',
-            padding: '28px 36px 52px',
             color: '#fff',
             position: 'relative',
             overflow: 'hidden',
-            minHeight: 280,
+            minHeight: 300,
             transition: 'background .35s ease',
         }}>
             {/* Watermark */}
             <img src="/logo-light.png" alt=""
                 style={{
                     position: 'absolute', right: -24, bottom: -28,
-                    height: 280, width: 'auto', opacity: .12,
+                    height: 300, width: 'auto', opacity: .12,
                     pointerEvents: 'none',
                 }}
             />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 28, alignItems: 'center', position: 'relative', zIndex: 1 }}>
-                <div>
-                    {/* Eyebrow */}
-                    <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 8,
-                        background: 'var(--overlay-white-12)', padding: '5px 12px', borderRadius: 'var(--r-full)',
-                        fontSize: 'var(--text-sm)', marginBottom: 14,
-                    }}>
-                        <span style={{ width: 6, height: 6, borderRadius: 3, background: s.eyebrowDot, display: 'inline-block' }}/>
-                        <span style={{ fontWeight: 600 }}>{s.eyebrow}</span>
-                        <span style={{ opacity: .65 }}>· {s.eyebrowText}</span>
-                    </div>
-
-                    <h1 style={{
-                        fontFamily: 'var(--font-head)', fontSize: 'var(--text-6xl)', fontWeight: 600,
-                        letterSpacing: '-0.022em', lineHeight: 1.12, color: '#fff',
-                        maxWidth: 580, margin: '0 0 12px',
-                    }}>
-                        {s.title}
-                    </h1>
-                    <p style={{ margin: '0 0 18px', fontSize: 'var(--text-md)', lineHeight: 1.55, color: 'var(--overlay-white-70)', maxWidth: 520 }}>
-                        {s.text}
-                    </p>
-
-                    <div style={{ display: 'flex', gap: 10 }}>
-                        <button
-                            onClick={onCatalog}
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 6,
-                                background: 'var(--surface)', color: 'var(--ink-1)', fontWeight: 600,
-                                padding: '0 18px', height: 'var(--btn-h-lg)', border: 'none', borderRadius: 'var(--r-3)',
-                                fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                transition: 'opacity .12s',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.opacity = '.9'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-                        >
-                            {s.cta1} <ArrRight />
-                        </button>
-                        <button style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            background: 'var(--overlay-white-14)', color: '#fff',
-                            padding: '0 18px', height: 'var(--btn-h-lg)', border: 0, borderRadius: 'var(--r-3)',
-                            fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                            transition: 'background .12s',
-                        }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,.22)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--overlay-white-14)'; }}
-                        >
-                            <DocIcon /> {s.cta2}
-                        </button>
-                    </div>
+            {/* Text blocks */}
+            {s.textBlocks?.map((block) => (
+                <div key={block.id} style={{
+                    position: 'absolute',
+                    left: `${block.x}%`,
+                    top: `${block.y}%`,
+                    width: `${block.width}%`,
+                    height: `${block.height}%`,
+                    background: block.background || 'transparent',
+                    borderRadius: block.borderRadius,
+                    padding: '8px 10px',
+                    boxSizing: 'border-box',
+                    zIndex: 2,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-start',
+                }}>
+                    {block.heading && (
+                        <div style={{
+                            fontFamily: 'var(--font-head)',
+                            fontSize: block.headingStyle.size,
+                            fontWeight: block.headingStyle.bold ? 700 : 400,
+                            fontStyle: block.headingStyle.italic ? 'italic' : 'normal',
+                            textDecoration: [
+                                block.headingStyle.underline ? 'underline' : '',
+                                block.headingStyle.strikethrough ? 'line-through' : '',
+                            ].filter(Boolean).join(' ') || 'none',
+                            color: block.headingStyle.color,
+                            lineHeight: 1.15,
+                            letterSpacing: '-0.02em',
+                            margin: '0 0 8px',
+                        }}>
+                            {block.heading}
+                        </div>
+                    )}
+                    {block.body && (
+                        <div style={{
+                            fontSize: block.bodyStyle.size,
+                            fontWeight: block.bodyStyle.bold ? 700 : 400,
+                            fontStyle: block.bodyStyle.italic ? 'italic' : 'normal',
+                            textDecoration: [
+                                block.bodyStyle.underline ? 'underline' : '',
+                                block.bodyStyle.strikethrough ? 'line-through' : '',
+                            ].filter(Boolean).join(' ') || 'none',
+                            color: block.bodyStyle.color,
+                            lineHeight: 1.5,
+                            margin: 0,
+                        }}>
+                            {block.body}
+                        </div>
+                    )}
                 </div>
+            ))}
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    {s.sideType === 'jur'
-                        ? <HeroSideJur onRegister={onRegister} />
-                        : s.stats && <HeroSideStats counts={s.stats.counts} labels={s.stats.labels} />
-                    }
-                </div>
-            </div>
-
-            {/* Slider controls */}
-            <div style={{
-                position: 'absolute', left: 36, bottom: 14, right: 36,
-                display: 'flex', alignItems: 'center', gap: 14, zIndex: 2,
-            }}>
-                <div style={{ display: 'flex', gap: 6 }}>
-                    {HERO_SLIDES.map((_, i) => (
-                        <button key={i} onClick={() => go(i)} style={{
-                            width: i === idx ? 28 : 8, height: 4, borderRadius: 2,
-                            background: i === idx ? '#fff' : 'rgba(255,255,255,.4)',
-                            border: 0, padding: 0, cursor: 'pointer',
-                            transition: 'width .25s, background .25s',
-                        }}/>
+            {/* CTA buttons */}
+            {s.cta?.length > 0 && (
+                <div style={{
+                    position: 'absolute',
+                    left: `${s.textBlocks?.[0]?.x ?? 5}%`,
+                    bottom: 52,
+                    display: 'flex', gap: 10, zIndex: 3,
+                }}>
+                    {s.cta.map((btn, i) => (
+                        btn.label ? (
+                            <button
+                                key={btn.id}
+                                onClick={() => handleCtaClick(btn.link)}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    background: btn.variant === 'primary' ? 'var(--surface)' : 'var(--overlay-white-14)',
+                                    color: btn.variant === 'primary' ? 'var(--ink-1)' : '#fff',
+                                    fontWeight: 600,
+                                    padding: '0 18px', height: 'var(--btn-h-lg)',
+                                    border: 'none', borderRadius: 'var(--r-3)',
+                                    fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                    transition: btn.variant === 'primary' ? 'opacity .12s' : 'background .12s',
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (btn.variant === 'primary') e.currentTarget.style.opacity = '.9';
+                                    else e.currentTarget.style.background = 'rgba(255,255,255,.22)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (btn.variant === 'primary') e.currentTarget.style.opacity = '1';
+                                    else e.currentTarget.style.background = 'var(--overlay-white-14)';
+                                }}
+                            >
+                                {btn.label} {btn.variant === 'primary' && <ArrRight />}
+                            </button>
+                        ) : null
                     ))}
                 </div>
-                <div style={{ flex: 1 }}/>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-60)', fontVariantNumeric: 'tabular-nums' }}>
-                    {String(idx + 1).padStart(2, '0')} / {String(HERO_SLIDES.length).padStart(2, '0')}
-                </span>
-                <button onClick={() => go((idx - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)} style={arrowBtn}>
-                    <ChevLeft />
-                </button>
-                <button onClick={() => go((idx + 1) % HERO_SLIDES.length)} style={arrowBtn}>
-                    <ChevRight />
-                </button>
-            </div>
+            )}
+
+            {/* Products block */}
+            {s.products.length > 0 && (
+                <div style={{
+                    position: 'absolute',
+                    right: `${s.productsRight}%`,
+                    top: `${s.productsTop}%`,
+                    width: `${s.productsWidth}%`,
+                    display: 'flex', flexDirection: 'column', gap: 8,
+                    zIndex: 2,
+                }}>
+                    {s.products.slice(0, 3).map((p) => (
+                        <div
+                            key={p.id}
+                            onClick={() => navigate(`/products/${p.id}`)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 10,
+                                background: 'rgba(255,255,255,.12)', backdropFilter: 'blur(6px)',
+                                border: '1px solid rgba(255,255,255,.2)',
+                                borderRadius: 'var(--r-3)', padding: '8px 10px',
+                                cursor: 'pointer', transition: 'background .12s',
+                                height: s.productsItemHeight ?? 56,
+                                boxSizing: 'border-box', overflow: 'hidden',
+                            }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.2)'; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.12)'; }}
+                        >
+                            {p.imageUrl && (
+                                <div style={{
+                                    width: 40, height: 40, borderRadius: 'var(--r-2)',
+                                    background: 'rgba(255,255,255,.9)', flexShrink: 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    overflow: 'hidden',
+                                }}>
+                                    <img src={p.imageUrl} alt={p.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                </div>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                {p.fields?.showName !== false && (
+                                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {p.name}
+                                    </div>
+                                )}
+                                {p.fields?.showShortDescription && p.shortDescription && (
+                                    <div style={{ fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,.7)', lineHeight: 1.3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {p.shortDescription}
+                                    </div>
+                                )}
+                                {p.fields?.showDescription && p.description && !p.fields?.showShortDescription && (
+                                    <div style={{ fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,.7)', lineHeight: 1.3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {p.description}
+                                    </div>
+                                )}
+                                {p.fields?.showPrice !== false && (
+                                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'rgba(255,255,255,.9)', fontVariantNumeric: 'tabular-nums' }}>
+                                        {formatPrice(p.price)}
+                                    </div>
+                                )}
+                            </div>
+                            <ArrRight width={12} height={12} />
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Invisible spacer to give slide height */}
+            <div style={{ height: 300, visibility: 'hidden' }} />
+
+            {/* Slider controls */}
+            {slides.length > 1 && (
+                <div style={{
+                    position: 'absolute', left: 36, bottom: 14, right: 36,
+                    display: 'flex', alignItems: 'center', gap: 14, zIndex: 3,
+                }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                        {slides.map((_, i) => (
+                            <button key={i} onClick={() => go(i)} style={{
+                                width: i === activeIdx ? 28 : 8, height: 4, borderRadius: 2,
+                                background: i === activeIdx ? '#fff' : 'rgba(255,255,255,.4)',
+                                border: 0, padding: 0, cursor: 'pointer',
+                                transition: 'width .25s, background .25s',
+                            }}/>
+                        ))}
+                    </div>
+                    <div style={{ flex: 1 }}/>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-60)', fontVariantNumeric: 'tabular-nums' }}>
+                        {String(activeIdx + 1).padStart(2, '0')} / {String(slides.length).padStart(2, '0')}
+                    </span>
+                    <button onClick={() => go((activeIdx - 1 + slides.length) % slides.length)} style={arrowBtn}>
+                        <ChevLeft />
+                    </button>
+                    <button onClick={() => go((activeIdx + 1) % slides.length)} style={arrowBtn}>
+                        <ChevRight />
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
@@ -381,7 +480,7 @@ const PrimaryGroupCard = ({ category, color, hoverColor, index, onClick }: {
             </h3>
 
             <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,.18)', paddingTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, fontWeight: 500 }}>Перейти в раздел</span>
+                <span style={{ fontSize: 'var(--text-base)', fontWeight: 500 }}>Перейти в раздел</span>
                 <ArrRight />
             </div>
         </div>
@@ -414,7 +513,7 @@ const SecondaryCatTile = ({ category, onClick }: { category: CategoryTree; onCli
                 <GridIcon />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink-1)', lineHeight: 1.3 }}>{category.name}</div>
+                <div style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--ink-1)', lineHeight: 1.3 }}>{category.name}</div>
             </div>
             <ArrRight width={14} height={14} />
         </div>
@@ -432,9 +531,9 @@ const ServiceCard = ({ icon, title, text, cta, accent }: { icon: React.ReactNode
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             }}>{icon}</div>
             <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4, color: 'var(--ink-1)' }}>{title}</div>
-                <p style={{ fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.5, margin: 0 }}>{text}</p>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 13, fontWeight: 600, color, cursor: 'pointer' }}>
+                <div style={{ fontSize: 'var(--text-lg)', fontWeight: 600, marginBottom: 4, color: 'var(--ink-1)' }}>{title}</div>
+                <p style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)', lineHeight: 1.5, margin: 0 }}>{text}</p>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 'var(--text-base)', fontWeight: 600, color, cursor: 'pointer' }}>
                     {cta} <ArrRight width={14} height={14} />
                 </div>
             </div>
@@ -478,7 +577,7 @@ const HomePage = () => {
     };
 
     return (
-        <div style={{ paddingBottom: 60 }}>
+        <div style={{ paddingBottom: 'var(--sp-20)' }}>
             {/* HERO SLIDER */}
             <div style={{ padding: '20px 0 0' }}>
                 <HeroSlider
@@ -491,16 +590,16 @@ const HomePage = () => {
             <div style={{ paddingTop: 36 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
                     <div>
-                        <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
+                        <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
                             Основные направления
                         </h2>
-                        <p style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 4, marginBottom: 0 }}>
+                        <p style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)', marginTop: 4, marginBottom: 0 }}>
                             Три направления, которые закрывают 80% заявок снабженца
                         </p>
                     </div>
                     <span
                         onClick={() => navigate('/catalog')}
-                        style={{ fontSize: 13, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        style={{ fontSize: 'var(--text-base)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
                     >
                         Все разделы каталога →
                     </span>
@@ -522,7 +621,7 @@ const HomePage = () => {
                         ))}
                     </div>
                 ) : (
-                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-3)', fontSize: 14 }}>
+                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--ink-3)', fontSize: 'var(--text-md)' }}>
                         Категории загружаются...
                     </div>
                 )}
@@ -531,7 +630,7 @@ const HomePage = () => {
             {/* SECONDARY CATEGORIES */}
             {secondaryCategories.length > 0 && (
                 <div style={{ paddingTop: 20 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
                         Сопутствующие категории
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
@@ -549,12 +648,12 @@ const HomePage = () => {
             {/* FEATURED PRODUCTS */}
             <div style={{ paddingTop: 40 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
-                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
+                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
                         Хиты снабжения
                     </h2>
                     <span
                         onClick={() => navigate('/catalog')}
-                        style={{ fontSize: 13, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
+                        style={{ fontSize: 'var(--text-base)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
                     >
                         Смотреть все →
                     </span>
@@ -615,10 +714,10 @@ const HomePage = () => {
                     background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-5)',
                     padding: '22px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 32,
                 }}>
-                    <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 15, maxWidth: 230, color: 'var(--ink-1)' }}>
+                    <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)', maxWidth: 230, color: 'var(--ink-1)' }}>
                         Нам доверяют 18 200+ организаций
                     </div>
-                    <div style={{ display: 'flex', gap: 36, fontSize: 13, fontWeight: 600, color: 'var(--ink-3)', flex: 1, justifyContent: 'space-around' }}>
+                    <div style={{ display: 'flex', gap: 36, fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--ink-3)', flex: 1, justifyContent: 'space-around' }}>
                         {['РЖД', 'Газпром-нефть', 'Северсталь', 'Магнит', 'Сибур', 'Х5 Group'].map((b) => (
                             <span key={b} style={{ letterSpacing: '0.05em' }}>{b}</span>
                         ))}

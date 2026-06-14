@@ -133,7 +133,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         void shouldAddNewItemToEmptyCart() {
             mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
 
-            Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 5);
+            Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 5);
 
             assertThat(cart.getItems()).hasSize(1);
             assertThat(cart.getItems().getFirst().getProductId()).isEqualTo(PRODUCT_ID_1);
@@ -146,7 +146,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
             cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 10);
 
-            Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 5);
+            Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 5);
 
             assertThat(cart.getItems()).hasSize(1);
             assertThat(cart.getItems().getFirst().getQuantity()).isEqualTo(15);
@@ -166,7 +166,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartRepository.save(dbCart);
 
             // Добавляем второй товар — должна восстановить из БД + добавить
-            Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_2, 2);
+            Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_2, null, 2);
 
             assertThat(cart.getItems()).hasSize(2);
         }
@@ -177,7 +177,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             when(productServiceClient.getProduct(PRODUCT_ID_1))
                     .thenReturn(new ProductDto(PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"), null, 100, false, "ext-001"));
 
-            assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1))
+            assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 1))
                     .isInstanceOf(ProductNotFoundException.class);
         }
     }
@@ -352,7 +352,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
 
             // 1. Добавляем товар
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 10);
+            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, null, 10);
             assertThat(cartRedisRepository.exists(USER_ID)).isTrue();
 
             // 2. Сохраняем в БД (имитация logout)
@@ -386,3 +386,4 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         return new ProductDto(id, name, new BigDecimal(price), null, 100, true, externalId);
     }
 }
+
