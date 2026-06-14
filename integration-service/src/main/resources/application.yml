@@ -108,3 +108,4 @@ logging:
   level:
     reactor.netty: DEBUG
     io.netty: DEBUG
+    ru.rfsnab.integrationservice.service.ftk: DEBUG

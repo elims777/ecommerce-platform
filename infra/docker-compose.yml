@@ -378,6 +378,12 @@ services:
       CML_USERNAME: ${CML_USERNAME}
       CML_PASSWORD: ${CML_PASSWORD}
       CML_TEMP_DIR: /app/1c-exchange
+      # ФТК FTP
+      FTK_FTP_HOST: ${FTK_FTP_HOST}
+      FTK_FTP_PORT: ${FTK_FTP_PORT}
+      FTK_FTP_USERNAME: ${FTK_FTP_USERNAME}
+      FTK_FTP_PASSWORD: ${FTK_FTP_PASSWORD}
+      FTK_FTP_PASSIVE_PORT_START: ${FTK_FTP_PASSIVE_PORT_START}
       # Внутренние сервисы
       PRODUCT_SERVICE_URL: http://product-service:8083
       ORDER_SERVICE_URL: http://order-service:8084

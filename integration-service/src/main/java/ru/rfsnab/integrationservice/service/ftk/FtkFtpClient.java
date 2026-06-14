@@ -36,11 +36,26 @@ public class FtkFtpClient {
     public String findFileByPrefix(String ftpFolder, String prefix) throws IOException {
         FTPClient ftp = connect();
         try {
-            FTPFile[] files = ftp.listFiles(ftpFolder);
+            // Пробуем listFiles с абсолютным путём (без trailing slash)
+            String dir = ftpFolder.endsWith("/") ? ftpFolder.substring(0, ftpFolder.length() - 1) : ftpFolder;
+            FTPFile[] files = ftp.listFiles(dir);
+            log.info("FTP listFiles '{}': файлов={}, reply={}", dir, files == null ? "null" : files.length, ftp.getReplyString().trim());
+            if (files != null) {
+                for (FTPFile f : files) {
+                    log.debug("  FTP entry: name='{}', isFile={}, isDir={}", f.getName(), f.isFile(), f.isDirectory());
+                }
+            }
+            if (files == null || files.length == 0) {
+                // Fallback: попробовать с trailing slash
+                files = ftp.listFiles(ftpFolder);
+                log.info("FTP listFiles fallback '{}': файлов={}", ftpFolder, files == null ? "null" : files.length);
+            }
             if (files == null) return null;
             for (FTPFile f : files) {
                 if (f.isFile() && f.getName().startsWith(prefix)) {
-                    return ftpFolder + f.getName();
+                    String fullPath = (dir.endsWith("/") ? dir : dir + "/") + f.getName();
+                    log.info("FTP: найден '{}' → {}", prefix, fullPath);
+                    return fullPath;
                 }
             }
             log.warn("Файл с префиксом '{}' не найден в {}", prefix, ftpFolder);
@@ -118,7 +133,14 @@ public class FtkFtpClient {
         ftp.setDataTimeout(Duration.ofMillis(timeoutMs));
 
         ftp.connect(cfg.getHost(), cfg.getPort());
-        ftp.login(cfg.getUsername(), cfg.getPassword());
+        boolean loggedIn = ftp.login(cfg.getUsername(), cfg.getPassword());
+        log.info("FTP connect: host={}, user={}, login={}, reply={}",
+                cfg.getHost(), cfg.getUsername(), loggedIn, ftp.getReplyString().trim());
+        if (!loggedIn) {
+            ftp.disconnect();
+            throw new IOException("FTP логин не прошёл для пользователя: " + cfg.getUsername()
+                    + " (reply: " + ftp.getReplyString().trim() + ")");
+        }
         ftp.enterLocalPassiveMode();
         ftp.setFileType(FTP.BINARY_FILE_TYPE);
         return ftp;
