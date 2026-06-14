@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://user-db:5432/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.springframework.web.reactive: WARN
+
+user:
+  service:
+    url: http://user-service:8081
+    verify: http://user-service:8081/v1/users/
+
+notification:
+  service:
+    url: http://notification-service:8082

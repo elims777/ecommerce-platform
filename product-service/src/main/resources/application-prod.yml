@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://product-db:5432/${PRODUCT_DB_NAME}
+    username: ${PRODUCT_DB_USER}
+    password: ${PRODUCT_DB_PASSWORD}
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+logging:
+  level:
+    ru.rfsnab.productservice: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+    software.amazon.awssdk: WARN

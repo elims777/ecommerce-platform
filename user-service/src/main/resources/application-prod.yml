@@ -1,14 +1,20 @@
 spring:
-  config:
-    activate:
-      on-profile: prod
-
   datasource:
     url: jdbc:postgresql://user-db:5432/${POSTGRES_DB}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
-    driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
-        ddl-auto: validate
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+logging:
+  level:
+    ru.rfsnab.userservice: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
