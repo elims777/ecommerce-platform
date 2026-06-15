@@ -132,7 +132,7 @@ export const useSliderStore = create<SliderState>()(
                 if (!p?.slides) return current;
                 return {
                     ...current,
-                    slides: p.slides.map((s) => migrateSlide(s as Record<string, unknown>)),
+                    slides: p.slides.map((s) => migrateSlide(s as unknown as Record<string, unknown>)),
                 };
             },
         },

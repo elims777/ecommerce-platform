@@ -198,7 +198,6 @@ const FieldsStep = ({ product, fields, onChange, onBack, onNext, currentIndex, t
                         Превью
                     </div>
                     <div style={{
-                        background: 'rgba(255,255,255,.12)',
                         border: '1px solid rgba(255,255,255,.2)',
                         borderRadius: 'var(--r-3)', padding: '8px',
                         background: 'var(--surface-2)',

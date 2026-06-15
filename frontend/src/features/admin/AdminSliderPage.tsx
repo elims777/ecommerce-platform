@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { App } from 'antd';
 import { useSliderStore } from '@/store/sliderStore';
 import type { Slide } from '@/types/slider';
-import { makeSlide, GRADIENT_PRESETS } from '@/types/slider';
+import { GRADIENT_PRESETS } from '@/types/slider';
 import SlideEditorModal from './SlideEditorModal';
 
 // ── Icons ─────────────────────────────────────────────────────
@@ -138,13 +138,13 @@ const SlideCard = ({ slide, index, onEdit, onDelete, onToggle, isDragging, onDra
                             {slide.products.length} товаров
                         </span>
                     )}
-                    {slide.cta1Label && (
+                    {slide.cta[0]?.label && (
                         <span style={{
                             height: 18, padding: '0 7px', borderRadius: 'var(--r-full)',
                             fontSize: 10, fontWeight: 500, display: 'inline-flex', alignItems: 'center',
                             background: 'var(--surface-2)', color: 'var(--ink-3)',
                         }}>
-                            {slide.cta1Label}
+                            {slide.cta[0].label}
                         </span>
                     )}
                 </div>

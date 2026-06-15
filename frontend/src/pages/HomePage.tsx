@@ -89,69 +89,6 @@ const SmallBul = ({ children }: { children: React.ReactNode }) => (
     </div>
 );
 
-const HeroSideJur = ({ onRegister }: { onRegister: () => void }) => (
-    <div style={{
-        background: 'rgba(255,255,255,.95)', color: 'var(--ink-1)',
-        borderRadius: 'var(--r-5)', padding: '16px 18px',
-        width: '100%', maxWidth: 320,
-    }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <BuildingIcon />
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>Для юридических лиц</span>
-            <span style={{
-                marginLeft: 'auto', display: 'inline-flex', alignItems: 'center',
-                height: 18, padding: '0 8px', borderRadius: 9,
-                background: 'var(--brand-green-soft)', color: 'var(--brand-green)',
-                fontSize: 'var(--text-xs)', fontWeight: 600,
-            }}>−7% к прайсу</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-            <SmallBul>Счёт-фактура, ЭДО, отсрочка до 45 дней</SmallBul>
-            <SmallBul>Закреплённый менеджер</SmallBul>
-            <SmallBul>Госзакупки 44-ФЗ · 223-ФЗ</SmallBul>
-        </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-            <button
-                onClick={onRegister}
-                style={{
-                    flex: 1, height: 32,
-                    background: 'var(--brand-red)', color: '#fff',
-                    border: 'none', borderRadius: 'var(--r-2)', fontSize: 'var(--text-sm)', fontWeight: 600,
-                    cursor: 'pointer', fontFamily: 'var(--font-body)',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
-            >
-                Открыть юр. счёт
-            </button>
-            <button style={{
-                height: 32, padding: '0 12px',
-                background: 'transparent', color: 'var(--ink-3)',
-                border: '1px solid rgba(0,0,0,.12)', borderRadius: 'var(--r-2)', fontSize: 'var(--text-sm)',
-                cursor: 'pointer', fontFamily: 'var(--font-body)',
-            }}>
-                Я физлицо
-            </button>
-        </div>
-    </div>
-);
-
-const HeroSideStats = ({ counts, labels }: { counts: string[]; labels: string[] }) => (
-    <div style={{
-        background: 'rgba(255,255,255,.10)', backdropFilter: 'blur(6px)',
-        border: '1px solid var(--overlay-white-18)',
-        borderRadius: 'var(--r-5)', padding: 16,
-        width: '100%', maxWidth: 320,
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px',
-    }}>
-        {counts.map((c, i) => (
-            <div key={i}>
-                <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-3xl)', color: '#fff', letterSpacing: '-0.015em', fontVariantNumeric: 'tabular-nums' }}>{c}</div>
-                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-70)', marginTop: 2 }}>{labels[i]}</div>
-            </div>
-        ))}
-    </div>
-);
 
 const arrowBtn: React.CSSProperties = {
     width: 30, height: 30, borderRadius: 'var(--r-full)',
@@ -177,7 +114,7 @@ const getSlideBgStyle = (slide: Slide): React.CSSProperties => {
     return { background: grad };
 };
 
-const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatalog: () => void }) => {
+const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
     const rawSlides = useSliderStore((s) => s.slides);
     const slides = [...rawSlides]
         .filter((s) => s.enabled)
@@ -296,7 +233,7 @@ const HeroSlider = ({ onRegister, onCatalog }: { onRegister: () => void; onCatal
                     bottom: 52,
                     display: 'flex', gap: 10, zIndex: 3,
                 }}>
-                    {s.cta.map((btn, i) => (
+                    {s.cta.map((btn) => (
                         btn.label ? (
                             <button
                                 key={btn.id}

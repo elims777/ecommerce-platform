@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { App } from 'antd';
-import type { Slide, SlideProduct, SlideType, GradientPreset, ImageFit, TextBlock, TextStyle, CtaButton } from '@/types/slider';
+import type { Slide, SlideProduct, SlideType, GradientPreset, ImageFit, TextBlock, TextStyle } from '@/types/slider';
 import { makeSlide, makeTextBlock, makeCtaButton, GRADIENT_PRESETS, GRADIENT_LABELS, IMAGE_FIT_LABELS } from '@/types/slider';
 import ProductPickerModal from './ProductPickerModal';
 
@@ -175,7 +175,6 @@ const SlideContent = ({
     onProductsMouseDown?: (e: React.MouseEvent) => void;
     drawRect?: { x: number; y: number; w: number; h: number } | null;
 }) => {
-    const bgStyle = getSlideBgStyle(slide);
     return (
         <>
             {/* Background applied by parent */}
@@ -1117,7 +1116,7 @@ const SlideEditorModal = ({ open, initial, onSave, onClose }: Props) => {
                                         {/* CTA кнопки */}
                                         <div style={{ background: 'var(--surface-2)', borderRadius: 'var(--r-3)', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                                             <Label>Кнопки (CTA)</Label>
-                                            {slide.cta.map((btn, i) => (
+                                            {slide.cta.map((btn) => (
                                                 <div key={btn.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: 6, alignItems: 'end' }}>
                                                     <div>
                                                         <div style={{ fontSize: 11, color: 'var(--ink-3)', marginBottom: 3 }}>Текст</div>
