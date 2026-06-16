@@ -37,6 +37,8 @@ public class OrderHandlerTest {
     private static final String EMAIL = "customer@example.com";
     private static final String ORDER_NUMBER = "ORD-2026-00001";
     private static final BigDecimal TOTAL = new BigDecimal("15000.00");
+    private static final String NAME = "Иванов Иван";
+    private static final String PHONE = "+79001234567";
 
     @BeforeEach
     void setUp() {
@@ -53,6 +55,8 @@ public class OrderHandlerTest {
                 status,
                 TOTAL,
                 EMAIL,
+                NAME,
+                PHONE,
                 LocalDateTime.now()
         );
     }
@@ -99,6 +103,7 @@ public class OrderHandlerTest {
 
             // Then
             verify(emailService).sendOrderCreatedEmail(EMAIL, ORDER_NUMBER, TOTAL);
+            verify(emailService).sendManagerOrderNotification(ORDER_NUMBER, TOTAL, EMAIL, NAME, PHONE);
             verifyNoMoreInteractions(emailService);
         }
     }

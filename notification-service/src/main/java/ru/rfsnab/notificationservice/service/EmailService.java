@@ -20,6 +20,9 @@ public class EmailService {
     @Value("${app.email.verification-url}")
     private String verificationBaseUrl;
 
+    @Value("${app.email.manager}")
+    private String managerEmail;
+
     public void sendVerificationEmail(String toEmail, String firstName, String verificationToken){
         log.info("Send verification email to: {}", toEmail);
 
@@ -79,6 +82,38 @@ public class EmailService {
                 Команда РФСнаб
                 """,
                 orderNumber, totalAmount.toPlainString()
+        ));
+        mailSender.send(message);
+    }
+
+    /**
+     * Уведомление менеджеру о новом заказе
+     */
+    public void sendManagerOrderNotification(String orderNumber, BigDecimal totalAmount,
+                                              String customerEmail, String customerName,
+                                              String customerPhone) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromEmail);
+        message.setTo(managerEmail);
+        message.setSubject("Новый заказ " + orderNumber + " — РФСнаб");
+        message.setText(String.format(
+                """
+                Поступил новый заказ!
+
+                Номер заказа: %s
+                Сумма: %s ₽
+
+                Покупатель: %s
+                Телефон: %s
+                Email: %s
+
+                Войдите в панель управления для подтверждения заказа.
+                """,
+                orderNumber,
+                totalAmount.toPlainString(),
+                customerName != null ? customerName : "—",
+                customerPhone != null ? customerPhone : "—",
+                customerEmail != null ? customerEmail : "—"
         ));
         mailSender.send(message);
     }

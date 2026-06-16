@@ -16,6 +16,8 @@ public record OrderEvent(
         String status,
         BigDecimal totalAmount,
         String customerEmail,
+        String customerName,
+        String customerPhone,
         LocalDateTime timestamp
 ) {
 }

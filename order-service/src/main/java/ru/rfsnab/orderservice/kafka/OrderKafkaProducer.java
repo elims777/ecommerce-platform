@@ -26,6 +26,8 @@ public class OrderKafkaProducer {
                 .status(order.getStatus().getDisplayName())
                 .totalAmount(order.getTotalAmount())
                 .customerEmail(order.getCustomerEmail())
+                .customerName(order.getCustomerName())
+                .customerPhone(order.getCustomerPhone())
                 .timestamp(LocalDateTime.now())
                 .build();
 
