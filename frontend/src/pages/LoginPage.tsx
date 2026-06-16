@@ -61,7 +61,6 @@ const LoginPage = () => {
     const location = useLocation();
     const login = useAuthStore((state) => state.login);
     const loginLegal = useAuthStore((state) => state.loginLegal);
-    const mergeGuestCart = useCartStore((state) => state.mergeGuestCart);
     const { message: messageApi } = App.useApp();
 
     const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
@@ -84,7 +83,6 @@ const LoginPage = () => {
             } else {
                 await login(values);
             }
-            await mergeGuestCart();
             messageApi.success('Вы успешно вошли в систему');
             navigate(from, { replace: true });
         } catch (error) {

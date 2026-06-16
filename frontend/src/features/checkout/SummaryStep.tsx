@@ -76,6 +76,9 @@ const SummaryStep = ({ items, totalAmount, loading }: SummaryStepProps) => {
         >
             Подтвердить заказ
         </Button>
+        <div style={{ marginTop: 10, textAlign: 'center', fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
+            Заказ будет передан менеджеру
+        </div>
     </>
     );
 };

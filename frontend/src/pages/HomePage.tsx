@@ -6,6 +6,7 @@ import { getProducts } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
 import ProductCard from '@/features/catalog/ProductCard';
 import { useCartStore } from '@/store/cartStore';
+import { useAuthStore } from '@/store/authStore';
 import { App } from 'antd';
 import type { CategoryTree } from '@/types/product';
 import { useSliderStore } from '@/store/sliderStore';
@@ -483,6 +484,7 @@ const HomePage = () => {
     const navigate = useNavigate();
     const { message: messageApi } = App.useApp();
     const addItem = useCartStore((state) => state.addItem);
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
     const { data: categoryTree = [], isLoading: categoriesLoading } = useQuery({
         queryKey: ['categories', 'tree'],
@@ -501,6 +503,7 @@ const HomePage = () => {
     const secondaryCategories = allCategories.slice(3, 11);
 
     const handleAddToCart = async (productId: number) => {
+        if (!isAuthenticated) { navigate('/login'); return; }
         try {
             await addItem(productId, 1);
             messageApi.success('Товар добавлен в корзину');

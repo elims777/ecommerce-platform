@@ -8,21 +8,18 @@ import {
     Typography,
     App,
     Steps,
-    Modal,
-    QRCode,
     Result,
 } from 'antd';
 import {
     ShoppingOutlined,
     EnvironmentOutlined,
-    CreditCardOutlined,
     CheckCircleOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
-import { createOrder, confirmOrder, initiatePayment } from '@/api/orders';
+import { createOrder } from '@/api/orders';
 import { getWarehousePoints } from '@/api/warehouse';
 import {
     getRecipients,
@@ -32,7 +29,6 @@ import {
     type RecipientDto,
     type RecipientAddressDto,
 } from '@/api/recipients';
-import { getPaymentSettings } from '@/api/paymentSettings';
 import {
     DeliveryMethod,
     PaymentMethod,
@@ -41,13 +37,11 @@ import type { CreateOrderRequest } from '@/types/order';
 import type { AxiosError } from 'axios';
 import DeliveryStep from './DeliveryStep';
 import RecipientStep from './RecipientStep';
-import PaymentStep from './PaymentStep';
 import SummaryStep from './SummaryStep';
 
 const { Title } = Typography;
 
 interface CheckoutFormValues {
-    paymentMethod: PaymentMethod;
     deliveryMethod: DeliveryMethod;
     warehousePointId?: number;
     comment?: string;
@@ -64,7 +58,6 @@ interface CheckoutFormValues {
 const CheckoutPage = () => {
     const [form] = Form.useForm<CheckoutFormValues>();
     const [loading, setLoading] = useState(false);
-    const [sbpModal, setSbpModal] = useState<{ orderNumber: string; paymentLink: string } | null>(null);
     const navigate = useNavigate();
     const { message: messageApi } = App.useApp();
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -94,13 +87,7 @@ const CheckoutPage = () => {
         enabled: !!selectedRecipient,
     });
 
-    const { data: paymentSettings } = useQuery({
-        queryKey: ['paymentSettings'],
-        queryFn: getPaymentSettings,
-        staleTime: 60_000,
-    });
-
-    useEffect(() => {
+useEffect(() => {
         if (recipients.length === 0) {
             setManualInput(true);
             if (user) {
@@ -123,24 +110,7 @@ const CheckoutPage = () => {
         }
     }, [addresses]);
 
-    // Автовыбор метода оплаты
-    useEffect(() => {
-        if (user?.clientType === 'B2B') {
-            form.setFieldValue('paymentMethod', PaymentMethod.INVOICE);
-            return;
-        }
-        if (!paymentSettings) return;
-        const { cardEnabled, sbpEnabled } = paymentSettings;
-        if (!cardEnabled && !sbpEnabled) {
-            form.setFieldValue('paymentMethod', PaymentMethod.INVOICE);
-        } else if (cardEnabled && !sbpEnabled) {
-            form.setFieldValue('paymentMethod', PaymentMethod.CARD);
-        } else if (!cardEnabled && sbpEnabled) {
-            form.setFieldValue('paymentMethod', PaymentMethod.SBP);
-        }
-    }, [paymentSettings, user?.clientType]);
-
-    const createRecipientMutation = useMutation({
+const createRecipientMutation = useMutation({
         mutationFn: createRecipient,
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recipients'] }),
     });
@@ -178,7 +148,7 @@ const CheckoutPage = () => {
             }
 
             const request: CreateOrderRequest = {
-                paymentMethod: values.paymentMethod,
+                paymentMethod: PaymentMethod.INVOICE,
                 deliveryMethod: values.deliveryMethod,
                 comment: values.comment,
                 customerName,
@@ -241,29 +211,6 @@ const CheckoutPage = () => {
             await clearCart();
             messageApi.success('Заказ успешно оформлен!');
 
-            const isB2C = user?.clientType !== 'B2B';
-
-            if (!isB2C) {
-                navigate('/orders');
-                return;
-            }
-
-            // B2C: confirmOrder обязателен перед оплатой (отправляет в 1С, меняет статус CREATED → PROCESSING)
-            await confirmOrder(order.id);
-
-            if (values.paymentMethod === PaymentMethod.CARD || values.paymentMethod === PaymentMethod.SBP) {
-                const resp = await initiatePayment(order.id);
-                if (values.paymentMethod === PaymentMethod.CARD && resp.paymentLink) {
-                    window.location.href = resp.paymentLink;
-                    return;
-                }
-                if (values.paymentMethod === PaymentMethod.SBP && resp.paymentLink) {
-                    setSbpModal({ orderNumber: order.orderNumber, paymentLink: resp.paymentLink });
-                    return;
-                }
-            }
-
-            // INVOICE и CASH_ON_DELIVERY — просто переходим на /orders
             navigate('/orders');
         } catch (error) {
             const axiosError = error as AxiosError<{ message?: string }>;
@@ -309,35 +256,8 @@ const CheckoutPage = () => {
         );
     }
 
-    const isB2C = user?.clientType !== 'B2B';
-
     return (
         <div>
-            <Modal
-                open={!!sbpModal}
-                onCancel={() => { setSbpModal(null); navigate('/orders'); }}
-                footer={[
-                    <Button key="link" onClick={() => { window.location.href = sbpModal!.paymentLink; }}>
-                        Открыть ссылку СБП
-                    </Button>,
-                    <Button key="orders" type="primary" onClick={() => { setSbpModal(null); navigate('/orders'); }}>
-                        Мои заказы
-                    </Button>,
-                ]}
-                title={`Оплата заказа ${sbpModal?.orderNumber}`}
-                centered
-            >
-                <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                    <div style={{ marginBottom: 16, fontSize: 14, color: 'rgba(0,0,0,0.45)' }}>
-                        Отсканируйте QR-кодом в банковском приложении
-                    </div>
-                    {sbpModal && <QRCode value={sbpModal.paymentLink} size={220} />}
-                    <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(0,0,0,0.35)' }}>
-                        Сумма уже указана — вводить вручную не нужно
-                    </div>
-                </div>
-            </Modal>
-
             <Title level={2} style={{ marginBottom: 24 }}>
                 Оформление заказа
             </Title>
@@ -347,7 +267,6 @@ const CheckoutPage = () => {
                 style={{ marginBottom: 32 }}
                 items={[
                     { title: 'Оформление', icon: <ShoppingOutlined /> },
-                    { title: 'Оплата', icon: <CreditCardOutlined /> },
                     { title: 'Готово', icon: <CheckCircleOutlined /> },
                 ]}
             />
@@ -358,7 +277,6 @@ const CheckoutPage = () => {
                 onFinish={handleSubmit}
                 initialValues={{
                     deliveryMethod: DeliveryMethod.PICKUP,
-                    paymentMethod: PaymentMethod.CARD,
                 }}
             >
                 <Row gutter={24}>
@@ -394,18 +312,16 @@ const CheckoutPage = () => {
                             />
                         </Card>
 
-                        <Card
-                            title={
-                                <span>
-                                    <CreditCardOutlined /> Способ оплаты
-                                </span>
-                            }
-                            style={{ marginBottom: 16 }}
-                        >
-                            <PaymentStep
-                                settings={paymentSettings}
-                                isB2C={isB2C}
-                            />
+                        <Card style={{ marginBottom: 16 }}>
+                            <Form.Item name="comment" label="Комментарий к заказу">
+                                <textarea
+                                    rows={3}
+                                    placeholder="Дополнительные пожелания по заказу..."
+                                    maxLength={500}
+                                    style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--line-2)', fontSize: 'var(--text-base)', fontFamily: 'var(--font-body)', resize: 'vertical', outline: 'none' }}
+                                    onChange={(e) => form.setFieldValue('comment', e.target.value)}
+                                />
+                            </Form.Item>
                         </Card>
                     </Col>
 
