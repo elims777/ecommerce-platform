@@ -73,6 +73,12 @@ public class Product {
     @Column(length = 500)
     private String material;
 
+    @Column(length = 50)
+    private String barcode;
+
+    @Column(length = 100)
+    private String countryOfOrigin;
+
     @Column(length = 20)
     private String unitOfMeasure;
 
@@ -84,10 +90,6 @@ public class Product {
 
     @Column(name = "parent_product_id")
     private Long parentProductId;
-
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<ProductVariant> variants = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC")
@@ -102,6 +104,11 @@ public class Product {
     @OrderBy("displayOrder ASC")
     @Builder.Default
     private List<ProductVideo> videos = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    @Builder.Default
+    private List<ProductDocument> documents = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

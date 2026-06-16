@@ -13,8 +13,10 @@ import ru.rfsnab.integrationservice.dto.ProductImportItemDto.VariantImportItemDt
 import ru.rfsnab.integrationservice.model.ftk.FtkProduct;
 import ru.rfsnab.integrationservice.model.ftk.FtkProduct.FtkVariant;
 import ru.rfsnab.integrationservice.service.ftk.FtkFtpClient.FtpStreamHandle;
+import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.ClassifierData;
 import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.OfferData;
 import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.ProductData;
+import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.RestData;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,8 +28,8 @@ import java.util.Map;
 /**
  * Оркестратор импорта ФТК.
  *
- * importFromXls() — устаревший метод через XLS-файл, сохранён для обратной совместимости.
- * importFromFtp() — актуальный метод: скачивает XML с FTP и парсит через FtkXmlParser.
+ * importFromFtp() — актуальный метод: XML с FTP.
+ * importFromXls() — устаревший, сохранён для обратной совместимости.
  */
 @Service
 @RequiredArgsConstructor
@@ -49,10 +51,6 @@ public class FtkImportService {
     // Актуальный метод: XML с FTP
     // ══════════════════════════════════════════════════════════════
 
-    /**
-     * Полный импорт каталога ФТК с FTP-сервера: скачивает 5 XML-файлов, парсит,
-     * загружает товары в product-service, скачивает изображения.
-     */
     public FtkImportResult importFromFtp() throws Exception {
         IntegrationProperties.FtkProperties cfg = properties.getFtk();
         categoryMapper.resetCache();
@@ -61,23 +59,24 @@ public class FtkImportService {
 
         log.info("ФТК XML импорт запущен");
 
-        // 1. Корневой классификатор → словарь групп
+        // 1. Классификатор → группы + свойства + единицы измерения
         String rootImportPath = ftpClient.findFileByPrefix(rootDir, "import___");
         if (rootImportPath == null) throw new IOException("Корневой import___.xml не найден на FTP");
-        Map<String, String> groupPaths;
+        ClassifierData classifier;
         try (InputStream is = ftpClient.openStream(rootImportPath)) {
-            groupPaths = xmlParser.parseClassifier(is);
+            classifier = xmlParser.parseClassifier(is);
         }
+        categoryMapper.loadClassifier(classifier);
 
-        // 2. Товары из goods/1/import
+        // 2. Товары
         String goodsImportPath = ftpClient.findFileByPrefix(goodsDir, "import___");
         if (goodsImportPath == null) throw new IOException("goods/1/import___.xml не найден на FTP");
         Map<String, ProductData> products;
         try (InputStream is = ftpClient.openStream(goodsImportPath)) {
-            products = xmlParser.parseProducts(is, groupPaths);
+            products = xmlParser.parseProducts(is, classifier);
         }
 
-        // 3. Предложения (offers)
+        // 3. Предложения
         String offersPath = ftpClient.findFileByPrefix(goodsDir, "offers___");
         if (offersPath == null) throw new IOException("offers___.xml не найден на FTP");
         Map<String, OfferData> offers;
@@ -96,13 +95,13 @@ public class FtkImportService {
         // 5. Остатки
         String restsPath = ftpClient.findFileByPrefix(goodsDir, "rests___");
         if (restsPath == null) throw new IOException("rests___.xml не найден на FTP");
-        Map<String, Integer> rests;
+        Map<String, RestData> rests;
         try (InputStream is = ftpClient.openStream(restsPath)) {
             rests = xmlParser.parseRests(is);
         }
 
         // 6. Сборка
-        List<FtkProduct> allProducts = xmlParser.assemble(products, offers, prices, rests);
+        List<FtkProduct> allProducts = xmlParser.assemble(products, offers, prices, rests, classifier);
         log.info("ФТК: собрано {} товаров", allProducts.size());
 
         // 7. Лимит
@@ -114,7 +113,7 @@ public class FtkImportService {
             log.info("ФТК: применён лимит {} из {}", limit, allProducts.size());
         }
 
-        // 8. Маппинг в DTO и batch-импорт
+        // 8. Маппинг и batch-импорт
         List<ProductImportItemDto> dtos = limited.stream()
                 .map(this::mapToDto)
                 .filter(dto -> dto != null)
@@ -124,16 +123,16 @@ public class FtkImportService {
         log.info("ФТК batch-импорт: created={}, updated={}, failed={}",
                 batchResult.created(), batchResult.updated(), batchResult.failed());
 
-        // 9. Изображения
+        // 9. Изображения — все картинки каждого товара
         int imagesOk = 0, imagesFailed = 0;
         for (FtkProduct p : limited) {
-            if (p.getImagePath() == null) continue;
-            // Полный FTP путь: /webdata/000000003/goods/1/ + относительный путь из XML
-            String ftpImagePath = "ftp://" + properties.getFtk().getFtp().getHost()
-                    + goodsDir + p.getImagePath();
             String externalId = buildProductExternalId(p.getArticle());
-            boolean ok = imageDownloader.downloadAndUpload(ftpImagePath, externalId);
-            if (ok) imagesOk++; else imagesFailed++;
+            for (String imagePath : p.getImagePaths()) {
+                String ftpImagePath = "ftp://" + properties.getFtk().getFtp().getHost()
+                        + goodsDir + imagePath;
+                boolean ok = imageDownloader.downloadAndUpload(ftpImagePath, externalId);
+                if (ok) imagesOk++; else imagesFailed++;
+            }
         }
         log.info("ФТК изображения: ok={}, failed={}", imagesOk, imagesFailed);
 
@@ -145,9 +144,6 @@ public class FtkImportService {
     // Устаревший метод: XLS
     // ══════════════════════════════════════════════════════════════
 
-    /**
-     * @deprecated Используй importFromFtp(). XLS делался для другого клиента ФТК.
-     */
     @Deprecated
     public FtkImportResult importFromXls(InputStream xls) throws IOException {
         IntegrationProperties.FtkProperties cfg = properties.getFtk();
@@ -173,8 +169,8 @@ public class FtkImportService {
         int imagesOk = 0, imagesFailed = 0;
         for (FtkProduct p : products) {
             String externalId = buildProductExternalId(p.getArticle());
-            if (p.getImagePath() != null) {
-                boolean ok = imageDownloader.downloadAndUpload(p.getImagePath(), externalId);
+            for (String imagePath : p.getImagePaths()) {
+                boolean ok = imageDownloader.downloadAndUpload(imagePath, externalId);
                 if (ok) imagesOk++; else imagesFailed++;
             }
         }
@@ -190,10 +186,9 @@ public class FtkImportService {
     private ProductImportItemDto mapToDto(FtkProduct p) {
         if (p == null || p.getArticle() == null || p.getName() == null) return null;
 
-        String externalId    = buildProductExternalId(p.getArticle());
-        String categorySlug  = categoryMapper.resolveSlug(p.getCategoryPath());
+        String externalId = buildProductExternalId(p.getArticle());
+        Long categoryId   = categoryMapper.resolveCategory(p.getGroupUuid());
 
-        // Базовая цена товара: берём из первого варианта
         BigDecimal basePrice = p.getVariants().stream()
                 .map(FtkVariant::getPrice)
                 .filter(pr -> pr != null)
@@ -212,9 +207,12 @@ public class FtkImportService {
                 .sku(p.getArticle())
                 .description(p.getDescription())
                 .price(basePrice)
-                .wholesalePrice(basePrice)   // FTK: нет отдельной оптовой цены
+                .wholesalePrice(basePrice)
                 .vatRate(vatRate)
                 .source(SOURCE)
+                .unitOfMeasure(p.getUnitOfMeasure())
+                .imagePaths(p.getImagePaths())
+                .properties(p.getProperties())
                 .build();
 
         if (!p.getVariants().isEmpty()) {
@@ -228,13 +226,14 @@ public class FtkImportService {
     }
 
     private VariantImportItemDto mapVariant(FtkVariant v, String parentExternalId) {
-        BigDecimal price = v.getPrice();
         return VariantImportItemDto.builder()
                 .externalId(buildVariantExternalId(v.getArticle()))
                 .sku(v.getArticle())
-                .price(price)
-                .wholesalePrice(price)
+                .price(v.getPrice())
+                .wholesalePrice(v.getPrice())
                 .stockQuantity(v.getStockQuantity())
+                .barcode(v.getBarcode())
+                .countryOfOrigin(v.getCountryOfOrigin())
                 .attributes(v.getAttributes())
                 .build();
     }

@@ -12,7 +12,6 @@ import java.util.Map;
 
 /**
  * DTO элемента импорта — зеркало ProductImportItem из product-service.
- * Формируется из CmlProduct + Offer (CommerceML) или из FTK XLS.
  */
 @Getter
 @Setter
@@ -32,9 +31,17 @@ public class ProductImportItemDto {
     private BigDecimal wholesalePrice;
     private Integer stockQuantity;
     private Integer vatRate;
-    // Источник: INTERNAL, FTK, ...
     private String source;
-    // Явные варианты (размер/рост/цвет). Если пусто — используется default-вариант
+    private String barcode;
+    private String countryOfOrigin;
+
+    /** Пути к изображениям (относительные, от goods/1/) — для скачивания в FtkImportService. */
+    private List<String> imagePaths;
+
+    /** Расшифрованные свойства из классификатора: имя → значение. */
+    private Map<String, String> properties;
+
+    /** Варианты — дочерние Product записи. */
     private List<VariantImportItemDto> variants;
 
     @Getter
@@ -48,6 +55,8 @@ public class ProductImportItemDto {
         private BigDecimal price;
         private BigDecimal wholesalePrice;
         private Integer stockQuantity;
+        private String barcode;
+        private String countryOfOrigin;
         private Map<String, String> attributes;
     }
 }

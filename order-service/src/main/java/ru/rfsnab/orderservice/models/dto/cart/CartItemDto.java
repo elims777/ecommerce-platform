@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 
 public record CartItemDto(
         Long productId,
-        Long variantId,
-        String variantAttributes,
         String productName,
         Integer quantity,
         BigDecimal price,

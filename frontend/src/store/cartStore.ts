@@ -11,7 +11,7 @@ interface CartState {
     isLoading: boolean;
 
     fetchCart: () => Promise<void>;
-    addItem: (productId: number, quantity: number, variantId?: number | null) => Promise<void>;
+    addItem: (productId: number, quantity: number) => Promise<void>;
     updateQuantity: (productId: number, quantity: number) => Promise<void>;
     removeItem: (productId: number) => Promise<void>;
     clearCart: () => Promise<void>;
@@ -37,10 +37,8 @@ const loadGuestCart = (): CartItemDto[] => {
 const saveGuestCart = (items: CartItemDto[]) =>
     localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
 
-const makeGuestItem = (productId: number, quantity: number, variantId?: number | null): CartItemDto => ({
+const makeGuestItem = (productId: number, quantity: number): CartItemDto => ({
     productId,
-    variantId: variantId ?? null,
-    variantAttributes: null,
     productName: '',
     quantity,
     price: 0,
@@ -68,15 +66,14 @@ export const useCartStore = create<CartState>((set, get) => ({
         }
     },
 
-    addItem: async (productId, quantity, variantId) => {
+    addItem: async (productId, quantity) => {
         if (!isAuthed()) {
             const items = loadGuestCart();
-            const key = variantId ?? productId;
-            const idx = items.findIndex(i => (i.variantId ?? i.productId) === key);
+            const idx = items.findIndex(i => i.productId === productId);
             if (idx >= 0) {
                 items[idx] = { ...items[idx], quantity: items[idx].quantity + quantity };
             } else {
-                items.push(makeGuestItem(productId, quantity, variantId));
+                items.push(makeGuestItem(productId, quantity));
             }
             saveGuestCart(items);
             set({ items, ...calcTotals(items) });
@@ -84,16 +81,15 @@ export const useCartStore = create<CartState>((set, get) => ({
         }
 
         const prev = get();
-        const key = variantId ?? productId;
-        const existing = prev.items.find(i => (i.variantId ?? i.productId) === key);
+        const existing = prev.items.find(i => i.productId === productId);
         if (existing) {
             const updatedItems = prev.items.map(i =>
-                (i.variantId ?? i.productId) === key ? { ...i, quantity: i.quantity + quantity } : i
+                i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i
             );
             set({ items: updatedItems, ...calcTotals(updatedItems) });
         }
         try {
-            await cartApi.addToCart({ productId, variantId, quantity });
+            await cartApi.addToCart({ productId, quantity });
             await get().fetchCart();
         } catch {
             set({ items: prev.items, ...calcTotals(prev.items) });
@@ -157,12 +153,11 @@ export const useCartStore = create<CartState>((set, get) => ({
         set({ items: [], totalItems: 0, totalAmount: 0, isLoading: false });
     },
 
-    // Вызывать после логина — переносит гостевую корзину на сервер
     mergeGuestCart: async () => {
         const guestItems = loadGuestCart();
         if (guestItems.length === 0) return;
         await Promise.allSettled(
-            guestItems.map(i => cartApi.addToCart({ productId: i.productId, variantId: i.variantId, quantity: i.quantity }))
+            guestItems.map(i => cartApi.addToCart({ productId: i.productId, quantity: i.quantity }))
         );
         localStorage.removeItem(GUEST_CART_KEY);
         await get().fetchCart();

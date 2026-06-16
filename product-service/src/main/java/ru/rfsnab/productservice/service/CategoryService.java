@@ -245,4 +245,40 @@ public class CategoryService {
     public boolean existsByParentId(Long categoryId) {
         return categoryRepository.existsByParentId(categoryId);
     }
+
+    /**
+     * Создать или обновить категорию по externalId (UUID группы из ФТК/1С).
+     * Используется FtkCategoryMapper при импорте для построения дерева категорий.
+     */
+    @Transactional
+    public Category upsertByExternalId(String externalId, String name, Long parentCategoryId) {
+        Category category = categoryRepository.findByExternalId(externalId).orElse(null);
+
+        if (category == null) {
+            String baseSlug = slugGenerator.generateSlug(name);
+            String uniqueSlug = generateUniqueSlug(baseSlug);
+
+            Category parent = parentCategoryId != null
+                    ? categoryRepository.findById(parentCategoryId).orElse(null)
+                    : null;
+
+            category = Category.builder()
+                    .externalId(externalId)
+                    .name(name)
+                    .slug(uniqueSlug)
+                    .isActive(true)
+                    .displayOrder(0)
+                    .parent(parent)
+                    .build();
+        } else {
+            category.setName(name);
+            if (parentCategoryId != null) {
+                categoryRepository.findById(parentCategoryId).ifPresent(category::setParent);
+            }
+        }
+
+        Category saved = categoryRepository.save(category);
+        refreshCategoryTree();
+        return saved;
+    }
 }

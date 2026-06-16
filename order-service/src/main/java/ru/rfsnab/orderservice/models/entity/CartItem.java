@@ -25,9 +25,6 @@ public class CartItem {
     @Column(nullable = false)
     private Long productId;
 
-    @Column(nullable = true)
-    private Long variantId;
-
     @Column(nullable = false)
     private Integer quantity;
 }
