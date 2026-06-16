@@ -207,7 +207,7 @@ const createRecipientMutation = useMutation({
                 request.warehousePointId = values.warehousePointId;
             }
 
-            const order = await createOrder(request);
+            await createOrder(request);
             await clearCart();
             messageApi.success('Заказ успешно оформлен!');
 

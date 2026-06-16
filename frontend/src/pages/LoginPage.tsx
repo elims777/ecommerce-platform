@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Form, Input, App } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import { useCartStore } from '@/store/cartStore';
 import type { LoginRequest } from '@/types/auth';
 import { AxiosError } from 'axios';
 

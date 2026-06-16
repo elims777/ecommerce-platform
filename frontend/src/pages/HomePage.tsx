@@ -34,16 +34,6 @@ const ShieldIcon = () => (
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
     </svg>
 );
-const BuildingIcon = () => (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-    </svg>
-);
-const CheckIcon = () => (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="20 6 9 17 4 12"/>
-    </svg>
-);
 const GridIcon = () => (
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
@@ -81,14 +71,6 @@ const flattenCategories = (tree: CategoryTree[]): CategoryTree[] => {
     traverse(tree);
     return result;
 };
-
-// ── Sub-components ────────────────────────────────────────────
-const SmallBul = ({ children }: { children: React.ReactNode }) => (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 'var(--text-sm)', lineHeight: 1.4 }}>
-        <CheckIcon />
-        <span>{children}</span>
-    </div>
-);
 
 
 const arrowBtn: React.CSSProperties = {
