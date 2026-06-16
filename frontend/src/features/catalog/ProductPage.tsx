@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Image, App, Skeleton } from 'antd';
+import { Image, App, Skeleton, Modal, Button } from 'antd';
 import { ShoppingCartOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProductById } from '@/api/products';
 import type { ProductImage, ProductChild } from '@/types/product';
 import { useCartStore } from '@/store/cartStore';
+import { useAuthStore } from '@/store/authStore';
 import { useDisplayPrice } from '@/utils/priceUtils';
 
 const formatPrice = (price: number): string =>
@@ -53,7 +54,9 @@ const ProductPage = () => {
     const { message: messageApi } = App.useApp();
     const [quantity, setQuantity] = useState(1);
     const [variantQtys, setVariantQtys] = useState<Record<number, number>>({});
+    const [authModalOpen, setAuthModalOpen] = useState(false);
     const addItem = useCartStore((state) => state.addItem);
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
     const { data: product, isLoading, isError } = useQuery({
         queryKey: ['product', id],
@@ -75,6 +78,7 @@ const ProductPage = () => {
 
     const handleAddToCart = async () => {
         if (!product) return;
+        if (!isAuthenticated) { setAuthModalOpen(true); return; }
         if (hasVariants) {
             const toAdd = activeVariants.filter(v => (variantQtys[v.id] ?? 0) > 0);
             if (toAdd.length === 0) {
@@ -91,6 +95,7 @@ const ProductPage = () => {
             try {
                 await addItem(product.id, quantity);
                 messageApi.success(`${product.name} (${quantity} шт.) добавлен в корзину`);
+                setQuantity(1);
             } catch {
                 messageApi.error('Ошибка при добавлении в корзину');
             }
@@ -129,6 +134,27 @@ const ProductPage = () => {
     const inStock = activeStock > 0;
 
     return (
+        <>
+        <Modal
+            open={authModalOpen}
+            onCancel={() => setAuthModalOpen(false)}
+            footer={null}
+            title="Войдите, чтобы добавить в корзину"
+            centered
+            width={360}
+        >
+            <p style={{ color: 'var(--ink-2)', marginBottom: 20 }}>
+                Для добавления товаров в корзину необходимо войти или зарегистрироваться.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+                <Button type="primary" block onClick={() => navigate('/login')} style={{ background: 'var(--brand-red)', borderColor: 'var(--brand-red)' }}>
+                    Войти
+                </Button>
+                <Button block onClick={() => navigate('/register')}>
+                    Зарегистрироваться
+                </Button>
+            </div>
+        </Modal>
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
             {/* Хлебные крошки */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 16 }}>
@@ -260,13 +286,24 @@ const ProductPage = () => {
                 {/* Buy box */}
                 <div>
                     <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', padding: 20, position: 'sticky', top: 20, background: 'var(--surface)' }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
-                            <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-6xl)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink-1)' }}>
-                                {formatPrice(displayPrice)}
-                            </span>
-                        </div>
-                        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 20 }}>
-                            за 1 {product.unitOfMeasure || 'шт.'}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+                            <div>
+                                <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-6xl)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink-1)' }}>
+                                    {formatPrice(displayPrice)}
+                                </span>
+                                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginTop: 2 }}>
+                                    за 1 {product.unitOfMeasure || 'шт.'}
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleAddToCart}
+                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, height: 44, padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s', whiteSpace: 'nowrap', flexShrink: 0 }}
+                                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-red)')}
+                            >
+                                <ShoppingCartOutlined style={{ fontSize: 16 }} />
+                                В корзину
+                            </button>
                         </div>
 
                         {/* Таблица вариантов */}
@@ -332,48 +369,26 @@ const ProductPage = () => {
                                 </table>
                             </div>
                         ) : (
-                            activeStock > 0 && (
-                                <div style={{ marginBottom: 14 }}>
-                                    <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}>Количество</label>
-                                    <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', height: 'var(--input-h-lg)', alignItems: 'center' }}>
-                                        <button
-                                            onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                                            style={{ width: 40, height: 42, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        >−</button>
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            max={activeStock}
-                                            value={quantity}
-                                            onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-                                            style={{ flex: 1, textAlign: 'center', border: 0, background: 'transparent', fontSize: 'var(--text-xl)', fontWeight: 600, outline: 'none', fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
-                                        />
-                                        <button
-                                            onClick={() => setQuantity((q) => Math.min(activeStock, q + 1))}
-                                            style={{ width: 40, height: 42, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                        >+</button>
-                                    </div>
+                            <div style={{ marginBottom: 14 }}>
+                                <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}>Количество</label>
+                                <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', height: 'var(--input-h-lg)', alignItems: 'center' }}>
+                                    <button
+                                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                                        style={{ width: 40, height: 42, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >−</button>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        value={quantity}
+                                        onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                                        style={{ flex: 1, textAlign: 'center', border: 0, background: 'transparent', fontSize: 'var(--text-xl)', fontWeight: 600, outline: 'none', fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
+                                    />
+                                    <button
+                                        onClick={() => setQuantity((q) => q + 1)}
+                                        style={{ width: 40, height: 42, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    >+</button>
                                 </div>
-                            )
-                        )}
-
-                        {(hasVariants ? activeVariants.some(v => v.stockQuantity > 0) : activeStock > 0) ? (
-                            <button
-                                onClick={handleAddToCart}
-                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', height: 'var(--btn-h-xl)', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s', marginBottom: 10 }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-red)')}
-                            >
-                                <ShoppingCartOutlined style={{ fontSize: 18 }} />
-                                Добавить в корзину
-                            </button>
-                        ) : (
-                            <button
-                                disabled
-                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 'var(--btn-h-xl)', background: 'var(--surface-3)', color: 'var(--ink-3)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500, cursor: 'not-allowed', fontFamily: 'var(--font-body)' }}
-                            >
-                                Нет в наличии
-                            </button>
+                            </div>
                         )}
 
                         {product.externalCode && (
@@ -385,6 +400,7 @@ const ProductPage = () => {
                 </div>
             </div>
         </div>
+        </>
     );
 };
 

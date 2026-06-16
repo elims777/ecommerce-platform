@@ -264,7 +264,7 @@ const CartPage = () => {
                             <span />
                         </div>
 
-                        {items.map((item) => (
+                        {[...items].sort((a, b) => b.productId - a.productId).map((item) => (
                             <CartItemRow
                                 key={item.productId}
                                 item={item}
@@ -307,14 +307,6 @@ const CartPage = () => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-base)', color: 'var(--ink-2)' }}>
                                 <span>Товары ({items.length} поз.)</span>
                                 <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(totalAmount)}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-base)', color: 'var(--brand-green)' }}>
-                                <span>Доставка по графику</span>
-                                <span style={{ fontWeight: 500 }}>Бесплатно</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
-                                <span>НДС 20% (в т.ч.)</span>
-                                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(totalAmount / 1.2 * 0.2)}</span>
                             </div>
                         </div>
 
