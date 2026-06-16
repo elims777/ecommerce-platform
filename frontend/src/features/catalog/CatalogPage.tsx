@@ -5,6 +5,7 @@ import { App } from 'antd';
 import { getProducts, searchProducts } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
 import { useCartStore } from '@/store/cartStore';
+import { useAuthStore } from '@/store/authStore';
 import type { CategoryTree } from '@/types/product';
 import CategoryTreeMenu from './CategoryTreeMenu';
 import ProductCard from './ProductCard';
@@ -85,6 +86,7 @@ const CatalogPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const { message: messageApi } = App.useApp();
     const addItem = useCartStore((state) => state.addItem);
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
     const currentPage = Number(searchParams.get('page')) || 1;
     const categoryId = searchParams.get('category') ? Number(searchParams.get('category')) : undefined;
@@ -152,6 +154,7 @@ const CatalogPage = () => {
     };
 
     const handleAddToCart = async (productId: number) => {
+        if (!isAuthenticated) { navigate('/login'); return; }
         try {
             await addItem(productId, 1);
             messageApi.success('Товар добавлен в корзину');
