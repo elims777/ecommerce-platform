@@ -1,7 +1,3 @@
--- Удаляем variant_id из cart_items (order-service управляет своей схемой,
--- но колонка могла попасть сюда при тестах — страхуемся через IF EXISTS)
-ALTER TABLE cart_items DROP COLUMN IF EXISTS variant_id;
-
 -- Новые поля товара
 ALTER TABLE products ADD COLUMN IF NOT EXISTS barcode VARCHAR(50);
 ALTER TABLE products ADD COLUMN IF NOT EXISTS country_of_origin VARCHAR(100);

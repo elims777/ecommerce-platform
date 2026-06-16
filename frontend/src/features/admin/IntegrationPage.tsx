@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
 
@@ -48,28 +48,17 @@ const IntegrationPage = () => {
     const [logs, setLogs] = useState<ImportLogEntry[]>([]);
     const [logsLoading, setLogsLoading] = useState(true);
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [ftkFile, setFtkFile] = useState<File | null>(null);
     const [ftkLoading, setFtkLoading] = useState(false);
     const [ftkResult, setFtkResult] = useState<FtkImportResult | null>(null);
     const [ftkError, setFtkError] = useState<string | null>(null);
 
     const handleFtkImport = async () => {
-        if (!ftkFile) return;
         setFtkLoading(true);
         setFtkResult(null);
         setFtkError(null);
         try {
-            const formData = new FormData();
-            formData.append('file', ftkFile);
-            const r = await apiClient.post<FtkImportResult>(
-                '/v1/integration/ftk/import',
-                formData,
-                { headers: { 'Content-Type': 'multipart/form-data' } }
-            );
+            const r = await apiClient.post<FtkImportResult>('/v1/integration/ftk/import-xml');
             setFtkResult(r.data);
-            setFtkFile(null);
-            if (fileInputRef.current) fileInputRef.current.value = '';
         } catch (e: any) {
             setFtkError(e?.response?.data?.message ?? 'Ошибка импорта');
         } finally {
@@ -108,58 +97,17 @@ const IntegrationPage = () => {
                 </div>
                 <div className="rf-card-body">
                     <p style={{ margin: '0 0 14px', fontSize: 'var(--text-base)', color: 'var(--ink-2)', lineHeight: 1.6 }}>
-                        Загрузите файл <code className="rf-mono" style={{ fontSize: 'var(--text-sm)', background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 'var(--r-1)' }}>ВОФ_номенклатура.xls</code> с FTP ФТК. Товары попадут в категорию <strong>ФТК — Факел</strong>.
+                        Импорт каталога с FTP ФТК по протоколу CommerceML XML. Товары попадут в категорию <strong>ФТК — Факел</strong>.
                     </p>
 
-                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <label style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 7,
-                            padding: '7px 14px', borderRadius: 'var(--r-2)',
-                            border: '1px solid var(--line-1)', background: 'var(--surface-2)',
-                            cursor: 'pointer', fontSize: 'var(--text-base)', color: 'var(--ink-1)',
-                            whiteSpace: 'nowrap',
-                        }}>
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                                <path d="M2 10v2h10v-2M7 2v7M4 5l3-3 3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                            {ftkFile ? ftkFile.name : 'Выбрать XLS'}
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".xls,.xlsx"
-                                style={{ display: 'none' }}
-                                onChange={e => {
-                                    setFtkResult(null);
-                                    setFtkError(null);
-                                    setFtkFile(e.target.files?.[0] ?? null);
-                                }}
-                            />
-                        </label>
-
-                        <button
-                            className="rf-btn rf-btn-primary"
-                            onClick={handleFtkImport}
-                            disabled={!ftkFile || ftkLoading}
-                            style={{ opacity: (!ftkFile || ftkLoading) ? 0.6 : 1 }}
-                        >
-                            {ftkLoading ? 'Импорт...' : 'Запустить импорт'}
-                        </button>
-
-                        {ftkFile && !ftkLoading && (
-                            <button
-                                className="rf-btn"
-                                onClick={() => {
-                                    setFtkFile(null);
-                                    setFtkResult(null);
-                                    setFtkError(null);
-                                    if (fileInputRef.current) fileInputRef.current.value = '';
-                                }}
-                                style={{ color: 'var(--ink-3)' }}
-                            >
-                                Сбросить
-                            </button>
-                        )}
-                    </div>
+                    <button
+                        className="rf-btn rf-btn-primary"
+                        onClick={handleFtkImport}
+                        disabled={ftkLoading}
+                        style={{ opacity: ftkLoading ? 0.6 : 1 }}
+                    >
+                        {ftkLoading ? 'Импорт...' : 'Запустить импорт'}
+                    </button>
 
                     {ftkLoading && (
                         <div style={{ marginTop: 14, fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>

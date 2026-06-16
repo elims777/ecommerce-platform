@@ -169,6 +169,17 @@ const AdminCatalogPage = () => {
     const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
     const [selectedParentName, setSelectedParentName] = useState('');
 
+    const [collapsedParents, setCollapsedParents] = useState<Set<number>>(new Set());
+
+    const toggleCollapse = (parentId: number) => {
+        setCollapsedParents(prev => {
+            const next = new Set(prev);
+            if (next.has(parentId)) next.delete(parentId);
+            else next.add(parentId);
+            return next;
+        });
+    };
+
     const [pageSize, setPageSize] = useState(() => {
         const saved = localStorage.getItem('adminCatalogPageSize');
         return saved ? Number(saved) : 20;
@@ -777,6 +788,7 @@ const AdminCatalogPage = () => {
                                                     style={{ cursor: 'pointer' }}
                                                 />
                                             </th>
+                                            <th style={{ width: 20 }}></th>
                                             <th style={{ width: 44 }}></th>
                                             <th>Название</th>
                                             <th style={{ width: 160 }}>Категория</th>
@@ -789,21 +801,38 @@ const AdminCatalogPage = () => {
                                     </thead>
                                     <tbody>
                                         {groupedRows.map(({ product, isChild, childCount }) => {
+                                            if (isChild && product.parentProductId != null && collapsedParents.has(product.parentProductId)) return null;
                                             const imageUrl = getPrimaryImageUrl(product);
                                             const isMovingThis = moveProductId === product.id;
+                                            const isCollapsed = !isChild && collapsedParents.has(product.id);
                                             return (
                                                 <tr
                                                     key={product.id}
                                                     style={isChild ? { background: 'var(--surface-2)' } : undefined}
                                                 >
                                                     {/* Checkbox */}
-                                                    <td style={{ paddingLeft: isChild ? 36 : 16 }}>
+                                                    <td style={{ paddingLeft: 16 }}>
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedRowKeys.includes(product.id)}
                                                             onChange={() => toggleRow(product.id)}
                                                             style={{ cursor: 'pointer' }}
                                                         />
+                                                    </td>
+
+                                                    {/* Collapse toggle */}
+                                                    <td style={{ width: 20, padding: 0, textAlign: 'center' }}>
+                                                        {childCount > 0 && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); toggleCollapse(product.id); }}
+                                                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: 0 }}
+                                                                title={isCollapsed ? 'Развернуть варианты' : 'Свернуть варианты'}
+                                                            >
+                                                                <svg width="10" height="10" viewBox="0 0 8 8" fill="none" style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
+                                                                    <path d="M1 2.5l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                                                                </svg>
+                                                            </button>
+                                                        )}
                                                     </td>
 
                                                     {/* Image */}
