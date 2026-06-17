@@ -60,6 +60,15 @@ const flattenForSelect = (
 
 // ── Category tree node (recursive) ──────────────────────────────────────────
 
+const hasSelectedDescendant = (cats: CategoryTree[], selectedId: number | undefined): boolean => {
+    if (!selectedId) return false;
+    for (const cat of cats) {
+        if (cat.id === selectedId) return true;
+        if (cat.children.length > 0 && hasSelectedDescendant(cat.children, selectedId)) return true;
+    }
+    return false;
+};
+
 interface CategoryTreeNodeProps {
     categories: CategoryTree[];
     selectedId: number | undefined;
@@ -71,54 +80,68 @@ const CategoryTreeNode = ({ categories, selectedId, onSelect, depth = 0 }: Categ
     const sorted = [...categories].sort((a, b) => a.displayOrder - b.displayOrder);
     return (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, paddingLeft: depth > 0 ? 14 : 0 }}>
-            {sorted.map((cat) => (
-                <li key={cat.id}>
-                    <div
-                        onClick={() => onSelect(cat.id)}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '6px 10px',
-                            borderRadius: 'var(--r-3)',
-                            cursor: 'pointer',
-                            fontSize: 'var(--text-base)',
-                            fontWeight: selectedId === cat.id ? 600 : 400,
-                            background: selectedId === cat.id ? 'var(--red-tint)' : 'transparent',
-                            color: selectedId === cat.id ? 'var(--brand-red)' : 'var(--ink-1)',
-                            transition: 'background 0.1s, color 0.1s',
-                            userSelect: 'none',
-                        }}
-                    >
-                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, opacity: 0.55 }}>
-                            <path d="M2 4h5l2 2h5v8H2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
-                        </svg>
-                        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {cat.name}
-                        </span>
-                        {!cat.isActive && (
-                            <span style={{
-                                fontSize: 10,
-                                padding: '1px 5px',
-                                borderRadius: 'var(--r-2)',
-                                background: 'var(--surface-3)',
-                                color: 'var(--ink-3)',
-                                flexShrink: 0,
-                            }}>
-                                скрыта
+            {sorted.map((cat) => {
+                const isSelected = selectedId === cat.id;
+                const hasChildren = cat.children.length > 0;
+                const isExpanded = hasChildren && (isSelected || hasSelectedDescendant(cat.children, selectedId));
+                return (
+                    <li key={cat.id}>
+                        <div
+                            onClick={() => onSelect(cat.id)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '6px 10px',
+                                borderRadius: 'var(--r-3)',
+                                cursor: 'pointer',
+                                fontSize: 'var(--text-base)',
+                                fontWeight: isSelected ? 600 : 400,
+                                background: isSelected ? 'var(--red-tint)' : 'transparent',
+                                color: isSelected ? 'var(--brand-red)' : 'var(--ink-1)',
+                                transition: 'background 0.1s, color 0.1s',
+                                userSelect: 'none',
+                            }}
+                        >
+                            {hasChildren ? (
+                                <svg
+                                    width="10" height="10" viewBox="0 0 8 8" fill="none"
+                                    style={{ flexShrink: 0, opacity: 0.55, transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}
+                                >
+                                    <path d="M2 1.5l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            ) : (
+                                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, opacity: 0.55 }}>
+                                    <path d="M2 4h5l2 2h5v8H2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
+                                </svg>
+                            )}
+                            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {cat.name}
                             </span>
+                            {!cat.isActive && (
+                                <span style={{
+                                    fontSize: 10,
+                                    padding: '1px 5px',
+                                    borderRadius: 'var(--r-2)',
+                                    background: 'var(--surface-3)',
+                                    color: 'var(--ink-3)',
+                                    flexShrink: 0,
+                                }}>
+                                    скрыта
+                                </span>
+                            )}
+                        </div>
+                        {hasChildren && isExpanded && (
+                            <CategoryTreeNode
+                                categories={cat.children}
+                                selectedId={selectedId}
+                                onSelect={onSelect}
+                                depth={depth + 1}
+                            />
                         )}
-                    </div>
-                    {cat.children.length > 0 && (
-                        <CategoryTreeNode
-                            categories={cat.children}
-                            selectedId={selectedId}
-                            onSelect={onSelect}
-                            depth={depth + 1}
-                        />
-                    )}
-                </li>
-            ))}
+                    </li>
+                );
+            })}
         </ul>
     );
 };
@@ -764,6 +787,36 @@ const AdminCatalogPage = () => {
                     <div className="rf-card">
                         <div className="rf-card-header" style={{ justifyContent: 'space-between' }}>
                             <h3>{pageTitle}</h3>
+                            {isPaginated && totalPages > 1 && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <select
+                                        value={pageSize}
+                                        onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                                        style={{
+                                            height: 26, fontSize: 'var(--text-sm)', border: '1px solid var(--line-2)',
+                                            borderRadius: 'var(--r-2)', background: 'var(--surface)', color: 'var(--ink-1)',
+                                            padding: '0 6px', fontFamily: 'var(--font-body)', cursor: 'pointer',
+                                        }}
+                                    >
+                                        {[10, 20, 50, 100].map((n) => (
+                                            <option key={n} value={n}>{n} / стр.</option>
+                                        ))}
+                                    </select>
+                                    <div className="rf-admin-pagination-pages" style={{ margin: 0 }}>
+                                        <button
+                                            className="rf-admin-page-btn"
+                                            disabled={currentPage === 1}
+                                            onClick={() => { setCurrentPage((p) => p - 1); setSelectedRowKeys([]); }}
+                                        >‹</button>
+                                        {renderPageButtons()}
+                                        <button
+                                            className="rf-admin-page-btn"
+                                            disabled={currentPage === totalPages}
+                                            onClick={() => { setCurrentPage((p) => p + 1); setSelectedRowKeys([]); }}
+                                        >›</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Table */}
@@ -1020,23 +1073,7 @@ const AdminCatalogPage = () => {
                         {/* Pagination */}
                         {isPaginated && totalPages > 1 && (
                             <div className="rf-admin-pagination">
-                                <span>
-                                    Всего {productsPage?.totalElements ?? 0}
-                                    {' · '}
-                                    <select
-                                        value={pageSize}
-                                        onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                                        style={{
-                                            height: 26, fontSize: 'var(--text-sm)', border: '1px solid var(--line-2)',
-                                            borderRadius: 'var(--r-2)', background: 'var(--surface)', color: 'var(--ink-1)',
-                                            padding: '0 6px', fontFamily: 'var(--font-body)', cursor: 'pointer',
-                                        }}
-                                    >
-                                        {[10, 20, 50, 100].map((n) => (
-                                            <option key={n} value={n}>{n} / стр.</option>
-                                        ))}
-                                    </select>
-                                </span>
+                                <span>Всего {productsPage?.totalElements ?? 0}</span>
                                 <div className="rf-admin-pagination-pages">
                                     <button
                                         className="rf-admin-page-btn"
