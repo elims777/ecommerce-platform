@@ -42,7 +42,7 @@ public class CategoryController {
     /**
      * Получить категорию по slug
      */
-    @GetMapping("/slug/{slug}")
+    @GetMapping("/by-slug/{slug}")
     public ResponseEntity<CategoryResponse> getCategoryBySlug(@PathVariable String slug){
         Category category = categoryService.getCategoryBySlug(slug);
         return ResponseEntity.ok(CategoryMapper.toResponse(category));

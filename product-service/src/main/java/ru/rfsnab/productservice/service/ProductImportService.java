@@ -104,7 +104,10 @@ public class ProductImportService {
                 product.setIsActive(false);
                 product.setIsFeatured(false);
                 product.setStockQuantity(0);
-                product.setCategory(importCategory);
+                Category resolvedCategory = item.getCategoryId() != null
+                        ? categoryRepository.findById(item.getCategoryId()).orElse(importCategory)
+                        : importCategory;
+                product.setCategory(resolvedCategory);
             }
 
             product.setName(item.getName());

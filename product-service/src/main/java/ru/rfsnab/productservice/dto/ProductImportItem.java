@@ -61,6 +61,9 @@ public class ProductImportItem {
     // Источник товара: INTERNAL (1С), FTK и т.д.
     private String source;
 
+    // ID категории (из дерева ФТК); если null — попадает в import-1c
+    private Long categoryId;
+
     private String barcode;
     private String countryOfOrigin;
 

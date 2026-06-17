@@ -32,6 +32,7 @@ public class ProductImportItemDto {
     private Integer stockQuantity;
     private Integer vatRate;
     private String source;
+    private Long categoryId;
     private String barcode;
     private String countryOfOrigin;
 

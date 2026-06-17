@@ -210,6 +210,7 @@ public class FtkImportService {
                 .wholesalePrice(basePrice)
                 .vatRate(vatRate)
                 .source(SOURCE)
+                .categoryId(categoryId)
                 .unitOfMeasure(p.getUnitOfMeasure())
                 .imagePaths(p.getImagePaths())
                 .properties(p.getProperties())
