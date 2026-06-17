@@ -10,10 +10,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Mapper для преобразования Cart entity в CartDto.
- * Чистый маппинг без внешних зависимостей.
- */
 public class CartMapper {
 
     public static CartDto toDto(Cart cart, Map<Long, ProductDto> products) {
@@ -47,8 +43,6 @@ public class CartMapper {
 
         return new CartItemDto(
                 product.id(),
-                item.getVariantId(),
-                null,
                 product.name(),
                 item.getQuantity(),
                 product.price(),

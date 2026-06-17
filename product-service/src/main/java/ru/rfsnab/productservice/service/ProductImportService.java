@@ -14,10 +14,8 @@ import ru.rfsnab.productservice.exception.CategoryNotFoundException;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.model.ProductAttribute;
-import ru.rfsnab.productservice.model.ProductVariant;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
-import ru.rfsnab.productservice.repository.ProductVariantRepository;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,9 +30,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Сервис batch-импорта товаров из 1С CommerceML.
+ * Сервис batch-импорта товаров из 1С CommerceML и ФТК.
  * Матчинг по externalId: существующие товары обновляются, новые создаются.
  * Поле description (зона сайта) никогда не затирается при импорте.
+ * Варианты (размерная сетка ФТК) создаются как дочерние записи в таблице products.
  */
 @Service
 @RequiredArgsConstructor
@@ -46,60 +45,46 @@ public class ProductImportService {
     private int chunkSize;
 
     private final ProductRepository productRepository;
-    private final ProductVariantRepository variantRepository;
     private final CategoryRepository categoryRepository;
     private final PlatformTransactionManager transactionManager;
     private final SlugGeneratorService slugService;
 
-    /**
-     * Batch-импорт товаров из 1С.
-     */
-    public BatchProductImportResponse importBatch(BatchProductImportRequest request){
+    public BatchProductImportResponse importBatch(BatchProductImportRequest request) {
         List<ProductImportItem> items = request.getItems();
 
-        // Batch-загрузка данных для матчинга (один SELECT вместо N)
         Map<String, Product> existingProducts = loadExistingProducts(items);
         Set<String> reservedSlugs = ConcurrentHashMap.newKeySet();
         reservedSlugs.addAll(productRepository.findAllSlugs());
 
-        //Дефлдтная категория для новых товаров
-        Category category = categoryRepository.findBySlug(IMPORT_CATEGORY_SLUG)
-                .orElseThrow(() -> new CategoryNotFoundException("Категория " + IMPORT_CATEGORY_SLUG +
-                        " не найдена. Выполните миграцию в БД")
-        );
+        Category importCategory = categoryRepository.findBySlug(IMPORT_CATEGORY_SLUG)
+                .orElseThrow(() -> new CategoryNotFoundException(
+                        "Категория " + IMPORT_CATEGORY_SLUG + " не найдена. Выполните миграцию в БД"));
 
-        // Разбиваем на chunk'и и обрабатываем параллельно
         List<List<ProductImportItem>> chunks = partitionList(items, chunkSize);
 
-        // Выполняем загрузку в виртуальных потоках
-        try(ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()){
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             List<CompletableFuture<List<ImportItemResult>>> futures = chunks.stream()
                     .map(chunk -> CompletableFuture.supplyAsync(
-                            ()-> processChunk(chunk, existingProducts, reservedSlugs, category), executor
-                    )).toList();
+                            () -> processChunk(chunk, existingProducts, reservedSlugs, importCategory), executor))
+                    .toList();
 
-            //Ожидаем обработку всех chunk'ов
             List<ImportItemResult> allResults = futures.stream()
                     .map(CompletableFuture::join)
                     .flatMap(List::stream)
                     .toList();
-            return  buildResponse(items.size(), allResults);
+
+            return buildResponse(items.size(), allResults);
         }
     }
 
-    /**
-     * Обработка одного chunk'а в отдельной транзакции.
-     * Если chunk падает — остальные chunk'и продолжают работу.
-     */
     private List<ImportItemResult> processChunk(List<ProductImportItem> chunk,
                                                 Map<String, Product> existingProducts,
                                                 Set<String> reservedSlugs,
-                                                Category importCategory){
+                                                Category importCategory) {
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
-
         return txTemplate.execute(status -> {
             List<ImportItemResult> results = new ArrayList<>(chunk.size());
-            for(ProductImportItem item : chunk){
+            for (ProductImportItem item : chunk) {
                 results.add(processItem(item, existingProducts, reservedSlugs, importCategory));
             }
             return results;
@@ -109,19 +94,22 @@ public class ProductImportService {
     private ImportItemResult processItem(ProductImportItem item,
                                          Map<String, Product> existingProducts,
                                          Set<String> reservedSlugs,
-                                         Category importCategory){
-        try{
+                                         Category importCategory) {
+        try {
             Product product = existingProducts.get(item.getExternalId());
-            boolean isNew = (product==null);
-            if(isNew){
+            boolean isNew = (product == null);
+            if (isNew) {
                 product = new Product();
                 product.setExternalId(item.getExternalId());
                 product.setIsActive(false);
                 product.setIsFeatured(false);
                 product.setStockQuantity(0);
-                product.setCategory(importCategory);
+                Category resolvedCategory = item.getCategoryId() != null
+                        ? categoryRepository.findById(item.getCategoryId()).orElse(importCategory)
+                        : importCategory;
+                product.setCategory(resolvedCategory);
             }
-            // Обновляем поля из 1С
+
             product.setName(item.getName());
             product.setSlug(slugService.generateUniqueSlug(product.getName(), reservedSlugs));
             product.setShortDescription(item.getShortDescription());
@@ -138,29 +126,28 @@ public class ProductImportService {
             if (item.getSource() != null) {
                 product.setSource(item.getSource());
             }
-
-            // Цена и остаток — обновляем только если переданы (могут прийти отдельно через offers.xml)
-            if(item.getPrice() != null){
+            if (item.getBarcode() != null) {
+                product.setBarcode(item.getBarcode());
+            }
+            if (item.getCountryOfOrigin() != null) {
+                product.setCountryOfOrigin(item.getCountryOfOrigin());
+            }
+            if (item.getPrice() != null) {
                 product.setPrice(item.getPrice());
             }
-            if(item.getWholesalePrice() != null){
+            if (item.getWholesalePrice() != null) {
                 product.setWholesalePrice(item.getWholesalePrice());
             }
-            if(item.getStockQuantity() != null){
+            if (item.getStockQuantity() != null) {
                 product.setStockQuantity(item.getStockQuantity());
             }
-            //Полная замена аттрибутов при каждом импорте
+
             updateAttributes(product, item.getAttributes());
 
             Product savedProduct = productRepository.save(product);
 
-            boolean hasExplicitVariants = item.getVariants() != null && !item.getVariants().isEmpty();
-            if (hasExplicitVariants) {
-                upsertExplicitVariants(savedProduct, item.getVariants());
-            } else if (isNew) {
-                createDefaultVariant(savedProduct, item);
-            } else {
-                updateDefaultVariant(savedProduct, item);
+            if (item.getVariants() != null && !item.getVariants().isEmpty()) {
+                upsertChildVariants(savedProduct, item.getVariants(), existingProducts, reservedSlugs, importCategory);
             }
 
             return ImportItemResult.builder()
@@ -169,7 +156,7 @@ public class ProductImportService {
                     .action(isNew ? ImportAction.CREATED : ImportAction.UPDATED)
                     .success(true)
                     .build();
-        } catch (Exception e){
+        } catch (Exception e) {
             return ImportItemResult.builder()
                     .externalId(item.getExternalId())
                     .action(ImportAction.FAILED)
@@ -180,84 +167,77 @@ public class ProductImportService {
     }
 
     /**
-     * Создаёт или обновляет явно переданные варианты (FTK и другие поставщики с размерной сеткой).
-     * Матчинг по externalId варианта. Новые — создаются, существующие — обновляются.
+     * Создаёт или обновляет варианты как дочерние записи Product.
+     * Матчинг по externalId варианта. Новые создаются с isVariantChild=true.
      */
-    private void upsertExplicitVariants(Product product,
-                                        List<ProductImportItem.VariantImportItem> variantItems) {
+    private void upsertChildVariants(Product parent,
+                                     List<ProductImportItem.VariantImportItem> variantItems,
+                                     Map<String, Product> existingProducts,
+                                     Set<String> reservedSlugs,
+                                     Category importCategory) {
         List<String> externalIds = variantItems.stream()
                 .map(ProductImportItem.VariantImportItem::getExternalId)
                 .filter(id -> id != null)
                 .toList();
 
-        Map<String, ProductVariant> existing = externalIds.isEmpty()
+        Map<String, Product> existingChildren = externalIds.isEmpty()
                 ? Collections.emptyMap()
-                : variantRepository.findByExternalIdIn(externalIds).stream()
-                        .collect(Collectors.toMap(ProductVariant::getExternalId, Function.identity()));
+                : productRepository.findByExternalIdIn(externalIds).stream()
+                        .collect(Collectors.toMap(Product::getExternalId, Function.identity()));
 
         for (ProductImportItem.VariantImportItem vi : variantItems) {
             if (vi.getExternalId() == null) continue;
-            ProductVariant variant = existing.get(vi.getExternalId());
-            if (variant == null) {
-                variant = ProductVariant.builder()
-                        .product(product)
-                        .externalId(vi.getExternalId())
-                        .isActive(true)
-                        .stockQuantity(0)
-                        .build();
+
+            Product child = existingChildren.get(vi.getExternalId());
+            boolean isNew = (child == null);
+            if (isNew) {
+                child = new Product();
+                child.setExternalId(vi.getExternalId());
+                child.setIsActive(false);
+                child.setIsFeatured(false);
+                child.setStockQuantity(0);
+                child.setIsVariantChild(true);
+                child.setParentProductId(parent.getId());
+                child.setCategory(parent.getCategory() != null ? parent.getCategory() : importCategory);
+                child.setSource(parent.getSource());
             }
-            if (vi.getSku() != null) variant.setSku(vi.getSku());
-            if (vi.getPrice() != null) variant.setPrice(vi.getPrice());
-            if (vi.getWholesalePrice() != null) variant.setWholesalePrice(vi.getWholesalePrice());
-            if (vi.getStockQuantity() != null) variant.setStockQuantity(vi.getStockQuantity());
-            if (vi.getAttributes() != null) variant.setAttributes(vi.getAttributes());
-            variantRepository.save(variant);
+
+            if (vi.getSku() != null) child.setSku(vi.getSku());
+            child.setName(parent.getName() + (vi.getSku() != null ? " (" + vi.getSku() + ")" : ""));
+            if (isNew) {
+                child.setSlug(slugService.generateUniqueSlug(child.getName(), reservedSlugs));
+            }
+            if (vi.getPrice() != null) child.setPrice(vi.getPrice());
+            if (vi.getWholesalePrice() != null) child.setWholesalePrice(vi.getWholesalePrice());
+            if (vi.getStockQuantity() != null) child.setStockQuantity(vi.getStockQuantity());
+            if (vi.getBarcode() != null) child.setBarcode(vi.getBarcode());
+            if (vi.getCountryOfOrigin() != null) child.setCountryOfOrigin(vi.getCountryOfOrigin());
+
+            if (vi.getAttributes() != null && !vi.getAttributes().isEmpty()) {
+                List<ProductImportItem.ProductAttributeImportItem> attrs = vi.getAttributes().entrySet().stream()
+                        .map(e -> new ProductImportItem.ProductAttributeImportItem(e.getKey(), e.getValue()))
+                        .toList();
+                updateAttributes(child, attrs);
+            }
+
+            productRepository.save(child);
         }
     }
 
-    private void createDefaultVariant(Product product, ProductImportItem item) {
-        String variantExternalId = item.getExternalId() != null ? item.getExternalId() + "#default" : null;
-        ProductVariant variant = ProductVariant.builder()
-                .product(product)
-                .sku(item.getSku())
-                .price(item.getPrice())
-                .wholesalePrice(item.getWholesalePrice())
-                .stockQuantity(item.getStockQuantity() != null ? item.getStockQuantity() : 0)
-                .isActive(true)
-                .externalId(variantExternalId)
-                .build();
-        variantRepository.save(variant);
-    }
-
-    private void updateDefaultVariant(Product product, ProductImportItem item) {
-        String variantExternalId = item.getExternalId() != null ? item.getExternalId() + "#default" : null;
-        if (variantExternalId == null) return;
-        variantRepository.findByExternalId(variantExternalId).ifPresent(variant -> {
-            if (item.getPrice() != null) variant.setPrice(item.getPrice());
-            if (item.getWholesalePrice() != null) variant.setWholesalePrice(item.getWholesalePrice());
-            if (item.getStockQuantity() != null) variant.setStockQuantity(item.getStockQuantity());
-            if (item.getSku() != null) variant.setSku(item.getSku());
-            variantRepository.save(variant);
-        });
-    }
-
-    private Map<String, Product> loadExistingProducts(List<ProductImportItem> items){
+    private Map<String, Product> loadExistingProducts(List<ProductImportItem> items) {
         List<String> externalIds = items.stream()
                 .map(ProductImportItem::getExternalId)
                 .toList();
-
-        return productRepository.findByExternalIdIn(externalIds)
-                .stream()
+        return productRepository.findByExternalIdIn(externalIds).stream()
                 .collect(Collectors.toMap(Product::getExternalId, Function.identity()));
     }
 
-    private void updateAttributes(Product product, List<ProductImportItem.ProductAttributeImportItem> attrItems){
-        if(attrItems == null || attrItems.isEmpty()){
+    private void updateAttributes(Product product, List<ProductImportItem.ProductAttributeImportItem> attrItems) {
+        if (attrItems == null || attrItems.isEmpty()) {
             return;
         }
         product.getAttributes().clear();
-
-        for(ProductImportItem.ProductAttributeImportItem attrItem: attrItems){
+        for (ProductImportItem.ProductAttributeImportItem attrItem : attrItems) {
             ProductAttribute attribute = ProductAttribute.builder()
                     .product(product)
                     .attributeName(attrItem.getName())
@@ -267,19 +247,15 @@ public class ProductImportService {
         }
     }
 
-    private BatchProductImportResponse buildResponse(int totalReceived, List<ImportItemResult> results){
-        int created =0;
-        int updated =0;
-        int failed =0;
-
-        for(ImportItemResult result : results){
-            switch (result.getAction()){
+    private BatchProductImportResponse buildResponse(int totalReceived, List<ImportItemResult> results) {
+        int created = 0, updated = 0, failed = 0;
+        for (ImportItemResult result : results) {
+            switch (result.getAction()) {
                 case CREATED -> created++;
                 case UPDATED -> updated++;
                 case FAILED -> failed++;
             }
         }
-
         return BatchProductImportResponse.builder()
                 .totalReceived(totalReceived)
                 .created(created)
@@ -289,10 +265,7 @@ public class ProductImportService {
                 .build();
     }
 
-    /**
-     * Разбивает списки на chunk'и указанного размера
-     */
-    private <T> List<List<T>> partitionList(List<T> list,int chunkSize){
+    private <T> List<List<T>> partitionList(List<T> list, int chunkSize) {
         List<List<T>> partitions = new ArrayList<>();
         for (int i = 0; i < list.size(); i += chunkSize) {
             partitions.add(list.subList(i, Math.min(i + chunkSize, list.size())));

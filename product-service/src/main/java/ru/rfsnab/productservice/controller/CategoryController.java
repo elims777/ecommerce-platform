@@ -12,6 +12,7 @@ import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.service.CategoryService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/categories")
@@ -41,7 +42,7 @@ public class CategoryController {
     /**
      * Получить категорию по slug
      */
-    @GetMapping("/slug/{slug}")
+    @GetMapping("/by-slug/{slug}")
     public ResponseEntity<CategoryResponse> getCategoryBySlug(@PathVariable String slug){
         Category category = categoryService.getCategoryBySlug(slug);
         return ResponseEntity.ok(CategoryMapper.toResponse(category));
@@ -109,6 +110,21 @@ public class CategoryController {
         category.setIsActive(false);
         Category updated = categoryService.updateCategory(id, category);
         return ResponseEntity.ok(CategoryMapper.toResponse(updated));
+    }
+
+    /**
+     * Создать или обновить категорию по externalId (UUID группы ФТК/1С).
+     * Используется integration-service при построении дерева категорий из классификатора.
+     */
+    @PostMapping("/upsert-by-external-id")
+    public ResponseEntity<CategoryResponse> upsertByExternalId(@RequestBody Map<String, Object> request) {
+        String externalId      = (String) request.get("externalId");
+        String name            = (String) request.get("name");
+        Long parentCategoryId  = request.get("parentCategoryId") != null
+                ? Long.valueOf(request.get("parentCategoryId").toString())
+                : null;
+        Category category = categoryService.upsertByExternalId(externalId, name, parentCategoryId);
+        return ResponseEntity.ok(CategoryMapper.toResponse(category));
     }
 
 }

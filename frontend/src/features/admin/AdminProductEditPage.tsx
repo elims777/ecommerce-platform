@@ -580,10 +580,10 @@ const AdminProductEditPage = () => {
                         </div>
                     </div>
 
-                    {/* Variants card */}
-                    {product.variants && product.variants.length > 0 && (
+                    {/* Children (variants) card */}
+                    {product.children && product.children.length > 0 && (
                         <div className="rf-card" style={{ overflow: 'hidden', marginTop: 16 }}>
-                            <div className="rf-card-header"><h3>Варианты ({product.variants.length})</h3></div>
+                            <div className="rf-card-header"><h3>Варианты ({product.children.length})</h3></div>
                             <div className="rf-admin-table-wrap">
                                 <table className="rf-admin-table">
                                     <thead>
@@ -594,11 +594,12 @@ const AdminProductEditPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {product.variants.map((v) => {
+                                        {product.children.map((v) => {
                                             const ATTR_ORDER = ['Размер', 'Рост'];
-                                            const attrParts = v.attributes
-                                                ? ATTR_ORDER.filter(k => v.attributes![k])
-                                                : [];
+                                            const attrMap = Object.fromEntries(
+                                                (v.attributes ?? []).map(a => [a.attributeName, a.attributeValue])
+                                            );
+                                            const attrParts = ATTR_ORDER.filter(k => attrMap[k]);
                                             const inStock = v.stockQuantity > 0;
                                             return (
                                                 <tr key={v.id}>
@@ -608,10 +609,10 @@ const AdminProductEditPage = () => {
                                                                 <span key={k}>
                                                                     {i > 0 && <br />}
                                                                     <span style={{ color: 'var(--ink-3)', fontSize: 12, fontWeight: 400 }}>{k}: </span>
-                                                                    {v.attributes![k]}
+                                                                    {attrMap[k]}
                                                                 </span>
                                                             ))
-                                                            : (v.attributes ? Object.values(v.attributes).join(' / ') : '—')
+                                                            : (Object.values(attrMap).join(' / ') || '—')
                                                         }
                                                     </td>
                                                     <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: inStock ? 'var(--brand-green)' : 'var(--brand-red)', fontWeight: 500 }}>

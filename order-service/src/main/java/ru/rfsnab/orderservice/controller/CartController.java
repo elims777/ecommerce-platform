@@ -59,7 +59,7 @@ public class CartController {
             Authentication authentication,
             @Valid @RequestBody AddToCartRequest request) {
         Long userId = getCurrentUserId(authentication);
-        Cart cart = cartService.addItemToCart(userId, request.productId(), request.variantId(), request.quantity());
+        Cart cart = cartService.addItemToCart(userId, request.productId(), request.quantity());
         Map<Long, ProductDto> products = cartService.fetchProductsForCart(cart);
         return ResponseEntity.ok(CartMapper.toDto(cart, products));
     }

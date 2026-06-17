@@ -417,10 +417,7 @@ public class ProductService {
      */
     @Transactional(readOnly = true)
     public List<Product> getChildren(Long parentId) {
-        List<Product> children = productRepository.findChildrenWithVariantsAndAttributes(parentId);
-        // Инициализируем attributes в рамках транзакции
-        children.forEach(c -> c.getAttributes().size());
-        return children;
+        return productRepository.findChildrenWithAttributes(parentId);
     }
 
     public Product findByExternalId(String externalId) {

@@ -102,6 +102,28 @@ class ProductControllerTest {
         }
 
         @Test
+        @DisplayName("возвращает children[] вместо variants[] для товара с дочерними вариантами")
+        void getProductById_WithChildren_ReturnsChildren() throws Exception {
+            Product child = productRepository.save(Product.builder()
+                    .name("Огнетушитель ОП-4 (S)")
+                    .slug("ognetushitel-op-4-s")
+                    .price(new BigDecimal("1500.00"))
+                    .stockQuantity(10)
+                    .isActive(true)
+                    .isFeatured(false)
+                    .isVariantChild(true)
+                    .parentProductId(testProduct.getId())
+                    .category(testCategory)
+                    .build());
+
+            mockMvc.perform(get("/api/v1/products/{id}", testProduct.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.children", hasSize(1)))
+                    .andExpect(jsonPath("$.children[0].name", is("Огнетушитель ОП-4 (S)")))
+                    .andExpect(jsonPath("$.children[0].isVariantChild", is(true)));
+        }
+
+        @Test
         @DisplayName("возвращает 404 для несуществующего продукта")
         void getProductById_NotFound_Returns404() throws Exception {
             mockMvc.perform(get("/api/v1/products/{id}", 999L))

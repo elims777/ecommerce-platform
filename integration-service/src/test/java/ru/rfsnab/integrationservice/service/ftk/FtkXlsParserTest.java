@@ -88,7 +88,7 @@ class FtkXlsParserTest {
     class CategoryTests {
 
         @Test
-        @DisplayName("товар попадает в категорию 1-го уровня")
+        @DisplayName("товары парсятся после строки-категории")
         void shouldAssignRootCategory() throws IOException {
             var xls = new XlsBuilder()
                     .category("01 Спецодежда")
@@ -98,12 +98,13 @@ class FtkXlsParserTest {
             List<FtkProduct> result = parser.parse(xls);
 
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).getCategoryPath()).isEqualTo("Спецодежда");
+            // XLS-парсер не знает UUID групп — groupUuid всегда null
+            assertThat(result.get(0).getGroupUuid()).isNull();
         }
 
         @Test
-        @DisplayName("товар попадает в категорию 3-го уровня")
-        void shouldAssignDeepCategory() throws IOException {
+        @DisplayName("строки-категории не превращаются в товары")
+        void shouldNotCreateProductsFromCategoryRows() throws IOException {
             var xls = new XlsBuilder()
                     .category("01 Спецодежда")
                     .category("01.01 Спецодежда летняя")
@@ -114,12 +115,11 @@ class FtkXlsParserTest {
             List<FtkProduct> result = parser.parse(xls);
 
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).getCategoryPath())
-                    .isEqualTo("Спецодежда > Спецодежда летняя > Костюмы летние");
+            assertThat(result.get(0).getArticle()).isEqualTo("87490974");
         }
 
         @Test
-        @DisplayName("переход на соседнюю подкатегорию сбрасывает предыдущую")
+        @DisplayName("переход на соседнюю подкатегорию: оба товара парсятся")
         void shouldResetDeepCategoryOnSiblingSwitch() throws IOException {
             var xls = new XlsBuilder()
                     .category("01 Спецодежда")
@@ -133,14 +133,12 @@ class FtkXlsParserTest {
             List<FtkProduct> result = parser.parse(xls);
 
             assertThat(result).hasSize(2);
-            assertThat(result.get(0).getCategoryPath())
-                    .isEqualTo("Спецодежда > Спецодежда летняя > Костюмы летние");
-            assertThat(result.get(1).getCategoryPath())
-                    .isEqualTo("Спецодежда > Спецодежда летняя > Куртки летние");
+            assertThat(result.get(0).getArticle()).isEqualTo("111");
+            assertThat(result.get(1).getArticle()).isEqualTo("222");
         }
 
         @Test
-        @DisplayName("переход на категорию 1-го уровня сбрасывает весь стек")
+        @DisplayName("переход на категорию 1-го уровня: оба товара парсятся")
         void shouldResetStackOnRootCategory() throws IOException {
             var xls = new XlsBuilder()
                     .category("01 Спецодежда")
@@ -153,7 +151,7 @@ class FtkXlsParserTest {
             List<FtkProduct> result = parser.parse(xls);
 
             assertThat(result).hasSize(2);
-            assertThat(result.get(1).getCategoryPath()).isEqualTo("СИЗ");
+            assertThat(result.get(1).getArticle()).isEqualTo("222");
         }
     }
 
@@ -181,7 +179,7 @@ class FtkXlsParserTest {
             assertThat(p.getArticle()).isEqualTo("87490974");
             assertThat(p.getName()).isEqualTo("Костюм летний");
             assertThat(p.getDescription()).isEqualTo("Описание костюма");
-            assertThat(p.getImagePath()).isEqualTo("ftp://fakelftp:poiPOI098@31.44.91.154/GoodsPictures/img.jpg");
+            assertThat(p.getImagePaths()).containsExactly("ftp://fakelftp:poiPOI098@31.44.91.154/GoodsPictures/img.jpg");
             // товар без вариантов → default-вариант с ценой
             assertThat(p.getVariants()).hasSize(1);
             assertThat(p.getVariants().get(0).getPrice()).isEqualByComparingTo("9267");

@@ -22,7 +22,6 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -122,7 +121,7 @@ class CartControllerTest extends BaseIntegrationTest {
             Map<Long, ProductDto> products = Map.of(
                     PRODUCT_ID, buildProduct(PRODUCT_ID, "Доска обрезная", "1500.00"));
 
-            when(cartService.addItemToCart(USER_ID, PRODUCT_ID, null, 5)).thenReturn(cart);
+            when(cartService.addItemToCart(USER_ID, PRODUCT_ID, 5)).thenReturn(cart);
             when(cartService.fetchProductsForCart(cart)).thenReturn(products);
 
             String json = """
@@ -140,7 +139,7 @@ class CartControllerTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.items[0].quantity").value(5))
                     .andExpect(jsonPath("$.totalItems").value(5));
 
-            verify(cartService).addItemToCart(USER_ID, PRODUCT_ID, null, 5);
+            verify(cartService).addItemToCart(USER_ID, PRODUCT_ID, 5);
         }
 
         @Test
@@ -196,7 +195,7 @@ class CartControllerTest extends BaseIntegrationTest {
         @Test
         @DisplayName("404 Not Found — товар не найден")
         void shouldReturn404WhenProductNotFound() throws Exception {
-            when(cartService.addItemToCart(eq(USER_ID), eq(999L), isNull(), eq(1)))
+            when(cartService.addItemToCart(eq(USER_ID), eq(999L), eq(1)))
                     .thenThrow(new ProductNotFoundException("Product is not available: 999"));
 
             String json = """
@@ -216,7 +215,7 @@ class CartControllerTest extends BaseIntegrationTest {
         @Test
         @DisplayName("409 Conflict — недостаточно товара на складе")
         void shouldReturn409WhenInsufficientStock() throws Exception {
-            when(cartService.addItemToCart(eq(USER_ID), eq(PRODUCT_ID), isNull(), eq(1000)))
+            when(cartService.addItemToCart(eq(USER_ID), eq(PRODUCT_ID), eq(1000)))
                     .thenThrow(new InsufficientStockException("Not enough stock"));
 
             String json = """
