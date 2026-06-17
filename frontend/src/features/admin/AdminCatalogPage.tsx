@@ -846,7 +846,7 @@ const AdminCatalogPage = () => {
                                             <th>Название</th>
                                             <th style={{ width: 160 }}>Категория</th>
                                             <th style={{ width: 100 }}>Артикул</th>
-                                            <th style={{ width: 110 }}>Цена</th>
+                                            <th style={{ width: 130 }}>Цена</th>
                                             <th style={{ width: 55 }}>Ост.</th>
                                             <th style={{ width: 55 }}>Акт.</th>
                                             <th style={{ width: 40 }}></th>
@@ -1023,7 +1023,12 @@ const AdminCatalogPage = () => {
 
                                                     {/* Price */}
                                                     <td className="rf-tabular" style={{ fontWeight: 500 }}>
-                                                        {formatPrice(product.price)}
+                                                        {formatPrice(product.wholesalePrice ?? product.price)}
+                                                        {product.price != null && product.price !== product.wholesalePrice && (
+                                                            <div style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-secondary, #888)', marginTop: 1 }}>
+                                                                {formatPrice(product.price)} опт
+                                                            </div>
+                                                        )}
                                                     </td>
 
                                                     {/* Stock */}

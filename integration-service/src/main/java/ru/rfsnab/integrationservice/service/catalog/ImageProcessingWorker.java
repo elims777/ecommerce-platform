@@ -71,10 +71,7 @@ public class ImageProcessingWorker {
             String webpFileName = buildWebpFileName(task.getOriginalFilename());
             uploadToProductService(task.getProductExternalId(), webpBytes, webpFileName);
 
-            // 3. Удаление оригинала
-            deleteOriginal(sourceFile);
-
-            // 4. Успех
+            // 3. Успех (оригинал не удаляем — чистится по расписанию в CatalogFileService)
             completeTask(task);
             log.debug("Изображение обработано: taskId={}, размер WebP={}KB",
                     task.getId(), webpBytes.length / 1024);

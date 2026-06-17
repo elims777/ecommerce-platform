@@ -362,8 +362,8 @@ class CategoryServiceTest {
         }
 
         @Test
-        @DisplayName("обновляет имя существующей категории")
-        void upsertByExternalId_ExistingCategory_UpdatesName() {
+        @DisplayName("не перезаписывает имя и родителя существующей категории")
+        void upsertByExternalId_ExistingCategory_DoesNotOverride() {
             // Given
             Category existing = Category.builder()
                     .id(5L).externalId("UUID-002").name("Старое название").slug("staroe-nazvanie").build();
@@ -374,8 +374,8 @@ class CategoryServiceTest {
             // When
             Category result = categoryService.upsertByExternalId("UUID-002", "Новое название", null);
 
-            // Then
-            assertThat(result.getName()).isEqualTo("Новое название");
+            // Then — имя и parent не изменились
+            assertThat(result.getName()).isEqualTo("Старое название");
             assertThat(result.getId()).isEqualTo(5L);
         }
 

@@ -42,7 +42,7 @@ const AdminProductEditPage = () => {
     const productId = Number(id);
 
     const [form, setForm] = useState<ProductRequest>({
-        name: '', description: '', shortDescription: '', price: 0,
+        name: '', description: '', shortDescription: '', price: 0, wholesalePrice: null,
         stockQuantity: 0, categoryId: undefined, isActive: true,
         isFeatured: false, sku: '', unitOfMeasure: '', material: '',
     });
@@ -73,6 +73,7 @@ const AdminProductEditPage = () => {
                 description: product.description || '',
                 shortDescription: product.shortDescription || '',
                 price: product.price,
+                wholesalePrice: product.wholesalePrice ?? null,
                 stockQuantity: product.stockQuantity,
                 categoryId: product.categoryId,
                 isActive: product.isActive,
@@ -228,9 +229,20 @@ const AdminProductEditPage = () => {
                                 />
                             </label>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
                                 <label style={labelStyle}>
-                                    <span style={labelTextStyle}>Цена, ₽</span>
+                                    <span style={labelTextStyle}>Цена розн., ₽</span>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        step={0.01}
+                                        style={inputStyle}
+                                        value={form.wholesalePrice ?? ''}
+                                        onChange={(e) => { setForm((f) => ({ ...f, wholesalePrice: e.target.value === '' ? null : Number(e.target.value) })); setFormTouched(true); }}
+                                    />
+                                </label>
+                                <label style={labelStyle}>
+                                    <span style={labelTextStyle}>Цена опт., ₽</span>
                                     <input
                                         type="number"
                                         min={0}

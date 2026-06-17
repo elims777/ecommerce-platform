@@ -122,6 +122,38 @@ public class CatalogFileService {
     }
 
     /**
+     * Удаление файлов из import_files/ старше 24 часов.
+     * Оригиналы не удаляются сразу после обработки — чтобы 1С не присылала их повторно.
+     * Запускается раз в сутки в 04:00.
+     */
+    @Scheduled(cron = "0 0 4 * * *")
+    public void purgeOldImportFiles() {
+        Path importFilesDir = Paths.get(properties.getCommerceml().getTempDir()).resolve("import_files");
+        if (!Files.exists(importFilesDir)) return;
+
+        Instant cutoff = Instant.now().minus(1, ChronoUnit.DAYS);
+        try (var stream = Files.walk(importFilesDir)) {
+            stream.filter(Files::isRegularFile)
+                    .filter(path -> {
+                        try {
+                            return Files.getLastModifiedTime(path).toInstant().isBefore(cutoff);
+                        } catch (IOException e) {
+                            return false;
+                        }
+                    })
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            log.warn("Не удалось удалить устаревший файл изображения {}: {}", path, e.getMessage());
+                        }
+                    });
+        } catch (IOException e) {
+            log.warn("Ошибка при очистке import_files: {}", e.getMessage());
+        }
+    }
+
+    /**
      * Удаление папок из archive/, которым больше 14 дней.
      * Каждая папка = одна сессия обмена (имя = sessionId).
      * Запускается раз в сутки в 03:00.

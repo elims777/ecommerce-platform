@@ -7,6 +7,7 @@ export interface ProductRequest {
     description?: string;
     shortDescription?: string;
     price?: number;
+    wholesalePrice?: number | null;
     stockQuantity?: number;
     categoryId?: number | null;
     isActive?: boolean;
