@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
+    DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors,
     type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core';
 import {
@@ -86,7 +86,7 @@ const CategoryTreeItem = ({ cat, selectedId, onSelect, isDraggingId }: TreeItemP
                     ref={setActivatorNodeRef}
                     {...listeners}
                     {...attributes}
-                    style={{ cursor: 'grab', color: 'var(--ink-2)', padding: '0 4px', touchAction: 'none', flexShrink: 0 }}
+                    style={{ cursor: 'grab', color: '#000', padding: '0 4px', touchAction: 'none', flexShrink: 0, display: 'inline-flex', background: 'red', minWidth: 20, minHeight: 20 }}
                     title="Перетащить"
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -245,7 +245,10 @@ const AdminCategoriesPage = () => {
 
     // ─── DnD ────────────────────────────────────────────────────────────────
 
-    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+    const sensors = useSensors(
+        useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    );
 
     // Найти уровень (siblings) к которому принадлежит activeId
     const findSiblings = (activeId: number): CategoryTree[] => {
