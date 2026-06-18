@@ -4,7 +4,7 @@ import { ShoppingCartOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getProductById } from '@/api/products';
-import type { ProductImage, ProductVariant } from '@/types/product';
+import type { ProductImage, ProductChild } from '@/types/product';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDisplayPrice } from '@/utils/priceUtils';
@@ -26,17 +26,22 @@ const sortImages = (images: ProductImage[]): ProductImage[] =>
 
 const ATTR_ORDER = ['Размер', 'Рост'];
 
-const VariantAttrs = ({ variant }: { variant: ProductVariant }) => {
-    if (!variant.attributes) return <span>—</span>;
-    const parts = ATTR_ORDER.filter(k => variant.attributes![k]);
-    if (parts.length === 0) return <span>{Object.values(variant.attributes).join(' / ')}</span>;
+const VariantAttrs = ({ variant }: { variant: ProductChild }) => {
+    const attrMap = variant.attributes
+        ? Object.fromEntries(variant.attributes.map(a => [a.attributeName, a.attributeValue]))
+        : {};
+    const parts = ATTR_ORDER.filter(k => attrMap[k]);
+    if (parts.length === 0) {
+        const vals = Object.values(attrMap);
+        return <span>{vals.length > 0 ? vals.join(' / ') : '—'}</span>;
+    }
     return (
         <span>
             {parts.map((k, i) => (
                 <span key={k}>
                     {i > 0 && <br />}
                     <span style={{ color: 'var(--ink-3)', fontSize: 'var(--text-xs)' }}>{k}: </span>
-                    {variant.attributes![k]}
+                    {attrMap[k]}
                 </span>
             ))}
         </span>
@@ -59,10 +64,10 @@ const ProductPage = () => {
         enabled: !!id,
     });
 
-    const hasVariants = (product?.variants?.length ?? 0) > 1;
+    const hasVariants = (product?.children?.length ?? 0) > 0;
     const activeVariants = useMemo(
-        () => (product?.variants ?? []).filter(v => v.isActive),
-        [product?.variants],
+        () => (product?.children ?? []).filter(v => v.isActive),
+        [product?.children],
     );
 
     const activeStock = product?.stockQuantity ?? 0;

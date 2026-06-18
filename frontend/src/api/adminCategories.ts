@@ -7,6 +7,7 @@ export interface CategoryRequest {
     description?: string;
     parentId?: number | null;
     externalId?: string;
+    displayOrder?: number;
 }
 
 /** Получить дерево категорий */
@@ -54,4 +55,9 @@ export const deactivateCategory = async (id: number): Promise<Category> => {
 export const setCategoryParent = async (id: number, parentId: number): Promise<Category> => {
     const { data } = await apiClient.put<Category>(`/v1/categories/${id}/parent/${parentId}`);
     return data;
+};
+
+/** Обновить displayOrder для нескольких категорий одним запросом */
+export const reorderCategories = async (orders: Record<number, number>): Promise<void> => {
+    await apiClient.patch('/v1/categories/reorder', orders);
 };

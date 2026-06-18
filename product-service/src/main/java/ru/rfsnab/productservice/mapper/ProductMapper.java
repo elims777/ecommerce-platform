@@ -1,20 +1,18 @@
 package ru.rfsnab.productservice.mapper;
 
+import ru.rfsnab.productservice.dto.ProductDocumentDto;
 import ru.rfsnab.productservice.dto.ProductRequest;
 import ru.rfsnab.productservice.dto.ProductResponse;
-import ru.rfsnab.productservice.dto.ProductVariantDto;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
-import ru.rfsnab.productservice.model.ProductAttribute;
-import ru.rfsnab.productservice.model.ProductVariant;
+import ru.rfsnab.productservice.model.ProductDocument;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ProductMapper {
 
-    public static Product mapToEntity(ProductRequest productRequest){
+    public static Product mapToEntity(ProductRequest productRequest) {
         return Product.builder()
                 .name(productRequest.getName())
                 .description(productRequest.getDescription())
@@ -41,34 +39,9 @@ public class ProductMapper {
     }
 
     public static ProductResponse mapToResponse(Product product, List<Product> children) {
-        // Варианты из таблицы product_variants
-        List<ProductVariantDto> variants = product.getVariants().stream()
-                .map(ProductMapper::mapVariantToDto)
+        List<ProductResponse> childResponses = children.stream()
+                .map(ProductMapper::mapToResponse)
                 .collect(Collectors.toList());
-
-        // Дочерние товары-варианты: маппим default-вариант каждого дочернего в ProductVariantDto
-        for (Product child : children) {
-            child.getVariants().stream()
-                    .filter(v -> v.getExternalId() != null && v.getExternalId().endsWith("#default"))
-                    .findFirst()
-                    .ifPresent(defaultVariant -> {
-                        Map<String, String> attrs = child.getAttributes().stream()
-                                .collect(Collectors.toMap(
-                                        ProductAttribute::getAttributeName,
-                                        ProductAttribute::getAttributeValue,
-                                        (a, b) -> a));
-                        variants.add(ProductVariantDto.builder()
-                                .id(defaultVariant.getId())
-                                .sku(child.getSku())
-                                .price(defaultVariant.getPrice() != null ? defaultVariant.getPrice() : child.getPrice())
-                                .wholesalePrice(defaultVariant.getWholesalePrice() != null ? defaultVariant.getWholesalePrice() : child.getWholesalePrice())
-                                .stockQuantity(defaultVariant.getStockQuantity())
-                                .attributes(attrs.isEmpty() ? null : attrs)
-                                .isActive(child.getIsActive())
-                                .externalId(defaultVariant.getExternalId())
-                                .build());
-                    });
-        }
 
         ProductResponse.ProductResponseBuilder builder = ProductResponse.builder()
                 .id(product.getId())
@@ -77,6 +50,8 @@ public class ProductMapper {
                 .description(product.getDescription())
                 .shortDescription(product.getShortDescription())
                 .material(product.getMaterial())
+                .barcode(product.getBarcode())
+                .countryOfOrigin(product.getCountryOfOrigin())
                 .price(product.getPrice())
                 .wholesalePrice(product.getWholesalePrice())
                 .stockQuantity(product.getStockQuantity())
@@ -89,13 +64,15 @@ public class ProductMapper {
                 .vatRate(product.getVatRate())
                 .isVariantChild(product.getIsVariantChild())
                 .parentProductId(product.getParentProductId())
+                .displayOrder(product.getDisplayOrder())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .source(product.getSource())
-                .variants(variants)
+                .children(childResponses)
                 .images(product.getImages().stream().map(ImageMapper::mapToResponse).toList())
                 .videos(product.getVideos().stream().map(VideoMapper::mapToResponse).toList())
-                .attributes(product.getAttributes().stream().map(AttributeMapper::mapToResponse).toList());
+                .attributes(product.getAttributes().stream().map(AttributeMapper::mapToResponse).toList())
+                .documents(product.getDocuments().stream().map(ProductMapper::mapDocumentToDto).toList());
 
         if (product.getCategory() != null) {
             builder.categoryId(product.getCategory().getId());
@@ -105,16 +82,13 @@ public class ProductMapper {
         return builder.build();
     }
 
-    public static ProductVariantDto mapVariantToDto(ProductVariant variant) {
-        return ProductVariantDto.builder()
-                .id(variant.getId())
-                .sku(variant.getSku())
-                .price(variant.getPrice())
-                .wholesalePrice(variant.getWholesalePrice())
-                .stockQuantity(variant.getStockQuantity())
-                .attributes(variant.getAttributes())
-                .isActive(variant.getIsActive())
-                .externalId(variant.getExternalId())
+    public static ProductDocumentDto mapDocumentToDto(ProductDocument document) {
+        return ProductDocumentDto.builder()
+                .id(document.getId())
+                .name(document.getName())
+                .url(document.getUrl())
+                .contentType(document.getContentType())
+                .displayOrder(document.getDisplayOrder())
                 .build();
     }
 }

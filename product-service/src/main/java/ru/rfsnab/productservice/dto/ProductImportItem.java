@@ -61,9 +61,30 @@ public class ProductImportItem {
     // Источник товара: INTERNAL (1С), FTK и т.д.
     private String source;
 
+    // ID категории (из дерева ФТК); если null — попадает в import-1c
+    private Long categoryId;
+
+    private String barcode;
+    private String countryOfOrigin;
+
+    // Все изображения товара (пути относительно FTP-корня)
+    private List<String> imagePaths;
+
+    // Дополнительные документы (сертификаты, PDF)
+    private List<ProductDocumentImportItem> documents;
+
+    // Характеристики из ЗначенияСвойств (имя свойства → значение)
+    private Map<String, String> properties;
+
+    // Дочерний товар-вариант: true если это вариант родительского товара
+    private Boolean isVariantChild;
+
+    // externalId родительского товара (для дочерних вариантов)
+    private String parentExternalId;
+
     private List<ProductAttributeImportItem> attributes;
 
-    // Варианты (размер/цвет/рост) — если пусто, используется default-вариант
+    // Варианты (размер/цвет/рост) — дочерние Product записи
     private List<VariantImportItem> variants;
 
     @Getter
@@ -91,7 +112,22 @@ public class ProductImportItem {
         private BigDecimal price;
         private BigDecimal wholesalePrice;
         private Integer stockQuantity;
+        private String barcode;
+        private String countryOfOrigin;
         // {"Размер": "XL", "Рост": "170-176"}
         private Map<String, String> attributes;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ProductDocumentImportItem {
+        @NotBlank
+        private String name;
+        @NotBlank
+        private String filePath;
+        private String contentType;
     }
 }

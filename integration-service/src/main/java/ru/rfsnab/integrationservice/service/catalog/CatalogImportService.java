@@ -19,6 +19,8 @@ import ru.rfsnab.integrationservice.model.ImportLog;
 import ru.rfsnab.integrationservice.model.ImportLog.ImportStatus;
 import ru.rfsnab.integrationservice.model.commerceml.*;
 import ru.rfsnab.integrationservice.repository.ImportLogRepository;
+import ru.rfsnab.integrationservice.service.ftk.FtkCategoryMapper;
+import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.ClassifierData;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -59,11 +61,14 @@ public class CatalogImportService {
     private static final String OFFERS_XML = "offers.xml";
     private static final String BATCH_IMPORT_URI = "/api/v1/products/import/batch";
 
+    private static final String CATALOG_ROOT_SLUG = "import-1c";
+
     private final JAXBContext commerceMlJaxbContext;
     private final RestTemplate productServiceRestTemplate;
     private final IntegrationProperties properties;
     private final ImportLogRepository importLogRepository;
     private final ImageProcessingPool imageProcessingPool;
+    private final FtkCategoryMapper categoryMapper;
 
     /**
      * Запускает полный цикл импорта каталога.
@@ -91,6 +96,13 @@ public class CatalogImportService {
                 return "success";
             }
 
+            // 1.5. Построить дерево категорий из Классификатора
+            categoryMapper.resetCache();
+            ClassifierData classifierData = buildClassifierData(importInfo.getClassifier());
+            categoryMapper.loadClassifier(classifierData, CATALOG_ROOT_SLUG);
+            log.info("Загружен классификатор 1С: {} групп. Session: {}",
+                    classifierData.groupPaths().size(), sessionId);
+
             // 2. Merge: товары + цены/остатки по externalId
             Map<String, Offer> offersById = indexOffers(offersInfo);
             List<PriceType> priceTypes = (offersInfo != null && offersInfo.getOffersPackage() != null)
@@ -105,6 +117,7 @@ public class CatalogImportService {
             log.info("Разбито на {} chunk(ов) по {}. Session: {}", chunks.size(), chunkSize, sessionId);
 
             ImportResult result = sendChunksInParallel(chunks);
+            categoryMapper.resetCache();
 
             // 4. Постановка задач на обработку изображений
             enqueueImageTasks(exchangeDir, products, sessionId);
@@ -224,7 +237,7 @@ public class CatalogImportService {
                                                    Map<String, Offer> offersById,
                                                    List<PriceType> priceTypes) {
         return products.stream()
-                .map(product -> mapToImportItem(product, offersById.get(product.getId()), priceTypes))
+                .map(product -> mapToImportItem(product, offersById.get(product.getId()), priceTypes, categoryMapper))
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -234,18 +247,24 @@ public class CatalogImportService {
      * Числовые поля парсятся здесь, чтобы JAXB-слой не падал на невалидных данных из 1С.
      * price = "Оптовая" (B2B цена), wholesalePrice = "Розничная" (B2C цена).
      */
-    private ProductImportItemDto mapToImportItem(CmlProduct product, Offer offer, List<PriceType> priceTypes) {
+    private ProductImportItemDto mapToImportItem(CmlProduct product, Offer offer,
+                                                  List<PriceType> priceTypes, FtkCategoryMapper mapper) {
         if (product.getId() == null || product.getName() == null) {
             log.warn("Пропущен товар без Ид или Наименования: {}", product.getId());
             return null;
         }
+
+        String firstGroupId = (product.getGroupIds() != null && !product.getGroupIds().isEmpty())
+                ? product.getGroupIds().get(0) : null;
+        Long categoryId = mapper.resolveCategory(firstGroupId);
 
         ProductImportItemDto.ProductImportItemDtoBuilder builder = ProductImportItemDto.builder()
                 .externalId(product.getId())
                 .name(product.getName().trim())
                 .sku(product.getSku())
                 .shortDescription(truncate(product.getDescription(), 1000))
-                .unitOfMeasure(extractUnitOfMeasure(product));
+                .unitOfMeasure(extractUnitOfMeasure(product))
+                .categoryId(categoryId);
 
         if (offer != null) {
             builder.price(extractPriceByType(offer, priceTypes, "Оптовая цена"))
@@ -255,6 +274,32 @@ public class CatalogImportService {
         }
 
         return builder.build();
+    }
+
+    /**
+     * Строит ClassifierData из JAXB Classifier (из import.xml 1С).
+     * Рекурсивно обходит дерево групп, формируя groupPaths и groupParents.
+     */
+    private ClassifierData buildClassifierData(Classifier classifier) {
+        Map<String, String> groupPaths   = new LinkedHashMap<>();
+        Map<String, String> groupParents = new HashMap<>();
+        if (classifier != null && classifier.getGroups() != null) {
+            walkGroups(classifier.getGroups(), null, "", groupPaths, groupParents);
+        }
+        return new ClassifierData(groupPaths, groupParents, Map.of(), Map.of());
+    }
+
+    private void walkGroups(List<Group> groups, String parentUuid, String parentPath,
+                             Map<String, String> paths, Map<String, String> parents) {
+        for (Group group : groups) {
+            if (group.getId() == null || group.getId().isBlank()) continue;
+            String path = parentPath.isBlank() ? group.getName() : parentPath + " > " + group.getName();
+            paths.put(group.getId(), path);
+            parents.put(group.getId(), parentUuid);
+            if (group.getSubGroups() != null && !group.getSubGroups().isEmpty()) {
+                walkGroups(group.getSubGroups(), group.getId(), path, paths, parents);
+            }
+        }
     }
 
     private String extractUnitOfMeasure(CmlProduct product) {

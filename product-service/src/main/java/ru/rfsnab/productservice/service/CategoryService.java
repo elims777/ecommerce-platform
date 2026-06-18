@@ -136,7 +136,6 @@ public class CategoryService {
         Category existing = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена: " + id));
 
-        // Обновляем только непустые поля
         if (updatedCategory.getName() != null) {
             existing.setName(updatedCategory.getName());
         }
@@ -150,10 +149,33 @@ public class CategoryService {
             existing.setDisplayOrder(updatedCategory.getDisplayOrder());
         }
 
+        // Обновляем родителя: null = сделать корневой, id = подвесить под родителя
+        if (updatedCategory.getParent() != null && updatedCategory.getParent().getId() != null) {
+            Category parent = categoryRepository.findById(updatedCategory.getParent().getId())
+                    .orElseThrow(() -> new CategoryNotFoundException("Родительская категория не найдена: " + updatedCategory.getParent().getId()));
+            existing.setParent(parent);
+        } else {
+            existing.setParent(null);
+        }
+
         Category saved = categoryRepository.save(existing);
         refreshCategoryTree();
 
         return saved;
+    }
+
+    /**
+     * Обновить displayOrder для списка категорий одним вызовом
+     */
+    @Transactional
+    public void reorderCategories(Map<Long, Integer> orders) {
+        orders.forEach((id, order) -> {
+            Category cat = categoryRepository.findById(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена: " + id));
+            cat.setDisplayOrder(order);
+            categoryRepository.save(cat);
+        });
+        refreshCategoryTree();
     }
 
     /**
@@ -244,5 +266,38 @@ public class CategoryService {
 
     public boolean existsByParentId(Long categoryId) {
         return categoryRepository.existsByParentId(categoryId);
+    }
+
+    /**
+     * Создать или обновить категорию по externalId (UUID группы из ФТК/1С).
+     * Используется FtkCategoryMapper при импорте для построения дерева категорий.
+     */
+    @Transactional
+    public Category upsertByExternalId(String externalId, String name, Long parentCategoryId) {
+        Category category = categoryRepository.findByExternalId(externalId).orElse(null);
+
+        if (category == null) {
+            String baseSlug = slugGenerator.generateSlug(name);
+            String uniqueSlug = generateUniqueSlug(baseSlug);
+
+            Category parent = parentCategoryId != null
+                    ? categoryRepository.findById(parentCategoryId).orElse(null)
+                    : null;
+
+            category = Category.builder()
+                    .externalId(externalId)
+                    .name(name)
+                    .slug(uniqueSlug)
+                    .isActive(true)
+                    .displayOrder(0)
+                    .parent(parent)
+                    .build();
+        } else {
+            // категория уже существует — не перезаписываем name и parent
+        }
+
+        Category saved = categoryRepository.save(category);
+        refreshCategoryTree();
+        return saved;
     }
 }

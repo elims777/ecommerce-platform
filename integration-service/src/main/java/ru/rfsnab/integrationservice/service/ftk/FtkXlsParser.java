@@ -174,6 +174,9 @@ public class FtkXlsParser {
                 .stockQuantity(0)
                 .attributes(attrs)
                 .vatRate(null)
+                .barcode(null)
+                .countryOfOrigin(null)
+                .deleted(false)
                 .build();
     }
 
@@ -227,25 +230,22 @@ public class FtkXlsParser {
         private final String article;
         private final String name;
         private final String description;
-        private final String categoryPath;
         private final BigDecimal price;
         private final String imagePath;
         private final List<FtkVariant> variants = new ArrayList<>();
 
         BuildContext(String article, String name, String description,
                      String categoryPath, BigDecimal price, String imagePath) {
-            this.article      = article;
-            this.name         = name;
-            this.description  = description;
-            this.categoryPath = categoryPath;
-            this.price        = price;
-            this.imagePath    = imagePath;
+            this.article     = article;
+            this.name        = name;
+            this.description = description;
+            this.price       = price;
+            this.imagePath   = imagePath;
         }
 
         void addVariant(FtkVariant v) { variants.add(v); }
 
         FtkProduct build() {
-            // Если вариантов нет — создаём default-вариант с ценой из строки товара
             List<FtkVariant> effectiveVariants = variants.isEmpty()
                     ? List.of(FtkVariant.builder()
                             .offerUuid(null)
@@ -254,6 +254,9 @@ public class FtkXlsParser {
                             .stockQuantity(0)
                             .attributes(Map.of())
                             .vatRate(null)
+                            .barcode(null)
+                            .countryOfOrigin(null)
+                            .deleted(false)
                             .build())
                     : new ArrayList<>(variants);
 
@@ -262,8 +265,10 @@ public class FtkXlsParser {
                     .article(article)
                     .name(name)
                     .description(description)
-                    .categoryPath(categoryPath)
-                    .imagePath(imagePath)
+                    .groupUuid(null)
+                    .imagePaths(imagePath != null && !imagePath.isEmpty() ? List.of(imagePath) : List.of())
+                    .properties(Map.of())
+                    .unitOfMeasure(null)
                     .variants(effectiveVariants)
                     .build();
         }

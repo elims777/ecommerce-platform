@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.integrationservice.config.IntegrationProperties;
+import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.ClassifierData;
 
 import java.text.Normalizer;
 import java.util.HashMap;
@@ -13,125 +14,135 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * Маппинг пути категорий ФТК ("Спецодежда > Костюмы") → slug категории в product-service.
+ * Строит дерево категорий в product-service из UUID-групп классификатора ФТК.
  *
  * Стратегия:
- * 1. Проверяем локальный кэш (в рамках одного запуска импорта)
- * 2. GET /api/v1/categories/by-slug/{slug} — проверяем существование
- * 3. Если не найдена → POST /api/v1/categories — создаём под корнем FTK
- * 4. Возвращаем slug (null если не удалось)
+ * 1. resetCache() + loadClassifier() перед новым запуском импорта
+ * 2. resolveCategory(groupUuid) → Long categoryId (создаёт при отсутствии)
+ * 3. Иерархия соблюдается: сначала создаётся родитель, потом дочерний
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class FtkCategoryMapper {
 
-    private static final String CATEGORIES_URI = "/api/v1/categories";
-    private static final String BY_SLUG_URI = "/api/v1/categories/by-slug/";
+    private static final String UPSERT_URI   = "/api/v1/categories/upsert-by-external-id";
+    private static final String BY_SLUG_URI  = "/api/v1/categories/by-slug/";
 
     private final RestTemplate productServiceRestTemplate;
     private final IntegrationProperties properties;
 
-    /** Кэш: путь категории → slug, живёт в рамках одного сеанса запуска */
-    private final Map<String, String> slugCache = new HashMap<>();
+    /** Кэш: groupUuid → categoryId в product-service. Живёт один сеанс импорта. */
+    private final Map<String, Long> categoryIdCache = new HashMap<>();
 
-    /**
-     * Сбрасывает кэш перед новым запуском импорта.
-     */
+    private ClassifierData classifierData;
+    private String rootCategorySlug;
+
     public void resetCache() {
-        slugCache.clear();
+        categoryIdCache.clear();
+        classifierData = null;
+        rootCategorySlug = null;
     }
 
     /**
-     * Возвращает slug категории для указанного пути.
-     * Если категория не существует — создаёт. При ошибке — возвращает rootCategorySlug.
+     * Загружает данные классификатора в маппер перед началом импорта.
+     * Использует slug корневой категории из конфигурации (для ФТК).
      */
-    public String resolveSlug(String categoryPath) {
-        if (categoryPath == null || categoryPath.isBlank()) {
-            return properties.getFtk().getRootCategorySlug();
-        }
-
-        if (slugCache.containsKey(categoryPath)) {
-            return slugCache.get(categoryPath);
-        }
-
-        // Берём последний сегмент пути как имя категории
-        String[] parts = categoryPath.split(" > ");
-        String leafName = parts[parts.length - 1].trim();
-        String candidateSlug = toSlug(leafName);
-
-        String resolvedSlug = findOrCreateCategory(candidateSlug, leafName);
-        slugCache.put(categoryPath, resolvedSlug);
-        return resolvedSlug;
+    public void loadClassifier(ClassifierData data) {
+        this.classifierData = data;
+        this.rootCategorySlug = properties.getFtk().getRootCategorySlug();
     }
 
-    private String findOrCreateCategory(String slug, String name) {
+    /**
+     * Загружает данные классификатора с явным slug корневой категории.
+     * Используется для 1С (rootSlug = "import-1c") и других источников.
+     */
+    public void loadClassifier(ClassifierData data, String rootSlug) {
+        this.classifierData = data;
+        this.rootCategorySlug = rootSlug;
+    }
+
+    /**
+     * Возвращает categoryId для UUID группы из классификатора.
+     * Создаёт категорию через product-service если её ещё нет.
+     * При ошибке — возвращает null (товар попадёт в корень FTK).
+     */
+    public Long resolveCategory(String groupUuid) {
+        if (groupUuid == null || classifierData == null) return null;
+        return resolveCategoryRecursive(groupUuid);
+    }
+
+    private Long resolveCategoryRecursive(String uuid) {
+        if (categoryIdCache.containsKey(uuid)) {
+            return categoryIdCache.get(uuid);
+        }
+
+        String name       = classifierData.groupPaths().get(uuid);
+        String parentUuid = classifierData.groupParents().get(uuid);
+
+        // Сначала обеспечиваем существование родителя
+        Long parentId = (parentUuid != null) ? resolveCategoryRecursive(parentUuid) : resolveRootCategoryId();
+
+        String leafName = extractLeafName(name);
+        Long categoryId = upsertCategory(uuid, leafName, parentId);
+
+        if (categoryId != null) {
+            categoryIdCache.put(uuid, categoryId);
+        }
+        return categoryId;
+    }
+
+    private Long upsertCategory(String externalId, String name, Long parentId) {
         String baseUrl = properties.getProductService().getUrl();
-
-        // Проверяем существование
         try {
-            CategoryCheckResponse resp = productServiceRestTemplate.getForObject(
-                    baseUrl + BY_SLUG_URI + slug, CategoryCheckResponse.class
-            );
-            if (resp != null && resp.id() != null) {
-                log.debug("Категория найдена: slug={}", slug);
-                return slug;
-            }
-        } catch (RestClientException e) {
-            // 404 → нужно создать
-        }
-
-        // Создаём под корневой категорией FTK
-        return createCategory(name, slug, baseUrl);
-    }
-
-    private String createCategory(String name, String slug, String baseUrl) {
-        try {
-            Long parentId = resolveRootCategoryId(baseUrl);
             Map<String, Object> request = new HashMap<>();
+            request.put("externalId", externalId);
             request.put("name", name);
-            request.put("slug", slug);
-            request.put("parentId", parentId);
-            request.put("isActive", true);
-            request.put("displayOrder", 0);
+            request.put("parentCategoryId", parentId);
 
-            CategoryCheckResponse created = productServiceRestTemplate.postForObject(
-                    baseUrl + CATEGORIES_URI, request, CategoryCheckResponse.class
-            );
-            if (created != null && created.id() != null) {
-                log.info("Создана категория: name='{}', slug={}", name, slug);
-                return created.slug() != null ? created.slug() : slug;
+            CategoryResponse resp = productServiceRestTemplate.postForObject(
+                    baseUrl + UPSERT_URI, request, CategoryResponse.class);
+
+            if (resp != null && resp.id() != null) {
+                log.debug("Категория upsert: externalId={}, name={}, id={}", externalId, name, resp.id());
+                return resp.id();
             }
         } catch (Exception e) {
-            log.warn("Не удалось создать категорию '{}': {}", name, e.getMessage());
+            log.warn("Не удалось upsert категорию externalId={}, name={}: {}", externalId, name, e.getMessage());
         }
-        return properties.getFtk().getRootCategorySlug();
+        return null;
     }
 
-    private Long resolveRootCategoryId(String baseUrl) {
-        String rootSlug = properties.getFtk().getRootCategorySlug();
+    private Long resolveRootCategoryId() {
+        String slug    = rootCategorySlug != null ? rootCategorySlug : properties.getFtk().getRootCategorySlug();
+        String baseUrl = properties.getProductService().getUrl();
         try {
-            CategoryCheckResponse root = productServiceRestTemplate.getForObject(
-                    baseUrl + BY_SLUG_URI + rootSlug, CategoryCheckResponse.class
-            );
+            CategoryResponse root = productServiceRestTemplate.getForObject(
+                    baseUrl + BY_SLUG_URI + slug, CategoryResponse.class);
             return (root != null) ? root.id() : null;
-        } catch (Exception e) {
-            log.warn("Корневая категория FTK '{}' не найдена", rootSlug);
+        } catch (RestClientException e) {
+            log.warn("Корневая категория '{}' не найдена", slug);
             return null;
         }
     }
 
-    /**
-     * Транслитерация + slug: "Спецодежда" → "spetsodezhda"
-     */
+    /** Берёт последний сегмент пути "А > Б > В" → "В". */
+    private String extractLeafName(String path) {
+        if (path == null) return "Без категории";
+        String[] parts = path.split(" > ");
+        return parts[parts.length - 1].trim();
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Транслитерация slug (оставлена для совместимости с тестами)
+    // ──────────────────────────────────────────────────────────────────────
+
     private static final Pattern NON_ALNUM = Pattern.compile("[^a-z0-9]+");
 
     public static String toSlug(String input) {
         if (input == null) return "category";
         String normalized = Normalizer.normalize(input.toLowerCase(), Normalizer.Form.NFD);
-        // Кириллица → транслит упрощённый через замену
         normalized = transliterate(normalized);
-        // Убираем диакритику и нечитаемые символы
         normalized = normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
         return NON_ALNUM.matcher(normalized).replaceAll("-").replaceAll("-{2,}", "-")
                 .replaceAll("^-|-$", "");
@@ -150,6 +161,5 @@ public class FtkCategoryMapper {
                 .replace("я", "ya");
     }
 
-    /** Минимальный ответ от product-service для категории */
-    private record CategoryCheckResponse(Long id, String slug) {}
+    private record CategoryResponse(Long id, String slug) {}
 }

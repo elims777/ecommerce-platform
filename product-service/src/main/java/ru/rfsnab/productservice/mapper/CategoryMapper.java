@@ -11,6 +11,7 @@ public class CategoryMapper {
                 .name(request.getName())
                 .description(request.getDescription())
                 .externalId(request.getExternalId())
+                .displayOrder(request.getDisplayOrder())
                 .build();
 
         // Устанавливаем parent если указан

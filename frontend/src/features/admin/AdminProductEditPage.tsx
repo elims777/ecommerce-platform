@@ -7,6 +7,7 @@ import { getCategoryTree } from '@/api/categories';
 import {
     updateProduct, uploadImage, deleteImage, setPrimaryImage,
     addAttribute, updateAttribute, deleteAttribute, setParentProduct, searchProducts,
+    updateDisplayOrder,
 } from '@/api/adminProducts';
 import type { ProductRequest, ProductAttributeRequest } from '@/api/adminProducts';
 import type { CategoryTree, ProductImage } from '@/types/product';
@@ -42,7 +43,7 @@ const AdminProductEditPage = () => {
     const productId = Number(id);
 
     const [form, setForm] = useState<ProductRequest>({
-        name: '', description: '', shortDescription: '', price: 0,
+        name: '', description: '', shortDescription: '', price: 0, wholesalePrice: null,
         stockQuantity: 0, categoryId: undefined, isActive: true,
         isFeatured: false, sku: '', unitOfMeasure: '', material: '',
     });
@@ -53,6 +54,8 @@ const AdminProductEditPage = () => {
 
     const [parentSearch, setParentSearch] = useState('');
     const [parentSearchResults, setParentSearchResults] = useState<{ id: number; name: string }[]>([]);
+
+    const [displayOrderValue, setDisplayOrderValue] = useState<number>(0);
 
     const { data: product, isLoading } = useQuery({
         queryKey: ['adminProduct', productId],
@@ -73,6 +76,7 @@ const AdminProductEditPage = () => {
                 description: product.description || '',
                 shortDescription: product.shortDescription || '',
                 price: product.price,
+                wholesalePrice: product.wholesalePrice ?? null,
                 stockQuantity: product.stockQuantity,
                 categoryId: product.categoryId,
                 isActive: product.isActive,
@@ -81,6 +85,7 @@ const AdminProductEditPage = () => {
                 unitOfMeasure: product.unitOfMeasure || '',
                 material: product.material || '',
             });
+            setDisplayOrderValue(product.displayOrder ?? 0);
         }
     }, [product]);
 
@@ -147,6 +152,12 @@ const AdminProductEditPage = () => {
         mutationFn: (parentId: number | null) => setParentProduct(productId, parentId),
         onSuccess: () => { messageApi.success('Сохранено'); invalidateProduct(); setParentSearchResults([]); setParentSearch(''); },
         onError: () => messageApi.error('Ошибка при сохранении'),
+    });
+
+    const displayOrderMutation = useMutation({
+        mutationFn: (order: number) => updateDisplayOrder(productId, order),
+        onSuccess: () => { messageApi.success('Порядок сохранён'); invalidateProduct(); },
+        onError: () => messageApi.error('Ошибка при сохранении порядка'),
     });
 
     const handleParentSearch = async (query: string) => {
@@ -228,9 +239,20 @@ const AdminProductEditPage = () => {
                                 />
                             </label>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
                                 <label style={labelStyle}>
-                                    <span style={labelTextStyle}>Цена, ₽</span>
+                                    <span style={labelTextStyle}>Цена розн., ₽</span>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        step={0.01}
+                                        style={inputStyle}
+                                        value={form.wholesalePrice ?? ''}
+                                        onChange={(e) => { setForm((f) => ({ ...f, wholesalePrice: e.target.value === '' ? null : Number(e.target.value) })); setFormTouched(true); }}
+                                    />
+                                </label>
+                                <label style={labelStyle}>
+                                    <span style={labelTextStyle}>Цена опт., ₽</span>
                                     <input
                                         type="number"
                                         min={0}
@@ -525,6 +547,33 @@ const AdminProductEditPage = () => {
                         </div>
                     </div>
 
+                    {/* Display order card */}
+                    <div className="rf-card" style={{ overflow: 'hidden', marginTop: 16 }}>
+                        <div className="rf-card-header"><h3>Порядок в категории</h3></div>
+                        <div className="rf-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                                Меньше — выше в списке. 0 — по умолчанию.
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    style={{ ...inputStyle, width: 100 }}
+                                    value={displayOrderValue}
+                                    onChange={(e) => setDisplayOrderValue(Number(e.target.value))}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') displayOrderMutation.mutate(displayOrderValue); }}
+                                />
+                                <button
+                                    className="rf-btn rf-btn-sm rf-btn-primary"
+                                    disabled={displayOrderMutation.isPending}
+                                    onClick={() => displayOrderMutation.mutate(displayOrderValue)}
+                                >
+                                    {displayOrderMutation.isPending ? 'Сохранение…' : 'Сохранить'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Parent product card */}
                     <div className="rf-card" style={{ overflow: 'visible', marginTop: 16 }}>
                         <div className="rf-card-header"><h3>Группировка вариантов</h3></div>
@@ -580,10 +629,10 @@ const AdminProductEditPage = () => {
                         </div>
                     </div>
 
-                    {/* Variants card */}
-                    {product.variants && product.variants.length > 0 && (
+                    {/* Children (variants) card */}
+                    {product.children && product.children.length > 0 && (
                         <div className="rf-card" style={{ overflow: 'hidden', marginTop: 16 }}>
-                            <div className="rf-card-header"><h3>Варианты ({product.variants.length})</h3></div>
+                            <div className="rf-card-header"><h3>Варианты ({product.children.length})</h3></div>
                             <div className="rf-admin-table-wrap">
                                 <table className="rf-admin-table">
                                     <thead>
@@ -594,11 +643,12 @@ const AdminProductEditPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {product.variants.map((v) => {
+                                        {product.children.map((v) => {
                                             const ATTR_ORDER = ['Размер', 'Рост'];
-                                            const attrParts = v.attributes
-                                                ? ATTR_ORDER.filter(k => v.attributes![k])
-                                                : [];
+                                            const attrMap = Object.fromEntries(
+                                                (v.attributes ?? []).map(a => [a.attributeName, a.attributeValue])
+                                            );
+                                            const attrParts = ATTR_ORDER.filter(k => attrMap[k]);
                                             const inStock = v.stockQuantity > 0;
                                             return (
                                                 <tr key={v.id}>
@@ -608,10 +658,10 @@ const AdminProductEditPage = () => {
                                                                 <span key={k}>
                                                                     {i > 0 && <br />}
                                                                     <span style={{ color: 'var(--ink-3)', fontSize: 12, fontWeight: 400 }}>{k}: </span>
-                                                                    {v.attributes![k]}
+                                                                    {attrMap[k]}
                                                                 </span>
                                                             ))
-                                                            : (v.attributes ? Object.values(v.attributes).join(' / ') : '—')
+                                                            : (Object.values(attrMap).join(' / ') || '—')
                                                         }
                                                     </td>
                                                     <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: inStock ? 'var(--brand-green)' : 'var(--brand-red)', fontWeight: 500 }}>

@@ -331,6 +331,73 @@ class CategoryServiceTest {
         }
     }
 
+    // ==================== upsertByExternalId() Tests ====================
+
+    @Nested
+    @DisplayName("upsertByExternalId()")
+    class UpsertByExternalIdTests {
+
+        @Test
+        @DisplayName("создаёт новую категорию если externalId не существует")
+        void upsertByExternalId_NewCategory_Creates() {
+            // Given
+            when(categoryRepository.findByExternalId("UUID-001")).thenReturn(Optional.empty());
+            when(slugGenerator.generateSlug("Спецодежда")).thenReturn("specodezhda");
+            when(categoryRepository.existsBySlug("specodezhda")).thenReturn(false);
+            when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> {
+                Category c = inv.getArgument(0);
+                c.setId(10L);
+                return c;
+            });
+            when(categoryRepository.findAll()).thenReturn(List.of());
+
+            // When
+            Category result = categoryService.upsertByExternalId("UUID-001", "Спецодежда", null);
+
+            // Then
+            assertThat(result.getId()).isEqualTo(10L);
+            assertThat(result.getExternalId()).isEqualTo("UUID-001");
+            assertThat(result.getSlug()).isEqualTo("specodezhda");
+            assertThat(result.getIsActive()).isTrue();
+        }
+
+        @Test
+        @DisplayName("не перезаписывает имя и родителя существующей категории")
+        void upsertByExternalId_ExistingCategory_DoesNotOverride() {
+            // Given
+            Category existing = Category.builder()
+                    .id(5L).externalId("UUID-002").name("Старое название").slug("staroe-nazvanie").build();
+            when(categoryRepository.findByExternalId("UUID-002")).thenReturn(Optional.of(existing));
+            when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(categoryRepository.findAll()).thenReturn(List.of());
+
+            // When
+            Category result = categoryService.upsertByExternalId("UUID-002", "Новое название", null);
+
+            // Then — имя и parent не изменились
+            assertThat(result.getName()).isEqualTo("Старое название");
+            assertThat(result.getId()).isEqualTo(5L);
+        }
+
+        @Test
+        @DisplayName("устанавливает родителя при создании категории")
+        void upsertByExternalId_WithParent_SetsParent() {
+            // Given
+            when(categoryRepository.findByExternalId("UUID-003")).thenReturn(Optional.empty());
+            when(slugGenerator.generateSlug("Жилеты")).thenReturn("zhilety");
+            when(categoryRepository.existsBySlug("zhilety")).thenReturn(false);
+            when(categoryRepository.findById(1L)).thenReturn(Optional.of(rootCategory));
+            when(categoryRepository.save(any(Category.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(categoryRepository.findAll()).thenReturn(List.of());
+
+            // When
+            Category result = categoryService.upsertByExternalId("UUID-003", "Жилеты", 1L);
+
+            // Then
+            assertThat(result.getParent()).isEqualTo(rootCategory);
+        }
+    }
+
     // ==================== getCategoryTree() Tests ====================
 
     @Nested

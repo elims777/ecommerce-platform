@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/import/batch").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/external/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/categories/upsert-by-external-id").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
 

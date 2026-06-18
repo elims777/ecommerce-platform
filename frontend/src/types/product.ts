@@ -25,16 +25,19 @@ export interface ProductAttribute {
     attributeValue: string;
 }
 
-/** Вариант товара (размер, рост, цвет и т.д.) */
-export interface ProductVariant {
+/** Дочерний товар-вариант (размер, рост, цвет и т.д.) */
+export interface ProductChild {
     id: number;
+    name: string;
     sku: string | null;
-    price: number | null;
+    price: number;
     wholesalePrice: number | null;
     stockQuantity: number;
-    attributes: Record<string, string> | null;
+    attributes: ProductAttribute[];
     isActive: boolean;
     externalId: string | null;
+    barcode: string | null;
+    countryOfOrigin: string | null;
 }
 
 /** Товар — полный ответ от product-service */
@@ -63,9 +66,10 @@ export interface Product {
     source: string | null;
     isVariantChild: boolean;
     parentProductId: number | null;
+    displayOrder: number;
 
     // Вложенные данные
-    variants: ProductVariant[];
+    children: ProductChild[];
     images: ProductImage[];
     videos: ProductVideo[];
     attributes: ProductAttribute[];

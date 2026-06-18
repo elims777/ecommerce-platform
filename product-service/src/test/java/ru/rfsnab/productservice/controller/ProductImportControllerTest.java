@@ -22,6 +22,7 @@ import ru.rfsnab.productservice.service.StorageService;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -178,5 +179,162 @@ class ProductImportControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /import/batch — варианты создаются как дочерние Product записи")
+    void shouldImportVariantsAsChildProducts() throws Exception {
+        BatchProductImportRequest request = new BatchProductImportRequest(List.of(
+                ProductImportItem.builder()
+                        .externalId("FTK-PARENT-001")
+                        .name("Костюм защитный")
+                        .price(new BigDecimal("5000"))
+                        .wholesalePrice(new BigDecimal("5000"))
+                        .source("FTK")
+                        .variants(List.of(
+                                ProductImportItem.VariantImportItem.builder()
+                                        .externalId("FTK-PARENT-001.001")
+                                        .sku("KZ-001-S")
+                                        .price(new BigDecimal("5000"))
+                                        .wholesalePrice(new BigDecimal("5000"))
+                                        .stockQuantity(10)
+                                        .barcode("4607032891234")
+                                        .countryOfOrigin("Россия")
+                                        .attributes(Map.of("Размер", "S", "Рост", "164-170"))
+                                        .build(),
+                                ProductImportItem.VariantImportItem.builder()
+                                        .externalId("FTK-PARENT-001.002")
+                                        .sku("KZ-001-M")
+                                        .price(new BigDecimal("5100"))
+                                        .wholesalePrice(new BigDecimal("5100"))
+                                        .stockQuantity(15)
+                                        .barcode("4607032891235")
+                                        .countryOfOrigin("Россия")
+                                        .attributes(Map.of("Размер", "M", "Рост", "170-176"))
+                                        .build()
+                        ))
+                        .build()
+        ));
+
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created").value(1))
+                .andExpect(jsonPath("$.failed").value(0));
+
+        // Родительский товар
+        Product parent = productRepository.findAll().stream()
+                .filter(p -> "FTK-PARENT-001".equals(p.getExternalId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(parent.getIsVariantChild()).isFalse();
+
+        // Дочерние товары-варианты как отдельные Product записи
+        List<Product> children = productRepository.findAll().stream()
+                .filter(p -> p.getParentProductId() != null && p.getParentProductId().equals(parent.getId()))
+                .toList();
+        assertThat(children).hasSize(2);
+
+        Product childS = children.stream()
+                .filter(c -> "FTK-PARENT-001.001".equals(c.getExternalId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(childS.getIsVariantChild()).isTrue();
+        assertThat(childS.getSku()).isEqualTo("KZ-001-S");
+        assertThat(childS.getBarcode()).isEqualTo("4607032891234");
+        assertThat(childS.getCountryOfOrigin()).isEqualTo("Россия");
+        assertThat(childS.getStockQuantity()).isEqualTo(10);
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /import/batch — повторный импорт вариантов обновляет дочерние Product")
+    void shouldUpdateChildProductsOnReimport() throws Exception {
+        // Первый импорт
+        BatchProductImportRequest first = new BatchProductImportRequest(List.of(
+                ProductImportItem.builder()
+                        .externalId("FTK-CHILD-TEST")
+                        .name("Куртка зимняя")
+                        .price(new BigDecimal("8000"))
+                        .wholesalePrice(new BigDecimal("8000"))
+                        .source("FTK")
+                        .variants(List.of(
+                                ProductImportItem.VariantImportItem.builder()
+                                        .externalId("FTK-CHILD-TEST.001")
+                                        .sku("KZ-L")
+                                        .price(new BigDecimal("8000"))
+                                        .stockQuantity(5)
+                                        .build()
+                        ))
+                        .build()
+        ));
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(first)))
+                .andExpect(status().isOk());
+
+        // Второй импорт — обновляем цену и остаток варианта
+        BatchProductImportRequest second = new BatchProductImportRequest(List.of(
+                ProductImportItem.builder()
+                        .externalId("FTK-CHILD-TEST")
+                        .name("Куртка зимняя")
+                        .price(new BigDecimal("8000"))
+                        .wholesalePrice(new BigDecimal("8000"))
+                        .source("FTK")
+                        .variants(List.of(
+                                ProductImportItem.VariantImportItem.builder()
+                                        .externalId("FTK-CHILD-TEST.001")
+                                        .sku("KZ-L")
+                                        .price(new BigDecimal("9000"))
+                                        .stockQuantity(20)
+                                        .build()
+                        ))
+                        .build()
+        ));
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(second)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.updated").value(1));
+
+        Product child = productRepository.findAll().stream()
+                .filter(p -> "FTK-CHILD-TEST.001".equals(p.getExternalId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(child.getPrice()).isEqualByComparingTo("9000");
+        assertThat(child.getStockQuantity()).isEqualTo(20);
+        assertThat(child.getIsVariantChild()).isTrue();
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /import/batch — импорт barcode и countryOfOrigin на уровне товара")
+    void shouldImportBarcodeAndCountryOfOrigin() throws Exception {
+        BatchProductImportRequest request = new BatchProductImportRequest(List.of(
+                ProductImportItem.builder()
+                        .externalId("FTK-BARCODE-001")
+                        .name("Перчатки рабочие")
+                        .price(new BigDecimal("350"))
+                        .wholesalePrice(new BigDecimal("350"))
+                        .source("FTK")
+                        .barcode("4600000000001")
+                        .countryOfOrigin("Китай")
+                        .build()
+        ));
+
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created").value(1));
+
+        Product saved = productRepository.findAll().stream()
+                .filter(p -> "FTK-BARCODE-001".equals(p.getExternalId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(saved.getBarcode()).isEqualTo("4600000000001");
+        assertThat(saved.getCountryOfOrigin()).isEqualTo("Китай");
     }
 }

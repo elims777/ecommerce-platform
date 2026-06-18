@@ -26,6 +26,8 @@ public class ProductResponse {
     private Boolean isFeatured;
 
     private String material;
+    private String barcode;
+    private String countryOfOrigin;
 
     //интеграция с 1с
     private String externalId;
@@ -38,12 +40,14 @@ public class ProductResponse {
 
     private Boolean isVariantChild;
     private Long parentProductId;
+    private Integer displayOrder;
 
     // Вложенные данные
-    private List<ProductVariantDto> variants;
+    private List<ProductResponse> children;
     private List<ProductImageResponse> images;
     private List<ProductVideoResponse> videos;
     private List<ProductAttributeResponse> attributes;
+    private List<ProductDocumentDto> documents;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
