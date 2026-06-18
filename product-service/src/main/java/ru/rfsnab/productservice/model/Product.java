@@ -91,6 +91,10 @@ public class Product {
     @Column(name = "parent_product_id")
     private Long parentProductId;
 
+    @Column(name = "display_order", nullable = false)
+    @Builder.Default
+    private Integer displayOrder = 0;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     @Builder.Default

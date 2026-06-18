@@ -16,6 +16,7 @@ import ru.rfsnab.productservice.repository.ProductRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -423,6 +424,31 @@ public class ProductService {
     public Product findByExternalId(String externalId) {
         return productRepository.findByExternalId(externalId).orElseThrow(
                 ()-> new ProductNotFoundException("Товар с id= " + externalId + " не найден"));
+    }
+
+    /**
+     * Обновить порядок отображения товара в категории
+     */
+    @Transactional
+    public Product updateDisplayOrder(Long productId, Integer displayOrder) {
+        log.info("Updating displayOrder for product id={}, order={}", productId, displayOrder);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException(productId));
+        product.setDisplayOrder(displayOrder);
+        return productRepository.save(product);
+    }
+
+    /**
+     * Обновить displayOrder для списка товаров одним вызовом
+     */
+    @Transactional
+    public void reorderProducts(Map<Long, Integer> orders) {
+        orders.forEach((id, order) -> {
+            Product product = productRepository.findById(id)
+                    .orElseThrow(() -> new ProductNotFoundException(id));
+            product.setDisplayOrder(order);
+            productRepository.save(product);
+        });
     }
 
     /**

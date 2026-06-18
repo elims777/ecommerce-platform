@@ -36,17 +36,30 @@ public class FtkCategoryMapper {
     private final Map<String, Long> categoryIdCache = new HashMap<>();
 
     private ClassifierData classifierData;
+    private String rootCategorySlug;
 
     public void resetCache() {
         categoryIdCache.clear();
         classifierData = null;
+        rootCategorySlug = null;
     }
 
     /**
      * Загружает данные классификатора в маппер перед началом импорта.
+     * Использует slug корневой категории из конфигурации (для ФТК).
      */
     public void loadClassifier(ClassifierData data) {
         this.classifierData = data;
+        this.rootCategorySlug = properties.getFtk().getRootCategorySlug();
+    }
+
+    /**
+     * Загружает данные классификатора с явным slug корневой категории.
+     * Используется для 1С (rootSlug = "import-1c") и других источников.
+     */
+    public void loadClassifier(ClassifierData data, String rootSlug) {
+        this.classifierData = data;
+        this.rootCategorySlug = rootSlug;
     }
 
     /**
@@ -101,14 +114,14 @@ public class FtkCategoryMapper {
     }
 
     private Long resolveRootCategoryId() {
-        String rootSlug = properties.getFtk().getRootCategorySlug();
-        String baseUrl  = properties.getProductService().getUrl();
+        String slug    = rootCategorySlug != null ? rootCategorySlug : properties.getFtk().getRootCategorySlug();
+        String baseUrl = properties.getProductService().getUrl();
         try {
             CategoryResponse root = productServiceRestTemplate.getForObject(
-                    baseUrl + BY_SLUG_URI + rootSlug, CategoryResponse.class);
+                    baseUrl + BY_SLUG_URI + slug, CategoryResponse.class);
             return (root != null) ? root.id() : null;
         } catch (RestClientException e) {
-            log.warn("Корневая категория FTK '{}' не найдена", rootSlug);
+            log.warn("Корневая категория '{}' не найдена", slug);
             return null;
         }
     }
