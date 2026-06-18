@@ -7,6 +7,7 @@ import { getCategoryTree } from '@/api/categories';
 import {
     updateProduct, uploadImage, deleteImage, setPrimaryImage,
     addAttribute, updateAttribute, deleteAttribute, setParentProduct, searchProducts,
+    updateDisplayOrder,
 } from '@/api/adminProducts';
 import type { ProductRequest, ProductAttributeRequest } from '@/api/adminProducts';
 import type { CategoryTree, ProductImage } from '@/types/product';
@@ -54,6 +55,8 @@ const AdminProductEditPage = () => {
     const [parentSearch, setParentSearch] = useState('');
     const [parentSearchResults, setParentSearchResults] = useState<{ id: number; name: string }[]>([]);
 
+    const [displayOrderValue, setDisplayOrderValue] = useState<number>(0);
+
     const { data: product, isLoading } = useQuery({
         queryKey: ['adminProduct', productId],
         queryFn: () => getProductById(productId),
@@ -82,6 +85,7 @@ const AdminProductEditPage = () => {
                 unitOfMeasure: product.unitOfMeasure || '',
                 material: product.material || '',
             });
+            setDisplayOrderValue(product.displayOrder ?? 0);
         }
     }, [product]);
 
@@ -148,6 +152,12 @@ const AdminProductEditPage = () => {
         mutationFn: (parentId: number | null) => setParentProduct(productId, parentId),
         onSuccess: () => { messageApi.success('Сохранено'); invalidateProduct(); setParentSearchResults([]); setParentSearch(''); },
         onError: () => messageApi.error('Ошибка при сохранении'),
+    });
+
+    const displayOrderMutation = useMutation({
+        mutationFn: (order: number) => updateDisplayOrder(productId, order),
+        onSuccess: () => { messageApi.success('Порядок сохранён'); invalidateProduct(); },
+        onError: () => messageApi.error('Ошибка при сохранении порядка'),
     });
 
     const handleParentSearch = async (query: string) => {
@@ -534,6 +544,33 @@ const AdminProductEditPage = () => {
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Display order card */}
+                    <div className="rf-card" style={{ overflow: 'hidden', marginTop: 16 }}>
+                        <div className="rf-card-header"><h3>Порядок в категории</h3></div>
+                        <div className="rf-card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                                Меньше — выше в списке. 0 — по умолчанию.
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    style={{ ...inputStyle, width: 100 }}
+                                    value={displayOrderValue}
+                                    onChange={(e) => setDisplayOrderValue(Number(e.target.value))}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') displayOrderMutation.mutate(displayOrderValue); }}
+                                />
+                                <button
+                                    className="rf-btn rf-btn-sm rf-btn-primary"
+                                    disabled={displayOrderMutation.isPending}
+                                    onClick={() => displayOrderMutation.mutate(displayOrderValue)}
+                                >
+                                    {displayOrderMutation.isPending ? 'Сохранение…' : 'Сохранить'}
+                                </button>
+                            </div>
                         </div>
                     </div>
 

@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAdminProducts, searchProducts } from '@/api/products';
 import {
     getCategoryTree,
@@ -11,10 +11,16 @@ import {
     getCategoryById,
     setCategoryParent,
 } from '@/api/adminCategories';
-import { batchUpdateActive, changeProductCategory, bulkDeleteProducts, setParentProduct, searchProducts as searchProductsApi } from '@/api/adminProducts';
+import { batchUpdateActive, changeProductCategory, bulkDeleteProducts, setParentProduct, searchProducts as searchProductsApi, reorderProducts } from '@/api/adminProducts';
 import apiClient from '@/api/client';
 import type { CategoryRequest } from '@/api/adminCategories';
 import type { Product, CategoryTree } from '@/types/product';
+import {
+    DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
+    type DragEndEvent, type DragStartEvent,
+} from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const ALPHABET = 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЭЮЯ'.split('');
 
@@ -156,19 +162,54 @@ interface CatFormState {
 
 const EMPTY_CAT_FORM: CatFormState = { name: '', description: '', parentId: '' };
 
+// ── Sortable строка товара ────────────────────────────────────────────────────
+
+interface SortableRowProps {
+    id: number;
+    disabled: boolean;
+    children: (dragHandleProps: {
+        trRef: (node: HTMLElement | null) => void;
+        handleRef: (node: HTMLElement | null) => void;
+        listeners: Record<string, unknown> | undefined;
+        attributes: Record<string, unknown> | undefined;
+        isDragging: boolean;
+        style: React.CSSProperties;
+    }) => React.ReactNode;
+}
+
+const SortableRow = ({ id, disabled, children }: SortableRowProps) => {
+    const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+    };
+    return <>{children({ trRef: setNodeRef, handleRef: setActivatorNodeRef, listeners: listeners as Record<string, unknown>, attributes: attributes as Record<string, unknown>, isDragging, style })}</>;
+};
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 const AdminCatalogPage = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { message: messageApi } = App.useApp();
     const queryClient = useQueryClient();
 
+    // selectedCategoryId хранится в URL (?category=N) — сохраняется при F5
+    const selectedCategoryId = searchParams.get('category') ? Number(searchParams.get('category')) : undefined;
+    const setSelectedCategoryId = (id: number | undefined) => {
+        setSearchParams(id ? { category: String(id) } : {}, { replace: true });
+    };
+
     // State
-    const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
     const [searchQuery, setSearchQuery] = useState('');
     const [activeLetter, setActiveLetter] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [showAllProducts, setShowAllProducts] = useState(true);
+    const [showAllProducts, setShowAllProducts] = useState(!selectedCategoryId);
+    const [draggingProductId, setDraggingProductId] = useState<number | null>(null);
+
+    const sortOrder = selectedCategoryId ? 'displayOrder,asc' : 'name,asc';
+    const dndEnabled = !!selectedCategoryId && !searchQuery;
 
     // Category modal
     const catDialogRef = useRef<HTMLDialogElement>(null);
@@ -226,13 +267,13 @@ const AdminCatalogPage = () => {
         isLoading: productsLoading,
         refetch: refetchProducts,
     } = useQuery({
-        queryKey: ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize }],
+        queryKey: ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder }],
         queryFn: () =>
             getAdminProducts({
                 page: currentPage - 1,
                 size: pageSize,
                 categoryId: selectedCategoryId,
-                sort: 'name,asc',
+                sort: sortOrder,
             }),
     });
 
@@ -284,6 +325,57 @@ const AdminCatalogPage = () => {
         queryClient.invalidateQueries({ queryKey: ['adminCategoryTree'] });
         queryClient.invalidateQueries({ queryKey: ['categories'] });
     }, [queryClient]);
+
+    // ── Product DnD ──────────────────────────────────────────────────────────
+
+    const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+    const reorderMutation = useMutation({
+        mutationFn: reorderProducts,
+        onError: () => { messageApi.error('Ошибка при сохранении порядка'); invalidateAll(); },
+    });
+
+    const handleProductDragStart = ({ active }: DragStartEvent) => {
+        setDraggingProductId(active.id as number);
+    };
+
+    const handleProductDragEnd = ({ active, over }: DragEndEvent) => {
+        setDraggingProductId(null);
+        if (!over || active.id === over.id) return;
+
+        const activeId = active.id as number;
+        const overId = over.id as number;
+        const roots = groupedRows.filter((r) => !r.isChild).map((r) => r.product);
+        const oldIndex = roots.findIndex((p) => p.id === activeId);
+        const newIndex = roots.findIndex((p) => p.id === overId);
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        const reordered = arrayMove(roots, oldIndex, newIndex);
+
+        // Оптимистичное обновление кэша
+        queryClient.setQueryData(
+            ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder }],
+            (old: { content: Product[]; totalElements: number } | undefined) => {
+                if (!old) return old;
+                const reorderedIds = new Set(reordered.map((p) => p.id));
+                const children = old.content.filter((p) => p.isVariantChild);
+                const newContent = [
+                    ...reordered.map((p, i) => ({ ...p, displayOrder: i * 10 })),
+                    ...children,
+                ];
+                return { ...old, content: newContent };
+            },
+        );
+
+        // Один запрос на бэк
+        const orders: Record<number, number> = {};
+        reordered.forEach((p, i) => { orders[p.id] = i * 10; });
+        reorderMutation.mutate(orders);
+    };
+
+    const draggingProduct = draggingProductId
+        ? groupedRows.find((r) => r.product.id === draggingProductId)?.product
+        : null;
 
     // ── Category mutations ────────────────────────────────────────────────────
 
@@ -787,6 +879,7 @@ const AdminCatalogPage = () => {
                     <div className="rf-card">
                         <div className="rf-card-header" style={{ justifyContent: 'space-between' }}>
                             <h3>{pageTitle}</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             {isPaginated && totalPages > 1 && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <select
@@ -817,6 +910,7 @@ const AdminCatalogPage = () => {
                                     </div>
                                 </div>
                             )}
+                            </div>
                         </div>
 
                         {/* Table */}
@@ -830,6 +924,15 @@ const AdminCatalogPage = () => {
                                     Товары не найдены
                                 </div>
                             ) : (
+                                <DndContext
+                                    sensors={dndSensors}
+                                    onDragStart={handleProductDragStart}
+                                    onDragEnd={handleProductDragEnd}
+                                >
+                                <SortableContext
+                                    items={groupedRows.filter((r) => !r.isChild).map((r) => r.product.id)}
+                                    strategy={verticalListSortingStrategy}
+                                >
                                 <table className="rf-admin-table">
                                     <thead>
                                         <tr>
@@ -842,6 +945,7 @@ const AdminCatalogPage = () => {
                                                 />
                                             </th>
                                             <th style={{ width: 20 }}></th>
+                                            {dndEnabled && <th style={{ width: 24 }}></th>}
                                             <th style={{ width: 44 }}></th>
                                             <th>Название</th>
                                             <th style={{ width: 160 }}>Категория</th>
@@ -859,10 +963,12 @@ const AdminCatalogPage = () => {
                                             const isMovingThis = moveProductId === product.id;
                                             const isCollapsed = !isChild && collapsedParents.has(product.id);
                                             return (
-                                                <tr
-                                                    key={product.id}
-                                                    style={isChild ? { background: 'var(--surface-2)' } : undefined}
-                                                >
+                                                <SortableRow key={product.id} id={product.id} disabled={!dndEnabled || isChild}>
+                                                    {({ trRef, handleRef, listeners: rowListeners, attributes: rowAttributes, isDragging: rowDragging, style: rowStyle }) => (
+                                                        <tr
+                                                            ref={trRef as React.Ref<HTMLTableRowElement>}
+                                                            style={{ ...(isChild ? { background: 'var(--surface-2)' } : {}), ...rowStyle }}
+                                                        >
                                                     {/* Checkbox */}
                                                     <td style={{ paddingLeft: 16 }}>
                                                         <input
@@ -887,6 +993,30 @@ const AdminCatalogPage = () => {
                                                             </button>
                                                         )}
                                                     </td>
+
+                                                    {/* Drag handle — только в режиме сортировки */}
+                                                    {dndEnabled && (
+                                                        <td style={{ width: 24, padding: '0 4px', textAlign: 'center' }}>
+                                                            {!isChild && (
+                                                                <span
+                                                                    ref={handleRef as React.Ref<HTMLSpanElement>}
+                                                                    {...rowListeners}
+                                                                    {...rowAttributes}
+                                                                    style={{ cursor: rowDragging ? 'grabbing' : 'grab', color: 'var(--ink-2)', display: 'inline-flex', touchAction: 'none' }}
+                                                                    title="Перетащить"
+                                                                >
+                                                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                                                        <circle cx="4" cy="2.5" r="1" fill="currentColor"/>
+                                                                        <circle cx="8" cy="2.5" r="1" fill="currentColor"/>
+                                                                        <circle cx="4" cy="6" r="1" fill="currentColor"/>
+                                                                        <circle cx="8" cy="6" r="1" fill="currentColor"/>
+                                                                        <circle cx="4" cy="9.5" r="1" fill="currentColor"/>
+                                                                        <circle cx="8" cy="9.5" r="1" fill="currentColor"/>
+                                                                    </svg>
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                    )}
 
                                                     {/* Image */}
                                                     <td style={{ paddingLeft: isChild ? 4 : 0 }}>
@@ -1068,10 +1198,27 @@ const AdminCatalogPage = () => {
                                                         </button>
                                                     </td>
                                                 </tr>
+                                            )}
+                                            </SortableRow>
                                             );
                                         })}
                                     </tbody>
                                 </table>
+                                </SortableContext>
+                                <DragOverlay>
+                                    {draggingProduct && (
+                                        <table className="rf-admin-table" style={{ background: 'var(--surface)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', borderRadius: 4, opacity: 0.95 }}>
+                                            <tbody>
+                                                <tr>
+                                                    <td colSpan={10} style={{ padding: '6px 12px', fontSize: 13, fontWeight: 500, color: 'var(--ink-1)', whiteSpace: 'nowrap' }}>
+                                                        {draggingProduct.name}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    )}
+                                </DragOverlay>
+                                </DndContext>
                             )}
                         </div>
 

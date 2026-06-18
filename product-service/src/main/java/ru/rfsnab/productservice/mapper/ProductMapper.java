@@ -64,6 +64,7 @@ public class ProductMapper {
                 .vatRate(product.getVatRate())
                 .isVariantChild(product.getIsVariantChild())
                 .parentProductId(product.getParentProductId())
+                .displayOrder(product.getDisplayOrder())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .source(product.getSource())

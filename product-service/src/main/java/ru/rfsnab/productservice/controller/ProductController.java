@@ -15,6 +15,7 @@ import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.service.ProductService;
 
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -63,6 +64,24 @@ public class ProductController {
         Product product = productService.getProductBySlug(slug);
         List<Product> children = productService.getChildren(product.getId());
         return ResponseEntity.ok(ProductMapper.mapToResponse(product, children));
+    }
+
+    /**
+     * Обновить порядок отображения товара в категории
+     */
+    @PatchMapping("/reorder")
+    public ResponseEntity<Void> reorderProducts(@RequestBody Map<Long, Integer> orders) {
+        productService.reorderProducts(orders);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/display-order")
+    public ResponseEntity<ProductResponse> updateDisplayOrder(
+            @PathVariable Long id,
+            @RequestBody Map<String, Integer> body
+    ) {
+        Product product = productService.updateDisplayOrder(id, body.get("displayOrder"));
+        return ResponseEntity.ok(ProductMapper.mapToResponse(product));
     }
 
     /**

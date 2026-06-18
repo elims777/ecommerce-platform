@@ -2,11 +2,22 @@ import { useState, useRef } from 'react';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+    DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
+    type DragEndEvent, type DragStartEvent,
+} from '@dnd-kit/core';
+import {
+    SortableContext, verticalListSortingStrategy,
+    useSortable, arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
     getCategoryTree, getCategoryById, createCategory, updateCategory,
-    deleteCategory, activateCategory, deactivateCategory,
+    deleteCategory, activateCategory, deactivateCategory, reorderCategories,
 } from '@/api/adminCategories';
 import type { CategoryRequest } from '@/api/adminCategories';
 import type { CategoryTree } from '@/types/product';
+
+// ─── Утилиты ─────────────────────────────────────────────────────────────────
 
 const flattenForSelect = (
     categories: CategoryTree[],
@@ -24,48 +35,121 @@ const flattenForSelect = (
     return result;
 };
 
+const findInTree = (tree: CategoryTree[], id: number): CategoryTree | null => {
+    for (const node of tree) {
+        if (node.id === id) return node;
+        const found = findInTree(node.children, id);
+        if (found) return found;
+    }
+    return null;
+};
+
+// ─── Sortable-узел дерева ─────────────────────────────────────────────────────
+
 interface TreeItemProps {
     cat: CategoryTree;
     selectedId: number | null;
     onSelect: (id: number) => void;
+    isDraggingId: number | null;
 }
 
-const CategoryTreeItem = ({ cat, selectedId, onSelect }: TreeItemProps) => (
-    <li style={{ listStyle: 'none' }}>
-        <div
-            onClick={() => onSelect(cat.id)}
-            style={{
-                padding: '6px 10px',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 13,
-                background: selectedId === cat.id ? 'var(--red-tint)' : 'transparent',
-                color: selectedId === cat.id ? 'var(--brand-red)' : 'var(--ink-1)',
-                fontWeight: selectedId === cat.id ? 600 : 400,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-            }}
-        >
-            <svg width="13" height="13" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0, color: 'var(--ink-3)' }}>
-                <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.879a1.5 1.5 0 0 1 1.06.44L8.5 3.5H12.5A1.5 1.5 0 0 1 14 5v6a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11V3.5Z" stroke="currentColor" strokeWidth="1.2"/>
-            </svg>
-            <span>{cat.name}</span>
-            {!cat.isActive && (
-                <span style={{ fontSize: 11, color: 'var(--ink-3)', marginLeft: 4 }}>(скрыта)</span>
+const CategoryTreeItem = ({ cat, selectedId, onSelect, isDraggingId }: TreeItemProps) => {
+    const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id });
+
+    const liStyle: React.CSSProperties = {
+        listStyle: 'none',
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+    };
+
+    return (
+        <li ref={setNodeRef} style={liStyle}>
+            <div
+                onClick={() => !isDragging && onSelect(cat.id)}
+                style={{
+                    padding: '5px 8px',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    background: selectedId === cat.id ? 'var(--surface-2, #f5f5f5)' : 'transparent',
+                    color: selectedId === cat.id ? 'var(--brand-red)' : 'var(--ink-1)',
+                    fontWeight: selectedId === cat.id ? 600 : 400,
+                    userSelect: 'none',
+                }}
+            >
+                {/* setActivatorNodeRef — handle откуда начинается drag, setNodeRef на li — границы элемента */}
+                <span
+                    ref={setActivatorNodeRef}
+                    {...listeners}
+                    {...attributes}
+                    style={{ cursor: 'grab', color: 'var(--ink-2)', padding: '0 4px', touchAction: 'none', flexShrink: 0 }}
+                    title="Перетащить"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <circle cx="4" cy="2.5" r="1" fill="currentColor"/>
+                        <circle cx="8" cy="2.5" r="1" fill="currentColor"/>
+                        <circle cx="4" cy="6" r="1" fill="currentColor"/>
+                        <circle cx="8" cy="6" r="1" fill="currentColor"/>
+                        <circle cx="4" cy="9.5" r="1" fill="currentColor"/>
+                        <circle cx="8" cy="9.5" r="1" fill="currentColor"/>
+                    </svg>
+                </span>
+
+                <svg width="13" height="13" viewBox="0 0 15 15" fill="none" style={{ flexShrink: 0, color: 'var(--ink-3)' }}>
+                    <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.879a1.5 1.5 0 0 1 1.06.44L8.5 3.5H12.5A1.5 1.5 0 0 1 14 5v6a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11V3.5Z" stroke="currentColor" strokeWidth="1.2"/>
+                </svg>
+                <span style={{ flex: 1 }}>{cat.name}</span>
+                {!cat.isActive && (
+                    <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>(скрыта)</span>
+                )}
+            </div>
+
+            {/* Дочерние категории — свой SortableContext на каждый уровень */}
+            {cat.children.length > 0 && (
+                <SortableCategoryLevel
+                    categories={[...cat.children].sort((a, b) => a.displayOrder - b.displayOrder)}
+                    selectedId={selectedId}
+                    onSelect={onSelect}
+                    isDraggingId={isDraggingId}
+                    paddingLeft={18}
+                />
             )}
-        </div>
-        {cat.children.length > 0 && (
-            <ul style={{ paddingLeft: 16, margin: 0 }}>
-                {cat.children
-                    .sort((a, b) => a.displayOrder - b.displayOrder)
-                    .map((child) => (
-                        <CategoryTreeItem key={child.id} cat={child} selectedId={selectedId} onSelect={onSelect} />
-                    ))}
-            </ul>
-        )}
-    </li>
+        </li>
+    );
+};
+
+// ─── Один уровень дерева с SortableContext ────────────────────────────────────
+
+interface LevelProps {
+    categories: CategoryTree[];
+    selectedId: number | null;
+    onSelect: (id: number) => void;
+    isDraggingId: number | null;
+    paddingLeft?: number;
+}
+
+const SortableCategoryLevel = ({ categories, selectedId, onSelect, isDraggingId, paddingLeft = 0 }: LevelProps) => (
+    <SortableContext items={categories.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+        <ul style={{ margin: 0, padding: 0, paddingLeft }}>
+            {categories.map((cat) => (
+                <CategoryTreeItem
+                    key={cat.id}
+                    cat={cat}
+                    selectedId={selectedId}
+                    onSelect={onSelect}
+                    isDraggingId={isDraggingId}
+                />
+            ))}
+        </ul>
+    </SortableContext>
 );
+
+// ─── Стили ────────────────────────────────────────────────────────────────────
 
 const selectStyle: React.CSSProperties = {
     width: '100%', height: 34, padding: '0 10px',
@@ -80,6 +164,8 @@ const inputStyle: React.CSSProperties = {
     outline: 'none', boxSizing: 'border-box',
 };
 
+// ─── Страница ─────────────────────────────────────────────────────────────────
+
 const AdminCategoriesPage = () => {
     const { message: messageApi } = App.useApp();
     const queryClient = useQueryClient();
@@ -88,6 +174,7 @@ const AdminCategoriesPage = () => {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [catForm, setCatForm] = useState<CategoryRequest>({ name: '', description: '', parentId: undefined });
+    const [draggingId, setDraggingId] = useState<number | null>(null);
 
     const { data: tree = [], isLoading, refetch } = useQuery({
         queryKey: ['adminCategoryTree'],
@@ -150,6 +237,79 @@ const AdminCategoriesPage = () => {
         onError: () => messageApi.error('Ошибка при обновлении статуса'),
     });
 
+    const reorderMutation = useMutation({
+        mutationFn: reorderCategories,
+        onSuccess: () => invalidate(),
+        onError: () => messageApi.error('Ошибка при сохранении порядка'),
+    });
+
+    // ─── DnD ────────────────────────────────────────────────────────────────
+
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+    // Найти уровень (siblings) к которому принадлежит activeId
+    const findSiblings = (activeId: number): CategoryTree[] => {
+        // Корневой уровень
+        if (tree.some((c) => c.id === activeId)) {
+            return [...tree].sort((a, b) => a.displayOrder - b.displayOrder);
+        }
+        // Ищем родителя
+        const findParentChildren = (nodes: CategoryTree[]): CategoryTree[] | null => {
+            for (const node of nodes) {
+                if (node.children.some((c) => c.id === activeId)) {
+                    return [...node.children].sort((a, b) => a.displayOrder - b.displayOrder);
+                }
+                const found = findParentChildren(node.children);
+                if (found) return found;
+            }
+            return null;
+        };
+        return findParentChildren(tree) ?? [];
+    };
+
+    const handleDragStart = ({ active }: DragStartEvent) => {
+        setDraggingId(active.id as number);
+    };
+
+    const handleDragEnd = ({ active, over }: DragEndEvent) => {
+        setDraggingId(null);
+        if (!over || active.id === over.id) return;
+
+        const activeId = active.id as number;
+        const overId = over.id as number;
+
+        const siblings = findSiblings(activeId);
+        const oldIndex = siblings.findIndex((c) => c.id === activeId);
+        const newIndex = siblings.findIndex((c) => c.id === overId);
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        const reordered = arrayMove(siblings, oldIndex, newIndex);
+
+        // Один запрос на бэк — { id: displayOrder, ... }
+        const orders: Record<number, number> = {};
+        reordered.forEach((cat, i) => { orders[cat.id] = i * 10; });
+        reorderMutation.mutate(orders);
+
+        // Оптимистично обновляем кэш чтобы список не прыгал обратно до ответа сервера
+        queryClient.setQueryData(['adminCategoryTree'], (old: CategoryTree[] | undefined) => {
+            if (!old) return old;
+            const applyReorder = (nodes: CategoryTree[]): CategoryTree[] =>
+                nodes.map((node) => {
+                    if (node.children.some((c) => c.id === activeId)) {
+                        return { ...node, children: reordered.map((c, i) => ({ ...c, displayOrder: i * 10 })) };
+                    }
+                    return { ...node, children: applyReorder(node.children) };
+                });
+
+            if (tree.some((c) => c.id === activeId)) {
+                return reordered.map((c, i) => ({ ...c, displayOrder: i * 10 }));
+            }
+            return applyReorder(old);
+        });
+    };
+
+    // ─── Handlers ───────────────────────────────────────────────────────────
+
     const handleAdd = (parentId?: number) => {
         setEditingId(null);
         setCatForm({ name: '', description: '', parentId });
@@ -179,8 +339,10 @@ const AdminCategoriesPage = () => {
         }
     };
 
+    const draggingCat = draggingId ? findInTree(tree, draggingId) : null;
     const parentOptions = flattenForSelect(tree, editingId || undefined);
     const isPending = createMutation.isPending || updateMutation.isPending;
+    const rootSorted = [...tree].sort((a, b) => a.displayOrder - b.displayOrder);
 
     return (
         <div>
@@ -203,21 +365,52 @@ const AdminCategoriesPage = () => {
             {/* Two-column layout */}
             <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
                 {/* Left: tree */}
-                <div className="rf-card" style={{ flex: '0 0 340px', overflow: 'hidden' }}>
-                    <div className="rf-card-header"><h3>Дерево категорий</h3></div>
-                    <div style={{ padding: '12px 8px', maxHeight: 600, overflowY: 'auto' }}>
+                <div className="rf-card" style={{ flex: '0 0 360px', overflow: 'hidden' }}>
+                    <div className="rf-card-header">
+                        <h3>Дерево категорий</h3>
+                        <span style={{ fontSize: 12, color: 'var(--ink-3)', marginLeft: 8 }}>перетащите для изменения порядка</span>
+                    </div>
+                    <div style={{ padding: '8px 8px', maxHeight: 640, overflowY: 'auto' }}>
                         {isLoading ? (
                             <div style={{ padding: 24, textAlign: 'center', color: 'var(--ink-3)' }}>Загрузка…</div>
                         ) : tree.length === 0 ? (
                             <div style={{ padding: 24, textAlign: 'center', color: 'var(--ink-3)' }}>Нет категорий</div>
                         ) : (
-                            <ul style={{ margin: 0, padding: 0 }}>
-                                {tree
-                                    .sort((a, b) => a.displayOrder - b.displayOrder)
-                                    .map((cat) => (
-                                        <CategoryTreeItem key={cat.id} cat={cat} selectedId={selectedId} onSelect={setSelectedId} />
-                                    ))}
-                            </ul>
+                            <DndContext
+                                sensors={sensors}
+                                onDragStart={handleDragStart}
+                                onDragEnd={handleDragEnd}
+                            >
+                                <SortableCategoryLevel
+                                    categories={rootSorted}
+                                    selectedId={selectedId}
+                                    onSelect={setSelectedId}
+                                    isDraggingId={draggingId}
+                                />
+
+                                <DragOverlay>
+                                    {draggingCat && (
+                                        <div style={{
+                                            padding: '5px 10px',
+                                            background: 'var(--surface)',
+                                            border: '1.5px solid var(--brand-red)',
+                                            borderRadius: 4,
+                                            fontSize: 13,
+                                            fontWeight: 500,
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            color: 'var(--ink-1)',
+                                        }}>
+                                            <svg width="13" height="13" viewBox="0 0 15 15" fill="none" style={{ color: 'var(--ink-3)' }}>
+                                                <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.879a1.5 1.5 0 0 1 1.06.44L8.5 3.5H12.5A1.5 1.5 0 0 1 14 5v6a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 11V3.5Z" stroke="currentColor" strokeWidth="1.2"/>
+                                            </svg>
+                                            {draggingCat.name}
+                                        </div>
+                                    )}
+                                </DragOverlay>
+                            </DndContext>
                         )}
                     </div>
                 </div>

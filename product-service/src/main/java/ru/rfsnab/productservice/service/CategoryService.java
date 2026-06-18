@@ -165,6 +165,20 @@ public class CategoryService {
     }
 
     /**
+     * Обновить displayOrder для списка категорий одним вызовом
+     */
+    @Transactional
+    public void reorderCategories(Map<Long, Integer> orders) {
+        orders.forEach((id, order) -> {
+            Category cat = categoryRepository.findById(id)
+                    .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена: " + id));
+            cat.setDisplayOrder(order);
+            categoryRepository.save(cat);
+        });
+        refreshCategoryTree();
+    }
+
+    /**
      * Удалить категорию
      */
     @Transactional

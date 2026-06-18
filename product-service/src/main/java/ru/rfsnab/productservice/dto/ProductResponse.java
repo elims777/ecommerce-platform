@@ -40,6 +40,7 @@ public class ProductResponse {
 
     private Boolean isVariantChild;
     private Long parentProductId;
+    private Integer displayOrder;
 
     // Вложенные данные
     private List<ProductResponse> children;

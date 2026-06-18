@@ -70,6 +70,15 @@ public class CategoryController {
     }
 
     /**
+     * Обновить порядок отображения для списка категорий: {id: displayOrder}
+     */
+    @PatchMapping("/reorder")
+    public ResponseEntity<Void> reorderCategories(@RequestBody Map<Long, Integer> orders) {
+        categoryService.reorderCategories(orders);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
      * Удалить категорию
      */
     @DeleteMapping("/{id}")

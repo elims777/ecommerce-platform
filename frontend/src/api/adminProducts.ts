@@ -146,3 +146,14 @@ export const batchUpdateActive = async (productIds: number[], isActive: boolean)
 export const bulkDeleteProducts = async (ids: number[]): Promise<void> => {
     await apiClient.delete('/v1/products/batch', { data: ids });
 };
+
+/** Обновить порядок отображения товара в категории */
+export const updateDisplayOrder = async (id: number, displayOrder: number): Promise<Product> => {
+    const { data } = await apiClient.patch<Product>(`/v1/products/${id}/display-order`, { displayOrder });
+    return data;
+};
+
+/** Обновить displayOrder для нескольких товаров одним запросом */
+export const reorderProducts = async (orders: Record<number, number>): Promise<void> => {
+    await apiClient.patch('/v1/products/reorder', orders);
+};
