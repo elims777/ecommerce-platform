@@ -135,3 +135,51 @@ jobs:
           context: ./order-service
           push: true
           tags: ${{ env.IMAGE_PREFIX }}/order-service:${{ steps.tag.outputs.TAG }}
+
+      - name: Build and push payment-service
+        uses: docker/build-push-action@v6.15.0
+        with:
+          context: ./payment-service
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/payment-service:${{ steps.tag.outputs.TAG }}
+
+      - name: Build and push integration-service
+        uses: docker/build-push-action@v6.15.0
+        with:
+          context: ./integration-service
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/integration-service:${{ steps.tag.outputs.TAG }}
+
+      - name: Build and push gateway-service
+        uses: docker/build-push-action@v6.15.0
+        with:
+          context: ./gateway-service
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/gateway-service:${{ steps.tag.outputs.TAG }}
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6.15.0
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/frontend:${{ steps.tag.outputs.TAG }}
+
+  deploy:
+    needs: docker
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/rfsnab
+            git pull origin master
+            cd infra
+            docker compose pull
+            docker compose up -d --build --wait --wait-timeout 120 && sudo systemctl reload nginx
+            docker system prune -f

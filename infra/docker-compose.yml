@@ -106,26 +106,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # PostgreSQL для payment-service
-  payment-db:
-    image: postgres:16-alpine
-    container_name: payment-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${PAYMENT_DB_NAME}
-      POSTGRES_USER: ${PAYMENT_DB_USER}
-      POSTGRES_PASSWORD: ${PAYMENT_DB_PASSWORD}
-    ports:
-      - "${PAYMENT_DB_PORT}:5432"
-    volumes:
-      - payment_db_data:/var/lib/postgresql/data
-    networks:
-      - ecommerce-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PAYMENT_DB_USER} -d ${PAYMENT_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # ==================== KAFKA ====================
 
@@ -235,7 +215,6 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      LOGGING_FILE_NAME: ""
       SECRET_JWT: ${SECRET_JWT}
     volumes:
       - /var/log/rfsnab/user-service:/var/log/rfsnab/user-service
@@ -270,7 +249,6 @@ services:
       # Internal services
       USER_SERVICE_URL: http://user-service:8081
       NOTIFICATION_SERVICE_URL: http://notification-service:8082
-      LOGGING_FILE_NAME: ""
     volumes:
       - /var/log/rfsnab/auth-service:/var/log/rfsnab/auth-service
     depends_on:
@@ -301,7 +279,6 @@ services:
       SPRING_MAIL_PORT: ${SMTP_PORT}
       SPRING_MAIL_USERNAME: ${MAIL_USER}
       SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
-      LOGGING_FILE_NAME: ""
     volumes:
       - /var/log/rfsnab/notification-service:/var/log/rfsnab/notification-service
     depends_on:
@@ -328,7 +305,6 @@ services:
       # Yandex Object Storage
       YANDEX_STORAGE_ACCESS_KEY: ${YANDEX_STORAGE_ACCESS_KEY}
       YANDEX_STORAGE_SECRET_KEY: ${YANDEX_STORAGE_SECRET_KEY}
-      LOGGING_FILE_NAME: ""
       SECRET_JWT: ${SECRET_JWT}
     volumes:
       - /var/log/rfsnab/product-service:/var/log/rfsnab/product-service
@@ -354,9 +330,8 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       PRODUCT_SERVICE_URL: http://product-service:8083
-      PAYMENT_SERVICE_URL: http://payment-service:8090
+
       INTERNAL_SECRET: ${INTERNAL_SECRET}
-      LOGGING_FILE_NAME: ""
       SECRET_JWT: ${SECRET_JWT}
     volumes:
       - /var/log/rfsnab/order-service:/var/log/rfsnab/order-service
@@ -364,40 +339,6 @@ services:
       order-db:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    networks:
-      - ecommerce-net
-
-  payment-service:
-    build:
-      context: ../payment-service
-      dockerfile: Dockerfile
-    container_name: payment-service
-    restart: unless-stopped
-    ports:
-      - "8090:8090"
-    environment:
-      SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:postgresql://payment-db:5432/${PAYMENT_DB_NAME}
-      SPRING_DATASOURCE_USERNAME: ${PAYMENT_DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${PAYMENT_DB_PASSWORD}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      TOCHKA_BASE_URL: ${TOCHKA_BASE_URL}
-      TOCHKA_TOKEN: ${TOCHKA_TOKEN}
-      TOCHKA_CUSTOMER_CODE: ${TOCHKA_CUSTOMER_CODE}
-      TOCHKA_MERCHANT_ID: ${TOCHKA_MERCHANT_ID}
-      TOCHKA_REDIRECT_URL: ${TOCHKA_REDIRECT_URL}
-      TOCHKA_FAIL_REDIRECT_URL: ${TOCHKA_FAIL_REDIRECT_URL}
-      INTERNAL_SECRET: ${INTERNAL_SECRET}
-      LOGGING_FILE_NAME: ""
-      LOGGING_LEVEL_REACTOR_NETTY_HTTP_CLIENT: DEBUG
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
-    depends_on:
-      payment-db:
         condition: service_healthy
       kafka:
         condition: service_healthy
@@ -453,7 +394,6 @@ volumes:
   product_db_data:
   redis_data:
   order_db_data:
-  payment_db_data:
   integration_db_data:
   integration_exchange_data:
 
