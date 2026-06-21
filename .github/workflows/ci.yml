@@ -136,13 +136,6 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_PREFIX }}/order-service:${{ steps.tag.outputs.TAG }}
 
-      - name: Build and push payment-service
-        uses: docker/build-push-action@v6.15.0
-        with:
-          context: ./payment-service
-          push: true
-          tags: ${{ env.IMAGE_PREFIX }}/payment-service:${{ steps.tag.outputs.TAG }}
-
       - name: Build and push integration-service
         uses: docker/build-push-action@v6.15.0
         with:
