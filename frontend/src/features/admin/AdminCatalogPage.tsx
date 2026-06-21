@@ -419,7 +419,6 @@ const AdminCatalogPage = () => {
             ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder }],
             (old) => {
                 if (!old) return old;
-                const reorderedIds = new Set(reordered.map((p) => p.id));
                 const children = old.content.filter((p) => p.isVariantChild);
                 const newContent = [
                     ...reordered.map((p, i) => ({ ...p, displayOrder: i * 10 })),
