@@ -87,6 +87,11 @@ spring:
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@ipKeyResolver}"
 
+            - id: auth-oauth2-callback
+              uri: http://localhost:9000
+              predicates:
+                - Path=/login/oauth2/**
+
             # Веб-страницы (Thymeleaf)
             - id: auth-pages
               uri: http://localhost:9000
