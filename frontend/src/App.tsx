@@ -37,6 +37,7 @@ const AdminSliderPage = lazy(() => import('@/features/admin/AdminSliderPage'));
 const LogisticsPage = lazy(() => import('@/features/admin/LogisticsPage'));
 const FavouritesPage = lazy(() => import('@/features/favourites/FavouritesPage'));
 const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage'));
+const OAuth2SuccessPage = lazy(() => import('@/pages/OAuth2SuccessPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -115,6 +116,8 @@ const AppRoutes = () => {
         </div>
       }>
         <Routes>
+          <Route path="/oauth2/success" element={<OAuth2SuccessPage />} />
+
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
