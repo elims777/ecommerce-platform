@@ -353,7 +353,7 @@ const RegisterPage = () => {
                                 <div style={{ flex: 1, height: 1, background: 'var(--line-1)' }} />
                             </div>
                             <button
-                                onClick={() => window.location.href = 'http://localhost:8080/auth/oauth2/register/yandex'}
+                                onClick={() => window.location.href = '/auth/oauth2/register/yandex'}
                                 style={{
                                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                                     width: '100%', height: 'var(--btn-h-lg)', border: '1px solid var(--line-2)', background: 'var(--surface)',
