@@ -38,6 +38,9 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     @Value("${user.service.url}")
     private String userServiceUrl;
 
+    @Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
+
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
     private static final int TEMP_PASSWORD_LENGTH = 16;
 
@@ -87,7 +90,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
 
              String tokensJson = objectMapper.writeValueAsString(tokens);
-             String redirectUrl = "/oauth2/success?data=" +
+             String redirectUrl = frontendUrl + "/oauth2/success?data=" +
                  java.net.URLEncoder.encode(tokensJson, java.nio.charset.StandardCharsets.UTF_8);
              log.info("Редирект на: {}", redirectUrl);
              response.sendRedirect(redirectUrl);
