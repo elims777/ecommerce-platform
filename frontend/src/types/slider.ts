@@ -1,7 +1,10 @@
-const generateId = (): string =>
-    typeof crypto !== 'undefined' && crypto.randomUUID
-        ? generateId()
-        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+const generateId = (): string => {
+    try {
+        return crypto.randomUUID();
+    } catch {
+        return Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+};
 
 export type SlideType = 'gradient' | 'image' | 'products';
 export type GradientPreset = 'navy' | 'red' | 'green' | 'custom';
