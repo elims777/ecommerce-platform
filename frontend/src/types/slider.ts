@@ -1,3 +1,8 @@
+const generateId = (): string =>
+    typeof crypto !== 'undefined' && crypto.randomUUID
+        ? generateId()
+        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+
 export type SlideType = 'gradient' | 'image' | 'products';
 export type GradientPreset = 'navy' | 'red' | 'green' | 'custom';
 export type ImageFit = 'cover' | 'contain' | 'fill';
@@ -56,7 +61,7 @@ export interface CtaButton {
 }
 
 export const makeCtaButton = (overrides: Partial<CtaButton> = {}): CtaButton => ({
-    id: crypto.randomUUID(),
+    id: generateId(),
     label: '',
     link: '',
     variant: 'primary',
@@ -81,7 +86,7 @@ export interface TextBlock {
 }
 
 export const makeTextBlock = (overrides: Partial<TextBlock> = {}): TextBlock => ({
-    id: crypto.randomUUID(),
+    id: generateId(),
     x: 5, y: 15, width: 45, height: 50,
     heading: '',
     headingStyle: { bold: true, italic: false, underline: false, strikethrough: false, size: 40, color: '#ffffff' },
@@ -146,7 +151,7 @@ export const IMAGE_FIT_LABELS: Record<ImageFit, string> = {
 };
 
 export const makeSlide = (overrides: Partial<Slide> = {}): Slide => ({
-    id: crypto.randomUUID(),
+    id: generateId(),
     type: 'gradient',
     enabled: true,
     displayOrder: 0,
