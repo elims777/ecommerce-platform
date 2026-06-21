@@ -168,9 +168,7 @@ services:
   # ==================== SERVICES ====================
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
+    image: elims777/frontend:latest
     container_name: frontend
     restart: unless-stopped
     ports:
@@ -181,9 +179,7 @@ services:
       - ecommerce-net
 
   gateway-service:
-    build:
-      context: ../gateway-service
-      dockerfile: Dockerfile
+    image: elims777/gateway-service:latest
     container_name: gateway-service
     restart: unless-stopped
     ports:
@@ -202,9 +198,7 @@ services:
       - ecommerce-net
 
   user-service:
-    build:
-      context: ../user-service
-      dockerfile: Dockerfile
+    image: elims777/user-service:latest
     container_name: user-service
     restart: unless-stopped
     ports:
@@ -227,9 +221,7 @@ services:
       - ecommerce-net
 
   auth-service:
-    build:
-      context: ../auth-service
-      dockerfile: Dockerfile
+    image: elims777/auth-service:latest
     container_name: auth-service
     restart: unless-stopped
     ports:
@@ -260,9 +252,7 @@ services:
       - ecommerce-net
 
   notification-service:
-    build:
-      context: ../notification-service
-      dockerfile: Dockerfile
+    image: elims777/notification-service:latest
     container_name: notification-service
     restart: unless-stopped
     ports:
@@ -290,9 +280,7 @@ services:
       - ecommerce-net
 
   product-service:
-    build:
-      context: ../product-service
-      dockerfile: Dockerfile
+    image: elims777/product-service:latest
     container_name: product-service
     restart: unless-stopped
     ports:
@@ -315,9 +303,7 @@ services:
       - ecommerce-net
 
   order-service:
-    build:
-      context: ../order-service
-      dockerfile: Dockerfile
+    image: elims777/order-service:latest
     container_name: order-service
     restart: unless-stopped
     ports:
@@ -330,7 +316,6 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       PRODUCT_SERVICE_URL: http://product-service:8083
-
       INTERNAL_SECRET: ${INTERNAL_SECRET}
       SECRET_JWT: ${SECRET_JWT}
     volumes:
@@ -346,9 +331,7 @@ services:
       - ecommerce-net
 
   integration-service:
-    build:
-      context: ../integration-service
-      dockerfile: Dockerfile
+    image: elims777/integration-service:latest
     container_name: integration-service
     restart: unless-stopped
     ports:
