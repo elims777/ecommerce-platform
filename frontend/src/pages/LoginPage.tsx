@@ -191,7 +191,7 @@ const LoginPage = () => {
                     </div>
 
                     <button
-                        onClick={() => window.location.href = 'http://localhost:8080/oauth2/authorization/yandex'}
+                        onClick={() => window.location.href = '/oauth2/authorization/yandex'}
                         style={{
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                             width: '100%', height: 'var(--btn-h-lg)', border: '1px solid var(--line-2)', background: 'var(--surface)',
