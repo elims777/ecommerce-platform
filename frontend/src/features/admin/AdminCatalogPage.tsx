@@ -190,7 +190,7 @@ const SortableRow = ({ id, disabled, children }: SortableRowProps) => {
         transition,
         opacity: isDragging ? 0.4 : 1,
     };
-    return <>{children({ trRef: setNodeRef, handleRef: setActivatorNodeRef, listeners: listeners as Record<string, unknown>, attributes: attributes as Record<string, unknown>, isDragging, style })}</>;
+    return <>{children({ trRef: setNodeRef, handleRef: setActivatorNodeRef, listeners: listeners as unknown as Record<string, unknown>, attributes: attributes as unknown as Record<string, unknown>, isDragging, style })}</>;
 };
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -415,9 +415,9 @@ const AdminCatalogPage = () => {
         const reordered = arrayMove(roots, oldIndex, newIndex);
 
         // Оптимистичное обновление кэша
-        queryClient.setQueryData(
+        queryClient.setQueryData<{ content: Product[]; totalElements: number }>(
             ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder }],
-            (old: { content: Product[]; totalElements: number } | undefined) => {
+            (old) => {
                 if (!old) return old;
                 const reorderedIds = new Set(reordered.map((p) => p.id));
                 const children = old.content.filter((p) => p.isVariantChild);
