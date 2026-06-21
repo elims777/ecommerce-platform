@@ -75,6 +75,11 @@ spring:
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@ipKeyResolver}"
 
+            - id: auth-oauth2-callback
+              uri: http://auth-service:9000
+              predicates:
+                - Path=/login/oauth2/**
+
             - id: auth-pages
               uri: http://auth-service:9000
               predicates:
