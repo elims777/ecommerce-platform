@@ -28,3 +28,6 @@ user:
 notification:
   service:
     url: http://notification-service:8082
+
+app:
+  frontend-url: ${APP_BASE_URL:http://72.56.14.213}
