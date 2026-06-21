@@ -223,8 +223,8 @@ public class GatewayRoutingTest extends BaseIntegrationTest {
                             .withStatus(200)
                             .withBody("{\"token\":\"test\"}")));
 
-            // Отправляем запросы до превышения лимита (burst = 7)
-            for (int i = 0; i < 8; i++) {
+            // Отправляем запросы до превышения лимита (burst = 1)
+            for (int i = 0; i < 20; i++) {
                 webTestClient.post()
                         .uri("/v1/auth/login")
                         .header("Content-Type", "application/json")
