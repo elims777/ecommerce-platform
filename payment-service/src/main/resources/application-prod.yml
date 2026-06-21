@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://payment-db:5432/${PAYMENT_DB_NAME}
+    username: ${PAYMENT_DB_USER}
+    password: ${PAYMENT_DB_PASSWORD}
+  kafka:
+    bootstrap-servers: kafka:29092
+
+tochka:
+  base-url: ${TOCHKA_BASE_URL:https://enter.tochka.com/uapi}

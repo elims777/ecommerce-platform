@@ -14,7 +14,7 @@ app:
   user-service:
     url: http://user-service:8081
 
-  frontend-url: ${FRONTEND_URL}
+  frontend-url: ${FRONTEND_URL:http://rfsnab.ru}
 
   email:
     verification-url: ${APP_BASE_URL:https://rfsnab.ru}/verify-email
