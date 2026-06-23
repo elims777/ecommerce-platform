@@ -52,3 +52,9 @@ LLM-wiki.md
 docs/*
 CLAUDE.md
 ARCHITECTURE.md
+
+# Test credentials for ui-tester agent (никогда не коммитить)
+**/credits_for_project.md
+
+# Playwright MCP — артефакты браузерных тестов
+.playwright-mcp/

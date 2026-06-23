@@ -17,7 +17,9 @@ import ru.rfsnab.orderservice.models.dto.cart.CartDto;
 import ru.rfsnab.orderservice.models.dto.cart.UpdateCartItemRequest;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.entity.Cart;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.service.CartService;
+import ru.rfsnab.orderservice.service.PriceSelector;
 
 import java.util.Map;
 
@@ -41,9 +43,11 @@ public class CartController {
             @ApiResponse(responseCode = "200", description = "Корзина получена"),
             @ApiResponse(responseCode = "401", description = "Не авторизован")
     })
-    public ResponseEntity<CartDto> getCart(Authentication authentication) {
+    public ResponseEntity<CartDto> getCart(
+            Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType) {
         Long userId = getCurrentUserId(authentication);
-        return ResponseEntity.ok(toCartDto(userId));
+        return ResponseEntity.ok(toCartDto(userId, PriceSelector.parseCustomerType(clientType)));
     }
 
     @PostMapping("/items")
@@ -57,11 +61,12 @@ public class CartController {
     })
     public ResponseEntity<CartDto> addItem(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @Valid @RequestBody AddToCartRequest request) {
         Long userId = getCurrentUserId(authentication);
         Cart cart = cartService.addItemToCart(userId, request.productId(), request.quantity());
         Map<Long, ProductDto> products = cartService.fetchProductsForCart(cart);
-        return ResponseEntity.ok(CartMapper.toDto(cart, products));
+        return ResponseEntity.ok(CartMapper.toDto(cart, products, PriceSelector.parseCustomerType(clientType)));
     }
 
     @PutMapping("/items/{productId}")
@@ -74,12 +79,13 @@ public class CartController {
     })
     public ResponseEntity<CartDto> updateItemQuantity(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable Long productId,
             @Valid @RequestBody UpdateCartItemRequest request) {
         Long userId = getCurrentUserId(authentication);
         Cart cart = cartService.updateItemQuantity(userId, productId, request.quantity());
         Map<Long, ProductDto> products = cartService.fetchProductsForCart(cart);
-        return ResponseEntity.ok(CartMapper.toDto(cart, products));
+        return ResponseEntity.ok(CartMapper.toDto(cart, products, PriceSelector.parseCustomerType(clientType)));
     }
 
     @DeleteMapping("/items/{productId}")
@@ -90,11 +96,12 @@ public class CartController {
     })
     public ResponseEntity<CartDto> removeItem(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable Long productId) {
         Long userId = getCurrentUserId(authentication);
         Cart cart = cartService.removeItem(userId, productId);
         Map<Long, ProductDto> products = cartService.fetchProductsForCart(cart);
-        return ResponseEntity.ok(CartMapper.toDto(cart, products));
+        return ResponseEntity.ok(CartMapper.toDto(cart, products, PriceSelector.parseCustomerType(clientType)));
     }
 
     @DeleteMapping
@@ -129,13 +136,13 @@ public class CartController {
      * Получение корзины и маппинг в DTO с enrichment.
      * Вынесено для переиспользования в GET /cart.
      */
-    private CartDto toCartDto(Long userId) {
+    private CartDto toCartDto(Long userId, CustomerType customerType) {
         Cart cart = cartService.getCart(userId);
         if (cart.getItems().isEmpty()) {
             return CartMapper.emptyCartDto(userId);
         }
         Map<Long, ProductDto> products = cartService.fetchProductsForCart(cart);
-        return CartMapper.toDto(cart, products);
+        return CartMapper.toDto(cart, products, customerType);
     }
 
     /**

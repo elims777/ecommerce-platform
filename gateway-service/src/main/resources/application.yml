@@ -182,6 +182,18 @@ spring:
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@ipKeyResolver}"
 
+            - id: favourites-api
+              uri: http://localhost:8083
+              predicates:
+                - Path=/api/v1/favourites/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 15
+                    redis-rate-limiter.burstCapacity: 25
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
             # === ORDER-SERVICE (:8084) ===
             - id: admin-orders-api
               uri: http://localhost:8084

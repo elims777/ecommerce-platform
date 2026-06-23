@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getFavouriteIds, addFavourite, removeFavourite } from '@/api/favourites';
+import { queryClient } from '@/lib/queryClient';
 
 interface FavouritesState {
     ids: Set<number>;
@@ -35,6 +36,7 @@ export const useFavouritesStore = create<FavouritesState>((set, get) => ({
             set({ ids: new Set([...ids, productId]) });
             await addFavourite(productId);
         }
+        queryClient.invalidateQueries({ queryKey: ['favourites', 'products'] });
     },
 
     isFavourite: (productId) => get().ids.has(productId),
