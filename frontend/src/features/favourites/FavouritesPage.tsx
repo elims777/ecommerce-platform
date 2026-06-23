@@ -20,7 +20,7 @@ const FavouritesPage = () => {
     const { data: products = [], isLoading } = useQuery({
         queryKey: ['favourites', 'products'],
         queryFn: getFavouriteProducts,
-        staleTime: 60 * 1000,
+        staleTime: 0,
     });
 
     const handleAddToCart = async (productId: number) => {

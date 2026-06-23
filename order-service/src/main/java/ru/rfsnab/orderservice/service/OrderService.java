@@ -228,7 +228,7 @@ public class OrderService {
 
         // Обновляем items — orphanRemoval удалит старые
         order.getItems().clear();
-        BigDecimal totalAmount = addItemsFromDto(order, request.items(), products);
+        BigDecimal totalAmount = addItemsFromDto(order, request.items(), products, order.getCustomerType());
         order.setTotalAmount(totalAmount);
 
         order = orderRepository.save(order);
@@ -272,21 +272,25 @@ public class OrderService {
         // Добавляем items с актуальными ценами
         BigDecimal totalAmount = BigDecimal.ZERO;
 
+        CustomerType customerType = newOrder.getCustomerType();
+
         for (OrderItem sourceItem : sourceOrder.getItems()) {
             ProductDto product = products.get(sourceItem.getProductId());
+
+            BigDecimal snapshotPrice = PriceSelector.pickPrice(product, customerType);
 
             OrderItem newItem = OrderItem.builder()
                     .order(newOrder)
                     .productId(sourceItem.getProductId())
                     .productName(product.name())
                     .quantity(sourceItem.getQuantity())
-                    .price(product.price())
+                    .price(snapshotPrice)
                     .externalId(product.externalId())
                     .build();
 
             newOrder.getItems().add(newItem);
             totalAmount = totalAmount.add(
-                    product.price().multiply(BigDecimal.valueOf(sourceItem.getQuantity())));
+                    snapshotPrice.multiply(BigDecimal.valueOf(sourceItem.getQuantity())));
         }
         newOrder.setTotalAmount(totalAmount);
 
@@ -564,12 +568,12 @@ public class OrderService {
                                         Map<Long, ProductDto> products, String clientType) {
         BigDecimal totalAmount = BigDecimal.ZERO;
 
+        CustomerType customerType = PriceSelector.parseCustomerType(clientType);
+
         for (CartItem cartItem : cartItems) {
             ProductDto product = products.get(cartItem.getProductId());
 
-            BigDecimal snapshotPrice = CustomerType.B2B.name().equals(clientType)
-                    ? product.price()
-                    : (product.wholesalePrice() != null ? product.wholesalePrice() : product.price());
+            BigDecimal snapshotPrice = PriceSelector.pickPrice(product, customerType);
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
@@ -594,24 +598,26 @@ public class OrderService {
      * @return totalAmount заказа
      */
     private BigDecimal addItemsFromDto(Order order, List<OrderItemDto> items,
-                                       Map<Long, ProductDto> products) {
+                                       Map<Long, ProductDto> products, CustomerType customerType) {
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (OrderItemDto itemDto : items) {
             ProductDto product = products.get(itemDto.productId());
+
+            BigDecimal snapshotPrice = PriceSelector.pickPrice(product, customerType);
 
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
                     .productId(itemDto.productId())
                     .productName(product.name())
                     .quantity(itemDto.quantity())
-                    .price(product.price())
+                    .price(snapshotPrice)
                     .externalId(product.externalId())
                     .build();
 
             order.getItems().add(orderItem);
             totalAmount = totalAmount.add(
-                    product.price().multiply(BigDecimal.valueOf(itemDto.quantity())));
+                    snapshotPrice.multiply(BigDecimal.valueOf(itemDto.quantity())));
         }
 
         return totalAmount;

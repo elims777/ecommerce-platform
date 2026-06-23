@@ -8,6 +8,7 @@ import ru.rfsnab.orderservice.models.dto.cart.CartItemDto;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.entity.Cart;
 import ru.rfsnab.orderservice.models.entity.CartItem;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -37,7 +38,7 @@ class CartMapperTest {
                             null, 50, true, "ext-002")
             );
 
-            CartDto dto = CartMapper.toDto(cart, products);
+            CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2C);
 
             assertThat(dto.userId()).isEqualTo(USER_ID);
             assertThat(dto.items()).hasSize(2);
@@ -54,7 +55,7 @@ class CartMapperTest {
                             null, 100, true, "ext-001")
             );
 
-            CartDto dto = CartMapper.toDto(cart, products);
+            CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2C);
 
             CartItemDto item = dto.items().getFirst();
             assertThat(item.productId()).isEqualTo(1L);
@@ -74,7 +75,7 @@ class CartMapperTest {
                             null, 100, true, "ext-001")
             );
 
-            CartDto dto = CartMapper.toDto(cart, products);
+            CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2C);
 
             assertThat(dto.items()).hasSize(1);
             assertThat(dto.items().getFirst().productId()).isEqualTo(1L);
@@ -87,7 +88,7 @@ class CartMapperTest {
         void shouldReturnEmptyDtoForEmptyCart() {
             Cart cart = emptyCart();
 
-            CartDto dto = CartMapper.toDto(cart, Map.of());
+            CartDto dto = CartMapper.toDto(cart, Map.of(), CustomerType.B2C);
 
             assertThat(dto.userId()).isEqualTo(USER_ID);
             assertThat(dto.items()).isEmpty();
@@ -100,11 +101,63 @@ class CartMapperTest {
         void shouldReturnEmptyItemsWhenAllProductsMissing() {
             Cart cart = buildCartWithSingleItem(999L, 5);
 
-            CartDto dto = CartMapper.toDto(cart, Map.of());
+            CartDto dto = CartMapper.toDto(cart, Map.of(), CustomerType.B2C);
 
             assertThat(dto.items()).isEmpty();
             assertThat(dto.totalItems()).isZero();
             assertThat(dto.totalAmount()).isEqualByComparingTo("0");
+        }
+
+        // Инвариант: price = B2B/оптовая, wholesalePrice = B2C/розничная (имена в БД исторически инвертированы).
+        @Test
+        @DisplayName("B2C: берёт wholesalePrice (розничную) при её наличии")
+        void shouldPickWholesalePriceForB2cWhenPresent() {
+            Cart cart = buildCartWithSingleItem(1L, 2);
+            Map<Long, ProductDto> products = Map.of(
+                    1L, new ProductDto(1L, "Доска обрезная",
+                            new BigDecimal("1000.00"),   // price (оптовая, B2B)
+                            new BigDecimal("1500.00"),   // wholesalePrice (розничная, B2C)
+                            100, true, "ext-001")
+            );
+
+            CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2C);
+
+            assertThat(dto.items().getFirst().price()).isEqualByComparingTo("1500.00");
+            assertThat(dto.totalAmount()).isEqualByComparingTo("3000.00");
+        }
+
+        @Test
+        @DisplayName("B2B: берёт price (оптовую), wholesalePrice игнорирует")
+        void shouldPickPriceForB2bIgnoringWholesalePrice() {
+            Cart cart = buildCartWithSingleItem(1L, 3);
+            Map<Long, ProductDto> products = Map.of(
+                    1L, new ProductDto(1L, "Доска обрезная",
+                            new BigDecimal("1000.00"),   // price (оптовая, B2B)
+                            new BigDecimal("1500.00"),   // wholesalePrice (розничная, B2C)
+                            100, true, "ext-001")
+            );
+
+            CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2B);
+
+            assertThat(dto.items().getFirst().price()).isEqualByComparingTo("1000.00");
+            assertThat(dto.totalAmount()).isEqualByComparingTo("3000.00");
+        }
+
+        @Test
+        @DisplayName("B2C с null wholesalePrice: fallback на price")
+        void shouldFallbackToPriceForB2cWhenWholesalePriceNull() {
+            Cart cart = buildCartWithSingleItem(1L, 2);
+            Map<Long, ProductDto> products = Map.of(
+                    1L, new ProductDto(1L, "Доска обрезная",
+                            new BigDecimal("1500.00"),
+                            null,
+                            100, true, "ext-001")
+            );
+
+            CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2C);
+
+            assertThat(dto.items().getFirst().price()).isEqualByComparingTo("1500.00");
+            assertThat(dto.totalAmount()).isEqualByComparingTo("3000.00");
         }
     }
 

@@ -5,9 +5,9 @@ import ru.rfsnab.orderservice.models.dto.order.OrderDto;
 import ru.rfsnab.orderservice.models.dto.order.OrderSummaryDto;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
-import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
+import ru.rfsnab.orderservice.service.PriceSelector;
 
 public class OrderMapper {
 
@@ -91,7 +91,7 @@ public class OrderMapper {
                 .deliveryMethod(request.deliveryMethod())
                 .customerEmail(customerEmail)
                 .comment(request.comment())
-                .customerType(parseCustomerType(clientType))
+                .customerType(PriceSelector.parseCustomerType(clientType))
                 .build();
 
         if (request.deliveryMethod() == DeliveryMethod.PICKUP) {
@@ -106,12 +106,4 @@ public class OrderMapper {
         return order;
     }
 
-    private static CustomerType parseCustomerType(String raw) {
-        if (raw == null) return CustomerType.B2C;
-        try {
-            return CustomerType.valueOf(raw.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return CustomerType.B2C;
-        }
-    }
 }

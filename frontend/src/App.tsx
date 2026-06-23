@@ -2,7 +2,8 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ConfigProvider, App as AntApp, Spin } from 'antd';
 import ruRU from 'antd/locale/ru_RU';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
 import { useAuthStore } from '@/store/authStore';
 import ProtectedRoute from '@/auth/ProtectedRoute';
 import ClientLayout from '@/components/layouts/ClientLayout';
@@ -38,16 +39,6 @@ const LogisticsPage = lazy(() => import('@/features/admin/LogisticsPage'));
 const FavouritesPage = lazy(() => import('@/features/favourites/FavouritesPage'));
 const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage'));
 const OAuth2SuccessPage = lazy(() => import('@/pages/OAuth2SuccessPage'));
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-      staleTime: 30 * 1000,
-    },
-  },
-});
 
 const antTheme = {
   token: {

@@ -2,12 +2,13 @@ import { useState, useMemo } from 'react';
 import { Image, App, Skeleton, Modal, Button } from 'antd';
 import { ShoppingCartOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getProductById } from '@/api/products';
 import type { ProductImage, ProductChild } from '@/types/product';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDisplayPrice } from '@/utils/priceUtils';
+import { savePendingAddToCart, clearPendingAddToCart } from '@/utils/pendingCart';
 
 const formatPrice = (price: number): string =>
     new Intl.NumberFormat('ru-RU', {
@@ -51,6 +52,7 @@ const VariantAttrs = ({ variant }: { variant: ProductChild }) => {
 const ProductPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const { message: messageApi } = App.useApp();
     const [quantity, setQuantity] = useState(1);
     const [variantQtys, setVariantQtys] = useState<Record<number, number>>({});
@@ -76,9 +78,21 @@ const ProductPage = () => {
     const setVariantQty = (variantId: number, qty: number) =>
         setVariantQtys(prev => ({ ...prev, [variantId]: qty }));
 
+    const savePendingAdd = () => {
+        if (!product) return;
+        if (hasVariants) {
+            const variantItems = activeVariants
+                .map(v => ({ productId: v.id, quantity: variantQtys[v.id] ?? 0 }))
+                .filter(i => i.quantity > 0);
+            savePendingAddToCart(variantItems);
+        } else {
+            savePendingAddToCart([{ productId: product.id, quantity }]);
+        }
+    };
+
     const handleAddToCart = async () => {
         if (!product) return;
-        if (!isAuthenticated) { setAuthModalOpen(true); return; }
+        if (!isAuthenticated) { savePendingAdd(); setAuthModalOpen(true); return; }
         if (hasVariants) {
             const toAdd = activeVariants.filter(v => (variantQtys[v.id] ?? 0) > 0);
             if (toAdd.length === 0) {
@@ -137,7 +151,7 @@ const ProductPage = () => {
         <>
         <Modal
             open={authModalOpen}
-            onCancel={() => setAuthModalOpen(false)}
+            onCancel={() => { clearPendingAddToCart(); setAuthModalOpen(false); }}
             footer={null}
             title="Войдите, чтобы добавить в корзину"
             centered
@@ -147,10 +161,10 @@ const ProductPage = () => {
                 Для добавления товаров в корзину необходимо войти или зарегистрироваться.
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
-                <Button type="primary" block onClick={() => navigate('/login')} style={{ background: 'var(--brand-red)', borderColor: 'var(--brand-red)' }}>
+                <Button type="primary" block onClick={() => navigate('/login', { state: { from: location } })} style={{ background: 'var(--brand-red)', borderColor: 'var(--brand-red)' }}>
                     Войти
                 </Button>
-                <Button block onClick={() => navigate('/register')}>
+                <Button block onClick={() => navigate('/register', { state: { from: location } })}>
                     Зарегистрироваться
                 </Button>
             </div>
