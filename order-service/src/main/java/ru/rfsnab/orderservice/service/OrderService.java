@@ -361,6 +361,23 @@ public class OrderService {
     }
 
     /**
+     * Подсчёт активных (не финальных) заказов по userId.
+     * Используется при удалении пользователя — блокирует удаление, если есть незавершённые заказы.
+     */
+    @Transactional(readOnly = true)
+    public long countActiveByUserId(Long userId) {
+        return orderRepository.countByUserIdAndStatusNotIn(userId, OrderStatus.finalStatuses());
+    }
+
+    /**
+     * Подсчёт активных (не финальных) заказов по ИНН юрлица.
+     */
+    @Transactional(readOnly = true)
+    public long countActiveByInn(String inn) {
+        return orderRepository.countByInnAndStatusNotIn(inn, OrderStatus.finalStatuses());
+    }
+
+    /**
      * Инициация оплаты (PROCESSING/INVOICE_SENT/PAYMENT_FAILED → PENDING_PAYMENT).
      * B2C: вызывается после confirmOrder когда клиент нажимает "Перейти к оплате".
      * B2B: вызывается после INVOICE_SENT когда менеджер выбирает предоплату.

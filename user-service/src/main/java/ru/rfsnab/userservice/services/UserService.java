@@ -88,6 +88,10 @@ public class UserService {
         userRepository.deleteById(id);
     }
 
+    public long countAdmins() {
+        return userRepository.countByRoles_Name("ROLE_ADMIN");
+    }
+
     @Transactional
     public void verifyUser(Long userId) {
         UserEntity user = userRepository.findById(userId)

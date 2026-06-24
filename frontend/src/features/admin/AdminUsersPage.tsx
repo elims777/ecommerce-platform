@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { isAxiosError } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import {
     getAllUsers, getAllLegalEntities, changeUserRole, changeUserStatus, verifyLegalEntity, rejectLegalEntity,
+    deleteUser, deleteLegalEntity,
 } from '@/api/adminUsers';
 import type { AdminUserDto, LegalEntityDto } from '@/api/adminUsers';
 
@@ -23,11 +25,13 @@ const VERIFICATION_BADGE: Record<string, { cls: string; label: string }> = {
 
 const AdminUsersPage = () => {
     const navigate = useNavigate();
-    const { message: messageApi } = App.useApp();
+    const { message: messageApi, modal } = App.useApp();
     const queryClient = useQueryClient();
 
     const adminEmail = useAuthStore((s) => s.user?.email ?? '');
-    const [tab, setTab] = useState<Tab>('individuals');
+    const currentUserId = useAuthStore((s) => s.user?.id);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const tab: Tab = searchParams.get('tab') === 'legal' ? 'legal' : 'individuals';
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState<string | undefined>();
     const [statusFilter, setStatusFilter] = useState<boolean | undefined>();
@@ -70,7 +74,89 @@ const AdminUsersPage = () => {
         onError: () => messageApi.error('Ошибка отклонения'),
     });
 
-    const switchTab = (t: Tab) => { setTab(t); setSearchQuery(''); setPage(1); };
+    const extractErrorMessage = (err: unknown, fallback: string): string => {
+        if (isAxiosError(err)) {
+            const data = err.response?.data as { message?: string } | undefined;
+            return data?.message || fallback;
+        }
+        return fallback;
+    };
+
+    const deleteUserMutation = useMutation({
+        mutationFn: (id: number) => deleteUser(id),
+        onSuccess: () => {
+            messageApi.success('Пользователь удалён');
+            queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+        },
+        onError: (err) => messageApi.error(extractErrorMessage(err, 'Не удалось удалить пользователя')),
+    });
+
+    const deleteLegalEntityMutation = useMutation({
+        mutationFn: (id: number) => deleteLegalEntity(id),
+        onSuccess: () => {
+            messageApi.success('Юрлицо удалено');
+            queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] });
+        },
+        onError: (err) => messageApi.error(extractErrorMessage(err, 'Не удалось удалить юрлицо')),
+    });
+
+    const confirmDeleteUser = (record: AdminUserDto) => {
+        const fullName = [record.lastname, record.firstname].filter(Boolean).join(' ') || '—';
+        modal.confirm({
+            icon: null,
+            title: <div style={{ textAlign: 'center' }}>Удалить пользователя?</div>,
+            content: (
+                <div style={{ textAlign: 'center' }}>
+                    <p style={{ marginBottom: 8 }}>
+                        Будет удалён аккаунт и связанные с ним адреса/привязки к юрлицам.
+                        Заказы, корзина и избранное останутся.
+                    </p>
+                    <div style={{ background: 'var(--surface-3)', padding: 12, borderRadius: 6, textAlign: 'left' }}>
+                        <div><strong>Email:</strong> {record.email}</div>
+                        <div><strong>Имя:</strong> {fullName}</div>
+                    </div>
+                </div>
+            ),
+            okText: 'Удалить',
+            okButtonProps: { danger: true },
+            cancelText: 'Отмена',
+            centered: true,
+            styles: { footer: { display: 'flex', justifyContent: 'center', gap: 8 } },
+            onOk: () => deleteUserMutation.mutateAsync(record.id),
+        });
+    };
+
+    const confirmDeleteLegalEntity = (le: LegalEntityDto) => {
+        modal.confirm({
+            icon: null,
+            title: <div style={{ textAlign: 'center' }}>Удалить юрлицо?</div>,
+            content: (
+                <div style={{ textAlign: 'center' }}>
+                    <p style={{ marginBottom: 8 }}>
+                        Будут удалены данные юрлица, банковские счета, адреса и привязки к физлицам.
+                        Заказы юрлица останутся.
+                    </p>
+                    <div style={{ background: 'var(--surface-3)', padding: 12, borderRadius: 6, textAlign: 'left' }}>
+                        <div><strong>Название:</strong> {le.fullName}</div>
+                        <div><strong>ИНН:</strong> {le.inn}</div>
+                        <div><strong>Email:</strong> {le.email ?? '—'}</div>
+                    </div>
+                </div>
+            ),
+            okText: 'Удалить',
+            okButtonProps: { danger: true },
+            cancelText: 'Отмена',
+            centered: true,
+            styles: { footer: { display: 'flex', justifyContent: 'center', gap: 8 } },
+            onOk: () => deleteLegalEntityMutation.mutateAsync(le.id),
+        });
+    };
+
+    const switchTab = (t: Tab) => {
+        setSearchParams({ tab: t });
+        setSearchQuery('');
+        setPage(1);
+    };
 
     // Фильтрация физлиц
     const filteredUsers = users.filter((u) => {
@@ -208,7 +294,7 @@ const AdminUsersPage = () => {
                                             <th style={{ width: 150 }}>Роль</th>
                                             <th style={{ width: 200 }}>Статус</th>
                                             <th style={{ width: 130 }}>Регистрация</th>
-                                            <th style={{ width: 50 }} />
+                                            <th style={{ width: 90 }} />
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -256,16 +342,31 @@ const AdminUsersPage = () => {
                                                         </div>
                                                     </td>
                                                     <td className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{formatDate(record.createdAt)}</td>
-                                                    <td>
-                                                        <button
-                                                            className="rf-btn rf-btn-sm rf-btn-ghost"
-                                                            style={{ padding: '4px 8px' }}
-                                                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/users/${record.id}`); }}
-                                                        >
-                                                            <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                                                                <path d="M7.5 11C4.803 11 2.53 9.622 1.096 7.5 2.53 5.378 4.803 4 7.5 4c2.697 0 4.97 1.378 6.404 3.5C12.47 9.622 10.197 11 7.5 11Zm0-8C4.308 3 1.656 4.706.076 7.235a.5.5 0 0 0 0 .53C1.656 10.294 4.308 12 7.5 12s5.844-1.706 7.424-4.235a.5.5 0 0 0 0-.53C13.344 4.706 10.692 3 7.5 3Zm0 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
-                                                            </svg>
-                                                        </button>
+                                                    <td onClick={(e) => e.stopPropagation()}>
+                                                        <div style={{ display: 'flex', gap: 4 }}>
+                                                            <button
+                                                                className="rf-btn rf-btn-sm rf-btn-ghost"
+                                                                style={{ padding: '4px 8px' }}
+                                                                title="Просмотр"
+                                                                onClick={() => navigate(`/admin/users/${record.id}`)}
+                                                            >
+                                                                <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+                                                                    <path d="M7.5 11C4.803 11 2.53 9.622 1.096 7.5 2.53 5.378 4.803 4 7.5 4c2.697 0 4.97 1.378 6.404 3.5C12.47 9.622 10.197 11 7.5 11Zm0-8C4.308 3 1.656 4.706.076 7.235a.5.5 0 0 0 0 .53C1.656 10.294 4.308 12 7.5 12s5.844-1.706 7.424-4.235a.5.5 0 0 0 0-.53C13.344 4.706 10.692 3 7.5 3Zm0 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
+                                                                </svg>
+                                                            </button>
+                                                            {record.id !== currentUserId && (
+                                                                <button
+                                                                    className="rf-btn rf-btn-sm rf-btn-ghost"
+                                                                    style={{ padding: '4px 8px', color: 'var(--danger, #d4380d)' }}
+                                                                    title="Удалить пользователя"
+                                                                    onClick={() => confirmDeleteUser(record)}
+                                                                >
+                                                                    <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+                                                                        <path d="M5.5 1a.5.5 0 0 0-.477.65l.486 1.55H3.5a.5.5 0 0 0 0 1H4l.706 8.353A1.5 1.5 0 0 0 6.2 14h2.6a1.5 1.5 0 0 0 1.494-1.447L11 4.2h.5a.5.5 0 0 0 0-1H9.49l.486-1.55A.5.5 0 0 0 9.5 1h-4Zm.654 2.2L5.84 2h3.32l-.314 1.2H6.154ZM5.005 4.2h4.99l-.7 8.27a.5.5 0 0 1-.5.43H6.2a.5.5 0 0 1-.5-.43L5.005 4.2Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
+                                                                    </svg>
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );
@@ -285,7 +386,7 @@ const AdminUsersPage = () => {
                                             <th>Email / Телефон</th>
                                             <th style={{ width: 160 }}>Статус</th>
                                             <th style={{ width: 130 }}>Регистрация</th>
-                                            <th style={{ width: 100 }} />
+                                            <th style={{ width: 110 }} />
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -328,16 +429,29 @@ const AdminUsersPage = () => {
                                                         </div>
                                                     </td>
                                                     <td className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{formatDate(le.createdAt)}</td>
-                                                    <td>
-                                                        <button
-                                                            className="rf-btn rf-btn-sm rf-btn-ghost"
-                                                            style={{ padding: '4px 8px' }}
-                                                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/legal-entities/${le.id}`); }}
-                                                        >
-                                                            <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                                                                <path d="M7.5 11C4.803 11 2.53 9.622 1.096 7.5 2.53 5.378 4.803 4 7.5 4c2.697 0 4.97 1.378 6.404 3.5C12.47 9.622 10.197 11 7.5 11Zm0-8C4.308 3 1.656 4.706.076 7.235a.5.5 0 0 0 0 .53C1.656 10.294 4.308 12 7.5 12s5.844-1.706 7.424-4.235a.5.5 0 0 0 0-.53C13.344 4.706 10.692 3 7.5 3Zm0 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
-                                                            </svg>
-                                                        </button>
+                                                    <td onClick={(e) => e.stopPropagation()}>
+                                                        <div style={{ display: 'flex', gap: 4 }}>
+                                                            <button
+                                                                className="rf-btn rf-btn-sm rf-btn-ghost"
+                                                                style={{ padding: '4px 8px' }}
+                                                                title="Просмотр"
+                                                                onClick={() => navigate(`/admin/legal-entities/${le.id}`)}
+                                                            >
+                                                                <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+                                                                    <path d="M7.5 11C4.803 11 2.53 9.622 1.096 7.5 2.53 5.378 4.803 4 7.5 4c2.697 0 4.97 1.378 6.404 3.5C12.47 9.622 10.197 11 7.5 11Zm0-8C4.308 3 1.656 4.706.076 7.235a.5.5 0 0 0 0 .53C1.656 10.294 4.308 12 7.5 12s5.844-1.706 7.424-4.235a.5.5 0 0 0 0-.53C13.344 4.706 10.692 3 7.5 3Zm0 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
+                                                                </svg>
+                                                            </button>
+                                                            <button
+                                                                className="rf-btn rf-btn-sm rf-btn-ghost"
+                                                                style={{ padding: '4px 8px', color: 'var(--danger, #d4380d)' }}
+                                                                title="Удалить юрлицо"
+                                                                onClick={() => confirmDeleteLegalEntity(le)}
+                                                            >
+                                                                <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+                                                                    <path d="M5.5 1a.5.5 0 0 0-.477.65l.486 1.55H3.5a.5.5 0 0 0 0 1H4l.706 8.353A1.5 1.5 0 0 0 6.2 14h2.6a1.5 1.5 0 0 0 1.494-1.447L11 4.2h.5a.5.5 0 0 0 0-1H9.49l.486-1.55A.5.5 0 0 0 9.5 1h-4Zm.654 2.2L5.84 2h3.32l-.314 1.2H6.154ZM5.005 4.2h4.99l-.7 8.27a.5.5 0 0 1-.5.43H6.2a.5.5 0 0 1-.5-.43L5.005 4.2Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
+                                                                </svg>
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );

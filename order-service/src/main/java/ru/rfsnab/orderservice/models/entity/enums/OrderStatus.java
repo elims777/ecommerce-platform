@@ -43,4 +43,12 @@ public enum OrderStatus {
     public static OrderStatus fromValue(String value) {
         return valueOf(value.toUpperCase());
     }
+
+    public boolean isFinal() {
+        return this == DELIVERED || this == CANCELLED || this == REFUNDED || this == COMPLETED;
+    }
+
+    public static java.util.List<OrderStatus> finalStatuses() {
+        return java.util.List.of(DELIVERED, CANCELLED, REFUNDED, COMPLETED);
+    }
 }
