@@ -52,6 +52,19 @@ public class AdminOrderController {
         return ResponseEntity.ok(enrichAndMap(order));
     }
 
+    @GetMapping("/active-count")
+    public ResponseEntity<Map<String, Long>> activeCount(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String inn) {
+        if ((userId == null) == (inn == null)) {
+            return ResponseEntity.badRequest().build();
+        }
+        long count = userId != null
+                ? orderService.countActiveByUserId(userId)
+                : orderService.countActiveByInn(inn);
+        return ResponseEntity.ok(Map.of("count", count));
+    }
+
     @PatchMapping("/{orderId}/status")
     public ResponseEntity<OrderDto> changeOrderStatus(
             @PathVariable UUID orderId,

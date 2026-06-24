@@ -16,4 +16,5 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     boolean existsByPhone(String phone);
     List<UserEntity> findAllByLastLoginAtBeforeAndLastInactivityEmailAtIsNullOrLastInactivityEmailAtBefore(
             LocalDateTime loginThreshold, LocalDateTime emailThreshold);
+    long countByRoles_Name(String roleName);
 }
