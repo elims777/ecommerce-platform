@@ -151,7 +151,9 @@ jobs:
         with:
           context: ./auth-service
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}/auth-service:${{ steps.tag.outputs.TAG }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/auth-service:${{ steps.tag.outputs.TAG }}
+            ${{ env.IMAGE_PREFIX }}/auth-service:sha-${{ github.sha }}
 
       - name: Build and push user-service
         if: steps.changed.outputs.user_any_changed == 'true' || steps.changed.outputs.java_root_any_changed == 'true'
@@ -159,7 +161,9 @@ jobs:
         with:
           context: ./user-service
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}/user-service:${{ steps.tag.outputs.TAG }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/user-service:${{ steps.tag.outputs.TAG }}
+            ${{ env.IMAGE_PREFIX }}/user-service:sha-${{ github.sha }}
 
       - name: Build and push notification-service
         if: steps.changed.outputs.notification_any_changed == 'true' || steps.changed.outputs.java_root_any_changed == 'true'
@@ -167,7 +171,9 @@ jobs:
         with:
           context: ./notification-service
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}/notification-service:${{ steps.tag.outputs.TAG }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/notification-service:${{ steps.tag.outputs.TAG }}
+            ${{ env.IMAGE_PREFIX }}/notification-service:sha-${{ github.sha }}
 
       - name: Build and push product-service
         if: steps.changed.outputs.product_any_changed == 'true' || steps.changed.outputs.java_root_any_changed == 'true'
@@ -175,7 +181,9 @@ jobs:
         with:
           context: ./product-service
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}/product-service:${{ steps.tag.outputs.TAG }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/product-service:${{ steps.tag.outputs.TAG }}
+            ${{ env.IMAGE_PREFIX }}/product-service:sha-${{ github.sha }}
 
       - name: Build and push order-service
         if: steps.changed.outputs.order_any_changed == 'true' || steps.changed.outputs.java_root_any_changed == 'true'
@@ -183,7 +191,9 @@ jobs:
         with:
           context: ./order-service
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}/order-service:${{ steps.tag.outputs.TAG }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/order-service:${{ steps.tag.outputs.TAG }}
+            ${{ env.IMAGE_PREFIX }}/order-service:sha-${{ github.sha }}
 
       - name: Build and push integration-service
         if: steps.changed.outputs.integration_any_changed == 'true' || steps.changed.outputs.java_root_any_changed == 'true'
@@ -191,7 +201,9 @@ jobs:
         with:
           context: ./integration-service
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}/integration-service:${{ steps.tag.outputs.TAG }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/integration-service:${{ steps.tag.outputs.TAG }}
+            ${{ env.IMAGE_PREFIX }}/integration-service:sha-${{ github.sha }}
 
       - name: Build and push gateway-service
         if: steps.changed.outputs.gateway_any_changed == 'true' || steps.changed.outputs.java_root_any_changed == 'true'
@@ -199,7 +211,9 @@ jobs:
         with:
           context: ./gateway-service
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}/gateway-service:${{ steps.tag.outputs.TAG }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/gateway-service:${{ steps.tag.outputs.TAG }}
+            ${{ env.IMAGE_PREFIX }}/gateway-service:sha-${{ github.sha }}
 
       - name: Build and push frontend
         if: steps.changed.outputs.frontend_any_changed == 'true'
@@ -207,7 +221,9 @@ jobs:
         with:
           context: ./frontend
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}/frontend:${{ steps.tag.outputs.TAG }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/frontend:${{ steps.tag.outputs.TAG }}
+            ${{ env.IMAGE_PREFIX }}/frontend:sha-${{ github.sha }}
 
   deploy:
     needs: docker
@@ -222,9 +238,25 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -e
+
+            which jq >/dev/null 2>&1 || sudo apt-get install -y jq
+
             cd /opt/rfsnab
             git pull origin master
             cd infra
+
             docker compose pull
-            docker compose up -d --wait --wait-timeout 120 && sudo systemctl reload nginx
+            docker compose up -d --wait --wait-timeout 180
+
+            FAILED=$(docker compose ps --format json | jq -r 'select(.State != "running") | .Name')
+            if [ -n "$FAILED" ]; then
+              echo "::error::Сервисы не в статусе running:"
+              echo "$FAILED"
+              docker compose ps
+              exit 1
+            fi
+
+            sudo systemctl restart nginx
+
             docker system prune -f
