@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { RowLink } from '@/components/navigation';
 import { isAxiosError } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import {
@@ -24,7 +25,6 @@ const VERIFICATION_BADGE: Record<string, { cls: string; label: string }> = {
 };
 
 const AdminUsersPage = () => {
-    const navigate = useNavigate();
     const { message: messageApi, modal } = App.useApp();
     const queryClient = useQueryClient();
 
@@ -308,15 +308,23 @@ const AdminUsersPage = () => {
                                             const currentRole = record.roles[0]?.name ?? 'ROLE_USER';
                                             const fullName = [record.lastname, record.firstname].filter(Boolean).join(' ');
                                             return (
-                                                <tr key={record.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/users/${record.id}`)}>
-                                                    <td className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{record.id}</td>
+                                                <tr key={record.id}>
                                                     <td>
-                                                        <a onClick={(e) => { e.stopPropagation(); navigate(`/admin/users/${record.id}`); }}>
-                                                            {record.email}
-                                                        </a>
+                                                        <RowLink to={`/admin/users/${record.id}`}>
+                                                            <span className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{record.id}</span>
+                                                        </RowLink>
                                                     </td>
-                                                    <td>{fullName || '—'}</td>
-                                                    <td onClick={(e) => e.stopPropagation()}>
+                                                    <td>
+                                                        <RowLink to={`/admin/users/${record.id}`} style={{ color: 'var(--brand-navy)' }}>
+                                                            {record.email}
+                                                        </RowLink>
+                                                    </td>
+                                                    <td>
+                                                        <RowLink to={`/admin/users/${record.id}`}>
+                                                            {fullName || '—'}
+                                                        </RowLink>
+                                                    </td>
+                                                    <td>
                                                         <select
                                                             value={currentRole}
                                                             onChange={(e) => roleMutation.mutate({ id: record.id, role: e.target.value })}
@@ -326,7 +334,7 @@ const AdminUsersPage = () => {
                                                             <option value="ROLE_ADMIN">ADMIN</option>
                                                         </select>
                                                     </td>
-                                                    <td onClick={(e) => e.stopPropagation()}>
+                                                    <td>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                             <span className={`rf-badge ${record.active ? 'rf-badge-success' : 'rf-badge-red'}`}>
                                                                 {record.active ? 'Активен' : 'Заблокирован'}
@@ -341,19 +349,13 @@ const AdminUsersPage = () => {
                                                             </select>
                                                         </div>
                                                     </td>
-                                                    <td className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{formatDate(record.createdAt)}</td>
-                                                    <td onClick={(e) => e.stopPropagation()}>
+                                                    <td>
+                                                        <RowLink to={`/admin/users/${record.id}`}>
+                                                            <span className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{formatDate(record.createdAt)}</span>
+                                                        </RowLink>
+                                                    </td>
+                                                    <td>
                                                         <div style={{ display: 'flex', gap: 4 }}>
-                                                            <button
-                                                                className="rf-btn rf-btn-sm rf-btn-ghost"
-                                                                style={{ padding: '4px 8px' }}
-                                                                title="Просмотр"
-                                                                onClick={() => navigate(`/admin/users/${record.id}`)}
-                                                            >
-                                                                <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                                                                    <path d="M7.5 11C4.803 11 2.53 9.622 1.096 7.5 2.53 5.378 4.803 4 7.5 4c2.697 0 4.97 1.378 6.404 3.5C12.47 9.622 10.197 11 7.5 11Zm0-8C4.308 3 1.656 4.706.076 7.235a.5.5 0 0 0 0 .53C1.656 10.294 4.308 12 7.5 12s5.844-1.706 7.424-4.235a.5.5 0 0 0 0-.53C13.344 4.706 10.692 3 7.5 3Zm0 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
-                                                                </svg>
-                                                            </button>
                                                             {record.id !== currentUserId && (
                                                                 <button
                                                                     className="rf-btn rf-btn-sm rf-btn-ghost"
@@ -399,18 +401,30 @@ const AdminUsersPage = () => {
                                         ) : paginatedLegal.map((le: LegalEntityDto) => {
                                             const badge = VERIFICATION_BADGE[le.verificationStatus] ?? { cls: 'rf-badge-neutral', label: le.verificationStatus };
                                             return (
-                                                <tr key={le.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/legal-entities/${le.id}`)}>
-                                                    <td className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{le.id}</td>
+                                                <tr key={le.id}>
                                                     <td>
-                                                        <div style={{ fontWeight: 500, fontSize: 13 }}>{le.fullName}</div>
-                                                        {le.director && <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 1 }}>{le.director}</div>}
+                                                        <RowLink to={`/admin/legal-entities/${le.id}`}>
+                                                            <span className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{le.id}</span>
+                                                        </RowLink>
                                                     </td>
-                                                    <td className="rf-mono" style={{ fontSize: 12 }}>{le.inn}</td>
                                                     <td>
-                                                        {le.email && <div style={{ fontSize: 13 }}>{le.email}</div>}
-                                                        {le.phone && <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{le.phone}</div>}
+                                                        <RowLink to={`/admin/legal-entities/${le.id}`}>
+                                                            <div style={{ fontWeight: 500, fontSize: 13 }}>{le.fullName}</div>
+                                                            {le.director && <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 1 }}>{le.director}</div>}
+                                                        </RowLink>
                                                     </td>
-                                                    <td onClick={(e) => e.stopPropagation()}>
+                                                    <td>
+                                                        <RowLink to={`/admin/legal-entities/${le.id}`}>
+                                                            <span className="rf-mono" style={{ fontSize: 12 }}>{le.inn}</span>
+                                                        </RowLink>
+                                                    </td>
+                                                    <td>
+                                                        <RowLink to={`/admin/legal-entities/${le.id}`}>
+                                                            {le.email && <div style={{ fontSize: 13 }}>{le.email}</div>}
+                                                            {le.phone && <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{le.phone}</div>}
+                                                        </RowLink>
+                                                    </td>
+                                                    <td>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                                             <span className={`rf-badge ${badge.cls}`}>{badge.label}</span>
                                                             <select
@@ -428,19 +442,13 @@ const AdminUsersPage = () => {
                                                             </select>
                                                         </div>
                                                     </td>
-                                                    <td className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{formatDate(le.createdAt)}</td>
-                                                    <td onClick={(e) => e.stopPropagation()}>
+                                                    <td>
+                                                        <RowLink to={`/admin/legal-entities/${le.id}`}>
+                                                            <span className="rf-tabular" style={{ color: 'var(--ink-3)' }}>{formatDate(le.createdAt)}</span>
+                                                        </RowLink>
+                                                    </td>
+                                                    <td>
                                                         <div style={{ display: 'flex', gap: 4 }}>
-                                                            <button
-                                                                className="rf-btn rf-btn-sm rf-btn-ghost"
-                                                                style={{ padding: '4px 8px' }}
-                                                                title="Просмотр"
-                                                                onClick={() => navigate(`/admin/legal-entities/${le.id}`)}
-                                                            >
-                                                                <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
-                                                                    <path d="M7.5 11C4.803 11 2.53 9.622 1.096 7.5 2.53 5.378 4.803 4 7.5 4c2.697 0 4.97 1.378 6.404 3.5C12.47 9.622 10.197 11 7.5 11Zm0-8C4.308 3 1.656 4.706.076 7.235a.5.5 0 0 0 0 .53C1.656 10.294 4.308 12 7.5 12s5.844-1.706 7.424-4.235a.5.5 0 0 0 0-.53C13.344 4.706 10.692 3 7.5 3Zm0 6.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
-                                                                </svg>
-                                                            </button>
                                                             <button
                                                                 className="rf-btn rf-btn-sm rf-btn-ghost"
                                                                 style={{ padding: '4px 8px', color: 'var(--danger, #d4380d)' }}

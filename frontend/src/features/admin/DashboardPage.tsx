@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { RowLink } from '@/components/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { getAdminOrders } from '@/api/adminOrders';
 import { OrderStatusLabels } from '@/types/order';
@@ -120,32 +121,40 @@ const DashboardPage = () => {
                 const code = extractEnumCode(o.status);
                 const badge = STATUS_BADGE[code] ?? { cls: 'rf-badge-neutral', label: OrderStatusLabels[code as OrderStatus] ?? code };
                 return (
-                  <tr
-                    key={o.id}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/admin/orders/${o.id}`)}
-                  >
+                  <tr key={o.id}>
                     <td>
-                      <span className="rf-mono" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--brand-navy)' }}>
-                        {o.orderNumber}
-                      </span>
+                      <RowLink to={`/admin/orders/${o.id}`}>
+                        <span className="rf-mono" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--brand-navy)' }}>
+                          {o.orderNumber}
+                        </span>
+                      </RowLink>
                     </td>
                     <td>
-                      <span className="rf-tabular" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
-                        {formatDate(o.createdAt)}
-                      </span>
+                      <RowLink to={`/admin/orders/${o.id}`}>
+                        <span className="rf-tabular" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
+                          {formatDate(o.createdAt)}
+                        </span>
+                      </RowLink>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 500, fontSize: 13 }}>{o.customerEmail}</div>
-                      {(o.customerName || o.companyName) && (
-                        <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 1 }}>
-                          {o.customerName || o.companyName}
-                        </div>
-                      )}
+                      <RowLink to={`/admin/orders/${o.id}`}>
+                        <div style={{ fontWeight: 500, fontSize: 13 }}>{o.customerEmail}</div>
+                        {(o.customerName || o.companyName) && (
+                          <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 1 }}>
+                            {o.customerName || o.companyName}
+                          </div>
+                        )}
+                      </RowLink>
                     </td>
-                    <td><span className={`rf-badge ${badge.cls}`}>{badge.label}</span></td>
+                    <td>
+                      <RowLink to={`/admin/orders/${o.id}`}>
+                        <span className={`rf-badge ${badge.cls}`}>{badge.label}</span>
+                      </RowLink>
+                    </td>
                     <td className="col-right">
-                      <span className="rf-tabular" style={{ fontWeight: 600 }}>{formatPrice(o.totalAmount)}</span>
+                      <RowLink to={`/admin/orders/${o.id}`}>
+                        <span className="rf-tabular" style={{ fontWeight: 600 }}>{formatPrice(o.totalAmount)}</span>
+                      </RowLink>
                     </td>
                   </tr>
                 );
