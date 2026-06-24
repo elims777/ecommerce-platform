@@ -86,7 +86,7 @@ public class IntegrationProperties {
     @Setter
     public static class FtkProperties {
         /** Лимит товаров (родителей) на один запуск. 0 = без лимита */
-        private int importLimit = 100;
+        private int importLimit = 0;
         /** Slug корневой категории ФТК (должна существовать в product-service) */
         private String rootCategorySlug = "ftk";
         /** Таймаут скачивания одного изображения в секундах */

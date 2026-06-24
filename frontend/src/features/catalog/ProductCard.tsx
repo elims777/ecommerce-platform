@@ -3,6 +3,7 @@ import { ShoppingOutlined } from '@ant-design/icons';
 import type { Product, ProductImage } from '@/types/product';
 import { useDisplayPrice } from '@/utils/priceUtils';
 import { useFavouritesStore } from '@/store/favouritesStore';
+import { ClickableCard } from '@/components/navigation';
 
 const formatPrice = (price: number): string =>
     new Intl.NumberFormat('ru-RU', {
@@ -69,7 +70,7 @@ const NameWithPopover = ({ name }: { name: string }) => {
                     display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical',
                     overflow: 'hidden', minHeight: 76, fontFamily: 'var(--font-body)',
                     textAlign: 'justify', hyphens: 'auto',
-                    cursor: isClamped ? 'help' : 'pointer',
+                    cursor: isClamped ? 'help' : 'inherit',
                 }}
             >
                 {name}
@@ -105,11 +106,10 @@ const NameWithPopover = ({ name }: { name: string }) => {
 
 interface ProductCardProps {
     product: Product;
-    onClick: () => void;
     onAddToCart: (productId: number) => void;
 }
 
-const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
+const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
     const displayPrice = useDisplayPrice(product);
     const sortedImages = sortImages(product.images || []);
     const hasMultipleImages = sortedImages.length > 1;
@@ -138,7 +138,8 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
     const currentImage = sortedImages[currentImageIndex];
 
     return (
-        <div
+        <ClickableCard
+            to={`/products/${product.id}`}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             style={{
@@ -184,10 +185,9 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
 
             {/* Изображение */}
             <div
-                onClick={onClick}
                 style={{
                     aspectRatio: '1 / 0.78', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'var(--surface-2)', overflow: 'hidden', position: 'relative', cursor: 'pointer',
+                    background: 'var(--surface-2)', overflow: 'hidden', position: 'relative',
                 }}
             >
                 {currentImage ? (
@@ -215,7 +215,7 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
             </div>
 
             {/* Инфо */}
-            <div onClick={onClick} style={{ padding: '12px 14px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer' }}>
+            <div style={{ padding: '12px 14px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <NameWithPopover name={product.name} />
 
                 {/* Цена */}
@@ -251,7 +251,7 @@ const ProductCard = ({ product, onClick, onAddToCart }: ProductCardProps) => {
                     </button>
                 </div>
             </div>
-        </div>
+        </ClickableCard>
     );
 };
 
