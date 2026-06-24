@@ -115,17 +115,6 @@ public class UserController {
                         .toList());
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteUser(@PathVariable("id") Long id){
-        if(userService.findUserById(id).isPresent()){
-            userService.deleteUser(id);
-            return ResponseEntity.ok("User deleted.");
-        } else{
-            throw new UsernameNotFoundException(
-                    "Пользователь с id " + id + " не найден");
-        }
-    }
-
     @GetMapping("/me")
     public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());

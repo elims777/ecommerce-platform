@@ -29,6 +29,10 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     long countByUserId(Long userId);
 
+    long countByUserIdAndStatusNotIn(Long userId, List<OrderStatus> excludedStatuses);
+
+    long countByInnAndStatusNotIn(String inn, List<OrderStatus> excludedStatuses);
+
     Page<Order> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);

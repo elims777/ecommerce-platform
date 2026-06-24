@@ -314,36 +314,6 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /v1/users/{id} - success returns OK")
-    void deleteUser_Success_ReturnsOk() throws Exception {
-        // Given
-        when(userService.findUserById(1L)).thenReturn(Optional.of(testUser));
-        doNothing().when(userService).deleteUser(1L);
-
-        // When & Then
-        mockMvc.perform(delete("/v1/users/1"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("User deleted."));
-
-        verify(userService, times(1)).findUserById(1L);
-        verify(userService, times(1)).deleteUser(1L);
-    }
-
-    @Test
-    @DisplayName("DELETE /v1/users/{id} - user not found returns NOT_FOUND")
-    void deleteUser_NotFound_ReturnsNotFound() throws Exception {
-        // Given
-        when(userService.findUserById(999L)).thenReturn(Optional.empty());
-
-        // When & Then
-        mockMvc.perform(delete("/v1/users/999"))
-                .andExpect(status().isNotFound()); // UsernameNotFoundException
-
-        verify(userService, times(1)).findUserById(999L);
-        verify(userService, never()).deleteUser(anyLong());
-    }
-
-    @Test
     @DisplayName("GET /v1/users/me - returns current user")
     void getCurrentUser_ReturnsCurrentUser() throws Exception {
         // Given

@@ -135,6 +135,18 @@ spring:
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@ipKeyResolver}"
 
+            - id: admin-users-api
+              uri: http://user-service:8081
+              predicates:
+                - Path=/api/v1/admin/users/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 15
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
             # === NOTIFICATION-SERVICE ===
             - id: notification-api
               uri: http://notification-service:8082

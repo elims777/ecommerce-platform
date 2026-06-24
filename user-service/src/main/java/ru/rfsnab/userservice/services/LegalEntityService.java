@@ -359,6 +359,13 @@ public class LegalEntityService {
     }
 
     @Transactional
+    public void deleteById(Long id) {
+        LegalEntity entity = getById(id);
+        legalEntityRepository.delete(entity);
+        log.info("Legal entity hard-deleted: id={}, inn={}", id, entity.getInn());
+    }
+
+    @Transactional
     public void detachFromUser(Long legalEntityId, Long userId) {
         UserLegalEntity link = userLegalEntityRepository
                 .findByUserIdAndLegalEntityId(userId, legalEntityId)

@@ -28,6 +28,10 @@ app:
       legal-entity-events: legal-entity-events
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
+services:
+  order:
+    url: ${ORDER_SERVICE_URL:http://localhost:8084}
+
 springdoc:
   api-docs:
     path: /api-docs

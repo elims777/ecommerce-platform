@@ -177,6 +177,68 @@ class AdminOrderControllerTest extends BaseIntegrationTest {
         }
     }
 
+    // ==================== GET /api/v1/admin/orders/active-count ====================
+
+    @Nested
+    @DisplayName("GET /api/v1/admin/orders/active-count — подсчёт активных заказов")
+    class ActiveCountTests {
+
+        @Test
+        @DisplayName("200 OK — возвращает count по userId")
+        void shouldReturnCountByUserId() throws Exception {
+            when(orderService.countActiveByUserId(42L)).thenReturn(3L);
+
+            mockMvc.perform(get("/api/v1/admin/orders/active-count")
+                            .param("userId", "42")
+                            .with(jwtAdmin()).with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.count").value(3));
+
+            verify(orderService).countActiveByUserId(42L);
+        }
+
+        @Test
+        @DisplayName("200 OK — возвращает count по inn")
+        void shouldReturnCountByInn() throws Exception {
+            when(orderService.countActiveByInn("7707083893")).thenReturn(0L);
+
+            mockMvc.perform(get("/api/v1/admin/orders/active-count")
+                            .param("inn", "7707083893")
+                            .with(jwtAdmin()).with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.count").value(0));
+
+            verify(orderService).countActiveByInn("7707083893");
+        }
+
+        @Test
+        @DisplayName("400 Bad Request — оба параметра")
+        void shouldReturn400WhenBothParams() throws Exception {
+            mockMvc.perform(get("/api/v1/admin/orders/active-count")
+                            .param("userId", "42")
+                            .param("inn", "7707083893")
+                            .with(jwtAdmin()).with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("400 Bad Request — ни одного параметра")
+        void shouldReturn400WhenNoParams() throws Exception {
+            mockMvc.perform(get("/api/v1/admin/orders/active-count")
+                            .with(jwtAdmin()).with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("403 Forbidden — пользователь без роли ADMIN")
+        void shouldReturn403ForRegularUser() throws Exception {
+            mockMvc.perform(get("/api/v1/admin/orders/active-count")
+                            .param("userId", "42")
+                            .with(jwtUser()).with(csrf()))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
     // ==================== Test data builders ====================
 
     private Order buildOrder() {

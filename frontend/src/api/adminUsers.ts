@@ -103,3 +103,13 @@ export const rejectLegalEntity = async (legalEntityId: number, managerEmail: str
 export const detachLegalEntity = async (legalEntityId: number, userId: number): Promise<void> => {
   await apiClient.delete(`/v1/admin/legal-entities/${legalEntityId}/users/${userId}`);
 };
+
+// DELETE /api/v1/admin/users/{id}
+export const deleteUser = async (id: number): Promise<void> => {
+  await apiClient.delete(`/v1/admin/users/${id}`);
+};
+
+// DELETE /api/v1/admin/legal-entities/{id}
+export const deleteLegalEntity = async (id: number): Promise<void> => {
+  await apiClient.delete(`/v1/admin/legal-entities/${id}`);
+};
