@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Select, App, DatePicker } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { RowLink } from '@/components/navigation';
 import { getAdminOrders, changeOrderStatus } from '@/api/adminOrders';
 import { OrderStatus, OrderStatusLabels } from '@/types/order';
 import { extractEnumCode } from '@/utils/enumUtils';
@@ -42,7 +42,6 @@ const STATUS_TABS = [
 ];
 
 const AdminOrdersPage = () => {
-  const navigate = useNavigate();
   const { message: messageApi } = App.useApp();
   const queryClient = useQueryClient();
 
@@ -166,35 +165,39 @@ const AdminOrdersPage = () => {
                 const ctCode = extractEnumCode(o.customerType);
 
                 return (
-                  <tr
-                    key={o.id}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/admin/orders/${o.id}`)}
-                  >
+                  <tr key={o.id}>
                     <td>
-                      <span className="rf-mono" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--brand-navy)' }}>
-                        {o.orderNumber}
-                      </span>
+                      <RowLink to={`/admin/orders/${o.id}`}>
+                        <span className="rf-mono" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--brand-navy)' }}>
+                          {o.orderNumber}
+                        </span>
+                      </RowLink>
                     </td>
                     <td>
-                      <span className="rf-tabular" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
-                        {formatDate(o.createdAt)}
-                      </span>
+                      <RowLink to={`/admin/orders/${o.id}`}>
+                        <span className="rf-tabular" style={{ color: 'var(--ink-3)', fontSize: 12 }}>
+                          {formatDate(o.createdAt)}
+                        </span>
+                      </RowLink>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 500, fontSize: 13 }}>{o.customerEmail}</div>
-                      {(o.customerName || o.companyName) && (
-                        <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 1 }}>
-                          {o.customerName || o.companyName}
-                        </div>
-                      )}
+                      <RowLink to={`/admin/orders/${o.id}`}>
+                        <div style={{ fontWeight: 500, fontSize: 13 }}>{o.customerEmail}</div>
+                        {(o.customerName || o.companyName) && (
+                          <div style={{ fontSize: 11.5, color: 'var(--ink-3)', marginTop: 1 }}>
+                            {o.customerName || o.companyName}
+                          </div>
+                        )}
+                      </RowLink>
                     </td>
                     <td>
-                      <span className={`rf-badge ${ctCode === 'B2B' ? 'rf-badge-navy' : 'rf-badge-neutral'}`} style={{ fontSize: 11 }}>
-                        {ctCode || '—'}
-                      </span>
+                      <RowLink to={`/admin/orders/${o.id}`}>
+                        <span className={`rf-badge ${ctCode === 'B2B' ? 'rf-badge-navy' : 'rf-badge-neutral'}`} style={{ fontSize: 11 }}>
+                          {ctCode || '—'}
+                        </span>
+                      </RowLink>
                     </td>
-                    <td onClick={(e) => e.stopPropagation()}>
+                    <td>
                       {transitions.length > 0 ? (
                         <Select
                           size="small"
@@ -211,14 +214,18 @@ const AdminOrdersPage = () => {
                       )}
                     </td>
                     <td className="col-right">
-                      <span className="rf-tabular" style={{ fontWeight: 600 }}>
-                        {formatPrice(o.totalAmount)}
-                      </span>
+                      <RowLink to={`/admin/orders/${o.id}`}>
+                        <span className="rf-tabular" style={{ fontWeight: 600 }}>
+                          {formatPrice(o.totalAmount)}
+                        </span>
+                      </RowLink>
                     </td>
                     <td>
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--ink-3)" strokeWidth="1.5">
-                        <path d="M6 4l4 4-4 4"/>
-                      </svg>
+                      <RowLink to={`/admin/orders/${o.id}`}>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--ink-3)" strokeWidth="1.5">
+                          <path d="M6 4l4 4-4 4"/>
+                        </svg>
+                      </RowLink>
                     </td>
                   </tr>
                 );

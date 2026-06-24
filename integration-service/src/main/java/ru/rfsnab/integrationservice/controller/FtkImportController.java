@@ -47,10 +47,10 @@ public class FtkImportController {
         return runXmlImport();
     }
 
-    /** Автоматический запуск ежедневно в 03:00. */
-    @Scheduled(cron = "0 0 3 * * *")
+    /** Автоматический запуск ежедневно в 04:00 МСК (на час позже обновления данных у ФТК). */
+    @Scheduled(cron = "0 0 4 * * *")
     public void scheduledXmlImport() {
-        log.info("ФТК XML импорт запущен по расписанию (03:00)");
+        log.info("ФТК XML импорт запущен по расписанию (04:00 МСК)");
         runXmlImport();
     }
 

@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { getAdminProducts, searchProducts } from '@/api/products';
 import {
     getCategoryTree,
@@ -1123,12 +1123,12 @@ const AdminCatalogPage = () => {
                                                             {isChild && (
                                                                 <span style={{ width: 2, height: 18, background: 'var(--line-2)', borderRadius: 2, flexShrink: 0 }} />
                                                             )}
-                                                            <a
-                                                                onClick={() => navigate(`/admin/products/${product.id}/edit`)}
-                                                                style={{ color: isChild ? 'var(--ink-2)' : 'var(--brand-navy)', cursor: 'pointer', textDecoration: 'none', fontSize: 'var(--text-base)' }}
+                                                            <Link
+                                                                to={`/admin/products/${product.id}/edit`}
+                                                                style={{ color: isChild ? 'var(--ink-2)' : 'var(--brand-navy)', textDecoration: 'none', fontSize: 'var(--text-base)' }}
                                                             >
                                                                 {product.name}
-                                                            </a>
+                                                            </Link>
                                                             {childCount > 0 && (
                                                                 <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 'var(--r-2)', background: 'var(--brand-navy)', color: '#fff', fontWeight: 600, flexShrink: 0 }}>
                                                                     {childCount} вар.

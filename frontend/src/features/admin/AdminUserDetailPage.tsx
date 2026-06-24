@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { RowLink } from '@/components/navigation';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -253,19 +254,29 @@ const AdminUserDetailPage = () => {
                   const code = extractEnumCode(order.status);
                   const badgeCls = ORDER_STATUS_BADGE[code] ?? 'rf-badge-neutral';
                   return (
-                    <tr key={order.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/orders/${order.id}`)}>
+                    <tr key={order.id}>
                       <td>
-                        <a onClick={(e) => { e.stopPropagation(); navigate(`/admin/orders/${order.id}`); }}>
+                        <RowLink to={`/admin/orders/${order.id}`} style={{ color: 'var(--brand-navy)' }}>
                           {order.orderNumber}
-                        </a>
+                        </RowLink>
                       </td>
                       <td>
-                        <span className={`rf-badge ${badgeCls}`}>
-                          {OrderStatusLabels[code as OrderStatus] ?? code}
-                        </span>
+                        <RowLink to={`/admin/orders/${order.id}`}>
+                          <span className={`rf-badge ${badgeCls}`}>
+                            {OrderStatusLabels[code as OrderStatus] ?? code}
+                          </span>
+                        </RowLink>
                       </td>
-                      <td className="col-right rf-tabular">{formatPrice(order.totalAmount)}</td>
-                      <td className="rf-tabular">{formatDateTime(order.createdAt)}</td>
+                      <td className="col-right">
+                        <RowLink to={`/admin/orders/${order.id}`}>
+                          <span className="rf-tabular">{formatPrice(order.totalAmount)}</span>
+                        </RowLink>
+                      </td>
+                      <td>
+                        <RowLink to={`/admin/orders/${order.id}`}>
+                          <span className="rf-tabular">{formatDateTime(order.createdAt)}</span>
+                        </RowLink>
+                      </td>
                     </tr>
                   );
                 })}
@@ -299,14 +310,26 @@ const AdminUserDetailPage = () => {
               <tbody>
                 {legalEntities.map((le: LegalEntityDto) => (
                   <tr key={le.id}>
-                    <td>{le.fullName}</td>
-                    <td className="rf-mono">{le.inn}</td>
                     <td>
-                      <span className={`rf-badge ${LE_STATUS_BADGE[le.verificationStatus] ?? 'rf-badge-neutral'}`}>
-                        {LE_STATUS_LABEL[le.verificationStatus] ?? le.verificationStatus}
-                      </span>
+                      <RowLink to={`/admin/legal-entities/${le.id}`}>{le.fullName}</RowLink>
                     </td>
-                    <td className="rf-tabular">{formatDate(le.createdAt)}</td>
+                    <td>
+                      <RowLink to={`/admin/legal-entities/${le.id}`}>
+                        <span className="rf-mono">{le.inn}</span>
+                      </RowLink>
+                    </td>
+                    <td>
+                      <RowLink to={`/admin/legal-entities/${le.id}`}>
+                        <span className={`rf-badge ${LE_STATUS_BADGE[le.verificationStatus] ?? 'rf-badge-neutral'}`}>
+                          {LE_STATUS_LABEL[le.verificationStatus] ?? le.verificationStatus}
+                        </span>
+                      </RowLink>
+                    </td>
+                    <td>
+                      <RowLink to={`/admin/legal-entities/${le.id}`}>
+                        <span className="rf-tabular">{formatDate(le.createdAt)}</span>
+                      </RowLink>
+                    </td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
                         {le.verificationStatus !== 'VERIFIED' && (

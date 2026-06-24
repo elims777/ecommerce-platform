@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ClickableCard } from '@/components/navigation';
 import { Spin } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { getProducts } from '@/api/products';
@@ -258,9 +259,9 @@ const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
                     zIndex: 2,
                 }}>
                     {s.products.slice(0, 3).map((p) => (
-                        <div
+                        <ClickableCard
                             key={p.id}
-                            onClick={() => navigate(`/products/${p.id}`)}
+                            to={`/products/${p.id}`}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: 10,
                                 background: 'rgba(255,255,255,.12)', backdropFilter: 'blur(6px)',
@@ -270,8 +271,9 @@ const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
                                 height: s.productsItemHeight ?? 56,
                                 boxSizing: 'border-box', overflow: 'hidden',
                             }}
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.2)'; }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,.12)'; }}
+                            // TODO: заменить ref-hack на useState hover-индекс внутри выделенного компонента SlideProductItem
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,.2)'; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,.12)'; }}
                         >
                             {p.imageUrl && (
                                 <div style={{
@@ -306,7 +308,7 @@ const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
                                 )}
                             </div>
                             <ArrRight width={12} height={12} />
-                        </div>
+                        </ClickableCard>
                     ))}
                 </div>
             )}
@@ -595,7 +597,6 @@ const HomePage = () => {
                             <div key={product.id} style={{ flex: '0 0 auto', scrollSnapAlign: 'start' }}>
                                 <ProductCard
                                     product={product}
-                                    onClick={() => navigate(`/products/${product.id}`)}
                                     onAddToCart={handleAddToCart}
                                 />
                             </div>

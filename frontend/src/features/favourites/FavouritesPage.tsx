@@ -82,7 +82,6 @@ const FavouritesPage = () => {
                         <ProductCard
                             key={product.id}
                             product={product}
-                            onClick={() => navigate(`/products/${product.id}`)}
                             onAddToCart={handleAddToCart}
                         />
                     ))}

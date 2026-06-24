@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Table, Skeleton, Pagination, Spin, Button, message, Modal, QRCode } from 'antd';
 import { ShoppingOutlined, CreditCardOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getMyOrders, getOrderById, initiatePayment } from '@/api/orders';
 import { OrderStatusLabels, PaymentMethodLabels, DeliveryMethodLabels, PaymentMethod } from '@/types/order';
 import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
@@ -158,7 +158,7 @@ const OrdersPage = () => {
                 dataIndex: 'productName',
                 key: 'productName',
                 render: (name: string, item) => (
-                    <span onClick={() => navigate(`/products/${item.productId}`)} style={{ color: 'var(--brand-navy)', cursor: 'pointer', fontWeight: 500 }}>{name}</span>
+                    <Link to={`/products/${item.productId}`} style={{ color: 'var(--brand-navy)', fontWeight: 500, textDecoration: 'none' }}>{name}</Link>
                 ),
             },
             {

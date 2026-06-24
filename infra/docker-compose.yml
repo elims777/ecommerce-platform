@@ -355,6 +355,7 @@ services:
       FTK_FTP_USERNAME: ${FTK_FTP_USERNAME}
       FTK_FTP_PASSWORD: ${FTK_FTP_PASSWORD}
       FTK_FTP_PASSIVE_PORT_START: ${FTK_FTP_PASSIVE_PORT_START}
+      FTK_IMPORT_LIMIT: ${FTK_IMPORT_LIMIT}
       # Внутренние сервисы
       PRODUCT_SERVICE_URL: http://product-service:8083
       ORDER_SERVICE_URL: http://order-service:8084
