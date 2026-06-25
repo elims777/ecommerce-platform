@@ -169,7 +169,8 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
 
             {/* Кнопка избранного */}
             <button
-                onClick={(e) => { e.stopPropagation(); toggleFavourite(product.id); }}
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavourite(product.id); }}
                 style={{
                     position: 'absolute', top: 10, right: 10, zIndex: 2,
                     width: 30, height: 30, borderRadius: 'var(--r-full)', border: 0,
@@ -236,7 +237,8 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
                 {/* Кнопка в корзину */}
                 <div style={{ display: 'flex', gap: 6 }}>
                     <button
-                        onClick={(e) => { e.stopPropagation(); onAddToCart(product.id); }}
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddToCart(product.id); }}
                         style={{
                             flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                             height: 34, padding: '0 12px',
