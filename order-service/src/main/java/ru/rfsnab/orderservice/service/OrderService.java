@@ -446,6 +446,19 @@ public class OrderService {
     }
 
     /**
+     * То же, что syncFrom1C, но ищет заказ по orderNumber (на сайте это AAB32389-NNNNN).
+     * Используется при импорте статусов из 1С — 1С шлёт <Номер>, а свой UUID в <Ид>.
+     */
+    @Transactional
+    public Order syncFrom1CByOrderNumber(String orderNumber, String externalId, OrderStatus newStatus) {
+        Order order = orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new OrderNotFoundException("Заказ не найден по номеру: " + orderNumber));
+        order.setExternalId(externalId);
+        order.setStatus(newStatus);
+        return orderRepository.save(order);
+    }
+
+    /**
      * Отмена заказа пользователем. Возможна только до статуса SHIPPED.
      */
     @Transactional
