@@ -39,18 +39,21 @@ public class OrderExportService {
     private final JAXBContext commerceMlJaxbContext;
     private final ObjectMapper objectMapper;
 
+    /** Результат выгрузки заказов: XML для 1С + количество заказов. */
+    public record OrderExportResult(String xml, int count) {}
+
     /**
      * Формирует CommerceML XML из непереданных заказов.
      * Вызывается при type=sale, mode=query.
-     * @return XML строка с документами заказов или пустой CommerceML если заказов нет
+     * @return OrderExportResult с XML строкой и количеством заказов
      */
     @Transactional
-    public String exportPendingOrders() {
+    public OrderExportResult exportPendingOrders() {
         List<PendingOrder> orders = repository.findByExportedFalseOrderByCreatedAtAsc();
 
         if(orders.isEmpty()){
             log.info("Нет заказов для выгрузки в 1С");
-            return buildEmptyResponse();
+            return new OrderExportResult(buildEmptyResponse(), 0);
         }
 
         log.info("Выгрузка {} заказов для 1С", orders.size());
@@ -70,17 +73,19 @@ public class OrderExportService {
             }
         }
         commerceInfo.setDocuments(documents);
-        return marshalToXml(commerceInfo);
+        return new OrderExportResult(marshalToXml(commerceInfo), orders.size());
     }
 
     /**
      * Помечает все непереданные заказы как exported.
      * Вызывается при type=sale, mode=success (1С подтвердила получение).
+     * @return количество помеченных заказов
      */
     @Transactional
-    public void markOrdersAsExported() {
+    public int markOrdersAsExported() {
         int count = repository.markAllAsExported(LocalDateTime.now());
         log.info("Помечено {} заказов как exported", count);
+        return count;
     }
 
     /**

@@ -81,14 +81,15 @@ class OrderExportServiceTest extends BaseIntegrationTest {
             savePendingOrder("uuid-001", "ORD-00001");
             savePendingOrder("uuid-002", "ORD-00002");
 
-            String xml = orderExportService.exportPendingOrders();
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            assertThat(xml).contains("КоммерческаяИнформация");
-            assertThat(xml).contains("uuid-001");
-            assertThat(xml).contains("uuid-002");
-            assertThat(xml).contains("ORD-00001");
-            assertThat(xml).contains("Перчатки нитриловые L");
-            assertThat(xml).contains("ext-001");
+            assertThat(result.count()).isEqualTo(2);
+            assertThat(result.xml()).contains("КоммерческаяИнформация");
+            assertThat(result.xml()).contains("uuid-001");
+            assertThat(result.xml()).contains("uuid-002");
+            assertThat(result.xml()).contains("ORD-00001");
+            assertThat(result.xml()).contains("Перчатки нитриловые L");
+            assertThat(result.xml()).contains("ext-001");
         }
 
         @Test
@@ -96,11 +97,11 @@ class OrderExportServiceTest extends BaseIntegrationTest {
         void shouldIncludeContragent() {
             savePendingOrder("uuid-003", "ORD-00003");
 
-            String xml = orderExportService.exportPendingOrders();
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            assertThat(xml).contains("Контрагент");
-            assertThat(xml).contains("Иванов Иван");
-            assertThat(xml).contains("test@email.com");
+            assertThat(result.xml()).contains("Контрагент");
+            assertThat(result.xml()).contains("Иванов Иван");
+            assertThat(result.xml()).contains("test@email.com");
         }
 
         @Test
@@ -108,21 +109,22 @@ class OrderExportServiceTest extends BaseIntegrationTest {
         void shouldIncludeRequisites() {
             savePendingOrder("uuid-004", "ORD-00004");
 
-            String xml = orderExportService.exportPendingOrders();
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            assertThat(xml).contains("Способ доставки");
-            assertThat(xml).contains("SUPPLIER_DELIVERY");
-            assertThat(xml).contains("Способ оплаты");
-            assertThat(xml).contains("CARD");
+            assertThat(result.xml()).contains("Способ доставки");
+            assertThat(result.xml()).contains("SUPPLIER_DELIVERY");
+            assertThat(result.xml()).contains("Способ оплаты");
+            assertThat(result.xml()).contains("CARD");
         }
 
         @Test
         @DisplayName("возвращает пустой XML если нет заказов")
         void shouldReturnEmptyXmlWhenNoOrders() {
-            String xml = orderExportService.exportPendingOrders();
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            assertThat(xml).contains("КоммерческаяИнформация");
-            assertThat(xml).doesNotContain("Документ");
+            assertThat(result.count()).isEqualTo(0);
+            assertThat(result.xml()).contains("КоммерческаяИнформация");
+            assertThat(result.xml()).doesNotContain("Документ");
         }
 
         @Test
@@ -135,10 +137,10 @@ class OrderExportServiceTest extends BaseIntegrationTest {
 
             savePendingOrder("uuid-006", "ORD-00006");
 
-            String xml = orderExportService.exportPendingOrders();
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            assertThat(xml).doesNotContain("uuid-005");
-            assertThat(xml).contains("uuid-006");
+            assertThat(result.xml()).doesNotContain("uuid-005");
+            assertThat(result.xml()).contains("uuid-006");
         }
     }
 

@@ -19,6 +19,8 @@ interface ImportLogEntry {
     created: number;
     updated: number;
     failed: number;
+    imagesProcessed: number;
+    imagesFailed: number;
     durationMs: number | null;
     errorMessage: string | null;
     createdAt: string;
@@ -31,9 +33,11 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 const TYPE_LABEL: Record<string, string> = {
-    CATALOG:      'Каталог',
+    CATALOG:      'Каталог 1С',
     OFFERS:       'Цены/остатки',
-    ORDER_STATUS: 'Статусы заказов',
+    ORDER_STATUS: 'Статусы из 1С',
+    FTK_CATALOG:  'Каталог ФТК',
+    ORDER_EXPORT: 'Заказы → 1С',
 };
 
 function formatDate(iso: string) {
@@ -67,10 +71,20 @@ const IntegrationPage = () => {
     };
 
     useEffect(() => {
-        apiClient.get<ImportLogEntry[]>('/v1/admin/integration/logs')
-            .then(r => setLogs(r.data))
-            .catch(() => setLogs([]))
-            .finally(() => setLogsLoading(false));
+        const fetchLogs = (isInitial: boolean = false) => {
+            return apiClient.get<ImportLogEntry[]>('/v1/admin/integration/logs')
+                .then(r => setLogs(r.data))
+                .catch(e => console.warn('logs fetch failed', e))
+                .finally(() => { if (isInitial) setLogsLoading(false); });
+        };
+
+        fetchLogs(true);
+
+        const interval = setInterval(() => {
+            if (document.visibilityState === 'visible') fetchLogs();
+        }, 10000);
+
+        return () => clearInterval(interval);
     }, []);
 
     return (
@@ -196,7 +210,7 @@ const IntegrationPage = () => {
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-base)' }}>
                             <thead>
                                 <tr style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--line-1)' }}>
-                                    {['Дата', 'Тип', 'Статус', 'Получено', 'Создано', 'Обновлено', 'Ошибок', 'Время'].map(h => (
+                                    {['Дата', 'Тип', 'Статус', 'Получено', 'Создано', 'Обновлено', 'Ошибок', 'Картинок', 'Ошибок фото', 'Время'].map(h => (
                                         <th key={h} style={{ padding: '8px 14px', textAlign: 'left', fontWeight: 500, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>{h}</th>
                                     ))}
                                 </tr>
@@ -218,6 +232,8 @@ const IntegrationPage = () => {
                                             <td style={{ padding: '9px 14px', textAlign: 'center', color: 'var(--success)' }}>{log.created}</td>
                                             <td style={{ padding: '9px 14px', textAlign: 'center' }}>{log.updated}</td>
                                             <td style={{ padding: '9px 14px', textAlign: 'center', color: log.failed > 0 ? 'var(--brand-red)' : 'inherit' }}>{log.failed}</td>
+                                            <td style={{ padding: '9px 14px', textAlign: 'center', color: 'var(--ink-3)' }}>{log.imagesProcessed > 0 ? log.imagesProcessed : '—'}</td>
+                                            <td style={{ padding: '9px 14px', textAlign: 'center', color: log.imagesFailed > 0 ? 'var(--brand-red)' : 'var(--ink-3)' }}>{log.imagesFailed > 0 ? log.imagesFailed : '—'}</td>
                                             <td style={{ padding: '9px 14px', color: 'var(--ink-3)' }}>{log.durationMs != null ? `${(log.durationMs / 1000).toFixed(1)}с` : '—'}</td>
                                         </tr>
                                     );
