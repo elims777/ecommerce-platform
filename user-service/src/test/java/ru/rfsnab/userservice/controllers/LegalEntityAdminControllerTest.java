@@ -59,15 +59,17 @@ class LegalEntityAdminControllerTest {
                 .build();
     }
 
+    private static final String BEARER = "Bearer test-token";
+
     @Test
     @DisplayName("DELETE — успешно удаляет юрлицо без активных заказов")
     void shouldDeleteLegalEntity() throws Exception {
         when(legalEntityService.getById(100L)).thenReturn(entityWithInn);
-        when(orderServiceClient.countActiveOrdersByInn("7707083893", "1", "ROLE_ADMIN")).thenReturn(0L);
+        when(orderServiceClient.countActiveOrdersByInn("7707083893", BEARER)).thenReturn(0L);
 
         mockMvc.perform(delete("/api/v1/admin/legal-entities/100")
                         .header("X-User-Id", "1")
-                        .header("X-User-Role", "ROLE_ADMIN"))
+                        .header("Authorization", BEARER))
                 .andExpect(status().isNoContent());
 
         verify(legalEntityService).deleteById(100L);
@@ -80,7 +82,7 @@ class LegalEntityAdminControllerTest {
 
         mockMvc.perform(delete("/api/v1/admin/legal-entities/101")
                         .header("X-User-Id", "1")
-                        .header("X-User-Role", "ROLE_ADMIN"))
+                        .header("Authorization", BEARER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
                         .value("Нельзя удалить юрлицо без ИНН — проверка активных заказов невозможна"));
@@ -92,11 +94,11 @@ class LegalEntityAdminControllerTest {
     @DisplayName("DELETE — 409 если есть активные заказы")
     void shouldReturn409WhenActiveOrders() throws Exception {
         when(legalEntityService.getById(100L)).thenReturn(entityWithInn);
-        when(orderServiceClient.countActiveOrdersByInn("7707083893", "1", "ROLE_ADMIN")).thenReturn(5L);
+        when(orderServiceClient.countActiveOrdersByInn("7707083893", BEARER)).thenReturn(5L);
 
         mockMvc.perform(delete("/api/v1/admin/legal-entities/100")
                         .header("X-User-Id", "1")
-                        .header("X-User-Role", "ROLE_ADMIN"))
+                        .header("Authorization", BEARER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
                         .value("Нельзя удалить юрлицо с активными заказами (5)"));

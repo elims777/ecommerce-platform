@@ -79,7 +79,7 @@ public class LegalEntityAdminController {
     public ResponseEntity<Void> delete(
             @PathVariable Long id,
             @RequestHeader("X-User-Id") String callerUserId,
-            @RequestHeader("X-User-Role") String callerRole) {
+            @RequestHeader("Authorization") String authorization) {
 
         LegalEntity entity = legalEntityService.getById(id);
 
@@ -88,7 +88,7 @@ public class LegalEntityAdminController {
                     "Нельзя удалить юрлицо без ИНН — проверка активных заказов невозможна");
         }
 
-        long activeOrders = orderServiceClient.countActiveOrdersByInn(entity.getInn(), callerUserId, callerRole);
+        long activeOrders = orderServiceClient.countActiveOrdersByInn(entity.getInn(), authorization);
         if (activeOrders > 0) {
             throw new LegalEntityDeletionNotAllowedException(
                     "Нельзя удалить юрлицо с активными заказами (" + activeOrders + ")");

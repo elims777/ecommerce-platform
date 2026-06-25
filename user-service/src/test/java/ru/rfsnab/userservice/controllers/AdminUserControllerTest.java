@@ -45,6 +45,8 @@ class AdminUserControllerTest {
     @MockitoBean
     private OrderServiceClient orderServiceClient;
 
+    private static final String BEARER = "Bearer test-token";
+
     private UserEntity targetUser;
     private UserEntity targetAdmin;
 
@@ -74,11 +76,11 @@ class AdminUserControllerTest {
     @DisplayName("DELETE /api/v1/admin/users/{id} — успешное удаление обычного пользователя")
     void shouldDeleteRegularUser() throws Exception {
         when(userService.findUserById(42L)).thenReturn(Optional.of(targetUser));
-        when(orderServiceClient.countActiveOrdersByUserId(42L, "1", "ROLE_ADMIN")).thenReturn(0L);
+        when(orderServiceClient.countActiveOrdersByUserId(42L, BEARER)).thenReturn(0L);
 
         mockMvc.perform(delete("/api/v1/admin/users/42")
                         .header("X-User-Id", "1")
-                        .header("X-User-Role", "ROLE_ADMIN"))
+                        .header("Authorization", BEARER))
                 .andExpect(status().isNoContent());
 
         verify(userService).deleteUser(42L);
@@ -89,7 +91,7 @@ class AdminUserControllerTest {
     void shouldReturn409WhenDeletingSelf() throws Exception {
         mockMvc.perform(delete("/api/v1/admin/users/42")
                         .header("X-User-Id", "42")
-                        .header("X-User-Role", "ROLE_ADMIN"))
+                        .header("Authorization", BEARER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Нельзя удалить собственный аккаунт"));
 
@@ -103,7 +105,7 @@ class AdminUserControllerTest {
 
         mockMvc.perform(delete("/api/v1/admin/users/999")
                         .header("X-User-Id", "1")
-                        .header("X-User-Role", "ROLE_ADMIN"))
+                        .header("Authorization", BEARER))
                 .andExpect(status().isNotFound());
 
         verify(userService, never()).deleteUser(anyLong());
@@ -117,7 +119,7 @@ class AdminUserControllerTest {
 
         mockMvc.perform(delete("/api/v1/admin/users/43")
                         .header("X-User-Id", "1")
-                        .header("X-User-Role", "ROLE_ADMIN"))
+                        .header("Authorization", BEARER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Нельзя удалить последнего администратора"));
 
@@ -129,11 +131,11 @@ class AdminUserControllerTest {
     void shouldDeleteAdminWhenOthersExist() throws Exception {
         when(userService.findUserById(43L)).thenReturn(Optional.of(targetAdmin));
         when(userService.countAdmins()).thenReturn(2L);
-        when(orderServiceClient.countActiveOrdersByUserId(43L, "1", "ROLE_ADMIN")).thenReturn(0L);
+        when(orderServiceClient.countActiveOrdersByUserId(43L, BEARER)).thenReturn(0L);
 
         mockMvc.perform(delete("/api/v1/admin/users/43")
                         .header("X-User-Id", "1")
-                        .header("X-User-Role", "ROLE_ADMIN"))
+                        .header("Authorization", BEARER))
                 .andExpect(status().isNoContent());
 
         verify(userService).deleteUser(43L);
@@ -143,11 +145,11 @@ class AdminUserControllerTest {
     @DisplayName("DELETE — 409 при наличии активных заказов")
     void shouldReturn409WhenActiveOrdersExist() throws Exception {
         when(userService.findUserById(42L)).thenReturn(Optional.of(targetUser));
-        when(orderServiceClient.countActiveOrdersByUserId(42L, "1", "ROLE_ADMIN")).thenReturn(3L);
+        when(orderServiceClient.countActiveOrdersByUserId(42L, BEARER)).thenReturn(3L);
 
         mockMvc.perform(delete("/api/v1/admin/users/42")
                         .header("X-User-Id", "1")
-                        .header("X-User-Role", "ROLE_ADMIN"))
+                        .header("Authorization", BEARER))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message")
                         .value("Нельзя удалить пользователя с активными заказами (3)"));
@@ -159,12 +161,12 @@ class AdminUserControllerTest {
     @DisplayName("DELETE — 503 при недоступности order-service")
     void shouldReturn503WhenOrderServiceDown() throws Exception {
         when(userService.findUserById(42L)).thenReturn(Optional.of(targetUser));
-        when(orderServiceClient.countActiveOrdersByUserId(anyLong(), anyString(), anyString()))
+        when(orderServiceClient.countActiveOrdersByUserId(anyLong(), anyString()))
                 .thenThrow(new OrderServiceUnavailableException("Order service unavailable"));
 
         mockMvc.perform(delete("/api/v1/admin/users/42")
                         .header("X-User-Id", "1")
-                        .header("X-User-Role", "ROLE_ADMIN"))
+                        .header("Authorization", BEARER))
                 .andExpect(status().isServiceUnavailable());
 
         verify(userService, never()).deleteUser(anyLong());
