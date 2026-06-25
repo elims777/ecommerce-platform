@@ -19,7 +19,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
-import { createOrder } from '@/api/orders';
+import { createOrder, confirmOrder } from '@/api/orders';
 import { getWarehousePoints } from '@/api/warehouse';
 import {
     getRecipients,
@@ -207,7 +207,8 @@ const createRecipientMutation = useMutation({
                 request.warehousePointId = values.warehousePointId;
             }
 
-            await createOrder(request);
+            const order = await createOrder(request);
+            await confirmOrder(order.id);
             await clearCart();
             messageApi.success('Заказ успешно оформлен!');
 
