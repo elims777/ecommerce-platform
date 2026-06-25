@@ -22,21 +22,20 @@ public class OrderServiceClient {
         this.orderServiceUrl = orderServiceUrl;
     }
 
-    public long countActiveOrdersByUserId(Long userId, String callerUserId, String callerRole) {
-        return fetchActiveCount("userId=" + userId, callerUserId, callerRole);
+    public long countActiveOrdersByUserId(Long userId, String authorization) {
+        return fetchActiveCount("userId=" + userId, authorization);
     }
 
-    public long countActiveOrdersByInn(String inn, String callerUserId, String callerRole) {
-        return fetchActiveCount("inn=" + inn, callerUserId, callerRole);
+    public long countActiveOrdersByInn(String inn, String authorization) {
+        return fetchActiveCount("inn=" + inn, authorization);
     }
 
     @SuppressWarnings("unchecked")
-    private long fetchActiveCount(String query, String callerUserId, String callerRole) {
+    private long fetchActiveCount(String query, String authorization) {
         try {
             Map<String, Object> body = restClient.get()
                     .uri(orderServiceUrl + "/api/v1/admin/orders/active-count?" + query)
-                    .header("X-User-Id", callerUserId)
-                    .header("X-User-Role", callerRole)
+                    .header("Authorization", authorization)
                     .retrieve()
                     .body(Map.class);
             if (body == null || body.get("count") == null) {
@@ -45,7 +44,7 @@ public class OrderServiceClient {
             Object countValue = body.get("count");
             return countValue instanceof Number n ? n.longValue() : Long.parseLong(countValue.toString());
         } catch (RestClientException e) {
-            log.error("Order service unavailable: {}", e.getMessage());
+            log.error("Order service unavailable", e);
             throw new OrderServiceUnavailableException("Order service unavailable");
         }
     }

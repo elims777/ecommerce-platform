@@ -31,7 +31,7 @@ public class AdminUserController {
     public ResponseEntity<Void> deleteUser(
             @PathVariable Long id,
             @RequestHeader("X-User-Id") String callerUserId,
-            @RequestHeader("X-User-Role") String callerRole) {
+            @RequestHeader("Authorization") String authorization) {
 
         if (callerUserId != null && callerUserId.equals(String.valueOf(id))) {
             throw new UserDeletionNotAllowedException("Нельзя удалить собственный аккаунт");
@@ -46,7 +46,7 @@ public class AdminUserController {
             throw new UserDeletionNotAllowedException("Нельзя удалить последнего администратора");
         }
 
-        long activeOrders = orderServiceClient.countActiveOrdersByUserId(id, callerUserId, callerRole);
+        long activeOrders = orderServiceClient.countActiveOrdersByUserId(id, authorization);
         if (activeOrders > 0) {
             throw new UserDeletionNotAllowedException(
                     "Нельзя удалить пользователя с активными заказами (" + activeOrders + ")");
