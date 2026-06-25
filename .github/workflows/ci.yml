@@ -234,6 +234,7 @@ jobs:
 
     steps:
       - name: Deploy to VPS
+        id: deploy_step
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -262,3 +263,31 @@ jobs:
             sudo systemctl restart nginx
 
             docker system prune -f
+
+      - name: Telegram — успешный деплой
+        if: steps.deploy_step.outcome == 'success'
+        uses: appleboy/telegram-action@221e6b684967abe813051ee4a37dd61770a83ad3  # v1.0.1
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: html
+          message: |
+            ✅ <b>Деплой РФСнаб — успех</b>
+            <code>${{ github.sha }}</code>
+            ${{ github.event.head_commit.message }}
+            Автор: ${{ github.actor }}
+            <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">Workflow run</a>
+
+      - name: Telegram — провал деплоя
+        if: steps.deploy_step.outcome == 'failure'
+        uses: appleboy/telegram-action@221e6b684967abe813051ee4a37dd61770a83ad3  # v1.0.1
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: html
+          message: |
+            ❌ <b>Деплой РФСнаб — провал</b>
+            <code>${{ github.sha }}</code>
+            ${{ github.event.head_commit.message }}
+            Автор: ${{ github.actor }}
+            <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">Workflow run</a>
