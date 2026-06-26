@@ -74,6 +74,7 @@ class ProductImportControllerTest {
         ));
 
         mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -108,6 +109,7 @@ class ProductImportControllerTest {
         ));
 
         mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(first)))
                 .andExpect(status().isOk());
@@ -124,6 +126,7 @@ class ProductImportControllerTest {
         ));
 
         mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(second)))
                 .andExpect(status().isOk())
@@ -156,6 +159,7 @@ class ProductImportControllerTest {
         ));
 
         mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
@@ -176,6 +180,7 @@ class ProductImportControllerTest {
         BatchProductImportRequest request = new BatchProductImportRequest(List.of());
 
         mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
@@ -218,6 +223,7 @@ class ProductImportControllerTest {
         ));
 
         mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -271,6 +277,7 @@ class ProductImportControllerTest {
                         .build()
         ));
         mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(first)))
                 .andExpect(status().isOk());
@@ -294,6 +301,7 @@ class ProductImportControllerTest {
                         .build()
         ));
         mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(second)))
                 .andExpect(status().isOk())
@@ -325,6 +333,7 @@ class ProductImportControllerTest {
         ));
 
         mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())

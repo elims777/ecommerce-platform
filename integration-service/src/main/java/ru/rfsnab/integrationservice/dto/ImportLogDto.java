@@ -12,6 +12,8 @@ public record ImportLogDto(
         int created,
         int updated,
         int failed,
+        int imagesProcessed,
+        int imagesFailed,
         Long durationMs,
         String errorMessage,
         LocalDateTime createdAt
@@ -25,6 +27,8 @@ public record ImportLogDto(
                 log.getCreated(),
                 log.getUpdated(),
                 log.getFailed(),
+                log.getImagesProcessed(),
+                log.getImagesFailed(),
                 log.getDurationMs(),
                 log.getErrorMessage(),
                 log.getCreatedAt()

@@ -14,8 +14,10 @@ import ru.rfsnab.integrationservice.config.IntegrationProperties;
 import ru.rfsnab.integrationservice.dto.BatchImportRequest;
 import ru.rfsnab.integrationservice.dto.BatchImportResponse;
 import ru.rfsnab.integrationservice.dto.ProductImportItemDto;
+import ru.rfsnab.integrationservice.model.ImportLog;
 import ru.rfsnab.integrationservice.model.ftk.FtkProduct;
 import ru.rfsnab.integrationservice.model.ftk.FtkProduct.FtkVariant;
+import ru.rfsnab.integrationservice.repository.ImportLogRepository;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,6 +44,7 @@ class FtkImportServiceTest {
     @Mock private FtkCategoryMapper categoryMapper;
     @Mock private FtkImageDownloader imageDownloader;
     @Mock private RestTemplate productServiceRestTemplate;
+    @Mock private ImportLogRepository importLogRepository;
 
     private IntegrationProperties properties;
     private FtkImportService service;
@@ -53,9 +56,11 @@ class FtkImportServiceTest {
         properties.getProductService().setUrl("http://product-service:8083");
         properties.getImportConfig().setChunkSize(100);
 
+        when(importLogRepository.save(any(ImportLog.class))).thenAnswer(inv -> inv.getArgument(0));
+
         service = new FtkImportService(
                 xlsParser, xmlParser, ftpClient, categoryMapper, imageDownloader,
-                productServiceRestTemplate, properties
+                productServiceRestTemplate, properties, importLogRepository
         );
     }
 

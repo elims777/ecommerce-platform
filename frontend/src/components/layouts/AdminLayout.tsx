@@ -3,7 +3,7 @@ import { useAuthStore } from '@/store/authStore';
 
 const NAV_ITEMS = [
   { key: '/admin',             label: 'Сводка',        icon: GridIcon },
-  { key: '/admin/orders',      label: 'Заявки',         icon: DocIcon },
+  { key: '/admin/orders',      label: 'Заказы',         icon: DocIcon },
   { key: '/admin/products',    label: 'Каталог',        icon: MenuIcon },
   { key: '/admin/slider',      label: 'Слайдер',        icon: SliderIcon },
   { key: '/admin/users',       label: 'Клиенты',        icon: PersonIcon },
@@ -14,7 +14,7 @@ const NAV_ITEMS = [
 
 const PAGE_TITLES: Record<string, string> = {
   '/admin':             'Сводка',
-  '/admin/orders':      'Заявки и заказы',
+  '/admin/orders':      'Заказы',
   '/admin/products':    'Каталог',
   '/admin/slider':      'Слайдер',
   '/admin/users':           'Клиенты',

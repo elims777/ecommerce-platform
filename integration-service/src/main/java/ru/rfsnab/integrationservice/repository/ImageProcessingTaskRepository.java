@@ -42,4 +42,8 @@ public interface ImageProcessingTaskRepository extends JpaRepository<ImageProces
     long countByStatus(TaskStatus status);
 
     List<ImageProcessingTask> findBySessionId(String sessionId);
+
+    long countBySessionIdAndStatusIn(String sessionId, List<TaskStatus> statuses);
+
+    long countBySessionIdAndStatus(String sessionId, TaskStatus status);
 }

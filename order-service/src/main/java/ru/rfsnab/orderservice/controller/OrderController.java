@@ -161,6 +161,14 @@ public class OrderController {
                 orderService.syncFrom1C(orderId, request.externalId(), request.newStatus())));
     }
 
+    @PatchMapping("/by-number/{orderNumber}/1c-sync")
+    @Operation(summary = "Обновление статуса заказа от 1С по orderNumber")
+    public ResponseEntity<OrderDto> syncFrom1CByOrderNumber(@PathVariable(name = "orderNumber") String orderNumber,
+                                                            @Valid @RequestBody OrderSyncRequest request){
+        return ResponseEntity.ok(OrderMapper.toDto(
+                orderService.syncFrom1CByOrderNumber(orderNumber, request.externalId(), request.newStatus())));
+    }
+
     /**
      * Обогащение Order данными WarehousePoint и маппинг в DTO.
      * Для PICKUP заказов подгружает информацию о точке самовывоза.

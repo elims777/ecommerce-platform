@@ -2,16 +2,11 @@ import { Button, Typography, Divider, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { CartItemDto } from '@/api/cart';
 import { useAuthStore } from '@/store/authStore';
+import { formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 
 const { Title, Text } = Typography;
 
-const formatPrice = (price: number): string =>
-    new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    }).format(price);
+const formatPrice = formatPriceOrPlaceholder;
 
 const columns: ColumnsType<CartItemDto> = [
     { title: 'Товар', dataIndex: 'productName', key: 'productName' },
@@ -33,6 +28,7 @@ interface SummaryStepProps {
 
 const SummaryStep = ({ items, totalAmount, loading }: SummaryStepProps) => {
     const user = useAuthStore((s) => s.user);
+    const hasUnpricedItems = items.some((i) => !isPriceAvailable(i.price));
     return (
     <>
         {user?.clientType === 'B2B' && user.companyName && (
@@ -66,6 +62,11 @@ const SummaryStep = ({ items, totalAmount, loading }: SummaryStepProps) => {
                 {formatPrice(totalAmount)}
             </Title>
         </div>
+        {hasUnpricedItems && (
+            <div style={{ marginBottom: 12, fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
+                * цена части товаров уточняется
+            </div>
+        )}
 
         <Button
             type="primary"

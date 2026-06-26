@@ -2,6 +2,7 @@ package ru.rfsnab.integrationservice.config;
 
 import io.netty.resolver.DefaultAddressResolverGroup;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -18,17 +19,19 @@ public class WebClientConfig {
     private final IntegrationProperties properties;
 
     @Bean
-    public WebClient productServiceClient() {
+    public WebClient productServiceClient(@Value("${internal.secret}") String internalSecret) {
         return WebClient.builder()
                 .baseUrl(properties.getProductService().getUrl())
+                .defaultHeader("X-Internal-Token", internalSecret)
                 .clientConnector(new ReactorClientHttpConnector())
                 .build();
     }
 
     @Bean
-    public WebClient orderServiceClient() {
+    public WebClient orderServiceClient(@Value("${internal.secret}") String internalSecret) {
         return WebClient.builder()
                 .baseUrl(properties.getOrderService().getUrl())
+                .defaultHeader("X-Internal-Token", internalSecret)
                 .clientConnector(new ReactorClientHttpConnector())
                 .build();
     }
@@ -40,7 +43,12 @@ public class WebClientConfig {
     }
 
     @Bean
-    public RestTemplate productServiceRestTemplate() {
-        return new RestTemplate();
+    public RestTemplate productServiceRestTemplate(@Value("${internal.secret}") String internalSecret) {
+        RestTemplate template = new RestTemplate();
+        template.getInterceptors().add((request, body, execution) -> {
+            request.getHeaders().set("X-Internal-Token", internalSecret);
+            return execution.execute(request, body);
+        });
+        return template;
     }
 }

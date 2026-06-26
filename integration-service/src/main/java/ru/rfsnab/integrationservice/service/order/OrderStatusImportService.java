@@ -32,24 +32,25 @@ import java.util.List;
  * через PATCH /api/v1/orders/{orderId}/1c-sync.
  * Формат XML от 1С:
  * <Документ>
- *   <Ид>orderId (наш UUID)</Ид>
- *   <Номер>РФ-000123 (номер в 1С)</Номер>
+ *   <Ид>{UUID документа в 1С}</Ид>
+ *   <Номер>{наш orderNumber}</Номер>
  *   <ЗначенияРеквизитов>
  *     <ЗначениеРеквизита>
  *       <Наименование>Статус заказа</Наименование>
- *       <Значение>PROCESSING</Значение>
+ *       <Значение>Счёт выставлен</Значение>
  *     </ЗначениеРеквизита>
  *   </ЗначенияРеквизитов>
  * </Документ>
+ * Русское название состояния маппится в код OrderStatus через OrderStatusRuMapper.
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class OrderStatusImportService {
 
-    private static final String ORDERS_XML = "orders.xml";
+    private static final String ORDERS_XML_PREFIX = "orders";
     private static final String STATUS_REQUISITE_NAME = "Статус заказа";
-    private static final String SYNC_URI = "/api/v1/orders/{orderId}/1c-sync";
+    private static final String SYNC_URI = "/api/v1/orders/by-number/{orderNumber}/1c-sync";
 
     private final JAXBContext commerceMlJaxbContext;
     private final WebClient orderServiceClient;
@@ -65,21 +66,22 @@ public class OrderStatusImportService {
     public String processStatusUpdate() {
         LocalDateTime startedAt = LocalDateTime.now();
         Path exchangeDir = Path.of(properties.getCommerceml().getTempDir());
-        Path ordersFile = exchangeDir.resolve(ORDERS_XML);
 
-        if (!Files.exists(ordersFile)) {
-            log.warn("Файл {} не найден — нет статусов для обработки", ORDERS_XML);
+        // 1С сохраняет файл как orders.xml ИЛИ orders-{uuid}_N.xml — берём самый свежий
+        Path ordersFile = findLatestOrdersFile(exchangeDir);
+        if (ordersFile == null) {
+            log.warn("Файлы orders*.xml не найдены в {} — нет статусов для обработки", exchangeDir);
             return "success";
         }
 
-        log.info("Обработка статусов заказов из {}", ORDERS_XML);
+        log.info("Обработка статусов заказов из {}", ordersFile.getFileName());
 
         try {
             CommerceInfo commerceInfo = parseXml(ordersFile);
             List<CmlDocument> documents = commerceInfo.getDocuments();
 
             if (documents == null || documents.isEmpty()) {
-                log.info("Нет документов со статусами в {}", ORDERS_XML);
+                log.info("Нет документов со статусами в {}", ordersFile.getFileName());
                 saveImportLog("ORDER_STATUS", ImportStatus.SUCCESS, 0, 0, 0, null, startedAt);
                 return "success";
             }
@@ -123,34 +125,64 @@ public class OrderStatusImportService {
 
     /**
      * Обновляет статус одного заказа в order-service.
-     * Извлекает orderId, номер 1С (externalId) и статус из документа.
+     * 1С шлёт <Номер> = наш orderNumber (AAB...) и <Ид> = свой внутренний UUID,
+     * поэтому ищем заказ по orderNumber, а <Ид> сохраняем как externalId 1С.
      */
     private void syncOrderStatus(CmlDocument doc) {
-        String orderId = doc.getId();
-        String externalId = doc.getNumber(); // номер заказа в 1С
-        String status = extractStatus(doc);
+        String orderNumber = doc.getNumber();
+        String externalId  = doc.getId(); // UUID документа в 1С
+        String russianStatus = extractStatus(doc);
 
-        if (orderId == null || orderId.isBlank()) {
-            throw new IllegalStateException("Документ без Ид (orderId)");
+        if (orderNumber == null || orderNumber.isBlank()) {
+            throw new IllegalStateException("Документ без Номера (orderNumber)");
         }
-        if (status == null || status.isBlank()) {
+        if (russianStatus == null || russianStatus.isBlank()) {
             throw new IllegalStateException("Документ без статуса");
         }
 
-        log.debug("Синхронизация заказа: orderId={}, externalId={}, status={}",
-                orderId, externalId, status);
+        String statusCode = OrderStatusRuMapper.toCode(russianStatus);
 
-        OrderSyncRequest request = new OrderSyncRequest(externalId, status);
+        log.debug("Синхронизация заказа: orderNumber={}, externalId={}, status={} → {}",
+                orderNumber, externalId, russianStatus, statusCode);
+
+        OrderSyncRequest request = new OrderSyncRequest(externalId, statusCode);
 
         try {
             orderServiceClient.patch()
-                    .uri(SYNC_URI, orderId)
+                    .uri(SYNC_URI, orderNumber)
                     .bodyValue(request)
                     .retrieve()
                     .toBodilessEntity()
                     .block();
         } catch (WebClientResponseException e) {
             throw new RuntimeException("HTTP " + e.getStatusCode() + ": " + e.getResponseBodyAsString(), e);
+        }
+    }
+
+    /**
+     * Ищет в exchangeDir файл orders.xml или orders-*.xml и возвращает самый свежий.
+     * Возвращает null, если файлов нет.
+     */
+    private Path findLatestOrdersFile(Path exchangeDir) {
+        if (!Files.isDirectory(exchangeDir)) return null;
+        try (var stream = Files.list(exchangeDir)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .filter(p -> {
+                        String name = p.getFileName().toString();
+                        return name.startsWith(ORDERS_XML_PREFIX) && name.endsWith(".xml");
+                    })
+                    .max((a, b) -> {
+                        try {
+                            return Files.getLastModifiedTime(a).compareTo(Files.getLastModifiedTime(b));
+                        } catch (java.io.IOException e) {
+                            return 0;
+                        }
+                    })
+                    .orElse(null);
+        } catch (java.io.IOException e) {
+            log.warn("Не удалось прочитать {}: {}", exchangeDir, e.getMessage());
+            return null;
         }
     }
 

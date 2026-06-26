@@ -18,6 +18,8 @@ import ru.rfsnab.integrationservice.dto.ProductImportItemDto;
 import ru.rfsnab.integrationservice.model.ImportLog;
 import ru.rfsnab.integrationservice.model.ImportLog.ImportStatus;
 import ru.rfsnab.integrationservice.model.commerceml.*;
+import ru.rfsnab.integrationservice.model.ImageProcessingTask.TaskStatus;
+import ru.rfsnab.integrationservice.repository.ImageProcessingTaskRepository;
 import ru.rfsnab.integrationservice.repository.ImportLogRepository;
 import ru.rfsnab.integrationservice.service.ftk.FtkCategoryMapper;
 import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.ClassifierData;
@@ -63,11 +65,15 @@ public class CatalogImportService {
 
     private static final String CATALOG_ROOT_SLUG = "import-1c";
 
+    private static final int IMAGE_WAIT_INTERVAL_MS = 5_000;
+    private static final int IMAGE_WAIT_TIMEOUT_MS  = 10 * 60 * 1_000;
+
     private final JAXBContext commerceMlJaxbContext;
     private final RestTemplate productServiceRestTemplate;
     private final IntegrationProperties properties;
     private final ImportLogRepository importLogRepository;
     private final ImageProcessingPool imageProcessingPool;
+    private final ImageProcessingTaskRepository imageTaskRepository;
     private final FtkCategoryMapper categoryMapper;
 
     /**
@@ -120,17 +126,23 @@ public class CatalogImportService {
             categoryMapper.resetCache();
 
             // 4. Постановка задач на обработку изображений
-            enqueueImageTasks(exchangeDir, products, sessionId);
+            int enqueuedImages = enqueueImageTasks(exchangeDir, products, sessionId);
 
             // 5. Log
             ImportStatus status = resolveStatus(result);
-            saveImportLog(sessionId, "CATALOG", status, result.totalItems(),
+            ImportLog logEntry = saveImportLog(sessionId, "CATALOG", status, result.totalItems(),
                     result.createdCount(), result.updatedCount(), result.failedCount(),
                     result.errors().isEmpty() ? null : String.join("; ", result.errors()),
                     startedAt);
 
             log.info("Импорт завершён. Status: {}, created: {}, updated: {}, failed: {}. Session: {}",
                     status, result.createdCount(), result.updatedCount(), result.failedCount(), sessionId);
+
+            // 6. Ожидание картинок в отдельном virtual thread (не блокирует ответ 1С)
+            if (enqueuedImages > 0 && logEntry != null) {
+                Long logId = logEntry.getId();
+                scheduleImageCounterUpdate(logId, sessionId, enqueuedImages);
+            }
 
             return status == ImportStatus.FAILED
                     ? "failure\nВсе chunk'и завершились с ошибкой"
@@ -463,8 +475,10 @@ public class CatalogImportService {
      * Задачи попадают в БД (image_processing_tasks) и подхватываются ImageProcessingPool.
      * Вызывается ПОСЛЕ успешного импорта товаров — картинки привязываются
      * к уже существующим товарам в product-service.
+     *
+     * @return количество поставленных в очередь задач
      */
-    private void enqueueImageTasks(Path exchangeDir, List<CmlProduct> products, String sessionId) {
+    private int enqueueImageTasks(Path exchangeDir, List<CmlProduct> products, String sessionId) {
         int enqueued = 0;
         for (CmlProduct product : products) {
             if (product.getImages() != null && !product.getImages().isEmpty()) {
@@ -476,6 +490,52 @@ public class CatalogImportService {
         if (enqueued > 0) {
             log.info("Создано {} задач на обработку изображений. Session: {}", enqueued, sessionId);
         }
+        return enqueued;
+    }
+
+    /**
+     * Запускает virtual thread, который ждёт завершения обработки картинок
+     * и обновляет запись import_log счётчиками images_processed / images_failed.
+     * Максимальное ожидание — 10 минут, затем фиксирует таймаут в errorMessage.
+     */
+    private void scheduleImageCounterUpdate(Long logId, String sessionId, int enqueuedImages) {
+        List<TaskStatus> pendingStatuses = List.of(TaskStatus.PENDING, TaskStatus.PROCESSING);
+        // картинки обрабатываются асинхронно; при рестарте JVM поток теряется,
+        // лог останется с imagesProcessed=0 — приемлемо для admin-статистики
+        Thread.ofVirtual()
+                .name("img-counter-" + sessionId)
+                .start(() -> {
+                    try {
+                        long deadline = System.currentTimeMillis() + IMAGE_WAIT_TIMEOUT_MS;
+                        while (System.currentTimeMillis() < deadline) {
+                            long pending = imageTaskRepository.countBySessionIdAndStatusIn(sessionId, pendingStatuses);
+                            if (pending == 0) break;
+                            Thread.sleep(IMAGE_WAIT_INTERVAL_MS);
+                        }
+
+                        final boolean timedOut = System.currentTimeMillis() >= deadline;
+                        importLogRepository.findById(logId).ifPresent(entry -> {
+                            long completed = imageTaskRepository.countBySessionIdAndStatus(sessionId, TaskStatus.COMPLETED);
+                            long failed    = imageTaskRepository.countBySessionIdAndStatus(sessionId, TaskStatus.FAILED);
+                            entry.setImagesProcessed((int) (completed + failed));
+                            entry.setImagesFailed((int) failed);
+                            if (timedOut) {
+                                String timeout = "изображения не обработаны за 10 мин";
+                                String existing = entry.getErrorMessage();
+                                entry.setErrorMessage(existing != null ? existing + "; " + timeout : timeout);
+                            }
+                            importLogRepository.save(entry);
+                            log.info("import_log id={} обновлён: imagesProcessed={}, imagesFailed={}. Session: {}",
+                                    logId, completed + failed, failed, sessionId);
+                        });
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        log.warn("Прервано ожидание обработки картинок. Session: {}", sessionId);
+                    } catch (Exception e) {
+                        log.error("Ошибка обновления import_log счётчиков картинок. Session: {}: {}",
+                                sessionId, e.getMessage());
+                    }
+                });
     }
 
     // ==================== Utilities ====================
@@ -486,10 +546,10 @@ public class CatalogImportService {
         return ImportStatus.FAILED;
     }
 
-    private void saveImportLog(String sessionId, String exchangeType, ImportStatus status,
-                               int totalItems, int createdCount, int updatedCount,
-                               int failedCount, String errorMessage,
-                               LocalDateTime startedAt) {
+    private ImportLog saveImportLog(String sessionId, String exchangeType, ImportStatus status,
+                                    int totalItems, int createdCount, int updatedCount,
+                                    int failedCount, String errorMessage,
+                                    LocalDateTime startedAt) {
         try {
             LocalDateTime completedAt = LocalDateTime.now();
             long durationMs = Duration.between(startedAt, completedAt).toMillis();
@@ -507,10 +567,11 @@ public class CatalogImportService {
                     .startedAt(startedAt)
                     .completedAt(completedAt)
                     .build();
-            importLogRepository.save(logEntry);
+            return importLogRepository.save(logEntry);
         } catch (Exception e) {
             // Ошибка записи лога не должна ломать основной процесс
             log.error("Не удалось сохранить import_log. Session: {}", sessionId, e);
+            return null;
         }
     }
 

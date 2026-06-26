@@ -67,6 +67,16 @@ public class ImportLog {
     @Builder.Default
     private int failed = 0;
 
+    /** Количество обработанных изображений */
+    @Column(name = "images_processed", nullable = false)
+    @Builder.Default
+    private int imagesProcessed = 0;
+
+    /** Количество изображений с ошибкой */
+    @Column(name = "images_failed", nullable = false)
+    @Builder.Default
+    private int imagesFailed = 0;
+
     /** Длительность импорта в миллисекундах */
     @Column(name = "duration_ms")
     private Long durationMs;

@@ -8,9 +8,9 @@ import { OrderStatusLabels, PaymentMethodLabels, DeliveryMethodLabels, PaymentMe
 import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
 import type { OrderSummaryDto, OrderDto, OrderItemDto, OrderStatus } from '@/types/order';
 import type { ColumnsType } from 'antd/es/table';
+import { formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 
-const formatPrice = (price: number): string =>
-    new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(price);
+const formatPrice = formatPriceOrPlaceholder;
 
 const formatDate = (dateStr: string): string =>
     new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -137,11 +137,20 @@ const OrdersPage = () => {
             dataIndex: 'totalAmount',
             key: 'totalAmount',
             width: 160,
-            render: (amount: number) => (
-                <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}>
-                    {formatPrice(amount)}
-                </span>
-            ),
+            render: (amount: number, record) => {
+                const items = expandedOrderDetails[record.id]?.items;
+                const hasUnpriced = items?.some((i) => !isPriceAvailable(i.price));
+                return (
+                    <div>
+                        <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}>
+                            {formatPrice(amount)}
+                        </span>
+                        {hasUnpriced && (
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)' }}>* цена части товаров уточняется</div>
+                        )}
+                    </div>
+                );
+            },
         },
     ];
 

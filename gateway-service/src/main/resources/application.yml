@@ -14,6 +14,9 @@ spring:
     gateway:
       server:
         webflux:
+          default-filters:
+            # Защита от подделки X-Internal-Token снаружи — стираем заголовок до проксирования
+            - RemoveRequestHeader=X-Internal-Token
           routes:
             # === AUTH-SERVICE (:9000) ===
 

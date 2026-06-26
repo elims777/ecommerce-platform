@@ -85,7 +85,8 @@ class ProductImageExternalControllerTest {
         when(storageService.uploadFile(any(), any())).thenReturn("https://storage.yandexcloud.net/test.webp");
 
         mockMvc.perform(multipart("/api/v1/products/external/{externalId}/images", "ext-123")
-                        .file(file))
+                        .file(file)
+                        .header("X-Internal-Token", "test-secret"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.fileUrl").exists());
     }
@@ -102,7 +103,8 @@ class ProductImageExternalControllerTest {
         );
 
         mockMvc.perform(multipart("/api/v1/products/external/{externalId}/images", "non-existent")
-                        .file(file))
+                        .file(file)
+                        .header("X-Internal-Token", "test-secret"))
                 .andExpect(status().isNotFound());
     }
 }

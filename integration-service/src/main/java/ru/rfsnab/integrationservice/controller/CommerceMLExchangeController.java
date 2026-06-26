@@ -2,22 +2,28 @@ package ru.rfsnab.integrationservice.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.integrationservice.config.IntegrationProperties;
 import ru.rfsnab.integrationservice.model.ExchangeSession;
 import ru.rfsnab.integrationservice.model.ExchangeSession.ExchangeType;
+import ru.rfsnab.integrationservice.model.ImportLog;
+import ru.rfsnab.integrationservice.model.ImportLog.ImportStatus;
 import ru.rfsnab.integrationservice.dto.ImportLogDto;
 import ru.rfsnab.integrationservice.repository.ImportLogRepository;
 import ru.rfsnab.integrationservice.service.auth.ExchangeAuthService;
 import ru.rfsnab.integrationservice.service.catalog.CatalogFileService;
 import ru.rfsnab.integrationservice.service.catalog.CatalogImportService;
 import ru.rfsnab.integrationservice.service.order.OrderExportService;
+import ru.rfsnab.integrationservice.service.order.OrderExportService.OrderExportResult;
 import ru.rfsnab.integrationservice.service.order.OrderStatusImportService;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,6 +49,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/1c-exchange")
 @RequiredArgsConstructor
+@Slf4j
 public class CommerceMLExchangeController {
 
     private final ExchangeAuthService authService;
@@ -82,12 +89,13 @@ public class CommerceMLExchangeController {
             return plainText("failure\nСессия не найдена или истекла");
         }
 
+        ExchangeSession sess = session.get();
         return switch (mode) {
             case "init" -> handleInit();
             case "file" -> handleFile(filename, sessionCookie, request);
             case "import" -> handleImport(exchangeType, sessionCookie);
-            case "query" -> handleQuery(exchangeType);
-            case "success" -> handleSuccess(sessionCookie);
+            case "query" -> handleQuery(exchangeType, sessionCookie);
+            case "success" -> handleSuccess(sessionCookie, sess);
             default -> plainText("failure\nНеизвестный режим: " + mode);
         };
     }
@@ -164,25 +172,87 @@ public class CommerceMLExchangeController {
      * E. Выгрузка заказов для 1С (type=sale, mode=query).
      * Формируем CommerceML XML из накопленных заказов и отдаём 1С.
      */
-    private ResponseEntity<String> handleQuery(ExchangeType exchangeType) {
+    private ResponseEntity<String> handleQuery(ExchangeType exchangeType, String sessionCookie) {
         if (exchangeType != ExchangeType.SALE) {
             return plainText("failure\nquery доступен только для type=sale");
         }
 
-        String ordersXml = orderExportService.exportPendingOrders();
+        OrderExportResult result = orderExportService.exportPendingOrders();
+        saveOrderExportQueryLog(sessionCookie, result.count());
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_XML)
-                .body(ordersXml);
+                .body(result.xml());
     }
 
     /**
      * F. Подтверждение успешного получения данных.
-     * Для заказов: помечаем выгруженные заказы как переданные.
+     * Для заказов (SALE): помечаем выгруженные заказы как переданные и обновляем лог.
      */
-    private ResponseEntity<String> handleSuccess(String sessionCookie) {
-        orderExportService.markOrdersAsExported();
+    private ResponseEntity<String> handleSuccess(String sessionCookie, ExchangeSession session) {
+        if (session.getExchangeType() == ExchangeType.SALE) {
+            int count = orderExportService.markOrdersAsExported();
+            updateOrderExportSuccessLog(sessionCookie, count);
+        }
         authService.completeSession(sessionCookie);
         return plainText("success");
+    }
+
+    /** Сохраняет запись ORDER_EXPORT при mode=query (заказы выгружены 1С). */
+    private void saveOrderExportQueryLog(String sessionCookie, int count) {
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            ImportLog logEntry = ImportLog.builder()
+                    .exchangeType("ORDER_EXPORT")
+                    .sessionId(sessionCookie)
+                    .status(ImportStatus.PARTIAL)
+                    .totalReceived(count)
+                    .created(count)
+                    .startedAt(now)
+                    .completedAt(now)
+                    .durationMs(0L)
+                    .build();
+            importLogRepository.save(logEntry);
+        } catch (Exception e) {
+            // Ошибка лога не должна ломать ответ 1С
+            log.error("Не удалось сохранить ORDER_EXPORT query лог: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Обновляет или создаёт запись ORDER_EXPORT при mode=success (1С подтвердила).
+     * Ищет последнюю PARTIAL-запись по sessionId и обновляет её статус на SUCCESS.
+     */
+    private void updateOrderExportSuccessLog(String sessionCookie, int count) {
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            Optional<ImportLog> existing = importLogRepository
+                    .findFirstBySessionIdAndExchangeTypeOrderByCreatedAtDesc(sessionCookie, "ORDER_EXPORT");
+            if (existing.isPresent()) {
+                ImportLog entry = existing.get();
+                long durationMs = entry.getStartedAt() != null
+                        ? Duration.between(entry.getStartedAt(), now).toMillis()
+                        : 0L;
+                entry.setStatus(ImportStatus.SUCCESS);
+                entry.setUpdated(count);
+                entry.setCompletedAt(now);
+                entry.setDurationMs(durationMs);
+                importLogRepository.save(entry);
+            } else {
+                ImportLog logEntry = ImportLog.builder()
+                        .exchangeType("ORDER_EXPORT")
+                        .sessionId(sessionCookie)
+                        .status(ImportStatus.SUCCESS)
+                        .totalReceived(count)
+                        .updated(count)
+                        .startedAt(now)
+                        .completedAt(now)
+                        .durationMs(0L)
+                        .build();
+                importLogRepository.save(logEntry);
+            }
+        } catch (Exception e) {
+            log.error("Не удалось обновить ORDER_EXPORT success лог: {}", e.getMessage());
+        }
     }
 
     /** Последние 20 записей лога обменов для admin-панели. */

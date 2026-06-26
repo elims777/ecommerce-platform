@@ -1,17 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ShoppingOutlined } from '@ant-design/icons';
 import type { Product, ProductImage } from '@/types/product';
-import { useDisplayPrice } from '@/utils/priceUtils';
+import { useDisplayPrice, formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 import { useFavouritesStore } from '@/store/favouritesStore';
 import { ClickableCard } from '@/components/navigation';
-
-const formatPrice = (price: number): string =>
-    new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    }).format(price);
 
 const sortImages = (images: ProductImage[]): ProductImage[] =>
     [...images].sort((a, b) => {
@@ -169,7 +161,8 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
 
             {/* Кнопка избранного */}
             <button
-                onClick={(e) => { e.stopPropagation(); toggleFavourite(product.id); }}
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavourite(product.id); }}
                 style={{
                     position: 'absolute', top: 10, right: 10, zIndex: 2,
                     width: 30, height: 30, borderRadius: 'var(--r-full)', border: 0,
@@ -221,10 +214,13 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
                 {/* Цена */}
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginTop: 'auto' }}>
                     <span style={{
-                        fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-2xl)',
-                        color: 'var(--ink-1)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
+                        fontFamily: 'var(--font-head)',
+                        fontWeight: isPriceAvailable(displayPrice) ? 600 : 500,
+                        fontSize: isPriceAvailable(displayPrice) ? 'var(--text-2xl)' : 'var(--text-base)',
+                        color: isPriceAvailable(displayPrice) ? 'var(--ink-1)' : 'var(--ink-3)',
+                        letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
                     }}>
-                        {formatPrice(displayPrice)}
+                        {formatPriceOrPlaceholder(displayPrice)}
                     </span>
                     {product.sku && (
                         <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>
@@ -236,7 +232,8 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
                 {/* Кнопка в корзину */}
                 <div style={{ display: 'flex', gap: 6 }}>
                     <button
-                        onClick={(e) => { e.stopPropagation(); onAddToCart(product.id); }}
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddToCart(product.id); }}
                         style={{
                             flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                             height: 34, padding: '0 12px',

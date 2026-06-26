@@ -41,3 +41,6 @@ services:
 
 jwt:
   secret: test-secret-key-for-testing-must-be-at-least-256-bits-long-for-hs256
+
+internal:
+  secret: test-secret
