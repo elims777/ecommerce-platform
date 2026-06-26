@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 @org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final InternalTokenFilter internalTokenFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -40,6 +42,8 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/api/v1/payment-settings"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/orders/*/1c-sync").hasRole("INTERNAL")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/orders/by-number/*/1c-sync").hasRole("INTERNAL")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptions -> exceptions
@@ -84,7 +88,8 @@ public class SecurityConfig {
                                     response.getWriter().write(mapper.writeValueAsString(errorResponse));
                                 })
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(internalTokenFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

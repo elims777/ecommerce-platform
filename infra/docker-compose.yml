@@ -201,8 +201,7 @@ services:
     image: elims777/user-service:latest
     container_name: user-service
     restart: unless-stopped
-    ports:
-      - "8081:8081"
+    # ports не открыты — доступ только из docker network через gateway-service
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SPRING_PROFILES_ACTIVE: prod
@@ -225,8 +224,7 @@ services:
     image: elims777/auth-service:latest
     container_name: auth-service
     restart: unless-stopped
-    ports:
-      - "9000:9000"
+    # ports не открыты — доступ только из docker network через gateway-service
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://user-db:5432/${POSTGRES_DB}
@@ -257,8 +255,7 @@ services:
     image: elims777/notification-service:latest
     container_name: notification-service
     restart: unless-stopped
-    ports:
-      - "8082:8082"
+    # ports не открыты — Kafka consumer, наружу не нужен
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://notification-db:5432/${NOTIFICATION_DB_NAME}
@@ -286,8 +283,7 @@ services:
     image: elims777/product-service:latest
     container_name: product-service
     restart: unless-stopped
-    ports:
-      - "8083:8083"
+    # ports не открыты — доступ только из docker network через gateway-service
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5432/${PRODUCT_DB_NAME}
@@ -297,6 +293,7 @@ services:
       YANDEX_STORAGE_ACCESS_KEY: ${YANDEX_STORAGE_ACCESS_KEY}
       YANDEX_STORAGE_SECRET_KEY: ${YANDEX_STORAGE_SECRET_KEY}
       SECRET_JWT: ${SECRET_JWT}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
       - /var/log/rfsnab/product-service:/var/log/rfsnab/product-service
     depends_on:
@@ -309,8 +306,7 @@ services:
     image: elims777/order-service:latest
     container_name: order-service
     restart: unless-stopped
-    ports:
-      - "8084:8084"
+    # ports не открыты — доступ только из docker network через gateway-service
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5432/${ORDER_DB_NAME}
@@ -359,6 +355,7 @@ services:
       # Внутренние сервисы
       PRODUCT_SERVICE_URL: http://product-service:8083
       ORDER_SERVICE_URL: http://order-service:8084
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
       - integration_exchange_data:/app/1c-exchange
       - /var/log/rfsnab/integration-service:/var/log/rfsnab/integration-service

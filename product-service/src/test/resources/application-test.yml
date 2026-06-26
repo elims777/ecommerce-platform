@@ -27,6 +27,9 @@ jwt:
   secret: dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtYXV0aGVudGljYXRpb24tdGVzdGluZy1wcm9kdWN0LXNlcnZpY2U=
   expiration: 3600000
 
+internal:
+  secret: test-secret
+
 # === Yandex Storage (моковые значения) ===
 yandex:
   storage:

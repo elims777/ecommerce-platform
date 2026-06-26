@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final InternalTokenFilter internalTokenFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -37,9 +38,9 @@ public class SecurityConfig {
                         // Публичные endpoints (только чтение)
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/import/batch").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/external/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/categories/upsert-by-external-id").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/import/batch").hasRole("INTERNAL")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/external/**").hasRole("INTERNAL")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/categories/upsert-by-external-id").hasRole("INTERNAL")
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
 
@@ -93,7 +94,8 @@ public class SecurityConfig {
                             response.getWriter().write(mapper.writeValueAsString(errorResponse));
                         })
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(internalTokenFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

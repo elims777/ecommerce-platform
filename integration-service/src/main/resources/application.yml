@@ -39,6 +39,9 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
+internal:
+  secret: ${INTERNAL_SECRET}
+
 # ===== Настройки интеграции с 1С =====
 integration:
   import-config:

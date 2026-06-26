@@ -46,6 +46,9 @@ integration:
     chunk-size: 50
     max-concurrent-requests: 2
 
+internal:
+  secret: test-secret
+
 logging:
   level:
     root: WARN

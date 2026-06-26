@@ -286,6 +286,7 @@ services:
       YANDEX_STORAGE_SECRET_KEY: ${YANDEX_STORAGE_SECRET_KEY}
       LOGGING_FILE_NAME: ""
       SECRET_JWT: ${SECRET_JWT}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
       - /var/log/rfsnab/product-service:/var/log/rfsnab/product-service
     depends_on:
@@ -385,6 +386,7 @@ services:
       FTK_IMPORT_LIMIT: ${FTK_IMPORT_LIMIT}
       PRODUCT_SERVICE_URL: http://product-service:8083
       ORDER_SERVICE_URL: http://order-service:8084
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
     volumes:
       - integration_exchange_data:/app/1c-exchange
       - /var/log/rfsnab/integration-service:/var/log/rfsnab/integration-service

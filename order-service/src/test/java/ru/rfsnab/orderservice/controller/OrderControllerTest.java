@@ -392,7 +392,8 @@ class OrderControllerTest extends BaseIntegrationTest {
                 """;
 
             mockMvc.perform(patch("/api/v1/orders/{id}/1c-sync", ORDER_ID)
-                            .with(jwtUser()).with(csrf())
+                            .header("X-Internal-Token", "test-secret")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isOk())
@@ -406,7 +407,8 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("400 Bad Request — без body")
         void shouldReturn400WithoutBody() throws Exception {
             mockMvc.perform(patch("/api/v1/orders/{id}/1c-sync", ORDER_ID)
-                            .with(jwtUser()).with(csrf())
+                            .header("X-Internal-Token", "test-secret")
+                            .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isInternalServerError());
         }

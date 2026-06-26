@@ -62,6 +62,9 @@ logging:
 jwt:
   secret: "${SECRET_JWT}"
 
+internal:
+  secret: ${INTERNAL_SECRET}
+
 
 springdoc:
   api-docs:
