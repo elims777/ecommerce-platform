@@ -11,3 +11,19 @@ export const useDisplayPrice = (product: HasPrice): number => {
         ? product.price
         : (product.wholesalePrice ?? product.price);
 };
+
+export const PRICE_PLACEHOLDER = 'Уточнить стоимость';
+
+export const isPriceAvailable = (price: number | null | undefined): boolean =>
+    typeof price === 'number' && price > 0;
+
+const formatRub = (price: number): string =>
+    new Intl.NumberFormat('ru-RU', {
+        style: 'currency',
+        currency: 'RUB',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    }).format(price);
+
+export const formatPriceOrPlaceholder = (price: number | null | undefined): string =>
+    isPriceAvailable(price) ? formatRub(price as number) : PRICE_PLACEHOLDER;

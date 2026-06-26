@@ -7,16 +7,8 @@ import { getProductById } from '@/api/products';
 import type { ProductImage, ProductChild } from '@/types/product';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
-import { useDisplayPrice } from '@/utils/priceUtils';
+import { useDisplayPrice, formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 import { savePendingAddToCart, clearPendingAddToCart } from '@/utils/pendingCart';
-
-const formatPrice = (price: number): string =>
-    new Intl.NumberFormat('ru-RU', {
-        style: 'currency',
-        currency: 'RUB',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    }).format(price);
 
 const sortImages = (images: ProductImage[]): ProductImage[] =>
     [...images].sort((a, b) => {
@@ -302,8 +294,15 @@ const ProductPage = () => {
                     <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', padding: 20, position: 'sticky', top: 20, background: 'var(--surface)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
                             <div>
-                                <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-6xl)', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: 'var(--ink-1)' }}>
-                                    {formatPrice(displayPrice)}
+                                <span style={{
+                                    fontFamily: 'var(--font-head)',
+                                    fontWeight: isPriceAvailable(displayPrice) ? 600 : 500,
+                                    fontSize: isPriceAvailable(displayPrice) ? 'var(--text-6xl)' : 'var(--text-lg)',
+                                    letterSpacing: '-0.02em',
+                                    fontVariantNumeric: 'tabular-nums',
+                                    color: isPriceAvailable(displayPrice) ? 'var(--ink-1)' : 'var(--ink-3)',
+                                }}>
+                                    {formatPriceOrPlaceholder(displayPrice)}
                                 </span>
                                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginTop: 2 }}>
                                     за 1 {product.unitOfMeasure || 'шт.'}
@@ -343,7 +342,7 @@ const ProductPage = () => {
                                                         <VariantAttrs variant={v} />
                                                     </td>
                                                     <td style={{ padding: '7px 6px', textAlign: 'right', color: 'var(--ink-2)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                                                        {formatPrice(variantPrice)}
+                                                        {formatPriceOrPlaceholder(variantPrice)}
                                                     </td>
                                                     <td style={{ padding: '7px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: inStockV ? 'var(--brand-green)' : 'var(--brand-red)', fontVariantNumeric: 'tabular-nums' }}>
                                                         {inStockV ? `${v.stockQuantity} ${product.unitOfMeasure || 'шт.'}` : 'нет'}

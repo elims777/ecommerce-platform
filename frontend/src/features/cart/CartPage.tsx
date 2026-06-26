@@ -3,6 +3,7 @@ import { App } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cartStore';
 import type { CartItemDto } from '@/api/cart';
+import { formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 
 // ── Icons ─────────────────────────────────────────────────────
 const TrashIcon = () => (
@@ -31,8 +32,7 @@ const ArrRight = () => (
     </svg>
 );
 
-const formatPrice = (price: number): string =>
-    new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(price);
+const formatPrice = formatPriceOrPlaceholder;
 
 // ── Confirm dialog (нативный) ─────────────────────────────────
 const ConfirmDialog = ({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) => (
@@ -185,6 +185,8 @@ const CartPage = () => {
         }
     };
 
+    const hasUnpricedItems = items.some((i) => !isPriceAvailable(i.price));
+
     if (isLoading) return <CartSkeleton />;
 
     if (items.length === 0) {
@@ -318,6 +320,11 @@ const CartPage = () => {
                                 {formatPrice(totalAmount)}
                             </span>
                         </div>
+                        {hasUnpricedItems && (
+                            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', marginTop: 4 }}>
+                                * цена части товаров уточняется
+                            </div>
+                        )}
 
                         <button
                             onClick={() => navigate('/checkout')}

@@ -74,13 +74,13 @@ const AdminOrderDetailPage = () => {
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
           <path d="M10 4L6 8l4 4"/>
         </svg>
-        Заявки и заказы
+        Заказы
       </div>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, margin: 0 }}>
-          Заявка {order.orderNumber}
+          Заказ {order.orderNumber}
         </h2>
         <span className={`rf-badge ${badge.cls}`}>{badge.label}</span>
       </div>
