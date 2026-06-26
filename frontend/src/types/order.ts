@@ -59,7 +59,7 @@ export const OrderStatusLabels: Record<OrderStatus, string> = {
     [OrderStatus.PAID]: 'Оплачен',
     [OrderStatus.PAYMENT_FAILED]: 'Ошибка оплаты',
     [OrderStatus.PROCESSING]: 'В обработке',
-    [OrderStatus.SHIPPED]: 'Отправлен',
+    [OrderStatus.SHIPPED]: 'Отгружен',
     [OrderStatus.IN_TRANSIT]: 'В пути',
     [OrderStatus.DELIVERED]: 'Доставлен',
     [OrderStatus.CANCELLED]: 'Отменён',
@@ -67,7 +67,7 @@ export const OrderStatusLabels: Record<OrderStatus, string> = {
     [OrderStatus.AWAITING_CONFIRMATION]: 'Ожидает подтверждения',
     [OrderStatus.INVOICE_SENT]: 'Счёт выставлен',
     [OrderStatus.PARTIALLY_PAID]: 'Частично оплачен',
-    [OrderStatus.COMPLETED]: 'Завершён',
+    [OrderStatus.COMPLETED]: 'Завершен',
 };
 
 /** Запрос на создание заказа */

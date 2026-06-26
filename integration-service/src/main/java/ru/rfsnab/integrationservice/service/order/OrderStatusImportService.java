@@ -32,15 +32,16 @@ import java.util.List;
  * через PATCH /api/v1/orders/{orderId}/1c-sync.
  * Формат XML от 1С:
  * <Документ>
- *   <Ид>orderId (наш UUID)</Ид>
- *   <Номер>РФ-000123 (номер в 1С)</Номер>
+ *   <Ид>{UUID документа в 1С}</Ид>
+ *   <Номер>{наш orderNumber}</Номер>
  *   <ЗначенияРеквизитов>
  *     <ЗначениеРеквизита>
  *       <Наименование>Статус заказа</Наименование>
- *       <Значение>PROCESSING</Значение>
+ *       <Значение>Счёт выставлен</Значение>
  *     </ЗначениеРеквизита>
  *   </ЗначенияРеквизитов>
  * </Документ>
+ * Русское название состояния маппится в код OrderStatus через OrderStatusRuMapper.
  */
 @Service
 @RequiredArgsConstructor
@@ -130,19 +131,21 @@ public class OrderStatusImportService {
     private void syncOrderStatus(CmlDocument doc) {
         String orderNumber = doc.getNumber();
         String externalId  = doc.getId(); // UUID документа в 1С
-        String status      = extractStatus(doc);
+        String russianStatus = extractStatus(doc);
 
         if (orderNumber == null || orderNumber.isBlank()) {
             throw new IllegalStateException("Документ без Номера (orderNumber)");
         }
-        if (status == null || status.isBlank()) {
+        if (russianStatus == null || russianStatus.isBlank()) {
             throw new IllegalStateException("Документ без статуса");
         }
 
-        log.debug("Синхронизация заказа: orderNumber={}, externalId={}, status={}",
-                orderNumber, externalId, status);
+        String statusCode = OrderStatusRuMapper.toCode(russianStatus);
 
-        OrderSyncRequest request = new OrderSyncRequest(externalId, status);
+        log.debug("Синхронизация заказа: orderNumber={}, externalId={}, status={} → {}",
+                orderNumber, externalId, russianStatus, statusCode);
+
+        OrderSyncRequest request = new OrderSyncRequest(externalId, statusCode);
 
         try {
             orderServiceClient.patch()

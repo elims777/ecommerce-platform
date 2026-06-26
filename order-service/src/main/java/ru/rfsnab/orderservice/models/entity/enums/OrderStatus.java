@@ -14,16 +14,16 @@ public enum OrderStatus {
     PROCESSING("В работе"),
     INVOICE_SENT("Счёт выставлен"),
     PENDING_PAYMENT("Ожидает оплаты"),
-    AWAITING_CONFIRMATION("Ожидает подтверждения оплаты"),
+    AWAITING_CONFIRMATION("Ожидает подтверждения"),
     PAID("Оплачен"),
     PAYMENT_FAILED("Ошибка оплаты"),
-    SHIPPED("Отправлен"),
+    SHIPPED("Отгружен"),
     IN_TRANSIT("В пути"),
     DELIVERED("Доставлен"),
     CANCELLED("Отменён"),
     REFUNDED("Возврат средств"),
     PARTIALLY_PAID("Оплачен частично"),
-    COMPLETED("Завершён");
+    COMPLETED("Завершен");
 
     private final String displayName;
 
