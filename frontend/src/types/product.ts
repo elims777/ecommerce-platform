@@ -66,6 +66,7 @@ export interface Product {
     source: string | null;
     isVariantChild: boolean;
     parentProductId: number | null;
+    hasVariants?: boolean;
     displayOrder: number;
 
     // Вложенные данные

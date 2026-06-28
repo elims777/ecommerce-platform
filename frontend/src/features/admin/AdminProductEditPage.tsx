@@ -11,6 +11,7 @@ import {
 } from '@/api/adminProducts';
 import type { ProductRequest, ProductAttributeRequest } from '@/api/adminProducts';
 import type { CategoryTree, ProductImage } from '@/types/product';
+import { RowLink } from '@/components/navigation';
 
 const flattenCategories = (tree: CategoryTree[], prefix = ''): { value: number; label: string }[] => {
     const result: { value: number; label: string }[] = [];
@@ -650,27 +651,34 @@ const AdminProductEditPage = () => {
                                             );
                                             const attrParts = ATTR_ORDER.filter(k => attrMap[k]);
                                             const inStock = v.stockQuantity > 0;
+                                            const variantHref = `/admin/products/${v.id}/edit`;
                                             return (
                                                 <tr key={v.id}>
                                                     <td style={{ fontWeight: 500, lineHeight: 1.5 }}>
-                                                        {attrParts.length > 0
-                                                            ? attrParts.map((k, i) => (
-                                                                <span key={k}>
-                                                                    {i > 0 && <br />}
-                                                                    <span style={{ color: 'var(--ink-3)', fontSize: 12, fontWeight: 400 }}>{k}: </span>
-                                                                    {attrMap[k]}
-                                                                </span>
-                                                            ))
-                                                            : (Object.values(attrMap).join(' / ') || '—')
-                                                        }
+                                                        <RowLink to={variantHref}>
+                                                            {attrParts.length > 0
+                                                                ? attrParts.map((k, i) => (
+                                                                    <span key={k}>
+                                                                        {i > 0 && <br />}
+                                                                        <span style={{ color: 'var(--ink-3)', fontSize: 12, fontWeight: 400 }}>{k}: </span>
+                                                                        {attrMap[k]}
+                                                                    </span>
+                                                                ))
+                                                                : (Object.values(attrMap).join(' / ') || '—')
+                                                            }
+                                                        </RowLink>
                                                     </td>
                                                     <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: inStock ? 'var(--brand-green)' : 'var(--brand-red)', fontWeight: 500 }}>
-                                                        {v.stockQuantity}
+                                                        <RowLink to={variantHref} style={{ textAlign: 'right' }}>
+                                                            {v.stockQuantity}
+                                                        </RowLink>
                                                     </td>
                                                     <td style={{ textAlign: 'center' }}>
-                                                        <span className={`rf-badge ${v.isActive ? 'rf-badge-success' : 'rf-badge-neutral'}`}>
-                                                            {v.isActive ? 'да' : 'нет'}
-                                                        </span>
+                                                        <RowLink to={variantHref} style={{ textAlign: 'center' }}>
+                                                            <span className={`rf-badge ${v.isActive ? 'rf-badge-success' : 'rf-badge-neutral'}`}>
+                                                                {v.isActive ? 'да' : 'нет'}
+                                                            </span>
+                                                        </RowLink>
                                                     </td>
                                                 </tr>
                                             );

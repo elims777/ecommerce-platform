@@ -32,7 +32,9 @@ public class ProductController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)Pageable pageable
             ){
         Page<Product> productsPage = productService.getProductsPage(pageable);
-        return ResponseEntity.ok(productsPage.map(ProductMapper::mapToResponse));
+        var parentIds = productService.findParentIdsWithActiveChildren(
+                productsPage.getContent().stream().map(Product::getId).toList());
+        return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(productsPage, parentIds));
     }
 
     /**
@@ -105,7 +107,9 @@ public class ProductController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
             ){
         Page<Product> products = productService.getProductsByCategoryPage(categoryId, pageable);
-        return ResponseEntity.ok(products.map(ProductMapper::mapToResponse));
+        var parentIds = productService.findParentIdsWithActiveChildren(
+                products.getContent().stream().map(Product::getId).toList());
+        return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(products, parentIds));
     }
 
     /**

@@ -337,7 +337,7 @@ const ProductPage = () => {
                                             const inStockV = v.stockQuantity > 0;
                                             const variantPrice = v.price ?? product.price;
                                             return (
-                                                <tr key={v.id} style={{ borderBottom: '1px solid var(--line-1)', opacity: inStockV ? 1 : 0.45 }}>
+                                                <tr key={v.id} style={{ borderBottom: '1px solid var(--line-1)' }}>
                                                     <td style={{ padding: '7px 6px 7px 0', color: 'var(--ink-1)', fontWeight: 500, lineHeight: 1.5 }}>
                                                         <VariantAttrs variant={v} />
                                                     </td>
@@ -345,35 +345,30 @@ const ProductPage = () => {
                                                         {formatPriceOrPlaceholder(variantPrice)}
                                                     </td>
                                                     <td style={{ padding: '7px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: inStockV ? 'var(--brand-green)' : 'var(--brand-red)', fontVariantNumeric: 'tabular-nums' }}>
-                                                        {inStockV ? `${v.stockQuantity} ${product.unitOfMeasure || 'шт.'}` : 'нет'}
+                                                        {inStockV ? `${v.stockQuantity} ${product.unitOfMeasure || 'шт.'}` : 'под заказ'}
                                                     </td>
                                                     <td style={{ padding: '7px 0 7px 6px' }}>
-                                                        {inStockV ? (
-                                                            <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', height: 28, alignItems: 'center', minWidth: 80 }}>
-                                                                <button
-                                                                    onClick={() => setVariantQty(v.id, Math.max(0, qty - 1))}
-                                                                    style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                                                                >−</button>
-                                                                <input
-                                                                    type="number"
-                                                                    min={0}
-                                                                    max={v.stockQuantity}
-                                                                    value={qty === 0 ? '' : qty}
-                                                                    placeholder="0"
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value === '' ? 0 : Math.min(v.stockQuantity, Math.max(0, Number(e.target.value)));
-                                                                        setVariantQty(v.id, val);
-                                                                    }}
-                                                                    style={{ flex: 1, width: 0, textAlign: 'center', border: 0, background: 'transparent', fontSize: 13, fontWeight: 600, outline: 'none', fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
-                                                                />
-                                                                <button
-                                                                    onClick={() => setVariantQty(v.id, Math.min(v.stockQuantity, qty + 1))}
-                                                                    style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                                                                >+</button>
-                                                            </div>
-                                                        ) : (
-                                                            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-4)' }}>—</span>
-                                                        )}
+                                                        <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', height: 28, alignItems: 'center', minWidth: 80 }}>
+                                                            <button
+                                                                onClick={() => setVariantQty(v.id, Math.max(0, qty - 1))}
+                                                                style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                                            >−</button>
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                value={qty === 0 ? '' : qty}
+                                                                placeholder="0"
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value === '' ? 0 : Math.max(0, Number(e.target.value));
+                                                                    setVariantQty(v.id, val);
+                                                                }}
+                                                                style={{ flex: 1, width: 0, textAlign: 'center', border: 0, background: 'transparent', fontSize: 13, fontWeight: 600, outline: 'none', fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
+                                                            />
+                                                            <button
+                                                                onClick={() => setVariantQty(v.id, qty + 1)}
+                                                                style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                                            >+</button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );

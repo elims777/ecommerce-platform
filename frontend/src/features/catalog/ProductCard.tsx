@@ -229,23 +229,40 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
                     )}
                 </div>
 
-                {/* Кнопка в корзину */}
+                {/* Кнопка в корзину / выбор варианта */}
                 <div style={{ display: 'flex', gap: 6 }}>
-                    <button
-                        type="button"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddToCart(product.id); }}
-                        style={{
-                            flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                            height: 34, padding: '0 12px',
-                            background: 'var(--brand-red)', color: '#fff',
-                            border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500,
-                            cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-red)')}
-                    >
-                        <CartIcon /> В корзину
-                    </button>
+                    {product.hasVariants ? (
+                        <button
+                            type="button"
+                            style={{
+                                flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                height: 34, padding: '0 12px',
+                                background: 'var(--brand-navy)', color: '#fff',
+                                border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500,
+                                cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-navy-hover)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-navy)')}
+                        >
+                            Выбрать вариант
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddToCart(product.id); }}
+                            style={{
+                                flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                height: 34, padding: '0 12px',
+                                background: 'var(--brand-red)', color: '#fff',
+                                border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500,
+                                cursor: 'pointer', fontFamily: 'var(--font-body)', transition: 'background 0.12s',
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-red)')}
+                        >
+                            <CartIcon /> В корзину
+                        </button>
+                    )}
                 </div>
             </div>
         </ClickableCard>
