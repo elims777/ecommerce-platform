@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Image, App, Skeleton, Modal, Button } from 'antd';
+import { Image, App, Skeleton, Modal } from 'antd';
 import { ShoppingCartOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink } from '@/components/navigation';
 import { getProductById } from '@/api/products';
 import type { ProductImage, ProductChild } from '@/types/product';
 import { useCartStore } from '@/store/cartStore';
@@ -126,12 +127,12 @@ const ProductPage = () => {
         return (
             <div style={{ textAlign: 'center', padding: '80px 0' }}>
                 <div style={{ fontFamily: 'var(--font-head)', fontSize: 20, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>Товар не найден</div>
-                <button
-                    onClick={() => navigate('/')}
+                <NavLink
+                    to="/"
                     style={{ display: 'inline-flex', alignItems: 'center', height: 'var(--btn-h-base)', padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
                 >
                     Вернуться в каталог
-                </button>
+                </NavLink>
             </div>
         );
     }
@@ -153,12 +154,12 @@ const ProductPage = () => {
                 Для добавления товаров в корзину необходимо войти или зарегистрироваться.
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
-                <Button type="primary" block onClick={() => navigate('/login', { state: { from: location } })} style={{ background: 'var(--brand-red)', borderColor: 'var(--brand-red)' }}>
+                <NavLink to="/login" state={{ from: location }} variant="button-primary" style={{ flex: 1 }}>
                     Войти
-                </Button>
-                <Button block onClick={() => navigate('/register', { state: { from: location } })}>
+                </NavLink>
+                <NavLink to="/register" state={{ from: location }} variant="button-secondary" style={{ flex: 1 }}>
                     Зарегистрироваться
-                </Button>
+                </NavLink>
             </div>
         </Modal>
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>

@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Dropdown } from 'antd';
 import { company } from '@/config/company';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink } from '@/components/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
@@ -222,15 +223,15 @@ const ClientLayout = () => {
     prevIndexRef.current = currentIndex;
 
     const userMenuItems: MenuProps['items'] = [
-        { key: 'orders', label: 'Мои заказы', onClick: () => navigate('/orders') },
-        { key: 'profile', label: 'Профиль', onClick: () => navigate('/profile') },
+        { key: 'orders', label: <NavLink to="/orders">Мои заказы</NavLink> },
+        { key: 'profile', label: <NavLink to="/profile">Профиль</NavLink> },
         ...(user && !user.companyName ? [
             { type: 'divider' as const },
-            { key: 'connect-org', label: 'Подключить организацию', onClick: () => navigate('/profile') },
+            { key: 'connect-org', label: <NavLink to="/profile">Подключить организацию</NavLink> },
         ] : []),
         ...(user && isAdmin(user) ? [
             { type: 'divider' as const },
-            { key: 'admin', label: 'Админ-панель', onClick: () => navigate('/admin') },
+            { key: 'admin', label: <NavLink to="/admin">Админ-панель</NavLink> },
         ] : []),
         { type: 'divider' as const },
         { key: 'logout', label: 'Выйти', onClick: handleLogout },
@@ -239,9 +240,9 @@ const ClientLayout = () => {
     const isActive = (path: string) => location.pathname === path;
 
     const navLink = (path: string, label: string, hasChev?: boolean) => (
-        <a
+        <NavLink
             key={path}
-            onClick={() => navigate(path)}
+            to={path}
             style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
                 padding: '0 14px', height: '100%', fontSize: 'var(--text-md)', fontWeight: 500,
@@ -255,7 +256,7 @@ const ClientLayout = () => {
         >
             {label}
             {hasChev && <ChevDownIcon />}
-        </a>
+        </NavLink>
     );
 
     return (
@@ -274,8 +275,8 @@ const ClientLayout = () => {
                         <TruckIcon /> Доставка по РФ
                     </div>
                     <div style={{ flex: 1 }} />
-                    <a onClick={() => navigate('/about')} style={{ opacity: 0.85, cursor: 'pointer', color: 'inherit', textDecoration: 'none' }}>О компании</a>
-                    <a onClick={() => navigate('/contacts')} style={{ opacity: 0.85, cursor: 'pointer', color: 'inherit', textDecoration: 'none' }}>Контакты</a>
+                    <NavLink to="/about" style={{ opacity: 0.85, color: 'inherit' }}>О компании</NavLink>
+                    <NavLink to="/contacts" style={{ opacity: 0.85, color: 'inherit' }}>Контакты</NavLink>
                     <a style={{ opacity: 0.85, cursor: 'pointer', color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                         Прайс-листы <DownloadIcon />
                     </a>
@@ -291,7 +292,7 @@ const ClientLayout = () => {
                     height: MAIN_H, display: 'flex', alignItems: 'center',
                     padding: '0 var(--page-pad-x)', gap: 28,
                 }}>
-                    <div onClick={() => navigate('/')} style={{ cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <NavLink to="/" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
                         <img src="/logo-dark.png" alt="РФснаб" style={{ height: 'var(--logo-h-header)', display: 'block' }} />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                             <span style={{
@@ -305,7 +306,7 @@ const ClientLayout = () => {
                                 color: 'var(--ink-3)', lineHeight: 1.2, textTransform: 'uppercase',
                             }}>комплексное снабжение</span>
                         </div>
-                    </div>
+                    </NavLink>
 
                     {/* Search */}
                     <div style={{ flex: 1, maxWidth: 620, position: 'relative' }}>
@@ -347,8 +348,24 @@ const ClientLayout = () => {
 
                     {/* User actions */}
                     <div style={{ display: 'flex', gap: 2, alignItems: 'center', marginLeft: 'auto', flexShrink: 0 }}>
-                        <HeaderAction icon={<HeartIcon />} label="Избранное" count={totalFavourites || undefined} onClick={() => navigate('/favourites')} />
-                        <HeaderAction icon={<CartIcon />} label="Корзина" count={totalItems} highlight onClick={() => navigate('/cart')} />
+                        <NavLink to="/favourites" variant="icon" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '6px 10px', borderRadius: 'var(--r-3)', color: 'var(--ink-1)' }}>
+                            <span style={{ position: 'relative' }}>
+                                <HeartIcon />
+                                {totalFavourites > 0 && (
+                                    <span style={{ position: 'absolute', top: -4, right: -8, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 'var(--r-4)', background: 'var(--brand-red)', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>{totalFavourites}</span>
+                                )}
+                            </span>
+                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>Избранное</span>
+                        </NavLink>
+                        <NavLink to="/cart" variant="icon" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '6px 10px', borderRadius: 'var(--r-3)', color: 'var(--ink-1)' }}>
+                            <span style={{ position: 'relative', color: 'var(--brand-red)' }}>
+                                <CartIcon />
+                                {totalItems > 0 && (
+                                    <span style={{ position: 'absolute', top: -4, right: -8, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 'var(--r-4)', background: 'var(--brand-red)', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>{totalItems}</span>
+                                )}
+                            </span>
+                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>Корзина</span>
+                        </NavLink>
                         <div style={{ width: 1, height: 28, background: 'var(--line-1)', margin: '0 4px' }} />
                         {isAuthenticated ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -365,8 +382,8 @@ const ClientLayout = () => {
                                 </Dropdown>
                             </div>
                         ) : (
-                            <button
-                                onClick={() => navigate('/login')}
+                            <NavLink
+                                to="/login"
                                 style={{
                                     display: 'inline-flex', alignItems: 'center', gap: 6,
                                     height: 36, padding: '0 14px',
@@ -379,7 +396,7 @@ const ClientLayout = () => {
                                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                             >
                                 <UserIcon /> Войти
-                            </button>
+                            </NavLink>
                         )}
                     </div>
                 </div>
@@ -390,8 +407,8 @@ const ClientLayout = () => {
                     height: CAT_H, display: 'flex', alignItems: 'center',
                     padding: '0 var(--page-pad-x)', gap: 0,
                 }}>
-                    <button
-                        onClick={() => navigate('/catalog')}
+                    <NavLink
+                        to="/catalog"
                         style={{
                             display: 'inline-flex', alignItems: 'center', gap: 8,
                             height: 36, padding: '0 14px', marginRight: 8,
@@ -399,11 +416,9 @@ const ClientLayout = () => {
                             border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 600,
                             cursor: 'pointer', fontFamily: 'var(--font-body)',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
                     >
                         <MenuIcon /> Каталог товаров
-                    </button>
+                    </NavLink>
                     {navLink('/about', 'О компании')}
                     {navLink('/contacts', 'Контакты')}
                     <a style={{

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { NavLink } from '@/components/navigation';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getLegalEntityById, verifyLegalEntity, rejectLegalEntity } from '@/api/adminUsers';
@@ -23,7 +24,6 @@ const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
 
 const AdminLegalEntityDetailPage = () => {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
     const { message: messageApi } = App.useApp();
     const queryClient = useQueryClient();
     const legalId = Number(id);
@@ -68,12 +68,12 @@ const AdminLegalEntityDetailPage = () => {
 
     return (
         <div>
-            <div className="rf-admin-back" onClick={() => navigate('/admin/users?tab=legal')}>
+            <NavLink to="/admin/users?tab=legal" className="rf-admin-back">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M10 4L6 8l4 4"/>
                 </svg>
                 Клиенты
-            </div>
+            </NavLink>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                 <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 22, fontWeight: 600, margin: 0 }}>

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { Spin } from 'antd';
+import { NavLink } from '@/components/navigation';
 import { App } from 'antd';
 import { getFavouriteProducts } from '@/api/favourites';
 import ProductCard from '@/features/catalog/ProductCard';
@@ -13,7 +13,6 @@ const HeartEmptyIcon = () => (
 );
 
 const FavouritesPage = () => {
-    const navigate = useNavigate();
     const { message: messageApi } = App.useApp();
     const addItem = useCartStore((s) => s.addItem);
 
@@ -60,19 +59,17 @@ const FavouritesPage = () => {
                     <HeartEmptyIcon />
                     <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--ink-2)' }}>В избранном пока ничего нет</div>
                     <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>Добавляйте товары, нажимая на сердечко в карточке</div>
-                    <button
-                        onClick={() => navigate('/catalog')}
+                    <NavLink
+                        to="/catalog"
                         style={{
                             marginTop: 8, height: 38, padding: '0 20px',
                             background: 'var(--brand-red)', color: '#fff',
                             border: 'none', borderRadius: 'var(--r-3)', fontSize: 14, fontWeight: 500,
                             cursor: 'pointer', fontFamily: 'var(--font-body)',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
                     >
                         Перейти в каталог
-                    </button>
+                    </NavLink>
                 </div>
             ) : (
                 <div style={{

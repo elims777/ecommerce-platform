@@ -1,4 +1,5 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { NavLink } from '@/components/navigation';
 import { Select, App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/api/client';
@@ -32,7 +33,6 @@ const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
 
 const AdminOrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { message: messageApi } = App.useApp();
   const queryClient = useQueryClient();
 
@@ -70,12 +70,12 @@ const AdminOrderDetailPage = () => {
   return (
     <div>
       {/* Back */}
-      <div className="rf-admin-back" onClick={() => navigate('/admin/orders')}>
+      <NavLink to="/admin/orders" className="rf-admin-back">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
           <path d="M10 4L6 8l4 4"/>
         </svg>
         Заказы
-      </div>
+      </NavLink>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>

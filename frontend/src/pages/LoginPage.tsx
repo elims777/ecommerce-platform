@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Form, Input, App } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { NavLink } from '@/components/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { consumePendingAddToCart } from '@/utils/pendingCart';
@@ -21,20 +22,24 @@ const BrandPanel = () => (
             }}
         />
 
-        <img
-            src="/logo-light.png"
-            alt="РФснаб"
-            onClick={() => window.location.href = '/'}
+        <NavLink
+            to="/"
             style={{
                 position: 'absolute',
                 top: 48,
                 left: 'var(--page-pad-x)',
-                height: 'var(--logo-h-header)',
-                display: 'block',
-                cursor: 'pointer',
                 zIndex: 2,
             }}
-        />
+        >
+            <img
+                src="/logo-light.png"
+                alt="РФснаб"
+                style={{
+                    height: 'var(--logo-h-header)',
+                    display: 'block',
+                }}
+            />
+        </NavLink>
 
         <div style={{ marginTop: 'auto', position: 'relative', zIndex: 1 }}>
             <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-7xl)', fontWeight: 600, color: '#fff', letterSpacing: '-0.022em', lineHeight: 1.1, maxWidth: 400, marginBottom: 16 }}>
@@ -133,9 +138,9 @@ const LoginPage = () => {
             <div style={{ background: 'var(--surface)', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
                     Ещё нет аккаунта?{' '}
-                    <span onClick={() => navigate('/register')} style={{ color: 'var(--brand-red)', fontWeight: 600, marginLeft: 6, cursor: 'pointer' }}>
+                    <NavLink to="/register" style={{ color: 'var(--brand-red)', fontWeight: 600, marginLeft: 6, cursor: 'pointer' }}>
                         Регистрация
-                    </span>
+                    </NavLink>
                 </div>
 
                 <div style={{ maxWidth: 380, margin: '60px auto auto', width: '100%' }}>
