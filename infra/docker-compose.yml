@@ -269,6 +269,7 @@ services:
       SPRING_MAIL_USERNAME: ${MAIL_USER}
       SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
       APP_BASE_URL: ${APP_BASE_URL}
+      MANAGER_EMAIL: ${MANAGER_EMAIL:-info@rfsnab.ru}
     volumes:
       - /var/log/rfsnab/notification-service:/var/log/rfsnab/notification-service
     depends_on:

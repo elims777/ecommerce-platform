@@ -53,7 +53,7 @@ app:
   email:
     from: test@example.com
     verification-url: http://localhost:9000/verify-email
-    manager: manager@rfsnab.ru
+    manager: info@rfsnab.ru
     legal-entity-confirm-url: http://localhost:8081/api/v1/legal-entities/confirm-email
     legal-entity-link-confirm-url: http://localhost:8081/api/v1/legal-entities/confirm-link
 
