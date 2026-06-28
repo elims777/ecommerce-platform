@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClickableCard } from '@/components/navigation';
+import { ClickableCard, NavLink } from '@/components/navigation';
 import { Spin } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { getProducts } from '@/api/products';
@@ -521,12 +521,12 @@ const HomePage = () => {
                             Три направления, которые закрывают 80% заявок снабженца
                         </p>
                     </div>
-                    <span
-                        onClick={() => navigate('/catalog')}
+                    <NavLink
+                        to="/catalog"
                         style={{ fontSize: 'var(--text-base)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
                     >
                         Все разделы каталога →
-                    </span>
+                    </NavLink>
                 </div>
 
                 {categoriesLoading ? (
@@ -575,12 +575,12 @@ const HomePage = () => {
                     <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
                         Хиты снабжения
                     </h2>
-                    <span
-                        onClick={() => navigate('/catalog')}
+                    <NavLink
+                        to="/catalog"
                         style={{ fontSize: 'var(--text-base)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
                     >
                         Смотреть все →
-                    </span>
+                    </NavLink>
                 </div>
 
                 {productsLoading ? (

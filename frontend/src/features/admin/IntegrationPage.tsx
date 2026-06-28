@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { NavLink } from '@/components/navigation';
 import apiClient from '@/api/client';
 
 interface FtkImportResult {
@@ -48,7 +48,6 @@ function formatDate(iso: string) {
 }
 
 const IntegrationPage = () => {
-    const navigate = useNavigate();
     const [logs, setLogs] = useState<ImportLogEntry[]>([]);
     const [logsLoading, setLogsLoading] = useState(true);
 
@@ -256,9 +255,9 @@ const IntegrationPage = () => {
                         <li>Нажать «Переместить в категорию» и выбрать целевую категорию</li>
                         <li>Активировать товары переключателем в колонке «Акт.»</li>
                     </ol>
-                    <button className="rf-btn rf-btn-primary" onClick={() => navigate('/admin/products')} style={{ marginTop: 12 }}>
+                    <NavLink to="/admin/products" className="rf-btn rf-btn-primary" style={{ marginTop: 12 }}>
                         → Перейти в каталог
-                    </button>
+                    </NavLink>
                 </div>
             </div>
 

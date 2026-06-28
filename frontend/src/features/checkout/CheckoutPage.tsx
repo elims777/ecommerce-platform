@@ -4,12 +4,12 @@ import {
     Col,
     Card,
     Form,
-    Button,
     Typography,
     App,
     Steps,
     Result,
 } from 'antd';
+import { NavLink } from '@/components/navigation';
 import {
     ShoppingOutlined,
     EnvironmentOutlined,
@@ -249,9 +249,9 @@ const createRecipientMutation = useMutation({
                 title="Корзина пуста"
                 subTitle="Добавьте товары в корзину перед оформлением заказа"
                 extra={
-                    <Button type="primary" onClick={() => navigate('/')}>
+                    <NavLink to="/" variant="button-primary">
                         В каталог
-                    </Button>
+                    </NavLink>
                 }
             />
         );

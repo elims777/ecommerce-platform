@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { App } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { NavLink } from '@/components/navigation';
 import { useCartStore } from '@/store/cartStore';
 import type { CartItemDto } from '@/api/cart';
 import { formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
@@ -151,7 +151,6 @@ const CartSkeleton = () => (
 
 // ── CartPage ──────────────────────────────────────────────────
 const CartPage = () => {
-    const navigate = useNavigate();
     const { message: messageApi } = App.useApp();
     const { items, totalAmount, isLoading, fetchCart, updateQuantity, removeItem, clearCart } = useCartStore();
     const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
@@ -208,19 +207,17 @@ const CartPage = () => {
                 <div style={{ fontSize: 'var(--text-base)', color: 'var(--ink-4)', marginBottom: 28 }}>
                     Для юридических лиц доступна оплата по счёту и работа по договору.
                 </div>
-                <button
-                    onClick={() => navigate('/catalog')}
+                <NavLink
+                    to="/catalog"
                     style={{
                         display: 'inline-flex', alignItems: 'center', gap: 8,
                         height: 'var(--btn-h-base)', padding: '0 28px', background: 'var(--brand-red)', color: '#fff',
                         border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-lg)', fontWeight: 500,
                         cursor: 'pointer', fontFamily: 'var(--font-body)',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-red)')}
                 >
                     Перейти в каталог <ArrRight />
-                </button>
+                </NavLink>
             </div>
         );
     }
@@ -237,7 +234,7 @@ const CartPage = () => {
 
             {/* Breadcrumbs */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 12 }}>
-                <span onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>Главная</span>
+                <NavLink to="/" style={{ cursor: 'pointer' }}>Главная</NavLink>
                 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                 <span style={{ color: 'var(--ink-1)', fontWeight: 500 }}>Корзина</span>
             </div>
@@ -288,14 +285,12 @@ const CartPage = () => {
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => navigate('/catalog')}
+                    <NavLink
+                        to="/catalog"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 'var(--btn-h-md)', padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)', marginTop: 16 }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                     >
                         ← Продолжить покупки
-                    </button>
+                    </NavLink>
                 </div>
 
                 {/* Summary sidebar */}
@@ -326,8 +321,8 @@ const CartPage = () => {
                             </div>
                         )}
 
-                        <button
-                            onClick={() => navigate('/checkout')}
+                        <NavLink
+                            to="/checkout"
                             style={{
                                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                                 width: '100%', height: 'var(--btn-h-xl)', marginTop: 16,
@@ -335,11 +330,9 @@ const CartPage = () => {
                                 fontSize: 'var(--text-lg)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
                                 transition: 'background 0.12s',
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--brand-red-hover)')}
-                            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--brand-red)')}
                         >
                             Оформить заявку <ArrRight />
-                        </button>
+                        </NavLink>
                     </div>
                 </aside>
             </div>

@@ -44,6 +44,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.attributes WHERE p.parentProductId = :parentId AND p.isActive = true ORDER BY p.name ASC")
     List<Product> findChildrenWithAttributes(@Param("parentId") Long parentId);
 
+    @Query("SELECT DISTINCT p.parentProductId FROM Product p WHERE p.parentProductId IN :ids AND p.isActive = true")
+    List<Long> findParentIdsWithActiveChildren(@Param("ids") List<Long> ids);
+
     List<Product> findByParentProductId(Long parentProductId);
 
     Page<Product> findByIsActiveTrueAndIsVariantChildFalse(Pageable pageable);

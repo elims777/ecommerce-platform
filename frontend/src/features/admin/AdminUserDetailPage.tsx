@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { RowLink } from '@/components/navigation';
+import { useParams } from 'react-router-dom';
+import { RowLink, NavLink } from '@/components/navigation';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -55,7 +55,6 @@ const LE_STATUS_LABEL: Record<string, string> = {
 
 const AdminUserDetailPage = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const { message: messageApi } = App.useApp();
   const queryClient = useQueryClient();
   const userId = Number(id);
@@ -142,12 +141,12 @@ const AdminUserDetailPage = () => {
   return (
     <div>
       {/* Back */}
-      <div className="rf-admin-back" onClick={() => navigate('/admin/users')}>
+      <NavLink to="/admin/users" className="rf-admin-back">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
           <path d="M10 4L6 8l4 4"/>
         </svg>
         Пользователи
-      </div>
+      </NavLink>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>

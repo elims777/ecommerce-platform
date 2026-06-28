@@ -1,5 +1,6 @@
 package ru.rfsnab.productservice.mapper;
 
+import org.springframework.data.domain.Page;
 import ru.rfsnab.productservice.dto.ProductDocumentDto;
 import ru.rfsnab.productservice.dto.ProductRequest;
 import ru.rfsnab.productservice.dto.ProductResponse;
@@ -8,6 +9,7 @@ import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.model.ProductDocument;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ProductMapper {
@@ -80,6 +82,14 @@ public class ProductMapper {
         }
 
         return builder.build();
+    }
+
+    public static Page<ProductResponse> mapPageWithHasVariants(Page<Product> page, Set<Long> parentIdsWithChildren) {
+        return page.map(p -> {
+            ProductResponse response = mapToResponse(p);
+            response.setHasVariants(parentIdsWithChildren.contains(p.getId()));
+            return response;
+        });
     }
 
     public static ProductDocumentDto mapDocumentToDto(ProductDocument document) {

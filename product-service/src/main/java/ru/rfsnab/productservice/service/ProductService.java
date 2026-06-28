@@ -17,6 +17,7 @@ import ru.rfsnab.productservice.repository.ProductRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -419,6 +420,18 @@ public class ProductService {
     @Transactional(readOnly = true)
     public List<Product> getChildren(Long parentId) {
         return productRepository.findChildrenWithAttributes(parentId);
+    }
+
+    /**
+     * Найти родителей, у которых есть активные дочерние варианты,
+     * среди заданного списка id (для пометки hasVariants в листинге).
+     */
+    @Transactional(readOnly = true)
+    public Set<Long> findParentIdsWithActiveChildren(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return Set.of();
+        }
+        return Set.copyOf(productRepository.findParentIdsWithActiveChildren(ids));
     }
 
     public Product findByExternalId(String externalId) {

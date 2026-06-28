@@ -1,5 +1,4 @@
-import { useNavigate } from 'react-router-dom';
-import { RowLink } from '@/components/navigation';
+import { RowLink, NavLink } from '@/components/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { getAdminOrders } from '@/api/adminOrders';
 import { OrderStatusLabels } from '@/types/order';
@@ -36,8 +35,6 @@ const KPI_CARDS = [
 ];
 
 const DashboardPage = () => {
-  const navigate = useNavigate();
-
   const { data: recentPage, isLoading } = useQuery({
     queryKey: ['dashboardRecentOrders'],
     queryFn: () => getAdminOrders({ page: 0, size: 5 }),
@@ -86,12 +83,12 @@ const DashboardPage = () => {
         <div className="rf-card-header">
           <h3>Последние заявки</h3>
           <div style={{ flex: 1 }} />
-          <a
+          <NavLink
+            to="/admin/orders"
             style={{ fontSize: 13, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
-            onClick={() => navigate('/admin/orders')}
           >
             Все заявки →
-          </a>
+          </NavLink>
         </div>
         <div className="rf-admin-table-wrap">
           <table className="rf-admin-table">

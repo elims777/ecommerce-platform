@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Result, Button, Spin } from 'antd';
+import { useSearchParams } from 'react-router-dom';
+import { Result, Spin } from 'antd';
+import { NavLink } from '@/components/navigation';
 import { getPaymentStatus } from '@/api/orders';
 
 const PaymentResultPage = () => {
     const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
     const orderId = searchParams.get('orderId');
     const [status, setStatus] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -51,12 +51,12 @@ const PaymentResultPage = () => {
                 title={titles[resultStatus]}
                 subTitle={subtitles[resultStatus]}
                 extra={[
-                    <Button type="primary" key="orders" onClick={() => navigate('/orders')}>
+                    <NavLink key="orders" to="/orders" variant="button-primary">
                         Мои заказы
-                    </Button>,
-                    <Button key="catalog" onClick={() => navigate('/catalog')}>
+                    </NavLink>,
+                    <NavLink key="catalog" to="/catalog" variant="button-secondary">
                         В каталог
-                    </Button>,
+                    </NavLink>,
                 ]}
             />
         </div>

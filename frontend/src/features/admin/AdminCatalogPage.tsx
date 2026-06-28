@@ -1,7 +1,8 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
+import { NavLink } from '@/components/navigation';
 import { getAdminProducts, searchProducts } from '@/api/products';
 import {
     getCategoryTree,
@@ -196,7 +197,6 @@ const SortableRow = ({ id, disabled, children }: SortableRowProps) => {
 // ── Main component ────────────────────────────────────────────────────────────
 
 const AdminCatalogPage = () => {
-    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { message: messageApi } = App.useApp();
     const queryClient = useQueryClient();
@@ -774,15 +774,15 @@ const AdminCatalogPage = () => {
                         </svg>
                         Категория
                     </button>
-                    <button
+                    <NavLink
+                        to="/admin/products/new"
                         className="rf-btn rf-btn-sm rf-btn-primary"
-                        onClick={() => navigate('/admin/products/new')}
                     >
                         <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                             <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                         </svg>
                         Товар
-                    </button>
+                    </NavLink>
                 </div>
             </div>
 

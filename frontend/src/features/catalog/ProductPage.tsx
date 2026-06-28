@@ -1,14 +1,16 @@
 import { useState, useMemo } from 'react';
-import { Image, App, Skeleton, Modal, Button } from 'antd';
+import { Image, App, Skeleton, Modal } from 'antd';
 import { ShoppingCartOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink } from '@/components/navigation';
 import { getProductById } from '@/api/products';
 import type { ProductImage, ProductChild } from '@/types/product';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDisplayPrice, formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 import { savePendingAddToCart, clearPendingAddToCart } from '@/utils/pendingCart';
+import { unitShort } from '@/utils/unitOfMeasure';
 
 const sortImages = (images: ProductImage[]): ProductImage[] =>
     [...images].sort((a, b) => {
@@ -59,10 +61,28 @@ const ProductPage = () => {
     });
 
     const hasVariants = (product?.children?.length ?? 0) > 0;
-    const activeVariants = useMemo(
-        () => (product?.children ?? []).filter(v => v.isActive),
-        [product?.children],
-    );
+    const activeVariants = useMemo<ProductChild[]>(() => {
+        if (!product) return [];
+        const children = product.children.filter(v => v.isActive);
+        if (children.length === 0) return [];
+        // ФТК-товары — родитель не продаётся, только дети-варианты.
+        // Для 1С/ручной группировки родитель — обычный SKU, показываем первой строкой.
+        if (product.source === 'FTK') return children;
+        const parentAsVariant: ProductChild = {
+            id: product.id,
+            name: product.name,
+            sku: product.sku,
+            price: product.price,
+            wholesalePrice: product.wholesalePrice,
+            stockQuantity: product.stockQuantity,
+            attributes: product.attributes,
+            isActive: product.isActive,
+            externalId: product.externalId,
+            barcode: null,
+            countryOfOrigin: null,
+        };
+        return [parentAsVariant, ...children];
+    }, [product]);
 
     const activeStock = product?.stockQuantity ?? 0;
     const displayPrice = useDisplayPrice({ price: product?.price ?? 0, wholesalePrice: product?.wholesalePrice ?? null });
@@ -126,12 +146,12 @@ const ProductPage = () => {
         return (
             <div style={{ textAlign: 'center', padding: '80px 0' }}>
                 <div style={{ fontFamily: 'var(--font-head)', fontSize: 20, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>Товар не найден</div>
-                <button
-                    onClick={() => navigate('/')}
+                <NavLink
+                    to="/"
                     style={{ display: 'inline-flex', alignItems: 'center', height: 'var(--btn-h-base)', padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
                 >
                     Вернуться в каталог
-                </button>
+                </NavLink>
             </div>
         );
     }
@@ -153,12 +173,12 @@ const ProductPage = () => {
                 Для добавления товаров в корзину необходимо войти или зарегистрироваться.
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
-                <Button type="primary" block onClick={() => navigate('/login', { state: { from: location } })} style={{ background: 'var(--brand-red)', borderColor: 'var(--brand-red)' }}>
+                <NavLink to="/login" state={{ from: location }} variant="button-primary" style={{ flex: 1 }}>
                     Войти
-                </Button>
-                <Button block onClick={() => navigate('/register', { state: { from: location } })}>
+                </NavLink>
+                <NavLink to="/register" state={{ from: location }} variant="button-secondary" style={{ flex: 1 }}>
                     Зарегистрироваться
-                </Button>
+                </NavLink>
             </div>
         </Modal>
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
@@ -223,7 +243,7 @@ const ProductPage = () => {
                         {inStock ? (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>
                                 <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', flexShrink: 0 }} />
-                                В наличии {activeStock} {product.unitOfMeasure || 'шт.'}
+                                В наличии {activeStock} {unitShort(product.unitOfMeasure)}
                             </span>
                         ) : (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--red-tint)', color: 'var(--brand-red)' }}>
@@ -305,7 +325,7 @@ const ProductPage = () => {
                                     {formatPriceOrPlaceholder(displayPrice)}
                                 </span>
                                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginTop: 2 }}>
-                                    за 1 {product.unitOfMeasure || 'шт.'}
+                                    за 1 {unitShort(product.unitOfMeasure)}
                                 </div>
                             </div>
                             <button
@@ -337,7 +357,7 @@ const ProductPage = () => {
                                             const inStockV = v.stockQuantity > 0;
                                             const variantPrice = v.price ?? product.price;
                                             return (
-                                                <tr key={v.id} style={{ borderBottom: '1px solid var(--line-1)', opacity: inStockV ? 1 : 0.45 }}>
+                                                <tr key={v.id} style={{ borderBottom: '1px solid var(--line-1)' }}>
                                                     <td style={{ padding: '7px 6px 7px 0', color: 'var(--ink-1)', fontWeight: 500, lineHeight: 1.5 }}>
                                                         <VariantAttrs variant={v} />
                                                     </td>
@@ -345,35 +365,30 @@ const ProductPage = () => {
                                                         {formatPriceOrPlaceholder(variantPrice)}
                                                     </td>
                                                     <td style={{ padding: '7px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: inStockV ? 'var(--brand-green)' : 'var(--brand-red)', fontVariantNumeric: 'tabular-nums' }}>
-                                                        {inStockV ? `${v.stockQuantity} ${product.unitOfMeasure || 'шт.'}` : 'нет'}
+                                                        {inStockV ? `${v.stockQuantity} ${unitShort(product.unitOfMeasure)}` : 'под заказ'}
                                                     </td>
                                                     <td style={{ padding: '7px 0 7px 6px' }}>
-                                                        {inStockV ? (
-                                                            <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', height: 28, alignItems: 'center', minWidth: 80 }}>
-                                                                <button
-                                                                    onClick={() => setVariantQty(v.id, Math.max(0, qty - 1))}
-                                                                    style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                                                                >−</button>
-                                                                <input
-                                                                    type="number"
-                                                                    min={0}
-                                                                    max={v.stockQuantity}
-                                                                    value={qty === 0 ? '' : qty}
-                                                                    placeholder="0"
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value === '' ? 0 : Math.min(v.stockQuantity, Math.max(0, Number(e.target.value)));
-                                                                        setVariantQty(v.id, val);
-                                                                    }}
-                                                                    style={{ flex: 1, width: 0, textAlign: 'center', border: 0, background: 'transparent', fontSize: 13, fontWeight: 600, outline: 'none', fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
-                                                                />
-                                                                <button
-                                                                    onClick={() => setVariantQty(v.id, Math.min(v.stockQuantity, qty + 1))}
-                                                                    style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                                                                >+</button>
-                                                            </div>
-                                                        ) : (
-                                                            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-4)' }}>—</span>
-                                                        )}
+                                                        <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', height: 28, alignItems: 'center', minWidth: 80 }}>
+                                                            <button
+                                                                onClick={() => setVariantQty(v.id, Math.max(0, qty - 1))}
+                                                                style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                                            >−</button>
+                                                            <input
+                                                                type="number"
+                                                                min={0}
+                                                                value={qty === 0 ? '' : qty}
+                                                                placeholder="0"
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value === '' ? 0 : Math.max(0, Number(e.target.value));
+                                                                    setVariantQty(v.id, val);
+                                                                }}
+                                                                style={{ flex: 1, width: 0, textAlign: 'center', border: 0, background: 'transparent', fontSize: 13, fontWeight: 600, outline: 'none', fontFamily: 'var(--font-head)', color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}
+                                                            />
+                                                            <button
+                                                                onClick={() => setVariantQty(v.id, qty + 1)}
+                                                                style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                                            >+</button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             );

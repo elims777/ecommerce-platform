@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Form, Input, Checkbox, App } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { NavLink } from '@/components/navigation';
 import type { RegisterRequest } from '@/types/auth';
 import type { AxiosError } from 'axios';
 import { register, registerLegal } from '@/api/auth';
@@ -156,7 +157,9 @@ const RegisterPage = () => {
                     style={{ position: 'absolute', right: -40, bottom: -30, height: 360, width: 'auto', opacity: 0.14, pointerEvents: 'none' }}
                 />
                 <div style={{ position: 'relative', zIndex: 1 }}>
-                    <img src="/logo-light.png" alt="РФснаб" onClick={() => window.location.href = '/'} style={{ height: 'var(--logo-h-auth)', display: 'block', cursor: 'pointer' }} />
+                    <NavLink to="/">
+                        <img src="/logo-light.png" alt="РФснаб" style={{ height: 'var(--logo-h-auth)', display: 'block' }} />
+                    </NavLink>
                 </div>
                 <div style={{ marginTop: 'auto', position: 'relative', zIndex: 1 }}>
                     <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-7xl)', fontWeight: 600, color: '#fff', letterSpacing: '-0.022em', lineHeight: 1.1, maxWidth: 460, marginBottom: 16 }}>
@@ -180,9 +183,9 @@ const RegisterPage = () => {
             <div style={{ background: 'var(--surface)', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
                     Уже зарегистрированы?{' '}
-                    <span onClick={() => navigate('/login')} style={{ color: 'var(--brand-red)', fontWeight: 600, marginLeft: 6, cursor: 'pointer' }}>
+                    <NavLink to="/login" style={{ color: 'var(--brand-red)', fontWeight: 600, marginLeft: 6, cursor: 'pointer' }}>
                         Войти
-                    </span>
+                    </NavLink>
                 </div>
 
                 <div style={{ maxWidth: 460, margin: '32px auto auto', width: '100%' }}>

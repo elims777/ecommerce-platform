@@ -1,5 +1,6 @@
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { NavLink } from '@/components/navigation';
 
 const NAV_ITEMS = [
   { key: '/admin',             label: 'Сводка',        icon: GridIcon },
@@ -111,7 +112,6 @@ function SearchIcon() {
 }
 
 const AdminLayout = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
 
@@ -139,35 +139,34 @@ const AdminLayout = () => {
     <div className="rf-admin-layout">
       {/* Sidebar */}
       <aside className="rf-admin-sidebar">
-        <div
+        <NavLink
+          to="/admin"
           className="rf-admin-logo"
-          onClick={() => navigate('/admin')}
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
         >
           <img src="/logo-dark.png" alt="РФснаб" style={{ height: 'var(--logo-h-admin)' }} />
           <span style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 15, color: 'var(--ink-1)', letterSpacing: '-0.01em' }}>
             РФснаб
           </span>
-        </div>
+        </NavLink>
 
         <nav className="rf-admin-nav">
           <div className="rf-admin-nav-label">Управление</div>
           {NAV_ITEMS.map(({ key, label, icon: Icon }) => (
-            <div
+            <NavLink
               key={key}
+              to={key}
               className={`rf-admin-nav-item${activeKey === key ? ' active' : ''}`}
-              onClick={() => navigate(key)}
             >
               <Icon />
               <span style={{ flex: 1 }}>{label}</span>
-            </div>
+            </NavLink>
           ))}
         </nav>
 
-        <div
+        <NavLink
+          to="/profile"
           className="rf-admin-user"
-          onClick={() => navigate('/profile')}
-          style={{ cursor: 'pointer' }}
           title="Личный кабинет"
         >
           <div className="rf-admin-avatar">{initials}</div>
@@ -176,7 +175,7 @@ const AdminLayout = () => {
             <div style={{ color: 'var(--ink-3)' }}>Администратор</div>
           </div>
           <ChevronDownIcon />
-        </div>
+        </NavLink>
       </aside>
 
       {/* Main */}
@@ -189,13 +188,13 @@ const AdminLayout = () => {
             <SearchIcon />
             <input placeholder="Поиск по заявкам, артикулам, клиентам…" />
           </div>
-          <button
+          <NavLink
+            to="/"
             className="rf-btn rf-btn-quiet rf-btn-sm"
-            onClick={() => navigate('/')}
             style={{ gap: 6 }}
           >
             ← В магазин
-          </button>
+          </NavLink>
         </div>
 
         <div className="rf-admin-content">
