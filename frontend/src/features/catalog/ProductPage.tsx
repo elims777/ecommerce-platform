@@ -61,10 +61,28 @@ const ProductPage = () => {
     });
 
     const hasVariants = (product?.children?.length ?? 0) > 0;
-    const activeVariants = useMemo(
-        () => (product?.children ?? []).filter(v => v.isActive),
-        [product?.children],
-    );
+    const activeVariants = useMemo<ProductChild[]>(() => {
+        if (!product) return [];
+        const children = product.children.filter(v => v.isActive);
+        if (children.length === 0) return [];
+        // ФТК-товары — родитель не продаётся, только дети-варианты.
+        // Для 1С/ручной группировки родитель — обычный SKU, показываем первой строкой.
+        if (product.source === 'FTK') return children;
+        const parentAsVariant: ProductChild = {
+            id: product.id,
+            name: product.name,
+            sku: product.sku,
+            price: product.price,
+            wholesalePrice: product.wholesalePrice,
+            stockQuantity: product.stockQuantity,
+            attributes: product.attributes,
+            isActive: product.isActive,
+            externalId: product.externalId,
+            barcode: null,
+            countryOfOrigin: null,
+        };
+        return [parentAsVariant, ...children];
+    }, [product]);
 
     const activeStock = product?.stockQuantity ?? 0;
     const displayPrice = useDisplayPrice({ price: product?.price ?? 0, wholesalePrice: product?.wholesalePrice ?? null });
