@@ -77,29 +77,6 @@ const DownloadIcon = () => (
 
 
 
-const HeaderAction = ({ icon, label, count, highlight, onClick }: { icon: React.ReactNode; label: string; count?: number; highlight?: boolean; onClick?: () => void }) => (
-    <button onClick={onClick} style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-        background: 'transparent', border: 0, cursor: 'pointer',
-        padding: '6px 10px', borderRadius: 'var(--r-3)', color: 'var(--ink-1)', fontFamily: 'inherit',
-    }}>
-        <span style={{ position: 'relative', color: highlight ? 'var(--brand-red)' : 'var(--ink-1)' }}>
-            {icon}
-            {count != null && count > 0 && (
-                <span style={{
-                    position: 'absolute', top: -4, right: -8,
-                    minWidth: 16, height: 16, padding: '0 4px', borderRadius: 'var(--r-4)',
-                    background: 'var(--brand-red)', color: '#fff',
-                    fontSize: 10, fontWeight: 700,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: '2px solid #fff',
-                }}>{count}</span>
-            )}
-        </span>
-        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>{label}</span>
-    </button>
-);
-
 const ContextSwitcher = () => {
     const { user, switchContext } = useAuthStore();
     const fetchCart = useCartStore((s) => s.fetchCart);
