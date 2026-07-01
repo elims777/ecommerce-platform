@@ -43,8 +43,9 @@ public class ProductController {
     @GetMapping("/admin")
     public ResponseEntity<Page<ProductResponse>> getAllProductsAdmin(
             @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Boolean isActive,
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
-        Page<Product> productsPage = productService.getAllProductsAdminPage(categoryId, pageable);
+        Page<Product> productsPage = productService.getAllProductsAdminPage(categoryId, isActive, pageable);
         return ResponseEntity.ok(productsPage.map(ProductMapper::mapToResponse));
     }
 

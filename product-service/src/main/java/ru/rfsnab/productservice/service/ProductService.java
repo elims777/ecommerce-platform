@@ -174,14 +174,18 @@ public class ProductService {
         return productRepository.findAll(pageable);
     }
 
-    public Page<Product> getAllProductsAdminPage(Long categoryId, Pageable pageable) {
+    public Page<Product> getAllProductsAdminPage(Long categoryId, Boolean isActive, Pageable pageable) {
         if (categoryId != null) {
             if (!categoryRepository.existsById(categoryId)) {
                 throw new CategoryNotFoundException(categoryId);
             }
-            return productRepository.findByCategoryId(categoryId, pageable);
+            return isActive == null
+                    ? productRepository.findByCategoryId(categoryId, pageable)
+                    : productRepository.findByCategoryIdAndIsActive(categoryId, isActive, pageable);
         }
-        return productRepository.findAll(pageable);
+        return isActive == null
+                ? productRepository.findAll(pageable)
+                : productRepository.findByIsActive(isActive, pageable);
     }
 
     /**

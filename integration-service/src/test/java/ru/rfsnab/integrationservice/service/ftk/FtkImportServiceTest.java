@@ -200,6 +200,32 @@ class FtkImportServiceTest {
         }
 
         @Test
+        @DisplayName("отрицательный stockQuantity зажимается в 0 (иначе БД check violation)")
+        void shouldClampNegativeStockQuantityToZero() throws IOException {
+            List<FtkVariant> variants = List.of(
+                    FtkVariant.builder()
+                            .offerUuid(null).article("999.001").price(BigDecimal.ONE)
+                            .stockQuantity(-5)
+                            .attributes(Map.of()).vatRate(null)
+                            .barcode(null).countryOfOrigin(null).deleted(false).build()
+            );
+            FtkProduct p = product("999", "Товар с отрицат. остатком",
+                    BigDecimal.ONE, null, null, variants);
+            when(xlsParser.parse(any())).thenReturn(List.of(p));
+            when(categoryMapper.resolveCategory(anyString())).thenReturn(42L);
+            when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
+                    .thenReturn(ResponseEntity.ok(okResponse(1, 0)));
+
+            service.importFromXls(InputStream.nullInputStream());
+
+            ArgumentCaptor<BatchImportRequest> captor = ArgumentCaptor.forClass(BatchImportRequest.class);
+            verify(productServiceRestTemplate).postForEntity(anyString(), captor.capture(), eq(BatchImportResponse.class));
+
+            ProductImportItemDto dto = captor.getValue().getItems().get(0);
+            assertThat(dto.getVariants().get(0).getStockQuantity()).isZero();
+        }
+
+        @Test
         @DisplayName("unitOfMeasure передаётся в DTO")
         void shouldMapUnitOfMeasure() throws IOException {
             FtkProduct p = product("333", "Товар", BigDecimal.ONE, null, null, List.of());

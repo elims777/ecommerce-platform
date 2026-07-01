@@ -6,6 +6,7 @@ interface GetProductsParams {
     size?: number;
     sort?: string;
     categoryId?: number;
+    isActive?: boolean;
 }
 
 /** Получить товары с пагинацией */
@@ -44,9 +45,10 @@ export const searchProducts = async (query: string): Promise<Product[]> => {
 
 /** Получить все товары включая неактивные (для админки) */
 export const getAdminProducts = async (params: GetProductsParams = {}): Promise<Page<Product>> => {
-    const { page = 0, size = 20, sort = 'name,asc', categoryId } = params;
+    const { page = 0, size = 20, sort = 'name,asc', categoryId, isActive } = params;
     const queryParams: Record<string, unknown> = { page, size, sort };
     if (categoryId !== undefined) queryParams.categoryId = categoryId;
+    if (isActive !== undefined) queryParams.isActive = isActive;
     const { data } = await apiClient.get<Page<Product>>('/v1/products/admin', {
         params: queryParams,
     });
