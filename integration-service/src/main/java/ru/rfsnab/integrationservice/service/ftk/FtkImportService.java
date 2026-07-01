@@ -258,7 +258,7 @@ public class FtkImportService {
                 .sku(v.getArticle())
                 .price(v.getPrice())
                 .wholesalePrice(v.getPrice())
-                .stockQuantity(v.getStockQuantity())
+                .stockQuantity(Math.max(0, v.getStockQuantity()))
                 .barcode(v.getBarcode())
                 .countryOfOrigin(v.getCountryOfOrigin())
                 .attributes(v.getAttributes())
