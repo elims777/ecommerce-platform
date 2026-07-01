@@ -213,6 +213,7 @@ const AdminCatalogPage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [showAllProducts, setShowAllProducts] = useState(!selectedCategoryId);
     const [draggingProductId, setDraggingProductId] = useState<number | null>(null);
+    const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
     const sortOrder = selectedCategoryId ? 'displayOrder,asc' : 'name,asc';
     const dndEnabled = !!selectedCategoryId && !searchQuery;
@@ -268,18 +269,21 @@ const AdminCatalogPage = () => {
         queryFn: getCategoryTree,
     });
 
+    const isActiveParam = activeFilter === 'all' ? undefined : activeFilter === 'active';
+
     const {
         data: productsPage,
         isLoading: productsLoading,
         refetch: refetchProducts,
     } = useQuery({
-        queryKey: ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder }],
+        queryKey: ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder, isActive: isActiveParam }],
         queryFn: () =>
             getAdminProducts({
                 page: currentPage - 1,
                 size: pageSize,
                 categoryId: selectedCategoryId,
                 sort: sortOrder,
+                isActive: isActiveParam,
             }),
     });
 
@@ -288,6 +292,12 @@ const AdminCatalogPage = () => {
         queryFn: () => searchProducts(searchQuery),
         enabled: searchQuery.length >= 2,
     });
+
+    const { data: inactiveCountPage } = useQuery({
+        queryKey: ['adminCatalogInactiveCount', { category: selectedCategoryId }],
+        queryFn: () => getAdminProducts({ page: 0, size: 1, categoryId: selectedCategoryId, isActive: false }),
+    });
+    const inactiveCount = inactiveCountPage?.totalElements ?? 0;
 
     const displayProducts = useMemo(() => {
         let items: Product[] = [];
@@ -328,6 +338,7 @@ const AdminCatalogPage = () => {
 
     const invalidateAll = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
+        queryClient.invalidateQueries({ queryKey: ['adminCatalogInactiveCount'] });
         queryClient.invalidateQueries({ queryKey: ['adminCategoryTree'] });
         queryClient.invalidateQueries({ queryKey: ['categories'] });
     }, [queryClient]);
@@ -574,6 +585,7 @@ const AdminCatalogPage = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
+            queryClient.invalidateQueries({ queryKey: ['adminCatalogInactiveCount'] });
             messageApi.success('Статус товара обновлён');
         },
     });
@@ -954,6 +966,27 @@ const AdminCatalogPage = () => {
                         <div className="rf-card-header" style={{ justifyContent: 'space-between' }}>
                             <h3>{pageTitle}</h3>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ display: 'inline-flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', overflow: 'hidden', height: 26 }}>
+                                {(['all', 'active', 'inactive'] as const).map((f) => (
+                                    <button
+                                        key={f}
+                                        onClick={() => { setActiveFilter(f); setCurrentPage(1); setSelectedRowKeys([]); }}
+                                        style={{
+                                            padding: '0 10px',
+                                            fontSize: 'var(--text-sm)',
+                                            fontFamily: 'var(--font-body)',
+                                            border: 'none',
+                                            background: activeFilter === f ? 'var(--brand-navy)' : 'var(--surface)',
+                                            color: activeFilter === f ? '#fff' : 'var(--ink-2)',
+                                            cursor: 'pointer',
+                                            borderLeft: f === 'all' ? 'none' : '1px solid var(--line-2)',
+                                            fontWeight: activeFilter === f ? 600 : 400,
+                                        }}
+                                    >
+                                        {f === 'all' ? 'Все' : f === 'active' ? 'Активные' : `Неактивные${inactiveCount > 0 ? ` (${inactiveCount})` : ''}`}
+                                    </button>
+                                ))}
+                            </div>
                             {isPaginated && totalPages > 1 && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <select
