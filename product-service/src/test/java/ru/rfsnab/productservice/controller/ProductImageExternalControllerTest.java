@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -106,5 +107,40 @@ class ProductImageExternalControllerTest {
                         .file(file)
                         .header("X-Internal-Token", "test-secret"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("GET /api/v1/products/external/{externalId}/images/keys - возвращает fileKey загруженных изображений")
+    void getImageKeysByExternalId_Success() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "test.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                "test image content".getBytes()
+        );
+
+        when(storageService.uploadFile(any(), any())).thenReturn("https://storage.yandexcloud.net/products/ftk/ext-123/test.jpg");
+
+        mockMvc.perform(multipart("/api/v1/products/external/{externalId}/images", "ext-123")
+                        .file(file)
+                        .header("X-Internal-Token", "test-secret"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/products/external/{externalId}/images/keys", "ext-123")
+                        .header("X-Internal-Token", "test-secret"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("products/ftk/ext-123/test.jpg"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("GET /api/v1/products/external/{externalId}/images/keys - товар не найден, возвращает пустой список")
+    void getImageKeysByExternalId_ProductNotFound_ReturnsEmptyList() throws Exception {
+        mockMvc.perform(get("/api/v1/products/external/{externalId}/images/keys", "non-existent")
+                        .header("X-Internal-Token", "test-secret"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
     }
 }

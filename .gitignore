@@ -58,3 +58,6 @@ ARCHITECTURE.md
 
 # Playwright MCP — артефакты браузерных тестов
 .playwright-mcp/
+
+# graphify — графы знаний и иерархическая визуализация (локальные артефакты)
+graphify-out/

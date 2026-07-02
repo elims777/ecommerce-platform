@@ -44,4 +44,21 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
     @Modifying
     @Query("DELETE FROM ProductImage pi WHERE pi.product.id = :productId")
     void deleteAllByProduct(@Param("productId") Long id);
+
+    /**
+     * Получить fileKey всех изображений товара (без загрузки целых сущностей)
+     * @param id товара
+     * @return List<String>
+     */
+    @Query("SELECT pi.fileKey FROM ProductImage pi WHERE pi.product.id = :productId")
+    List<String> findFileKeysByProduct(@Param("productId") Long id);
+
+    /**
+     * Получить пары (externalId товара, fileKey изображения) для набора товаров одним запросом.
+     * Используется для batch-сверки картинок ФТК-импорта.
+     * @param externalIds список externalId товаров
+     * @return List<Object[]> — [0]=externalId (String), [1]=fileKey (String)
+     */
+    @Query("SELECT pi.product.externalId, pi.fileKey FROM ProductImage pi WHERE pi.product.externalId IN :externalIds")
+    List<Object[]> findFileKeysByProductExternalIdIn(@Param("externalIds") List<String> externalIds);
 }

@@ -18,7 +18,12 @@ import ru.rfsnab.integrationservice.model.ImportLog;
 import ru.rfsnab.integrationservice.model.ftk.FtkProduct;
 import ru.rfsnab.integrationservice.model.ftk.FtkProduct.FtkVariant;
 import ru.rfsnab.integrationservice.repository.ImportLogRepository;
+import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.ClassifierData;
+import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.OfferData;
+import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.ProductData;
+import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.RestData;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -27,8 +32,10 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -350,6 +357,150 @@ class FtkImportServiceTest {
 
             assertThat(result.failed()).isEqualTo(1);
             assertThat(result.created()).isEqualTo(0);
+        }
+    }
+
+    @Nested
+    @DisplayName("importFromFtp — три порции")
+    class FtpThreePartsTests {
+
+        private final ClassifierData classifier =
+                new ClassifierData(Map.of(), Map.of(), Map.of(), Map.of());
+
+        private InputStream stream() {
+            return new ByteArrayInputStream(new byte[0]);
+        }
+
+        private FtkProduct partProduct(String article, int part) {
+            return FtkProduct.builder()
+                    .productUuid(article)
+                    .article(article)
+                    .name("Товар " + article)
+                    .description(null)
+                    .imagePaths(List.of())
+                    .groupUuid("GRP")
+                    .unitOfMeasure("шт")
+                    .partNumber(part)
+                    .properties(Map.of())
+                    .variants(List.of(FtkVariant.builder()
+                            .offerUuid(null).article(article).price(BigDecimal.ONE)
+                            .stockQuantity(0).attributes(Map.of()).vatRate(null)
+                            .barcode(null).countryOfOrigin(null).deleted(false).build()))
+                    .build();
+        }
+
+        /** Настраивает ftpClient/xmlParser так, чтобы порция part была полностью читаема и собиралась в partProducts. */
+        private void mockFullPart(int part, List<FtkProduct> partProducts) throws Exception {
+            String goodsDir = "/webdata/000000003/goods/" + part + "/";
+            when(ftpClient.getGoodsDir(part)).thenReturn(goodsDir);
+            when(ftpClient.findFileByPrefix(eq(goodsDir), eq("import___"))).thenReturn(goodsDir + "import___1.xml");
+            when(ftpClient.findFileByPrefix(eq(goodsDir), eq("offers___"))).thenReturn(goodsDir + "offers___1.xml");
+            when(ftpClient.findFileByPrefix(eq(goodsDir), eq("prices___"))).thenReturn(goodsDir + "prices___1.xml");
+            when(ftpClient.findFileByPrefix(eq(goodsDir), eq("rests___"))).thenReturn(goodsDir + "rests___1.xml");
+
+            when(ftpClient.openStream(goodsDir + "import___1.xml")).thenReturn(stream());
+            when(ftpClient.openStream(goodsDir + "offers___1.xml")).thenReturn(stream());
+            when(ftpClient.openStream(goodsDir + "rests___1.xml")).thenReturn(stream());
+            FtkFtpClient.FtpStreamHandle handle = mock(FtkFtpClient.FtpStreamHandle.class);
+            when(handle.getStream()).thenReturn(stream());
+            when(ftpClient.openLargeStream(goodsDir + "prices___1.xml")).thenReturn(handle);
+
+            when(xmlParser.assemble(any(), any(), any(), any(), eq(classifier), eq(part)))
+                    .thenReturn(partProducts);
+        }
+
+        @Test
+        @DisplayName("обходит все 3 порции и суммирует результаты сборки")
+        void shouldProcessAllThreePartsAndAccumulateResults() throws Exception {
+            when(ftpClient.getRootDir()).thenReturn("/webdata/000000003/");
+            when(ftpClient.findFileByPrefix("/webdata/000000003/", "import___"))
+                    .thenReturn("/webdata/000000003/import___1.xml");
+            when(ftpClient.openStream("/webdata/000000003/import___1.xml")).thenReturn(stream());
+            when(xmlParser.parseClassifier(any())).thenReturn(classifier);
+
+            mockFullPart(1, List.of(partProduct("1", 1)));
+            mockFullPart(2, List.of(partProduct("2", 2), partProduct("3", 2)));
+            mockFullPart(3, List.of(partProduct("4", 3)));
+
+            when(categoryMapper.resolveCategory(anyString())).thenReturn(42L);
+            when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
+                    .thenReturn(ResponseEntity.ok(okResponse(4, 0)));
+
+            FtkImportService.FtkImportResult result = service.doImportFromFtp();
+
+            assertThat(result.totalProducts()).isEqualTo(4);
+            verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(1));
+            verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(2));
+            verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(3));
+        }
+
+        @Test
+        @DisplayName("картинка с уже существующим fileKey не перекачивается — imagesSkipped++")
+        void shouldSkipImageAlreadyUploaded() throws Exception {
+            when(ftpClient.getRootDir()).thenReturn("/webdata/000000003/");
+            when(ftpClient.findFileByPrefix("/webdata/000000003/", "import___"))
+                    .thenReturn("/webdata/000000003/import___1.xml");
+            when(ftpClient.openStream("/webdata/000000003/import___1.xml")).thenReturn(stream());
+            when(xmlParser.parseClassifier(any())).thenReturn(classifier);
+
+            FtkProduct productWithImage = FtkProduct.builder()
+                    .productUuid("1").article("1").name("Товар 1").description(null)
+                    .imagePaths(List.of("img/photo1.jpg"))
+                    .groupUuid("GRP").unitOfMeasure("шт").partNumber(1)
+                    .properties(Map.of())
+                    .variants(List.of(FtkVariant.builder()
+                            .offerUuid(null).article("1").price(BigDecimal.ONE)
+                            .stockQuantity(0).attributes(Map.of()).vatRate(null)
+                            .barcode(null).countryOfOrigin(null).deleted(false).build()))
+                    .build();
+
+            mockFullPart(1, List.of(productWithImage));
+            mockFullPart(2, List.of());
+            mockFullPart(3, List.of());
+
+            when(categoryMapper.resolveCategory(anyString())).thenReturn(42L);
+            when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
+                    .thenReturn(ResponseEntity.ok(okResponse(1, 0)));
+
+            String predictedFileKey = "products/ftk/FTK-1/ftk-photo1.webp";
+            when(imageDownloader.predictFileKey(anyString(), eq("FTK-1"))).thenReturn(predictedFileKey);
+            when(imageDownloader.getExistingFileKeysBatch(anyList()))
+                    .thenReturn(Map.of("FTK-1", java.util.Set.of(predictedFileKey)));
+
+            FtkImportService.FtkImportResult result = service.doImportFromFtp();
+
+            verify(imageDownloader, never()).downloadAndUpload(anyString(), anyString());
+            assertThat(result.imagesSkipped()).isEqualTo(1);
+            assertThat(result.imagesOk()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("отсутствие файла в одной порции не валит весь импорт — остальные обрабатываются")
+        void shouldSkipPartWhenFileMissingButProcessOthers() throws Exception {
+            when(ftpClient.getRootDir()).thenReturn("/webdata/000000003/");
+            when(ftpClient.findFileByPrefix("/webdata/000000003/", "import___"))
+                    .thenReturn("/webdata/000000003/import___1.xml");
+            when(ftpClient.openStream("/webdata/000000003/import___1.xml")).thenReturn(stream());
+            when(xmlParser.parseClassifier(any())).thenReturn(classifier);
+
+            // Порция 2: import___ не найден на FTP
+            String goodsDir2 = "/webdata/000000003/goods/2/";
+            when(ftpClient.getGoodsDir(2)).thenReturn(goodsDir2);
+            when(ftpClient.findFileByPrefix(eq(goodsDir2), eq("import___"))).thenReturn(null);
+
+            mockFullPart(1, List.of(partProduct("1", 1)));
+            mockFullPart(3, List.of(partProduct("3", 3)));
+
+            when(categoryMapper.resolveCategory(anyString())).thenReturn(42L);
+            when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
+                    .thenReturn(ResponseEntity.ok(okResponse(2, 0)));
+
+            FtkImportService.FtkImportResult result = service.doImportFromFtp();
+
+            assertThat(result.totalProducts()).isEqualTo(2);
+            verify(xmlParser, never()).assemble(any(), any(), any(), any(), eq(classifier), eq(2));
+            verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(1));
+            verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(3));
         }
     }
 }

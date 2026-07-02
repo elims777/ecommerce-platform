@@ -330,7 +330,7 @@ class FtkXmlParserTest {
                     "PROD-1#VAR-1", new RestData(10, "4607000000002", "Китай")
             );
 
-            List<FtkProduct> result = parser.assemble(products, offers, prices, rests, classifier);
+            List<FtkProduct> result = parser.assemble(products, offers, prices, rests, classifier, 1);
 
             assertThat(result).hasSize(1);
             FtkProduct p = result.get(0);
@@ -364,7 +364,7 @@ class FtkXmlParserTest {
             Map<String, BigDecimal> prices = Map.of("PROD-1", new BigDecimal("100"));
             Map<String, RestData> rests    = Map.of("PROD-1", new RestData(5, null, null));
 
-            List<FtkProduct> result = parser.assemble(products, offers, prices, rests, classifier);
+            List<FtkProduct> result = parser.assemble(products, offers, prices, rests, classifier, 1);
 
             assertThat(result).hasSize(1);
             FtkProduct.FtkVariant v = result.get(0).getVariants().get(0);
@@ -389,7 +389,7 @@ class FtkXmlParserTest {
             Map<String, BigDecimal> prices = Map.of("PROD-DEL", new BigDecimal("50"));
             Map<String, RestData> rests    = Map.of("PROD-DEL", new RestData(0, null, null));
 
-            List<FtkProduct> result = parser.assemble(products, offers, prices, rests, classifier);
+            List<FtkProduct> result = parser.assemble(products, offers, prices, rests, classifier, 1);
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getVariants().get(0).isDeleted()).isTrue();
@@ -508,7 +508,7 @@ class FtkXmlParserTest {
             rests = parser.parseRests(is);
         }
 
-        List<FtkProduct> assembled = parser.assemble(products, offers, prices, rests, classifier);
+        List<FtkProduct> assembled = parser.assemble(products, offers, prices, rests, classifier, 1);
 
         assertThat(assembled).isNotEmpty();
         List<FtkProduct> first100 = assembled.subList(0, Math.min(100, assembled.size()));

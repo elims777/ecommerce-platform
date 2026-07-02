@@ -3,6 +3,7 @@ package ru.rfsnab.integrationservice.service.ftk;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.integrationservice.config.IntegrationProperties;
@@ -29,12 +30,15 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Оркестратор импорта ФТК.
  *
- * importFromFtp() — актуальный метод: XML с FTP.
- * importFromXls() — устаревший, сохранён для обратной совместимости.
+ * importFromFtp() — актуальный метод: XML с FTP, выполняется асинхронно (@Async),
+ *                    результат пишется в import_log (см. saveFtkLog).
+ * importFromXls() — устаревший, сохранён для обратной совместимости, синхронный.
  */
 @Service
 @RequiredArgsConstructor
@@ -53,21 +57,38 @@ public class FtkImportService {
     private final IntegrationProperties properties;
     private final ImportLogRepository importLogRepository;
 
+    private final AtomicBoolean importInProgress = new AtomicBoolean(false);
+
     // ══════════════════════════════════════════════════════════════
     // Актуальный метод: XML с FTP
     // ══════════════════════════════════════════════════════════════
 
-    public FtkImportResult importFromFtp() throws Exception {
+    @Async("ftkImportExecutor")
+    public void importFromFtp() {
+        if (!importInProgress.compareAndSet(false, true)) {
+            log.warn("ФТК XML импорт уже выполняется, повторный запуск пропущен");
+            return;
+        }
+        try {
+            doImportFromFtp();
+        } catch (Exception e) {
+            log.error("ФТК XML импорт (async) завершился с ошибкой: {}", e.getMessage(), e);
+        } finally {
+            importInProgress.set(false);
+        }
+    }
+
+    // package-private — вызывается напрямую из юнит-тестов, минуя @Async-прокси
+    FtkImportResult doImportFromFtp() throws Exception {
         LocalDateTime startedAt = LocalDateTime.now();
         IntegrationProperties.FtkProperties cfg = properties.getFtk();
         categoryMapper.resetCache();
-        String goodsDir = ftpClient.getGoodsDir();
-        String rootDir  = ftpClient.getRootDir();
+        String rootDir = ftpClient.getRootDir();
 
         log.info("ФТК XML импорт запущен");
 
         try {
-            // 1. Классификатор → группы + свойства + единицы измерения
+            // 1. Классификатор → группы + свойства + единицы измерения (общий для всех порций)
             String rootImportPath = ftpClient.findFileByPrefix(rootDir, "import___");
             if (rootImportPath == null) throw new IOException("Корневой import___.xml не найден на FTP");
             ClassifierData classifier;
@@ -76,41 +97,64 @@ public class FtkImportService {
             }
             categoryMapper.loadClassifier(classifier);
 
-            // 2. Товары
-            String goodsImportPath = ftpClient.findFileByPrefix(goodsDir, "import___");
-            if (goodsImportPath == null) throw new IOException("goods/1/import___.xml не найден на FTP");
-            Map<String, ProductData> products;
-            try (InputStream is = ftpClient.openStream(goodsImportPath)) {
-                products = xmlParser.parseProducts(is, classifier);
-            }
+            // 2-6. Товары/офферы/цены/остатки/сборка — по каждой из трёх FTP-порций
+            List<FtkProduct> allProducts = new ArrayList<>();
+            for (int part = 1; part <= FtkFtpClient.GOODS_PARTS_COUNT; part++) {
+                String goodsDir = ftpClient.getGoodsDir(part);
+                try {
+                    // 2. Товары
+                    String goodsImportPath = ftpClient.findFileByPrefix(goodsDir, "import___");
+                    if (goodsImportPath == null) {
+                        log.warn("ФТК: goods/{}/import___.xml не найден на FTP, порция пропущена", part);
+                        continue;
+                    }
+                    Map<String, ProductData> products;
+                    try (InputStream is = ftpClient.openStream(goodsImportPath)) {
+                        products = xmlParser.parseProducts(is, classifier);
+                    }
 
-            // 3. Предложения
-            String offersPath = ftpClient.findFileByPrefix(goodsDir, "offers___");
-            if (offersPath == null) throw new IOException("offers___.xml не найден на FTP");
-            Map<String, OfferData> offers;
-            try (InputStream is = ftpClient.openStream(offersPath)) {
-                offers = xmlParser.parseOffers(is);
-            }
+                    // 3. Предложения
+                    String offersPath = ftpClient.findFileByPrefix(goodsDir, "offers___");
+                    if (offersPath == null) {
+                        log.warn("ФТК: goods/{}/offers___.xml не найден на FTP, порция пропущена", part);
+                        continue;
+                    }
+                    Map<String, OfferData> offers;
+                    try (InputStream is = ftpClient.openStream(offersPath)) {
+                        offers = xmlParser.parseOffers(is);
+                    }
 
-            // 4. Цены — StAX стрим (125 МБ)
-            String pricesPath = ftpClient.findFileByPrefix(goodsDir, "prices___");
-            if (pricesPath == null) throw new IOException("prices___.xml не найден на FTP");
-            Map<String, BigDecimal> prices;
-            try (FtpStreamHandle handle = ftpClient.openLargeStream(pricesPath)) {
-                prices = xmlParser.parsePrices(handle.getStream());
-            }
+                    // 4. Цены — StAX стрим (125 МБ)
+                    String pricesPath = ftpClient.findFileByPrefix(goodsDir, "prices___");
+                    if (pricesPath == null) {
+                        log.warn("ФТК: goods/{}/prices___.xml не найден на FTP, порция пропущена", part);
+                        continue;
+                    }
+                    Map<String, BigDecimal> prices;
+                    try (FtpStreamHandle handle = ftpClient.openLargeStream(pricesPath)) {
+                        prices = xmlParser.parsePrices(handle.getStream());
+                    }
 
-            // 5. Остатки
-            String restsPath = ftpClient.findFileByPrefix(goodsDir, "rests___");
-            if (restsPath == null) throw new IOException("rests___.xml не найден на FTP");
-            Map<String, RestData> rests;
-            try (InputStream is = ftpClient.openStream(restsPath)) {
-                rests = xmlParser.parseRests(is);
-            }
+                    // 5. Остатки
+                    String restsPath = ftpClient.findFileByPrefix(goodsDir, "rests___");
+                    if (restsPath == null) {
+                        log.warn("ФТК: goods/{}/rests___.xml не найден на FTP, порция пропущена", part);
+                        continue;
+                    }
+                    Map<String, RestData> rests;
+                    try (InputStream is = ftpClient.openStream(restsPath)) {
+                        rests = xmlParser.parseRests(is);
+                    }
 
-            // 6. Сборка
-            List<FtkProduct> allProducts = xmlParser.assemble(products, offers, prices, rests, classifier);
-            log.info("ФТК: собрано {} товаров", allProducts.size());
+                    // 6. Сборка
+                    List<FtkProduct> partProducts = xmlParser.assemble(products, offers, prices, rests, classifier, part);
+                    log.info("ФТК: goods/{} — собрано {} товаров", part, partProducts.size());
+                    allProducts.addAll(partProducts);
+                } catch (Exception e) {
+                    log.warn("ФТК: ошибка обработки порции goods/{} — порция пропущена: {}", part, e.getMessage());
+                }
+            }
+            log.info("ФТК: всего собрано {} товаров из {} порций", allProducts.size(), FtkFtpClient.GOODS_PARTS_COUNT);
 
             // 7. Лимит
             int limit = cfg.getImportLimit();
@@ -131,21 +175,35 @@ public class FtkImportService {
             log.info("ФТК batch-импорт: created={}, updated={}, failed={}",
                     batchResult.created(), batchResult.updated(), batchResult.failed());
 
-            // 9. Изображения — все картинки каждого товара
-            int imagesOk = 0, imagesFailed = 0;
+            // 9. Изображения — все картинки каждого товара, кроме уже загруженных ранее
+            List<String> externalIdsWithImages = limited.stream()
+                    .filter(p -> !p.getImagePaths().isEmpty())
+                    .map(p -> buildProductExternalId(p.getArticle()))
+                    .toList();
+            Map<String, Set<String>> existingFileKeysByProduct = imageDownloader.getExistingFileKeysBatch(externalIdsWithImages);
+
+            int imagesOk = 0, imagesFailed = 0, imagesSkipped = 0;
             for (FtkProduct p : limited) {
+                if (p.getImagePaths().isEmpty()) continue;
                 String externalId = buildProductExternalId(p.getArticle());
+                Set<String> existingFileKeys = existingFileKeysByProduct.getOrDefault(externalId, Set.of());
                 for (String imagePath : p.getImagePaths()) {
                     String ftpImagePath = "ftp://" + properties.getFtk().getFtp().getHost()
-                            + goodsDir + imagePath;
+                            + ftpClient.getGoodsDir(p.getPartNumber()) + imagePath;
+                    String predictedFileKey = imageDownloader.predictFileKey(ftpImagePath, externalId);
+                    if (existingFileKeys.contains(predictedFileKey)) {
+                        imagesSkipped++;
+                        log.debug("ФТК изображение уже загружено, пропуск: externalId={}, fileKey={}", externalId, predictedFileKey);
+                        continue;
+                    }
                     boolean ok = imageDownloader.downloadAndUpload(ftpImagePath, externalId);
                     if (ok) imagesOk++; else imagesFailed++;
                 }
             }
-            log.info("ФТК изображения: ok={}, failed={}", imagesOk, imagesFailed);
+            log.info("ФТК изображения: ok={}, failed={}, skipped={}", imagesOk, imagesFailed, imagesSkipped);
 
             FtkImportResult result = new FtkImportResult(limited.size(), batchResult.created(),
-                    batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed);
+                    batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed, imagesSkipped);
             saveFtkLog(startedAt, result, null);
             return result;
 
@@ -194,7 +252,7 @@ public class FtkImportService {
             }
 
             FtkImportResult result = new FtkImportResult(products.size(), batchResult.created(),
-                    batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed);
+                    batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed, 0);
             saveFtkLog(startedAt, result, null);
             return result;
 
@@ -356,6 +414,7 @@ public class FtkImportService {
             int updated,
             int failed,
             int imagesOk,
-            int imagesFailed
+            int imagesFailed,
+            int imagesSkipped
     ) {}
 }

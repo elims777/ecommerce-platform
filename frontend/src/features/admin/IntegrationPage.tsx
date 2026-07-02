@@ -1,15 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink } from '@/components/navigation';
 import apiClient from '@/api/client';
-
-interface FtkImportResult {
-    totalProducts: number;
-    created: number;
-    updated: number;
-    failed: number;
-    imagesOk: number;
-    imagesFailed: number;
-}
 
 interface ImportLogEntry {
     id: number;
@@ -52,16 +43,32 @@ const IntegrationPage = () => {
     const [logsLoading, setLogsLoading] = useState(true);
 
     const [ftkLoading, setFtkLoading] = useState(false);
-    const [ftkResult, setFtkResult] = useState<FtkImportResult | null>(null);
+    const [ftkStarted, setFtkStarted] = useState(false);
     const [ftkError, setFtkError] = useState<string | null>(null);
+
+    const fetchLogsRef = useRef<(isInitial?: boolean) => Promise<void>>(undefined);
+    const ftkPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const handleFtkImport = async () => {
         setFtkLoading(true);
-        setFtkResult(null);
+        setFtkStarted(false);
         setFtkError(null);
         try {
-            const r = await apiClient.post<FtkImportResult>('/v1/integration/ftk/import-xml');
-            setFtkResult(r.data);
+            await apiClient.post('/v1/integration/ftk/import-xml');
+            setFtkStarted(true);
+            fetchLogsRef.current?.();
+
+            // Поллим логи каждые 30с в течение 10 минут, чтобы таблица сама обновилась
+            if (ftkPollIntervalRef.current) clearInterval(ftkPollIntervalRef.current);
+            let attempts = 0;
+            ftkPollIntervalRef.current = setInterval(() => {
+                attempts += 1;
+                fetchLogsRef.current?.();
+                if (attempts >= 20) {
+                    clearInterval(ftkPollIntervalRef.current!);
+                    ftkPollIntervalRef.current = null;
+                }
+            }, 30000);
         } catch (e: any) {
             setFtkError(e?.response?.data?.message ?? 'Ошибка импорта');
         } finally {
@@ -76,6 +83,7 @@ const IntegrationPage = () => {
                 .catch(e => console.warn('logs fetch failed', e))
                 .finally(() => { if (isInitial) setLogsLoading(false); });
         };
+        fetchLogsRef.current = fetchLogs;
 
         fetchLogs(true);
 
@@ -83,7 +91,10 @@ const IntegrationPage = () => {
             if (document.visibilityState === 'visible') fetchLogs();
         }, 10000);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            if (ftkPollIntervalRef.current) clearInterval(ftkPollIntervalRef.current);
+        };
     }, []);
 
     return (
@@ -124,7 +135,7 @@ const IntegrationPage = () => {
 
                     {ftkLoading && (
                         <div style={{ marginTop: 14, fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
-                            Идёт импорт, это может занять несколько минут...
+                            Запуск импорта...
                         </div>
                     )}
 
@@ -134,17 +145,9 @@ const IntegrationPage = () => {
                         </div>
                     )}
 
-                    {ftkResult && (
-                        <div style={{ marginTop: 14, padding: '12px 16px', borderRadius: 'var(--r-2)', background: 'var(--green-tint)', border: '1px solid var(--success)', fontSize: 'var(--text-base)' }}>
-                            <div style={{ fontWeight: 600, color: 'var(--success)', marginBottom: 8 }}>Импорт завершён</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px 24px', color: 'var(--ink-2)' }}>
-                                <span>Товаров обработано: <strong>{ftkResult.totalProducts}</strong></span>
-                                <span>Создано: <strong style={{ color: 'var(--success)' }}>{ftkResult.created}</strong></span>
-                                <span>Обновлено: <strong>{ftkResult.updated}</strong></span>
-                                <span>Ошибок: <strong style={{ color: ftkResult.failed > 0 ? 'var(--brand-red)' : 'inherit' }}>{ftkResult.failed}</strong></span>
-                                <span>Изображений: <strong style={{ color: 'var(--success)' }}>{ftkResult.imagesOk}</strong></span>
-                                <span>Ошибок фото: <strong style={{ color: ftkResult.imagesFailed > 0 ? 'var(--brand-red)' : 'inherit' }}>{ftkResult.imagesFailed}</strong></span>
-                            </div>
+                    {ftkStarted && (
+                        <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 'var(--r-2)', background: 'var(--navy-tint)', border: '1px solid var(--brand-navy)', color: 'var(--brand-navy)', fontSize: 'var(--text-base)' }}>
+                            Импорт запущен. Результат появится в таблице «История обменов» ниже через несколько минут.
                         </div>
                     )}
                 </div>

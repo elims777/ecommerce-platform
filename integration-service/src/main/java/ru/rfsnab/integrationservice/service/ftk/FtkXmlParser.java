@@ -30,7 +30,7 @@ import java.util.Map;
  *   3. parseOffers(offersStream) → Map<offerUuid, OfferData>
  *   4. parsePrices(pricesStream) → Map<offerUuid, BigDecimal>  (StAX — 125 МБ)
  *   5. parseRests(restsStream) → Map<offerUuid, RestData>
- *   6. assemble(products, offers, prices, rests, classifierData) → List<FtkProduct>
+ *   6. assemble(products, offers, prices, rests, classifierData, partNumber) → List<FtkProduct>
  */
 @Component
 @Slf4j
@@ -521,7 +521,8 @@ public class FtkXmlParser {
             Map<String, OfferData> offers,
             Map<String, BigDecimal> prices,
             Map<String, RestData> rests,
-            ClassifierData classifier
+            ClassifierData classifier,
+            int partNumber
     ) {
         Map<String, List<OfferData>> offersByProduct = new HashMap<>();
         for (OfferData od : offers.values()) {
@@ -569,6 +570,7 @@ public class FtkXmlParser {
                     .imagePaths(pd.imagePaths())
                     .groupUuid(pd.groupUuid())
                     .unitOfMeasure(unitOfMeasure)
+                    .partNumber(partNumber)
                     .properties(pd.properties())
                     .variants(variants)
                     .build());

@@ -111,6 +111,50 @@ class ProductImageServiceTest {
     }
 
     @Nested
+    @DisplayName("addImageWithFileKey()")
+    class AddImageWithFileKeyTests {
+
+        @Test
+        @DisplayName("сохраняет изображение с переданным fileKey вместо сгенерированного из productId")
+        void addImageWithFileKey_UsesProvidedFileKey() {
+            String explicitFileKey = "products/ftk/FTK-12345/image.webp";
+
+            when(productService.getProductById(1L)).thenReturn(testProduct);
+            doNothing().when(storageService).validateImage(emptyFile);
+            when(storageService.uploadFile(emptyFile, explicitFileKey))
+                    .thenReturn("https://storage.example.com/" + explicitFileKey);
+            when(imageRepository.findAllByProduct(1L)).thenReturn(List.of());
+            when(imageRepository.save(any(ProductImage.class))).thenAnswer(inv -> {
+                ProductImage img = inv.getArgument(0);
+                img.setId(200L);
+                return img;
+            });
+
+            ProductImage result = imageService.addImageWithFileKey(1L, emptyFile, explicitFileKey);
+
+            assertThat(result.getFileKey()).isEqualTo(explicitFileKey);
+            assertThat(result.getId()).isEqualTo(200L);
+            verify(storageService).uploadFile(emptyFile, explicitFileKey);
+        }
+    }
+
+    @Nested
+    @DisplayName("getImageFileKeys()")
+    class GetImageFileKeysTests {
+
+        @Test
+        @DisplayName("возвращает список fileKey изображений товара")
+        void getImageFileKeys_ReturnsKeys() {
+            when(imageRepository.findFileKeysByProduct(1L))
+                    .thenReturn(List.of("products/ftk/FTK-1/a.jpg", "products/ftk/FTK-1/b.jpg"));
+
+            List<String> result = imageService.getImageFileKeys(1L);
+
+            assertThat(result).containsExactly("products/ftk/FTK-1/a.jpg", "products/ftk/FTK-1/b.jpg");
+        }
+    }
+
+    @Nested
     @DisplayName("deleteImage()")
     class DeleteImageTests {
 

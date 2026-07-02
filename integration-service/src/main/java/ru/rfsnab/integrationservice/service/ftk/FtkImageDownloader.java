@@ -6,12 +6,14 @@ import net.coobird.thumbnailator.Thumbnails;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.integrationservice.config.IntegrationProperties;
 import ru.rfsnab.integrationservice.config.IntegrationProperties.FtpProperties;
@@ -26,6 +28,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Скачивает изображение с FTP/HTTP URL ФТК, конвертирует в WebP и загружает в product-service.
@@ -39,10 +44,43 @@ import java.time.Duration;
 public class FtkImageDownloader {
 
     private static final String UPLOAD_URI = "/api/v1/products/external/{externalId}/images";
+    private static final String EXISTING_KEYS_BATCH_URI = "/api/v1/products/external/images/keys/batch";
     private static final String WEBP_FORMAT = "webp";
 
     private final RestTemplate productServiceRestTemplate;
     private final IntegrationProperties properties;
+
+    /**
+     * Уже загруженные fileKey картинок для набора товаров (один batch-запрос вместо N).
+     * Используется для сверки перед перекачкой картинок ФТК.
+     * При любой ошибке (сеть, таймаут, 5xx) — не блокирует импорт, возвращает пустую Map.
+     * @return externalId -> Set загруженных fileKey (товары без картинок отсутствуют в карте)
+     */
+    public Map<String, Set<String>> getExistingFileKeysBatch(List<String> externalIds) {
+        if (externalIds.isEmpty()) return Map.of();
+
+        String url = properties.getProductService().getUrl() + EXISTING_KEYS_BATCH_URI;
+        try {
+            HttpEntity<List<String>> request = new HttpEntity<>(externalIds);
+            Map<String, List<String>> response = productServiceRestTemplate.exchange(
+                    url, org.springframework.http.HttpMethod.POST, request,
+                    new ParameterizedTypeReference<Map<String, List<String>>>() {}
+            ).getBody();
+
+            if (response == null) return Map.of();
+            return response.entrySet().stream()
+                    .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> Set.copyOf(e.getValue())));
+        } catch (RestClientException e) {
+            log.warn("Не удалось получить существующие fileKey изображений (batch, {} товаров): {}",
+                    externalIds.size(), e.getMessage());
+            return Map.of();
+        }
+    }
+
+    /** Предсказывает fileKey, который получит картинка в product-service, до её скачивания. */
+    public String predictFileKey(String imageUrl, String externalId) {
+        return "products/ftk/" + externalId + "/" + buildFileName(imageUrl, externalId);
+    }
 
     public boolean downloadAndUpload(String imageUrl, String externalId) {
         if (imageUrl == null || imageUrl.isBlank()) return false;
@@ -136,12 +174,20 @@ public class FtkImageDownloader {
         }
     }
 
-    private byte[] convertToWebP(byte[] imageBytes) throws IOException {
+    byte[] convertToWebP(byte[] imageBytes) throws IOException {
         IntegrationProperties.ImageProcessingProperties cfg = properties.getImageProcessing();
 
         BufferedImage original = ImageIO.read(new java.io.ByteArrayInputStream(imageBytes));
         if (original == null) {
             throw new IOException("Не удалось декодировать изображение");
+        }
+
+        // webp-imageio не умеет кодировать grayscale (например, часть JPEG от ФТК) — падает
+        // с ArrayIndexOutOfBoundsException внутри кодека, поэтому приводим к RGB заранее.
+        if (original.getType() != BufferedImage.TYPE_INT_RGB && original.getType() != BufferedImage.TYPE_INT_ARGB) {
+            BufferedImage rgb = new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_INT_RGB);
+            rgb.createGraphics().drawImage(original, 0, 0, null);
+            original = rgb;
         }
 
         int maxDim = cfg.getMaxImageWidth();

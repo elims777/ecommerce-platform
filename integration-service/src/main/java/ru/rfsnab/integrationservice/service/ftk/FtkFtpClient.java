@@ -24,8 +24,10 @@ import java.time.Duration;
 @Slf4j
 public class FtkFtpClient {
 
-    private static final String GOODS_DIR = "/webdata/000000003/goods/1/";
     private static final String ROOT_DIR  = "/webdata/000000003/";
+
+    /** ФТК отдаёт каталог тремя порциями: goods/1/, goods/2/, goods/3/ — с одинаковым набором файлов. */
+    public static final int GOODS_PARTS_COUNT = 3;
 
     private final IntegrationProperties properties;
 
@@ -120,7 +122,7 @@ public class FtkFtpClient {
         return new FtpStreamHandle(is, ftp);
     }
 
-    public String getGoodsDir() { return GOODS_DIR; }
+    public String getGoodsDir(int part) { return "/webdata/000000003/goods/" + part + "/"; }
     public String getRootDir()  { return ROOT_DIR; }
 
     private FTPClient connect() throws IOException {
