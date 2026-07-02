@@ -46,7 +46,7 @@ const IntegrationPage = () => {
     const [ftkStarted, setFtkStarted] = useState(false);
     const [ftkError, setFtkError] = useState<string | null>(null);
 
-    const fetchLogsRef = useRef<(isInitial?: boolean) => Promise<void>>();
+    const fetchLogsRef = useRef<(isInitial?: boolean) => Promise<void>>(undefined);
     const ftkPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const handleFtkImport = async () => {
