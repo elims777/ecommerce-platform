@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -44,7 +45,11 @@ public class WebClientConfig {
 
     @Bean
     public RestTemplate productServiceRestTemplate(@Value("${internal.secret}") String internalSecret) {
-        RestTemplate template = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(10000);
+
+        RestTemplate template = new RestTemplate(factory);
         template.getInterceptors().add((request, body, execution) -> {
             request.getHeaders().set("X-Internal-Token", internalSecret);
             return execution.execute(request, body);

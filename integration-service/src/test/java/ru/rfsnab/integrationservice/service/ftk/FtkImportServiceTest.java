@@ -32,6 +32,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -431,6 +432,46 @@ class FtkImportServiceTest {
             verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(1));
             verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(2));
             verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(3));
+        }
+
+        @Test
+        @DisplayName("картинка с уже существующим fileKey не перекачивается — imagesSkipped++")
+        void shouldSkipImageAlreadyUploaded() throws Exception {
+            when(ftpClient.getRootDir()).thenReturn("/webdata/000000003/");
+            when(ftpClient.findFileByPrefix("/webdata/000000003/", "import___"))
+                    .thenReturn("/webdata/000000003/import___1.xml");
+            when(ftpClient.openStream("/webdata/000000003/import___1.xml")).thenReturn(stream());
+            when(xmlParser.parseClassifier(any())).thenReturn(classifier);
+
+            FtkProduct productWithImage = FtkProduct.builder()
+                    .productUuid("1").article("1").name("Товар 1").description(null)
+                    .imagePaths(List.of("img/photo1.jpg"))
+                    .groupUuid("GRP").unitOfMeasure("шт").partNumber(1)
+                    .properties(Map.of())
+                    .variants(List.of(FtkVariant.builder()
+                            .offerUuid(null).article("1").price(BigDecimal.ONE)
+                            .stockQuantity(0).attributes(Map.of()).vatRate(null)
+                            .barcode(null).countryOfOrigin(null).deleted(false).build()))
+                    .build();
+
+            mockFullPart(1, List.of(productWithImage));
+            mockFullPart(2, List.of());
+            mockFullPart(3, List.of());
+
+            when(categoryMapper.resolveCategory(anyString())).thenReturn(42L);
+            when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
+                    .thenReturn(ResponseEntity.ok(okResponse(1, 0)));
+
+            String predictedFileKey = "products/ftk/FTK-1/ftk-photo1.webp";
+            when(imageDownloader.predictFileKey(anyString(), eq("FTK-1"))).thenReturn(predictedFileKey);
+            when(imageDownloader.getExistingFileKeysBatch(anyList()))
+                    .thenReturn(Map.of("FTK-1", java.util.Set.of(predictedFileKey)));
+
+            FtkImportService.FtkImportResult result = service.doImportFromFtp();
+
+            verify(imageDownloader, never()).downloadAndUpload(anyString(), anyString());
+            assertThat(result.imagesSkipped()).isEqualTo(1);
+            assertThat(result.imagesOk()).isEqualTo(0);
         }
 
         @Test

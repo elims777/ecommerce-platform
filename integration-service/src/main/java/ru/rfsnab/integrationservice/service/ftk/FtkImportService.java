@@ -30,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -174,21 +175,35 @@ public class FtkImportService {
             log.info("ФТК batch-импорт: created={}, updated={}, failed={}",
                     batchResult.created(), batchResult.updated(), batchResult.failed());
 
-            // 9. Изображения — все картинки каждого товара
-            int imagesOk = 0, imagesFailed = 0;
+            // 9. Изображения — все картинки каждого товара, кроме уже загруженных ранее
+            List<String> externalIdsWithImages = limited.stream()
+                    .filter(p -> !p.getImagePaths().isEmpty())
+                    .map(p -> buildProductExternalId(p.getArticle()))
+                    .toList();
+            Map<String, Set<String>> existingFileKeysByProduct = imageDownloader.getExistingFileKeysBatch(externalIdsWithImages);
+
+            int imagesOk = 0, imagesFailed = 0, imagesSkipped = 0;
             for (FtkProduct p : limited) {
+                if (p.getImagePaths().isEmpty()) continue;
                 String externalId = buildProductExternalId(p.getArticle());
+                Set<String> existingFileKeys = existingFileKeysByProduct.getOrDefault(externalId, Set.of());
                 for (String imagePath : p.getImagePaths()) {
                     String ftpImagePath = "ftp://" + properties.getFtk().getFtp().getHost()
                             + ftpClient.getGoodsDir(p.getPartNumber()) + imagePath;
+                    String predictedFileKey = imageDownloader.predictFileKey(ftpImagePath, externalId);
+                    if (existingFileKeys.contains(predictedFileKey)) {
+                        imagesSkipped++;
+                        log.debug("ФТК изображение уже загружено, пропуск: externalId={}, fileKey={}", externalId, predictedFileKey);
+                        continue;
+                    }
                     boolean ok = imageDownloader.downloadAndUpload(ftpImagePath, externalId);
                     if (ok) imagesOk++; else imagesFailed++;
                 }
             }
-            log.info("ФТК изображения: ok={}, failed={}", imagesOk, imagesFailed);
+            log.info("ФТК изображения: ok={}, failed={}, skipped={}", imagesOk, imagesFailed, imagesSkipped);
 
             FtkImportResult result = new FtkImportResult(limited.size(), batchResult.created(),
-                    batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed);
+                    batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed, imagesSkipped);
             saveFtkLog(startedAt, result, null);
             return result;
 
@@ -237,7 +252,7 @@ public class FtkImportService {
             }
 
             FtkImportResult result = new FtkImportResult(products.size(), batchResult.created(),
-                    batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed);
+                    batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed, 0);
             saveFtkLog(startedAt, result, null);
             return result;
 
@@ -399,6 +414,7 @@ public class FtkImportService {
             int updated,
             int failed,
             int imagesOk,
-            int imagesFailed
+            int imagesFailed,
+            int imagesSkipped
     ) {}
 }

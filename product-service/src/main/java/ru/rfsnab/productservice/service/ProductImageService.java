@@ -13,7 +13,9 @@ import ru.rfsnab.productservice.repository.ProductImageRepository;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +44,49 @@ public class ProductImageService {
 
         // Загрузка в Yandex Object Storage
         String fileKey = "products/" + productId + "/" + file.getOriginalFilename();
+        String fileUrl = storageService.uploadFile(file, fileKey);
+
+        // Определяем displayOrder (последний + 1)
+        List<ProductImage> existingImages = imageRepository.findAllByProduct(productId);
+        int nextOrder = existingImages.isEmpty() ? 1 : existingImages.get(existingImages.size() - 1).getDisplayOrder() + 1;
+
+        // Создаем запись в БД
+        ProductImage image = ProductImage.builder()
+                .product(product)
+                .fileKey(fileKey)
+                .fileUrl(fileUrl)
+                .fileSize(file.getSize())
+                .contentType(file.getContentType())
+                .width(dimensions.width())
+                .height(dimensions.height())
+                .isPrimary(existingImages.isEmpty())
+                .displayOrder(nextOrder)
+                .build();
+
+        return imageRepository.save(image);
+    }
+
+    /**
+     * Добавить изображение к товару с явным fileKey (для внешней ФТК-загрузки).
+     * В отличие от addImage(), fileKey формируется вызывающей стороной (детерминированно из externalId),
+     * а не генерируется из внутреннего productId — это позволяет избежать повторной заливки в S3
+     * при повторных запусках импорта.
+     * @param productId товара
+     * @param file изображение
+     * @param fileKey готовый ключ для сохранения в S3
+     * @return ProductImage
+     */
+    @Transactional
+    public ProductImage addImageWithFileKey(Long productId, MultipartFile file, String fileKey) {
+        Product product = productService.getProductById(productId);
+
+        // Валидация файла
+        storageService.validateImage(file);
+
+        // Получаем размеры изображения
+        ImageDimensions dimensions = getImageDimensions(file);
+
+        // Загрузка в Yandex Object Storage с явным fileKey
         String fileUrl = storageService.uploadFile(file, fileKey);
 
         // Определяем displayOrder (последний + 1)
@@ -182,5 +227,30 @@ public class ProductImageService {
     public ProductImage getImageById(Long imageId) {
         return imageRepository.findById(imageId)
                 .orElseThrow(() -> new BusinessException("Изображение не найдено"));
+    }
+
+    /**
+     * Получить fileKey всех уже сохранённых изображений товара (для сверки перед повторной загрузкой)
+     * @param productId товара
+     * @return List<String>
+     */
+    public List<String> getImageFileKeys(Long productId) {
+        return imageRepository.findFileKeysByProduct(productId);
+    }
+
+    /**
+     * Получить fileKey уже загруженных изображений сразу для нескольких товаров по externalId.
+     * Используется для batch-сверки картинок ФТК-импорта (один запрос вместо N).
+     * @param externalIds список externalId товаров
+     * @return Map<externalId, List<fileKey>> — товары без картинок в карте отсутствуют
+     */
+    public Map<String, List<String>> getImageFileKeysByExternalIds(List<String> externalIds) {
+        Map<String, List<String>> result = new HashMap<>();
+        for (Object[] row : imageRepository.findFileKeysByProductExternalIdIn(externalIds)) {
+            String externalId = (String) row[0];
+            String fileKey = (String) row[1];
+            result.computeIfAbsent(externalId, k -> new java.util.ArrayList<>()).add(fileKey);
+        }
+        return result;
     }
 }
