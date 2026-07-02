@@ -174,12 +174,20 @@ public class FtkImageDownloader {
         }
     }
 
-    private byte[] convertToWebP(byte[] imageBytes) throws IOException {
+    byte[] convertToWebP(byte[] imageBytes) throws IOException {
         IntegrationProperties.ImageProcessingProperties cfg = properties.getImageProcessing();
 
         BufferedImage original = ImageIO.read(new java.io.ByteArrayInputStream(imageBytes));
         if (original == null) {
             throw new IOException("Не удалось декодировать изображение");
+        }
+
+        // webp-imageio не умеет кодировать grayscale (например, часть JPEG от ФТК) — падает
+        // с ArrayIndexOutOfBoundsException внутри кодека, поэтому приводим к RGB заранее.
+        if (original.getType() != BufferedImage.TYPE_INT_RGB && original.getType() != BufferedImage.TYPE_INT_ARGB) {
+            BufferedImage rgb = new BufferedImage(original.getWidth(), original.getHeight(), BufferedImage.TYPE_INT_RGB);
+            rgb.createGraphics().drawImage(original, 0, 0, null);
+            original = rgb;
         }
 
         int maxDim = cfg.getMaxImageWidth();

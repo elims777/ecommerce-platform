@@ -15,6 +15,9 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.integrationservice.config.IntegrationProperties;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -90,6 +93,23 @@ class FtkImageDownloaderTest {
             Map<String, Set<String>> keys = downloader.getExistingFileKeysBatch(List.of());
 
             assertThat(keys).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("convertToWebP")
+    class ConvertToWebPTests {
+
+        @Test
+        @DisplayName("конвертирует grayscale JPEG (1 канал) в WebP без исключения")
+        void shouldConvertGrayscaleImage() throws Exception {
+            BufferedImage grayscale = new BufferedImage(10, 10, BufferedImage.TYPE_BYTE_GRAY);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(grayscale, "jpg", baos);
+
+            byte[] webpBytes = downloader.convertToWebP(baos.toByteArray());
+
+            assertThat(webpBytes).isNotEmpty();
         }
     }
 }
