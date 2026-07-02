@@ -28,6 +28,9 @@ public class FtkProduct {
     /** Текстовое обозначение единицы измерения ("шт", "пар" и т.д.). */
     private final String unitOfMeasure;
 
+    /** Номер порции FTP-каталога (goods/{partNumber}/), из которой собран товар. */
+    private final int partNumber;
+
     private final List<FtkVariant> variants;
 
     @Getter

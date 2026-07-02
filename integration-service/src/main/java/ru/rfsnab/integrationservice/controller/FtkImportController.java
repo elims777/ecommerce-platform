@@ -44,25 +44,16 @@ public class FtkImportController {
     @Operation(summary = "Импорт каталога ФТК с FTP (XML CommerceML 3.1)")
     public ResponseEntity<Map<String, Object>> importXml() {
         log.info("ФТК XML импорт запущен вручную");
-        return runXmlImport();
+        ftkImportService.importFromFtp();
+        return ResponseEntity.accepted()
+                .body(Map.of("status", "started", "message", "Импорт запущен, результат появится в логах"));
     }
 
     /** Автоматический запуск ежедневно в 04:00 МСК (на час позже обновления данных у ФТК). */
     @Scheduled(cron = "0 0 4 * * *")
     public void scheduledXmlImport() {
         log.info("ФТК XML импорт запущен по расписанию (04:00 МСК)");
-        runXmlImport();
-    }
-
-    private ResponseEntity<Map<String, Object>> runXmlImport() {
-        try {
-            FtkImportResult result = ftkImportService.importFromFtp();
-            return ResponseEntity.ok(buildResponse(result));
-        } catch (Exception e) {
-            log.error("Ошибка XML импорта ФТК", e);
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Ошибка импорта: " + e.getMessage()));
-        }
+        ftkImportService.importFromFtp();
     }
 
     // ──────────────────────────────────────────────────────────────
