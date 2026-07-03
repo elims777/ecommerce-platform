@@ -6,6 +6,7 @@ services:
     image: postgres:16-alpine
     container_name: user-db
     restart: unless-stopped
+    mem_limit: 384m
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -27,6 +28,7 @@ services:
     image: postgres:16-alpine
     container_name: notification-db
     restart: unless-stopped
+    mem_limit: 384m
     environment:
       POSTGRES_DB: ${NOTIFICATION_DB_NAME}
       POSTGRES_USER: ${NOTIFICATION_DB_USER}
@@ -48,6 +50,7 @@ services:
     image: postgres:16-alpine
     container_name: product-db
     restart: unless-stopped
+    mem_limit: 512m
     environment:
       POSTGRES_DB: ${PRODUCT_DB_NAME}
       POSTGRES_USER: ${PRODUCT_DB_USER}
@@ -69,6 +72,7 @@ services:
     image: postgres:16-alpine
     container_name: order-db
     restart: unless-stopped
+    mem_limit: 384m
     environment:
       POSTGRES_DB: ${ORDER_DB_NAME}
       POSTGRES_USER: ${ORDER_DB_USER}
@@ -90,6 +94,7 @@ services:
     image: postgres:16-alpine
     container_name: integration-db
     restart: unless-stopped
+    mem_limit: 384m
     environment:
       POSTGRES_DB: ${INTEGRATION_DB_NAME}
       POSTGRES_USER: ${INTEGRATION_DB_USER}
@@ -113,9 +118,12 @@ services:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
     restart: unless-stopped
+    mem_limit: 384m
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      # дефолт образа — 512m heap; для одного брокера хватает с запасом
+      KAFKA_HEAP_OPTS: "-Xms128m -Xmx256m"
     ports:
       - "2181:2181"
     networks:
@@ -125,11 +133,14 @@ services:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
     restart: unless-stopped
+    mem_limit: 1g
     depends_on:
       - zookeeper
     ports:
       - "9092:9092"
     environment:
+      # дефолт образа -Xms1G -Xmx1G рассчитан на тысячи msg/s; наш трафик — единичные события
+      KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
@@ -153,6 +164,7 @@ services:
     image: redis:7-alpine
     container_name: redis
     restart: unless-stopped
+    mem_limit: 128m
     ports:
       - "6379:6379"
     volumes:
@@ -171,6 +183,7 @@ services:
     image: elims777/frontend:latest
     container_name: frontend
     restart: unless-stopped
+    mem_limit: 128m
     ports:
       - "3000:80"
     depends_on:
@@ -182,6 +195,9 @@ services:
     image: elims777/gateway-service:latest
     container_name: gateway-service
     restart: unless-stopped
+    # JVM сама возьмёт 75% лимита под heap (MaxRAMPercentage в Dockerfile);
+    # без mem_limit каждая JVM считала доступной всю память хоста
+    mem_limit: 640m
     ports:
       - "8080:8080"
     environment:
@@ -201,6 +217,7 @@ services:
     image: elims777/user-service:latest
     container_name: user-service
     restart: unless-stopped
+    mem_limit: 640m
     # ports не открыты — доступ только из docker network через gateway-service
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
@@ -224,6 +241,7 @@ services:
     image: elims777/auth-service:latest
     container_name: auth-service
     restart: unless-stopped
+    mem_limit: 640m
     # ports не открыты — доступ только из docker network через gateway-service
     environment:
       SPRING_PROFILES_ACTIVE: prod
@@ -255,6 +273,7 @@ services:
     image: elims777/notification-service:latest
     container_name: notification-service
     restart: unless-stopped
+    mem_limit: 640m
     # ports не открыты — Kafka consumer, наружу не нужен
     environment:
       SPRING_PROFILES_ACTIVE: prod
@@ -284,6 +303,9 @@ services:
     image: elims777/product-service:latest
     container_name: product-service
     restart: unless-stopped
+    # больше остальных: принимает ~3000 картинок при ФТК-импорте (02.07 был убит
+    # kernel OOM killer на 2.5GB RSS, когда heap не был ограничен лимитом)
+    mem_limit: 1280m
     # ports не открыты — доступ только из docker network через gateway-service
     environment:
       SPRING_PROFILES_ACTIVE: prod
@@ -307,6 +329,7 @@ services:
     image: elims777/order-service:latest
     container_name: order-service
     restart: unless-stopped
+    mem_limit: 768m
     # ports не открыты — доступ только из docker network через gateway-service
     environment:
       SPRING_PROFILES_ACTIVE: prod
@@ -334,6 +357,8 @@ services:
     image: elims777/integration-service:latest
     container_name: integration-service
     restart: unless-stopped
+    # больше остальных: скачивание и конвертация картинок при ФТК-импорте
+    mem_limit: 1280m
     ports:
       - "8085:8085"
     environment:

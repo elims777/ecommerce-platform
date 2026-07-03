@@ -63,7 +63,9 @@ class FtkImportServiceTest {
         properties.getProductService().setUrl("http://product-service:8083");
         properties.getImportConfig().setChunkSize(100);
 
-        when(importLogRepository.save(any(ImportLog.class))).thenAnswer(inv -> inv.getArgument(0));
+        // lenient: тест чекпоинта переопределяет save своим Answer
+        org.mockito.Mockito.lenient()
+                .when(importLogRepository.save(any(ImportLog.class))).thenAnswer(inv -> inv.getArgument(0));
 
         service = new FtkImportService(
                 xlsParser, xmlParser, ftpClient, categoryMapper, imageDownloader,
@@ -472,6 +474,42 @@ class FtkImportServiceTest {
             verify(imageDownloader, never()).downloadAndUpload(anyString(), anyString());
             assertThat(result.imagesSkipped()).isEqualTo(1);
             assertThat(result.imagesOk()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("создаёт запись IN_PROGRESS в начале и финализирует её же в SUCCESS")
+        void shouldCreateInProgressLogAndFinalizeSameRow() throws Exception {
+            when(ftpClient.getRootDir()).thenReturn("/webdata/000000003/");
+            when(ftpClient.findFileByPrefix("/webdata/000000003/", "import___"))
+                    .thenReturn("/webdata/000000003/import___1.xml");
+            when(ftpClient.openStream("/webdata/000000003/import___1.xml")).thenReturn(stream());
+            when(xmlParser.parseClassifier(any())).thenReturn(classifier);
+
+            mockFullPart(1, List.of(partProduct("1", 1)));
+            mockFullPart(2, List.of());
+            mockFullPart(3, List.of());
+
+            when(categoryMapper.resolveCategory(anyString())).thenReturn(42L);
+            when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
+                    .thenReturn(ResponseEntity.ok(okResponse(1, 0)));
+
+            // фиксируем статус на момент каждого save — объект мутируется, пост-фактум капчер не годится
+            List<ImportLog.ImportStatus> statusesAtSave = new java.util.ArrayList<>();
+            List<ImportLog> savedInstances = new java.util.ArrayList<>();
+            when(importLogRepository.save(any(ImportLog.class))).thenAnswer(inv -> {
+                ImportLog entry = inv.getArgument(0);
+                statusesAtSave.add(entry.getStatus());
+                savedInstances.add(entry);
+                return entry;
+            });
+
+            service.doImportFromFtp(2);
+
+            assertThat(statusesAtSave).containsExactly(
+                    ImportLog.ImportStatus.IN_PROGRESS, ImportLog.ImportStatus.SUCCESS);
+            assertThat(savedInstances.get(1)).isSameAs(savedInstances.get(0));
+            assertThat(savedInstances.get(0).getResumeAttempts()).isEqualTo(2);
+            assertThat(savedInstances.get(0).getCompletedAt()).isNotNull();
         }
 
         @Test

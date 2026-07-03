@@ -12,4 +12,6 @@ public interface ImportLogRepository extends JpaRepository<ImportLog, Long> {
     List<ImportLog> findTop20ByOrderByCreatedAtDesc();
 
     Optional<ImportLog> findFirstBySessionIdAndExchangeTypeOrderByCreatedAtDesc(String sessionId, String exchangeType);
+
+    List<ImportLog> findByExchangeTypeAndStatus(String exchangeType, ImportLog.ImportStatus status);
 }
