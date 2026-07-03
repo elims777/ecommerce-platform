@@ -45,6 +45,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class FtkImportService {
 
+    public static final String EXCHANGE_TYPE_FTK = "FTK_CATALOG";
+
     private static final String SOURCE           = "FTK";
     private static final String BATCH_IMPORT_URI = "/api/v1/products/import/batch";
 
@@ -65,12 +67,22 @@ public class FtkImportService {
 
     @Async("ftkImportExecutor")
     public void importFromFtp() {
+        runImport(0);
+    }
+
+    /** Автовозобновление после рестарта сервиса (см. FtkImportResumer). */
+    @Async("ftkImportExecutor")
+    public void resumeImportFromFtp(int resumeAttempts) {
+        runImport(resumeAttempts);
+    }
+
+    private void runImport(int resumeAttempts) {
         if (!importInProgress.compareAndSet(false, true)) {
             log.warn("ФТК XML импорт уже выполняется, повторный запуск пропущен");
             return;
         }
         try {
-            doImportFromFtp();
+            doImportFromFtp(resumeAttempts);
         } catch (Exception e) {
             log.error("ФТК XML импорт (async) завершился с ошибкой: {}", e.getMessage(), e);
         } finally {
@@ -80,7 +92,14 @@ public class FtkImportService {
 
     // package-private — вызывается напрямую из юнит-тестов, минуя @Async-прокси
     FtkImportResult doImportFromFtp() throws Exception {
+        return doImportFromFtp(0);
+    }
+
+    FtkImportResult doImportFromFtp(int resumeAttempts) throws Exception {
         LocalDateTime startedAt = LocalDateTime.now();
+        // Запись IN_PROGRESS сразу: если JVM умрёт посреди импорта, по ней
+        // FtkImportResumer при старте сервиса поймёт, что импорт надо доделать
+        ImportLog logEntry = createInProgressLog(startedAt, resumeAttempts);
         IntegrationProperties.FtkProperties cfg = properties.getFtk();
         categoryMapper.resetCache();
         String rootDir = ftpClient.getRootDir();
@@ -204,12 +223,12 @@ public class FtkImportService {
 
             FtkImportResult result = new FtkImportResult(limited.size(), batchResult.created(),
                     batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed, imagesSkipped);
-            saveFtkLog(startedAt, result, null);
+            saveFtkLog(logEntry, startedAt, resumeAttempts, result, null);
             return result;
 
         } catch (Exception e) {
             log.error("ФТК XML импорт завершился с ошибкой: {}", e.getMessage(), e);
-            saveFtkLog(startedAt, null, e);
+            saveFtkLog(logEntry, startedAt, resumeAttempts, null, e);
             throw e;
         }
     }
@@ -253,12 +272,12 @@ public class FtkImportService {
 
             FtkImportResult result = new FtkImportResult(products.size(), batchResult.created(),
                     batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed, 0);
-            saveFtkLog(startedAt, result, null);
+            saveFtkLog(null, startedAt, 0, result, null);
             return result;
 
         } catch (IOException e) {
             log.error("ФТК XLS импорт завершился с ошибкой: {}", e.getMessage(), e);
-            saveFtkLog(startedAt, null, e);
+            saveFtkLog(null, startedAt, 0, null, e);
             throw e;
         }
     }
@@ -366,7 +385,31 @@ public class FtkImportService {
     // Logging
     // ══════════════════════════════════════════════════════════════
 
-    private void saveFtkLog(LocalDateTime startedAt, FtkImportResult result, Exception error) {
+    /**
+     * Создаёт запись IN_PROGRESS в начале импорта. При ошибке БД импорт не блокируется —
+     * финализация в saveFtkLog создаст запись с нуля (fallback на старое поведение).
+     */
+    private ImportLog createInProgressLog(LocalDateTime startedAt, int resumeAttempts) {
+        try {
+            return importLogRepository.save(ImportLog.builder()
+                    .exchangeType(EXCHANGE_TYPE_FTK)
+                    .status(ImportStatus.IN_PROGRESS)
+                    .startedAt(startedAt)
+                    .resumeAttempts(resumeAttempts)
+                    .build());
+        } catch (Exception e) {
+            log.warn("Не удалось создать IN_PROGRESS запись import_log: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Финализирует запись импорта: обновляет IN_PROGRESS-запись или создаёт новую
+     * (XLS-путь, fallback при ошибке createInProgressLog — resumeAttempts сохраняется и там,
+     * чтобы не сбросить счётчик автовозобновлений).
+     */
+    private void saveFtkLog(ImportLog logEntry, LocalDateTime startedAt, int resumeAttempts,
+                            FtkImportResult result, Exception error) {
         try {
             LocalDateTime completedAt = LocalDateTime.now();
             long durationMs = Duration.between(startedAt, completedAt).toMillis();
@@ -382,20 +425,23 @@ public class FtkImportService {
                 status = ImportStatus.SUCCESS;
             }
 
-            ImportLog logEntry = ImportLog.builder()
-                    .exchangeType("FTK_CATALOG")
-                    .status(status)
-                    .totalReceived(result != null ? result.totalProducts() : 0)
-                    .created(result != null ? result.created() : 0)
-                    .updated(result != null ? result.updated() : 0)
-                    .failed(result != null ? result.failed() : 0)
-                    .imagesProcessed(result != null ? result.imagesOk() + result.imagesFailed() : 0)
-                    .imagesFailed(result != null ? result.imagesFailed() : 0)
-                    .durationMs(durationMs)
-                    .errorMessage(error != null ? error.getMessage() : null)
-                    .startedAt(startedAt)
-                    .completedAt(completedAt)
-                    .build();
+            if (logEntry == null) {
+                logEntry = ImportLog.builder()
+                        .exchangeType(EXCHANGE_TYPE_FTK)
+                        .startedAt(startedAt)
+                        .resumeAttempts(resumeAttempts)
+                        .build();
+            }
+            logEntry.setStatus(status);
+            logEntry.setTotalReceived(result != null ? result.totalProducts() : 0);
+            logEntry.setCreated(result != null ? result.created() : 0);
+            logEntry.setUpdated(result != null ? result.updated() : 0);
+            logEntry.setFailed(result != null ? result.failed() : 0);
+            logEntry.setImagesProcessed(result != null ? result.imagesOk() + result.imagesFailed() : 0);
+            logEntry.setImagesFailed(result != null ? result.imagesFailed() : 0);
+            logEntry.setDurationMs(durationMs);
+            logEntry.setErrorMessage(error != null ? error.getMessage() : null);
+            logEntry.setCompletedAt(completedAt);
             importLogRepository.save(logEntry);
         } catch (Exception ex) {
             log.error("Не удалось сохранить FTK import_log: {}", ex.getMessage());

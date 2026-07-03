@@ -96,9 +96,18 @@ public class ImportLog {
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    /** Номер попытки автовозобновления (0 — обычный запуск) */
+    @Column(name = "resume_attempts", nullable = false)
+    @Builder.Default
+    private int resumeAttempts = 0;
+
     public enum ImportStatus {
         SUCCESS,
         PARTIAL,
-        FAILED
+        FAILED,
+        /** Импорт выполняется; остаётся в БД после краша JVM — признак незавершённого импорта */
+        IN_PROGRESS,
+        /** Импорт был прерван рестартом сервиса (выставляется при старте вместо IN_PROGRESS) */
+        INTERRUPTED
     }
 }

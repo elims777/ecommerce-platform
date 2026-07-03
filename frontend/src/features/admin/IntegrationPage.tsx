@@ -5,7 +5,7 @@ import apiClient from '@/api/client';
 interface ImportLogEntry {
     id: number;
     exchangeType: string;
-    status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
+    status: 'SUCCESS' | 'PARTIAL' | 'FAILED' | 'IN_PROGRESS' | 'INTERRUPTED';
     totalReceived: number;
     created: number;
     updated: number;
@@ -18,9 +18,11 @@ interface ImportLogEntry {
 }
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-    SUCCESS: { label: 'Успешно',  className: 'rf-badge rf-badge-success' },
-    PARTIAL: { label: 'Частично', className: 'rf-badge rf-badge-warn' },
-    FAILED:  { label: 'Ошибка',   className: 'rf-badge rf-badge-red' },
+    SUCCESS:     { label: 'Успешно',   className: 'rf-badge rf-badge-success' },
+    PARTIAL:     { label: 'Частично',  className: 'rf-badge rf-badge-warn' },
+    FAILED:      { label: 'Ошибка',    className: 'rf-badge rf-badge-red' },
+    IN_PROGRESS: { label: 'Выполняется', className: 'rf-badge rf-badge-navy' },
+    INTERRUPTED: { label: 'Прерван',   className: 'rf-badge rf-badge-red' },
 };
 
 const TYPE_LABEL: Record<string, string> = {
