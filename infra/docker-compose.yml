@@ -157,6 +157,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      # восстановление лога брокера после пересоздания контейнера занимает ~2 мин —
+      # без start_period healthcheck объявлял unhealthy через 50с и валил деплой
+      start_period: 180s
 
   # ==================== REDIS ====================
 
