@@ -167,6 +167,15 @@ class FtkImageDownloaderTest {
     class ConvertToWebPTests {
 
         @Test
+        @DisplayName("JPEG декодирует TwelveMonkeys, а не JDK — иначе CMYK/битые ICC-профили ФТК падают")
+        void shouldUseTwelveMonkeysJpegReader() {
+            var readers = ImageIO.getImageReadersByFormatName("JPEG");
+
+            assertThat(readers.hasNext()).isTrue();
+            assertThat(readers.next().getClass().getName()).startsWith("com.twelvemonkeys");
+        }
+
+        @Test
         @DisplayName("конвертирует grayscale JPEG (1 канал) в WebP без исключения")
         void shouldConvertGrayscaleImage() throws Exception {
             BufferedImage grayscale = new BufferedImage(10, 10, BufferedImage.TYPE_BYTE_GRAY);

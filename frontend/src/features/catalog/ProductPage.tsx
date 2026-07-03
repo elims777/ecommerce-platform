@@ -210,28 +210,33 @@ const ProductPage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 360px', gap: 28 }}>
                 {/* Галерея */}
                 <div>
-                    <div style={{ borderRadius: 'var(--r-5)', overflow: 'hidden', border: '1px solid var(--line-1)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
-                        {sortedImages.length > 0 ? (
-                            <Image.PreviewGroup>
+                    <Image.PreviewGroup items={sortedImages.map((img) => img.fileUrl)}>
+                        <div style={{ borderRadius: 'var(--r-5)', overflow: 'hidden', border: '1px solid var(--line-1)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
+                            {sortedImages.length > 0 ? (
                                 <Image
                                     src={sortedImages[0].fileUrl}
                                     alt={sortedImages[0].altText || product.name}
                                     style={{ maxHeight: 420, objectFit: 'contain' }}
                                 />
-                            </Image.PreviewGroup>
-                        ) : (
-                            <ShoppingOutlined style={{ fontSize: 80, color: 'var(--ink-4)' }} />
-                        )}
-                    </div>
-                    {sortedImages.length > 1 && (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginTop: 10 }}>
-                            {sortedImages.slice(1, 6).map((img, i) => (
-                                <div key={img.id} style={{ height: 80, borderRadius: 'var(--r-3)', border: i === 0 ? '2px solid var(--brand-red)' : '1px solid var(--line-1)', overflow: 'hidden', background: 'var(--surface-2)' }}>
-                                    <img src={img.fileUrl} alt={img.altText || product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                </div>
-                            ))}
+                            ) : (
+                                <ShoppingOutlined style={{ fontSize: 80, color: 'var(--ink-4)' }} />
+                            )}
                         </div>
-                    )}
+                        {sortedImages.length > 1 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginTop: 10 }}>
+                                {sortedImages.slice(1, 6).map((img) => (
+                                    <div key={img.id} style={{ height: 80, borderRadius: 'var(--r-3)', border: '1px solid var(--line-1)', overflow: 'hidden', background: 'var(--surface-2)' }}>
+                                        <Image
+                                            src={img.fileUrl}
+                                            alt={img.altText || product.name}
+                                            wrapperStyle={{ width: '100%', height: '100%' }}
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </Image.PreviewGroup>
                 </div>
 
                 {/* Описание */}
