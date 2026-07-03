@@ -92,7 +92,15 @@ public class FtkImageDownloader {
                 return false;
             }
 
-            byte[] webpBytes = convertToWebP(imageBytes);
+            byte[] webpBytes;
+            if (isWebP(imageBytes)) {
+                webpBytes = imageBytes;
+            } else if (isSafeToDecode(imageBytes)) {
+                webpBytes = convertToWebP(imageBytes);
+            } else {
+                log.warn("Неизвестный формат изображения, пропускаем: externalId={}, url={}", externalId, imageUrl);
+                return false;
+            }
             String fileName = buildFileName(imageUrl, externalId);
             uploadToProductService(externalId, webpBytes, fileName);
 
@@ -172,6 +180,35 @@ public class FtkImageDownloader {
                 try { ftp.disconnect(); } catch (Exception ignored) {}
             }
         }
+    }
+
+    /**
+     * ФТК отдаёт часть картинок в WebP с расширением .jpg/.png. Нативный декодер
+     * webp-imageio падает на них с SIGSEGV (валит всю JVM), поэтому такие файлы
+     * не перекодируем, а заливаем как есть — они уже в целевом формате.
+     */
+    static boolean isWebP(byte[] bytes) {
+        return bytes.length >= 12
+                && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+                && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P';
+    }
+
+    /**
+     * Разрешаем декодировать только форматы с чисто-Java ридерами JDK (JPEG, PNG,
+     * GIF, BMP, TIFF): они при битом файле бросают исключение, а не роняют JVM.
+     * Всё остальное (неизвестные форматы) пропускаем, чтобы ImageIO не подобрал
+     * нативный декодер, способный упасть с SIGSEGV.
+     */
+    static boolean isSafeToDecode(byte[] b) {
+        // порог 12 — единый минимум с isWebP; сигнатуры ниже читают только b[0]..b[3]
+        if (b.length < 12) return false;
+        if ((b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF) return true; // JPEG
+        if ((b[0] & 0xFF) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G') return true;      // PNG
+        if (b[0] == 'G' && b[1] == 'I' && b[2] == 'F' && b[3] == '8') return true;                // GIF
+        if (b[0] == 'B' && b[1] == 'M') return true;                                              // BMP
+        if ((b[0] == 'I' && b[1] == 'I' && b[2] == 42 && b[3] == 0)
+                || (b[0] == 'M' && b[1] == 'M' && b[2] == 0 && b[3] == 42)) return true;          // TIFF
+        return false;
     }
 
     byte[] convertToWebP(byte[] imageBytes) throws IOException {
