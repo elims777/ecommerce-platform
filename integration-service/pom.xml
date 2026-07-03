@@ -90,6 +90,13 @@
             <artifactId>webp-imageio</artifactId>
             <version>0.1.6</version>
         </dependency>
+        <!-- JPEG-декодер вместо встроенного в JDK: переваривает CMYK и битые/несовпадающие
+             ICC-профили (реальные файлы ФТК падали с «Raster bands ... do not match») -->
+        <dependency>
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <artifactId>imageio-jpeg</artifactId>
+            <version>3.12.0</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
