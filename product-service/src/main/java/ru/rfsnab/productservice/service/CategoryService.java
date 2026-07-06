@@ -264,6 +264,41 @@ public class CategoryService {
         return categoryRepository.existsById(categoryId);
     }
 
+    /**
+     * Собрать id категории и всех её потомков (для фильтрации товаров по поддереву).
+     * Использует закэшированное дерево категорий.
+     */
+    public List<Long> getSubtreeCategoryIds(Long categoryId) {
+        CategoryTreeDTO node = findNodeById(cachedCategoryTree, categoryId);
+        if (node == null) {
+            return List.of(categoryId);
+        }
+
+        List<Long> ids = new ArrayList<>();
+        collectIds(node, ids);
+        return ids;
+    }
+
+    private CategoryTreeDTO findNodeById(List<CategoryTreeDTO> nodes, Long categoryId) {
+        for (CategoryTreeDTO node : nodes) {
+            if (node.getId().equals(categoryId)) {
+                return node;
+            }
+            CategoryTreeDTO found = findNodeById(node.getChildren(), categoryId);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    private void collectIds(CategoryTreeDTO node, List<Long> ids) {
+        ids.add(node.getId());
+        for (CategoryTreeDTO child : node.getChildren()) {
+            collectIds(child, ids);
+        }
+    }
+
     public boolean existsByParentId(Long categoryId) {
         return categoryRepository.existsByParentId(categoryId);
     }

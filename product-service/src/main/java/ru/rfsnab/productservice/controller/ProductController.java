@@ -8,6 +8,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.rfsnab.productservice.dto.AvailableCountResponse;
 import ru.rfsnab.productservice.dto.ProductRequest;
 import ru.rfsnab.productservice.dto.ProductResponse;
 import ru.rfsnab.productservice.mapper.ProductMapper;
@@ -111,6 +112,14 @@ public class ProductController {
         var parentIds = productService.findParentIdsWithActiveChildren(
                 products.getContent().stream().map(Product::getId).toList());
         return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(products, parentIds));
+    }
+
+    /**
+     * Количество активных товаров в наличии (для счётчика на главной странице)
+     */
+    @GetMapping("/count-available")
+    public ResponseEntity<AvailableCountResponse> countAvailableProducts() {
+        return ResponseEntity.ok(new AvailableCountResponse(productService.countAvailableProducts()));
     }
 
     /**

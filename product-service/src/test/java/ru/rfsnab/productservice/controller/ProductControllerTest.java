@@ -18,6 +18,7 @@ import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
+import ru.rfsnab.productservice.service.CategoryService;
 import ru.rfsnab.productservice.service.StorageService;
 
 import java.math.BigDecimal;
@@ -41,6 +42,9 @@ class ProductControllerTest {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private CategoryService categoryService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -145,6 +149,131 @@ class ProductControllerTest {
                             .param("query", "огне"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)));
+        }
+    }
+
+    // ==================== GET /category/{id} (поддерево категорий) ====================
+
+    @Nested
+    @DisplayName("GET /api/v1/products/category/{id} (поддерево категорий)")
+    class GetProductsByCategoryTests {
+
+        @Test
+        @DisplayName("для листовой категории возвращает её товары")
+        void getProductsByCategory_LeafCategory_ReturnsOwnProducts() throws Exception {
+            mockMvc.perform(get("/api/v1/products/category/{categoryId}", testCategory.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.content[0].name", is("Огнетушитель ОП-4")));
+        }
+
+        @Test
+        @DisplayName("для родительской категории возвращает товары всех подкатегорий")
+        void getProductsByCategory_ParentCategory_ReturnsSubtreeProducts() throws Exception {
+            Category parentCategory = categoryRepository.save(Category.builder()
+                    .name("Спецодежда и СИЗ")
+                    .slug("specodezhda-i-siz")
+                    .isActive(true)
+                    .displayOrder(1)
+                    .build());
+
+            testCategory.setParent(parentCategory);
+            categoryRepository.save(testCategory);
+
+            Category siblingLeaf = categoryRepository.save(Category.builder()
+                    .name("Перчатки")
+                    .slug("perchatki")
+                    .isActive(true)
+                    .displayOrder(2)
+                    .parent(parentCategory)
+                    .build());
+
+            productRepository.save(Product.builder()
+                    .name("Перчатки х/б")
+                    .slug("perchatki-hb")
+                    .price(new BigDecimal("50.00"))
+                    .stockQuantity(500)
+                    .isActive(true)
+                    .isFeatured(false)
+                    .category(siblingLeaf)
+                    .build());
+
+            categoryService.refreshCategoryTree();
+
+            mockMvc.perform(get("/api/v1/products/category/{categoryId}", parentCategory.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    .andExpect(jsonPath("$.totalElements", is(2)));
+        }
+
+        @Test
+        @DisplayName("возвращает 404 для несуществующей категории")
+        void getProductsByCategory_NotFound_Returns404() throws Exception {
+            mockMvc.perform(get("/api/v1/products/category/{categoryId}", 999L))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
+    // ==================== GET /count-available ====================
+
+    @Nested
+    @DisplayName("GET /api/v1/products/count-available (Public)")
+    class CountAvailableProductsTests {
+
+        @Test
+        @DisplayName("без авторизации возвращает количество товаров в наличии")
+        void countAvailableProducts_NoAuth_ReturnsCount() throws Exception {
+            mockMvc.perform(get("/api/v1/products/count-available"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.count", is(1)));
+        }
+
+        @Test
+        @DisplayName("не учитывает товары без остатка")
+        void countAvailableProducts_ZeroStock_ExcludedFromCount() throws Exception {
+            productRepository.save(Product.builder()
+                    .name("Товар без остатка")
+                    .slug("tovar-bez-ostatka")
+                    .price(new BigDecimal("100.00"))
+                    .stockQuantity(0)
+                    .isActive(true)
+                    .isFeatured(false)
+                    .category(testCategory)
+                    .build());
+
+            mockMvc.perform(get("/api/v1/products/count-available"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.count", is(1)));
+        }
+
+        @Test
+        @DisplayName("учитывает остаток дочерних вариантов у родителя с нулевым собственным остатком")
+        void countAvailableProducts_ParentWithVariantStock_CountsParentOnce() throws Exception {
+            Product ftkParent = productRepository.save(Product.builder()
+                    .name("Куртка утеплённая")
+                    .slug("kurtka-utheplennaya")
+                    .price(new BigDecimal("3000.00"))
+                    .stockQuantity(0)
+                    .isActive(true)
+                    .isFeatured(false)
+                    .category(testCategory)
+                    .build());
+
+            productRepository.save(Product.builder()
+                    .name("Куртка утеплённая (48)")
+                    .slug("kurtka-utheplennaya-48")
+                    .price(new BigDecimal("3000.00"))
+                    .stockQuantity(10)
+                    .isActive(true)
+                    .isFeatured(false)
+                    .isVariantChild(true)
+                    .parentProductId(ftkParent.getId())
+                    .category(testCategory)
+                    .build());
+
+            mockMvc.perform(get("/api/v1/products/count-available"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.count", is(2))); // testProduct + ftkParent (через дочерний остаток)
         }
     }
 

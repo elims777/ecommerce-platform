@@ -53,7 +53,18 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Page<Product> findByCategoryIdAndIsActiveTrueAndIsVariantChildFalse(Long categoryId, Pageable pageable);
 
+    Page<Product> findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(List<Long> categoryIds, Pageable pageable);
+
     Page<Product> findByIsActive(Boolean isActive, Pageable pageable);
 
     Page<Product> findByCategoryIdAndIsActive(Long categoryId, Boolean isActive, Pageable pageable);
+
+    @Query("""
+            SELECT COUNT(p) FROM Product p
+            WHERE p.isActive = true AND p.isVariantChild = false
+            AND (p.stockQuantity + COALESCE(
+                (SELECT SUM(c.stockQuantity) FROM Product c
+                 WHERE c.parentProductId = p.id AND c.isActive = true), 0)) > 0
+            """)
+    long countAvailableProducts();
 }

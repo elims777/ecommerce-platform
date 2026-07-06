@@ -41,6 +41,9 @@ class ProductServiceTest {
     private CategoryRepository categoryRepository;
 
     @Mock
+    private CategoryService categoryService;
+
+    @Mock
     private SlugGeneratorService slugGenerator;
 
     @InjectMocks
@@ -366,6 +369,86 @@ class ProductServiceTest {
             // Then
             assertThat(result.getContent()).hasSize(1);
             assertThat(result.getTotalElements()).isEqualTo(1);
+        }
+    }
+
+    // ==================== getProductsByCategoryPage() Tests ====================
+
+    @Nested
+    @DisplayName("getProductsByCategoryPage()")
+    class GetProductsByCategoryPageTests {
+
+        @Test
+        @DisplayName("для листовой категории фильтрует только по её id")
+        void getProductsByCategoryPage_LeafCategory_FiltersBySingleId() {
+            // Given
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 1);
+
+            when(categoryRepository.existsById(1L)).thenReturn(true);
+            when(categoryService.getSubtreeCategoryIds(1L)).thenReturn(List.of(1L));
+            when(productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(List.of(1L), pageable))
+                    .thenReturn(page);
+
+            // When
+            Page<Product> result = productService.getProductsByCategoryPage(1L, pageable);
+
+            // Then
+            assertThat(result.getContent()).containsExactly(testProduct);
+            verify(productRepository).findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(List.of(1L), pageable);
+        }
+
+        @Test
+        @DisplayName("для родительской категории возвращает товары всего поддерева")
+        void getProductsByCategoryPage_ParentCategory_FiltersBySubtreeIds() {
+            // Given
+            Pageable pageable = PageRequest.of(0, 20);
+            List<Long> subtreeIds = List.of(5L, 6L, 7L);
+            Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 1);
+
+            when(categoryRepository.existsById(5L)).thenReturn(true);
+            when(categoryService.getSubtreeCategoryIds(5L)).thenReturn(subtreeIds);
+            when(productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(subtreeIds, pageable))
+                    .thenReturn(page);
+
+            // When
+            Page<Product> result = productService.getProductsByCategoryPage(5L, pageable);
+
+            // Then
+            assertThat(result.getContent()).hasSize(1);
+            verify(productRepository).findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(subtreeIds, pageable);
+        }
+
+        @Test
+        @DisplayName("выбрасывает исключение для несуществующей категории")
+        void getProductsByCategoryPage_CategoryNotFound_ThrowsException() {
+            // Given
+            Pageable pageable = PageRequest.of(0, 20);
+            when(categoryRepository.existsById(999L)).thenReturn(false);
+
+            // When & Then
+            assertThatThrownBy(() -> productService.getProductsByCategoryPage(999L, pageable))
+                    .isInstanceOf(CategoryNotFoundException.class);
+        }
+    }
+
+    // ==================== countAvailableProducts() Tests ====================
+
+    @Nested
+    @DisplayName("countAvailableProducts()")
+    class CountAvailableProductsTests {
+
+        @Test
+        @DisplayName("возвращает количество активных товаров с положительным эффективным остатком")
+        void countAvailableProducts_ReturnsCount() {
+            // Given
+            when(productRepository.countAvailableProducts()).thenReturn(3300L);
+
+            // When
+            long result = productService.countAvailableProducts();
+
+            // Then
+            assertThat(result).isEqualTo(3300L);
         }
     }
 
