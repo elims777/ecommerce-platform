@@ -287,9 +287,9 @@ const AdminCatalogPage = () => {
             }),
     });
 
-    const { data: searchResults } = useQuery({
-        queryKey: ['adminProductSearch', searchQuery],
-        queryFn: async () => (await searchProducts(searchQuery, 0, 1000)).content,
+    const { data: searchPage } = useQuery({
+        queryKey: ['adminProductSearch', { query: searchQuery, page: currentPage, size: pageSize }],
+        queryFn: () => searchProducts(searchQuery, currentPage - 1, pageSize),
         enabled: searchQuery.length >= 2,
     });
 
@@ -301,8 +301,8 @@ const AdminCatalogPage = () => {
 
     const displayProducts = useMemo(() => {
         let items: Product[] = [];
-        if (searchQuery.length >= 2 && searchResults) {
-            items = searchResults;
+        if (searchQuery.length >= 2 && searchPage) {
+            items = searchPage.content;
         } else if (productsPage) {
             items = productsPage.content;
         }
@@ -310,7 +310,7 @@ const AdminCatalogPage = () => {
             items = items.filter((p) => p.name.toUpperCase().startsWith(activeLetter));
         }
         return items;
-    }, [searchQuery, searchResults, productsPage, activeLetter]);
+    }, [searchQuery, searchPage, productsPage, activeLetter]);
 
     // Grouped rows: parents first, children inserted right after their parent
     const groupedRows = useMemo(() => {
@@ -693,8 +693,9 @@ const AdminCatalogPage = () => {
     const parentOptions = flattenForSelect(categoryTree, editingCatId || undefined);
     const flatCategoryOptions = flattenForSelect(categoryTree);
 
-    const totalPages = productsPage ? Math.ceil(productsPage.totalElements / pageSize) : 0;
-    const isPaginated = searchQuery.length < 2 && !activeLetter;
+    const activePage = searchQuery.length >= 2 ? searchPage : productsPage;
+    const totalPages = activePage ? Math.ceil(activePage.totalElements / pageSize) : 0;
+    const isPaginated = !activeLetter;
 
     const pageTitle = selectedCategoryId
         ? findCatName(categoryTree, selectedCategoryId) || 'Товары'
@@ -812,6 +813,7 @@ const AdminCatalogPage = () => {
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
+                                setCurrentPage(1);
                                 if (e.target.value) {
                                     setActiveLetter(null);
                                     setSelectedCategoryId(undefined);
@@ -1332,7 +1334,7 @@ const AdminCatalogPage = () => {
                         {/* Pagination */}
                         {isPaginated && totalPages > 1 && (
                             <div className="rf-admin-pagination">
-                                <span>Всего {productsPage?.totalElements ?? 0}</span>
+                                <span>Всего {activePage?.totalElements ?? 0}</span>
                                 <div className="rf-admin-pagination-pages">
                                     <button
                                         className="rf-admin-page-btn"

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { App } from 'antd';
+import { App, Drawer, Grid } from 'antd';
 import { getProducts, searchProducts } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
 import { useCartStore } from '@/store/cartStore';
@@ -87,6 +87,9 @@ const CatalogPage = () => {
     const { message: messageApi } = App.useApp();
     const addItem = useCartStore((state) => state.addItem);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const screens = Grid.useBreakpoint();
+    const isMobile = screens.md === false;
+    const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false);
 
     const currentPage = Number(searchParams.get('page')) || 1;
     const categoryId = searchParams.get('category') ? Number(searchParams.get('category')) : undefined;
@@ -122,6 +125,7 @@ const CatalogPage = () => {
         if (selectedKeys.length > 0) newParams.set('category', String(selectedKeys[0]));
         setSearchParams(newParams);
         setSearchInput('');
+        setCategoriesDrawerOpen(false);
     };
 
     const handleSearch = (value: string) => {
@@ -169,7 +173,7 @@ const CatalogPage = () => {
     return (
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
             {/* Breadcrumbs */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 12, flexWrap: 'wrap' }}>
                 <span onClick={handleClearFilters} style={{ cursor: 'pointer' }}>Главная</span>
                 <ChevRight />
                 <span onClick={handleClearFilters} style={{ cursor: 'pointer' }}>Каталог</span>
@@ -193,9 +197,9 @@ const CatalogPage = () => {
             </div>
 
             {/* Title row */}
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20, flexWrap: isMobile ? 'wrap' : 'nowrap', gap: 10 }}>
                 <div>
-                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', margin: 0 }}>
+                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: isMobile ? 22 : 32, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', margin: 0 }}>
                         {pageTitle}
                     </h1>
                     {productsPage && !productsLoading && (
@@ -225,38 +229,88 @@ const CatalogPage = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '260px 1fr', gap: 20 }}>
                 {/* Sidebar */}
-                <aside>
-                    <div style={{ border: '1px solid var(--line-1)', borderRadius: 6, background: '#fff', overflow: 'hidden', marginBottom: 16 }}>
-                        <div style={{ padding: '10px 14px 8px', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                            Каталог
+                {!isMobile && (
+                    <aside>
+                        <div style={{ border: '1px solid var(--line-1)', borderRadius: 6, background: '#fff', overflow: 'hidden', marginBottom: 16 }}>
+                            <div style={{ padding: '10px 14px 8px', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                Каталог
+                            </div>
+                            {categoriesLoading ? (
+                                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {Array.from({ length: 6 }).map((_, i) => (
+                                        <div key={i} style={{ height: 14, background: 'var(--surface-3)', borderRadius: 4, width: `${70 + (i % 3) * 10}%` }}/>
+                                    ))}
+                                </div>
+                            ) : (
+                                <CategoryTreeMenu
+                                    categories={categoryTree}
+                                    selectedId={categoryId}
+                                    onSelect={(id) => handleCategorySelect([id])}
+                                />
+                            )}
+                            {categoryId && (
+                                <div style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--line-1)' }}>
+                                    <span
+                                        onClick={handleClearFilters}
+                                        style={{ fontSize: 12.5, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
+                                    >
+                                        Показать все товары
+                                    </span>
+                                </div>
+                            )}
                         </div>
-                        {categoriesLoading ? (
-                            <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                {Array.from({ length: 6 }).map((_, i) => (
-                                    <div key={i} style={{ height: 14, background: 'var(--surface-3)', borderRadius: 4, width: `${70 + (i % 3) * 10}%` }}/>
-                                ))}
-                            </div>
-                        ) : (
-                            <CategoryTreeMenu
-                                categories={categoryTree}
-                                selectedId={categoryId}
-                                onSelect={(id) => handleCategorySelect([id])}
-                            />
-                        )}
-                        {categoryId && (
-                            <div style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--line-1)' }}>
-                                <span
-                                    onClick={handleClearFilters}
-                                    style={{ fontSize: 12.5, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
-                                >
-                                    Показать все товары
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                </aside>
+                    </aside>
+                )}
+
+                {isMobile && (
+                    <>
+                        <button
+                            onClick={() => setCategoriesDrawerOpen(true)}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                height: 36, padding: '0 14px', marginBottom: 16, alignSelf: 'flex-start',
+                                background: 'var(--surface-2)', border: '1px solid var(--line-1)',
+                                borderRadius: 6, fontSize: 13, fontWeight: 500, color: 'var(--ink-1)',
+                                cursor: 'pointer', fontFamily: 'var(--font-body)',
+                            }}
+                        >
+                            Категории
+                        </button>
+                        <Drawer
+                            title="Каталог"
+                            placement="left"
+                            open={categoriesDrawerOpen}
+                            onClose={() => setCategoriesDrawerOpen(false)}
+                            size={280}
+                        >
+                            {categoriesLoading ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                    {Array.from({ length: 6 }).map((_, i) => (
+                                        <div key={i} style={{ height: 14, background: 'var(--surface-3)', borderRadius: 4, width: `${70 + (i % 3) * 10}%` }}/>
+                                    ))}
+                                </div>
+                            ) : (
+                                <CategoryTreeMenu
+                                    categories={categoryTree}
+                                    selectedId={categoryId}
+                                    onSelect={(id) => handleCategorySelect([id])}
+                                />
+                            )}
+                            {categoryId && (
+                                <div style={{ padding: '12px 0 0' }}>
+                                    <span
+                                        onClick={() => { handleClearFilters(); setCategoriesDrawerOpen(false); }}
+                                        style={{ fontSize: 12.5, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
+                                    >
+                                        Показать все товары
+                                    </span>
+                                </div>
+                            )}
+                        </Drawer>
+                    </>
+                )}
 
                 {/* Right column */}
                 <div>
@@ -348,7 +402,10 @@ const CatalogPage = () => {
 
                     {/* Loading skeletons */}
                     {productsLoading && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+                        <div style={isMobile
+                            ? { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, ['--product-card-w' as string]: '100%' }
+                            : { display: 'flex', flexWrap: 'wrap', gap: 14 }}
+                        >
                             {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
                         </div>
                     )}
@@ -389,7 +446,10 @@ const CatalogPage = () => {
                     {/* Products grid */}
                     {productsPage && !productsPage.empty && !productsLoading && (
                         <>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+                            <div style={isMobile
+                                ? { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, ['--product-card-w' as string]: '100%' }
+                                : { display: 'flex', flexWrap: 'wrap', gap: 14 }}
+                            >
                                 {productsPage.content.map((product) => (
                                     <ProductCard
                                         key={product.id}
@@ -401,7 +461,7 @@ const CatalogPage = () => {
 
                             {/* Pagination */}
                             {totalPages > 1 && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, fontSize: 13 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, fontSize: 13, flexWrap: 'wrap', gap: 12 }}>
                                     <span style={{ color: 'var(--ink-3)' }}>
                                         Показано {productsPage.content.length} из {productsPage.totalElements.toLocaleString('ru-RU')}
                                     </span>

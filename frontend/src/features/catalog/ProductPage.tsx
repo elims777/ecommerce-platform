@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Image, App, Skeleton, Modal } from 'antd';
+import { Image, App, Skeleton, Modal, Grid } from 'antd';
 import { ShoppingCartOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -47,6 +47,8 @@ const ProductPage = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const location = useLocation();
+    const screens = Grid.useBreakpoint();
+    const isMobile = screens.md === false;
     const { message: messageApi } = App.useApp();
     const [quantity, setQuantity] = useState(1);
     const [variantQtys, setVariantQtys] = useState<Record<number, number>>({});
@@ -132,7 +134,7 @@ const ProductPage = () => {
 
     if (isLoading) {
         return (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 280px', gap: 32, padding: '24px 0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.4fr 280px', gap: 32, padding: '24px 0' }}>
                 <Skeleton.Image active style={{ width: '100%', height: 340, borderRadius: 8 }} />
                 <div>
                     <Skeleton active paragraph={{ rows: 6 }} title={{ width: '80%' }} />
@@ -185,7 +187,7 @@ const ProductPage = () => {
         </Modal>
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
             {/* Хлебные крошки */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 16 }}>
                 <span onClick={() => navigate('/catalog')} style={{ cursor: 'pointer' }}>Каталог</span>
                 {product.categoryName && (
                     <>
@@ -209,9 +211,9 @@ const ProductPage = () => {
                 <ArrowLeftOutlined /> Назад
             </button>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 360px', gap: 28 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 360px', gap: 28 }}>
                 {/* Галерея */}
-                <div>
+                <div style={isMobile ? { order: 1 } : undefined}>
                     <Image.PreviewGroup items={sortedImages.map((img) => img.fileUrl)}>
                         <div style={{ borderRadius: 'var(--r-5)', overflow: 'hidden', border: '1px solid var(--line-1)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
                             {sortedImages.length > 0 ? (
@@ -242,7 +244,7 @@ const ProductPage = () => {
                 </div>
 
                 {/* Описание */}
-                <div>
+                <div style={isMobile ? { order: 3 } : undefined}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                         {product.categoryName && (
                             <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--brand-navy)' }}>{product.categoryName}</span>
@@ -265,7 +267,7 @@ const ProductPage = () => {
                         )}
                     </div>
 
-                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-4xl)', fontWeight: 600, letterSpacing: '-0.018em', lineHeight: 1.2, color: 'var(--ink-1)', marginBottom: 16 }}>
+                    <h1 style={{ fontFamily: 'var(--font-head)', fontSize: isMobile ? 22 : 'var(--text-4xl)', fontWeight: 600, letterSpacing: '-0.018em', lineHeight: 1.2, color: 'var(--ink-1)', marginBottom: 16 }}>
                         {product.name}
                     </h1>
 
@@ -282,7 +284,7 @@ const ProductPage = () => {
                     {/* Характеристики */}
                     {product.attributes && product.attributes.length > 0 && (
                         <div style={{ borderTop: '1px solid var(--line-1)', paddingTop: 20, marginBottom: 20 }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 24px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '4px 24px' }}>
                                 {product.attributes.map((attr) => (
                                     <div key={attr.id} style={{ display: 'flex', fontSize: 'var(--text-base)', padding: '5px 0', borderBottom: '1px dashed var(--line-1)' }}>
                                         <span style={{ color: 'var(--ink-3)', flex: 1 }}>{attr.attributeName}</span>
@@ -317,8 +319,8 @@ const ProductPage = () => {
                 </div>
 
                 {/* Buy box */}
-                <div>
-                    <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', padding: 20, position: 'sticky', top: 20, background: 'var(--surface)' }}>
+                <div style={isMobile ? { order: 2 } : undefined}>
+                    <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', padding: 20, position: isMobile ? 'static' : 'sticky', top: 20, background: 'var(--surface)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
                             <div>
                                 <span style={{
@@ -348,7 +350,7 @@ const ProductPage = () => {
 
                         {/* Таблица вариантов */}
                         {hasVariants ? (
-                            <div style={{ marginBottom: 16 }}>
+                            <div style={{ marginBottom: 16, overflowX: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--line-1)' }}>
