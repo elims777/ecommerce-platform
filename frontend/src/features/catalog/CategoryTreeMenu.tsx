@@ -1,5 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CategoryTree } from '@/types/product';
+
+const subtreeContainsSelected = (category: CategoryTree, selectedId?: number): boolean =>
+    selectedId !== undefined &&
+    category.children.some((c) => c.id === selectedId || subtreeContainsSelected(c, selectedId));
 
 const ChevRight = () => (
     <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -17,7 +21,11 @@ interface CategoryNodeProps {
 const CategoryNode = ({ category, selectedId, onSelect, depth = 0 }: CategoryNodeProps) => {
     const hasChildren = category.children.filter((c) => c.isActive).length > 0;
     const isSelected = selectedId === category.id;
-    const [expanded, setExpanded] = useState(false);
+    const [expanded, setExpanded] = useState(() => subtreeContainsSelected(category, selectedId));
+
+    useEffect(() => {
+        if (subtreeContainsSelected(category, selectedId)) setExpanded(true);
+    }, [category, selectedId]);
 
     const activeChildren = category.children
         .filter((c) => c.isActive)

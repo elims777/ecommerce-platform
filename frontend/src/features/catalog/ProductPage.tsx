@@ -186,12 +186,12 @@ const ProductPage = () => {
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
             {/* Хлебные крошки */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 16 }}>
-                <span onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>Каталог</span>
+                <span onClick={() => navigate('/catalog')} style={{ cursor: 'pointer' }}>Каталог</span>
                 {product.categoryName && (
                     <>
                         <span style={{ opacity: 0.5 }}>›</span>
                         <span
-                            onClick={() => navigate(`/?category=${product.categoryId}`)}
+                            onClick={() => navigate(`/catalog?category=${product.categoryId}`)}
                             style={{ cursor: 'pointer', color: 'var(--ink-2)', fontWeight: 500 }}
                         >
                             {product.categoryName}
