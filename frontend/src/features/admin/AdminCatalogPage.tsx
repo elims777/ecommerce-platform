@@ -312,15 +312,25 @@ const AdminCatalogPage = () => {
         return items;
     }, [searchQuery, searchPage, productsPage, activeLetter]);
 
-    // Grouped rows: parents first, children inserted right after their parent
+    // Grouped rows: parents first, children inserted right after their parent.
+    // Ребёнок, чьего родителя нет на текущей странице (серверная пагинация поиска
+    // рвёт семьи), отображается самостоятельной строкой — иначе он пропадает из таблицы.
     const groupedRows = useMemo(() => {
+        const rootIds = new Set(
+            displayProducts.filter((p) => !(p.isVariantChild && p.parentProductId != null)).map((p) => p.id),
+        );
         const childrenByParent = new Map<number, Product[]>();
         const roots: Product[] = [];
+        const orphans: Product[] = [];
         for (const p of displayProducts) {
             if (p.isVariantChild && p.parentProductId != null) {
-                const arr = childrenByParent.get(p.parentProductId) ?? [];
-                arr.push(p);
-                childrenByParent.set(p.parentProductId, arr);
+                if (rootIds.has(p.parentProductId)) {
+                    const arr = childrenByParent.get(p.parentProductId) ?? [];
+                    arr.push(p);
+                    childrenByParent.set(p.parentProductId, arr);
+                } else {
+                    orphans.push(p);
+                }
             } else {
                 roots.push(p);
             }
@@ -332,6 +342,9 @@ const AdminCatalogPage = () => {
             for (const child of children) {
                 result.push({ product: child, isChild: true, childCount: 0 });
             }
+        }
+        for (const orphan of orphans) {
+            result.push({ product: orphan, isChild: false, childCount: 0 });
         }
         return result;
     }, [displayProducts]);
