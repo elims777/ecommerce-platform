@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClickableCard, NavLink } from '@/components/navigation';
-import { Spin } from 'antd';
+import { Spin, Grid } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { getProducts } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
@@ -107,6 +107,8 @@ const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
     const [idx, setIdx] = useState(0);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const navigate = useNavigate();
+    const screens = Grid.useBreakpoint();
+    const isMobile = screens.md === false;
 
     const activeIdx = Math.min(idx, Math.max(slides.length - 1, 0));
 
@@ -136,6 +138,9 @@ const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
         else navigate(link);
     };
 
+    // Мобильный масштаб для px-размеров шрифта из конфига слайдера (рассчитан под desktop-ширину)
+    const textScale = isMobile ? 0.55 : 1;
+
     return (
         <div style={{
             ...bgStyle,
@@ -143,7 +148,7 @@ const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
             color: '#fff',
             position: 'relative',
             overflow: 'hidden',
-            minHeight: 300,
+            minHeight: isMobile ? 360 : 300,
             transition: 'background .35s ease',
         }}>
             {/* Watermark */}
@@ -171,11 +176,12 @@ const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'flex-start',
+                    overflow: 'hidden',
                 }}>
                     {block.heading && (
                         <div style={{
                             fontFamily: 'var(--font-head)',
-                            fontSize: block.headingStyle.size,
+                            fontSize: block.headingStyle.size * textScale,
                             fontWeight: block.headingStyle.bold ? 700 : 400,
                             fontStyle: block.headingStyle.italic ? 'italic' : 'normal',
                             textDecoration: [
@@ -192,7 +198,7 @@ const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
                     )}
                     {block.body && (
                         <div style={{
-                            fontSize: block.bodyStyle.size,
+                            fontSize: block.bodyStyle.size * textScale,
                             fontWeight: block.bodyStyle.bold ? 700 : 400,
                             fontStyle: block.bodyStyle.italic ? 'italic' : 'normal',
                             textDecoration: [
@@ -213,8 +219,8 @@ const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
             {s.cta?.length > 0 && (
                 <div style={{
                     position: 'absolute',
-                    left: `${s.textBlocks?.[0]?.x ?? 5}%`,
-                    bottom: 52,
+                    left: isMobile ? 16 : `${s.textBlocks?.[0]?.x ?? 5}%`,
+                    bottom: isMobile ? 12 : 52,
                     display: 'flex', gap: 10, zIndex: 3,
                 }}>
                     {s.cta.map((btn) => (
@@ -227,7 +233,7 @@ const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
                                     background: btn.variant === 'primary' ? 'var(--surface)' : 'var(--overlay-white-14)',
                                     color: btn.variant === 'primary' ? 'var(--ink-1)' : '#fff',
                                     fontWeight: 600,
-                                    padding: '0 18px', height: 'var(--btn-h-lg)',
+                                    padding: isMobile ? '0 14px' : '0 18px', height: isMobile ? 'var(--btn-h-base)' : 'var(--btn-h-lg)',
                                     border: 'none', borderRadius: 'var(--r-3)',
                                     fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
                                     transition: btn.variant === 'primary' ? 'opacity .12s' : 'background .12s',
@@ -248,8 +254,8 @@ const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
                 </div>
             )}
 
-            {/* Products block */}
-            {s.products.length > 0 && (
+            {/* Products block — скрыт на мобильном: абсолютное позиционирование по % накладывается на текстовые блоки на узких экранах */}
+            {!isMobile && s.products.length > 0 && (
                 <div style={{
                     position: 'absolute',
                     right: `${s.productsRight}%`,

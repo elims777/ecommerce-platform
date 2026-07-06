@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Dropdown } from 'antd';
+import { Dropdown, Drawer, Grid } from 'antd';
 import { company } from '@/config/company';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/navigation';
@@ -17,6 +17,10 @@ const TOPBAR_H = 36;
 const MAIN_H = 76;
 const CAT_H = 46;
 const HEADER_TOTAL = TOPBAR_H + MAIN_H + CAT_H;
+
+const TOPBAR_H_MOBILE = 32;
+const MAIN_H_MOBILE = 60;
+const HEADER_TOTAL_MOBILE = TOPBAR_H_MOBILE + MAIN_H_MOBILE;
 
 const PAGE_ORDER = ['/about', '/contacts', '/', '/catalog', '/cart', '/orders', '/profile', '/privacy-policy', '/personal-data'];
 const getPageIndex = (pathname: string): number => {
@@ -172,7 +176,10 @@ const ClientLayout = () => {
     const clearFavourites = useFavouritesStore((s) => s.clear);
     const totalFavourites = useFavouritesStore((s) => s.ids.size);
     const [searchQuery, setSearchQuery] = useState('');
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const prevIndexRef = useRef(getPageIndex(location.pathname));
+    const screens = Grid.useBreakpoint();
+    const isMobile = screens.md === false;
 
     const { data: availableCount } = useQuery({
         queryKey: ['products', 'count-available'],
@@ -197,6 +204,10 @@ const ClientLayout = () => {
     const currentIndex = getPageIndex(location.pathname);
     prevIndexRef.current = currentIndex;
 
+    useEffect(() => {
+        setMobileNavOpen(false);
+    }, [location.pathname]);
+
     const userMenuItems: MenuProps['items'] = [
         { key: 'orders', label: <NavLink to="/orders">Мои заказы</NavLink> },
         { key: 'profile', label: <NavLink to="/profile">Профиль</NavLink> },
@@ -218,19 +229,27 @@ const ClientLayout = () => {
                 {/* TopBar */}
                 <div style={{
                     background: 'var(--brand-navy)', color: 'var(--overlay-white-85)',
-                    fontSize: 'var(--text-sm)', height: TOPBAR_H,
+                    fontSize: 'var(--text-sm)', height: isMobile ? TOPBAR_H_MOBILE : TOPBAR_H,
                     display: 'flex', alignItems: 'center', padding: '0 var(--page-pad-x)', gap: 20,
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <PinIcon /> {company.address.full}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <TruckIcon /> Доставка по РФ
-                    </div>
+                    {!isMobile && (
+                        <>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <PinIcon /> {company.address.full}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <TruckIcon /> Доставка по РФ
+                            </div>
+                        </>
+                    )}
                     <div style={{ flex: 1 }} />
-                    <NavLink to="/about" style={{ opacity: 0.85, color: 'inherit' }}>О компании</NavLink>
-                    <NavLink to="/contacts" style={{ opacity: 0.85, color: 'inherit' }}>Контакты</NavLink>
-                    <span style={{ opacity: 0.35 }}>·</span>
+                    {!isMobile && (
+                        <>
+                            <NavLink to="/about" style={{ opacity: 0.85, color: 'inherit' }}>О компании</NavLink>
+                            <NavLink to="/contacts" style={{ opacity: 0.85, color: 'inherit' }}>Контакты</NavLink>
+                            <span style={{ opacity: 0.35 }}>·</span>
+                        </>
+                    )}
                     <a style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#fff', cursor: 'pointer', textDecoration: 'none' }}>
                         <PhoneIcon /> {company.phone.free}
                     </a>
@@ -239,37 +258,55 @@ const ClientLayout = () => {
                 {/* Main header */}
                 <div style={{
                     background: 'var(--surface)', borderBottom: '1px solid var(--line-1)',
-                    height: MAIN_H, display: 'flex', alignItems: 'center',
-                    padding: '0 var(--page-pad-x)', gap: 28,
+                    height: isMobile ? MAIN_H_MOBILE : MAIN_H, display: 'flex', alignItems: 'center',
+                    padding: isMobile ? '0 16px' : '0 var(--page-pad-x)', gap: isMobile ? 12 : 28,
                 }}>
+                    {isMobile && (
+                        <button
+                            onClick={() => setMobileNavOpen(true)}
+                            aria-label="Открыть меню"
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 36, height: 36, flexShrink: 0,
+                                background: 'transparent', border: '1px solid var(--line-2)',
+                                borderRadius: 'var(--r-3)', cursor: 'pointer', color: 'var(--ink-1)',
+                            }}
+                        >
+                            <MenuIcon />
+                        </button>
+                    )}
+
                     <NavLink to="/" style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
                         <img src="/logo-dark.png" alt="РФснаб" style={{ height: 'var(--logo-h-header)', display: 'block' }} />
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <span style={{
-                                fontFamily: 'var(--font-display)',
-                                fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em',
-                                color: 'var(--brand-navy)', lineHeight: 1.1,
-                            }}>РФснаб</span>
-                            <span style={{
-                                fontFamily: 'var(--font-body)',
-                                fontSize: 'var(--text-xs)', fontWeight: 400, letterSpacing: '0.04em',
-                                color: 'var(--ink-3)', lineHeight: 1.2, textTransform: 'uppercase',
-                            }}>комплексное снабжение</span>
-                        </div>
+                        {!isMobile && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <span style={{
+                                    fontFamily: 'var(--font-display)',
+                                    fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em',
+                                    color: 'var(--brand-navy)', lineHeight: 1.1,
+                                }}>РФснаб</span>
+                                <span style={{
+                                    fontFamily: 'var(--font-body)',
+                                    fontSize: 'var(--text-xs)', fontWeight: 400, letterSpacing: '0.04em',
+                                    color: 'var(--ink-3)', lineHeight: 1.2, textTransform: 'uppercase',
+                                }}>комплексное снабжение</span>
+                            </div>
+                        )}
                     </NavLink>
 
                     {/* Search */}
-                    <div style={{ flex: 1, maxWidth: 620, position: 'relative' }}>
+                    <div style={{ flex: 1, maxWidth: isMobile ? 'none' : 620, position: 'relative' }}>
                         <input
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Артикул, бренд или название товара"
+                            placeholder={isMobile ? 'Поиск товаров' : 'Артикул, бренд или название товара'}
                             style={{
-                                width: '100%', height: 'var(--input-h-lg)', padding: '0 120px 0 42px',
+                                width: '100%', height: isMobile ? 'var(--input-h-md)' : 'var(--input-h-lg)',
+                                padding: isMobile ? '0 42px 0 38px' : '0 120px 0 42px',
                                 border: '1px solid var(--line-2)', borderRadius: 'var(--r-4)',
                                 fontSize: 'var(--text-md)', fontFamily: 'var(--font-body)', outline: 'none',
                                 background: 'var(--surface)', color: 'var(--ink-1)',
-                                transition: 'border-color 0.12s',
+                                transition: 'border-color 0.12s', boxSizing: 'border-box',
                             }}
                             onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--brand-navy)'; }}
                             onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--line-2)'; }}
@@ -279,112 +316,198 @@ const ClientLayout = () => {
                                 }
                             }}
                         />
-                        <span style={{ position: 'absolute', left: 14, top: 13, color: 'var(--ink-3)' }}>
+                        <span style={{ position: 'absolute', left: 14, top: isMobile ? 11 : 13, color: 'var(--ink-3)' }}>
                             <SearchIcon />
                         </span>
-                        <button
-                            onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
-                            style={{
-                                position: 'absolute', right: 4, top: 4, height: 36, padding: '0 18px',
-                                background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)',
-                                fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
-                        >
-                            Найти
-                        </button>
+                        {isMobile ? (
+                            <button
+                                onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
+                                aria-label="Найти"
+                                style={{
+                                    position: 'absolute', right: 4, top: 4, width: 32, height: 32,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                <SearchIcon />
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
+                                style={{
+                                    position: 'absolute', right: 4, top: 4, height: 36, padding: '0 18px',
+                                    background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)',
+                                    fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
+                            >
+                                Найти
+                            </button>
+                        )}
                     </div>
 
                     {/* User actions */}
-                    <div style={{ display: 'flex', gap: 2, alignItems: 'center', marginLeft: 'auto', flexShrink: 0 }}>
-                        <NavLink to="/favourites" variant="icon" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '6px 10px', borderRadius: 'var(--r-3)', color: 'var(--ink-1)' }}>
-                            <span style={{ position: 'relative' }}>
-                                <HeartIcon />
-                                {totalFavourites > 0 && (
-                                    <span style={{ position: 'absolute', top: -4, right: -8, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 'var(--r-4)', background: 'var(--brand-red)', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>{totalFavourites}</span>
-                                )}
-                            </span>
-                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>Избранное</span>
-                        </NavLink>
-                        <NavLink to="/cart" variant="icon" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '6px 10px', borderRadius: 'var(--r-3)', color: 'var(--ink-1)' }}>
+                    <div style={{ display: 'flex', gap: isMobile ? 6 : 2, alignItems: 'center', marginLeft: isMobile ? 0 : 'auto', flexShrink: 0 }}>
+                        {!isMobile && (
+                            <NavLink to="/favourites" variant="icon" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '6px 10px', borderRadius: 'var(--r-3)', color: 'var(--ink-1)' }}>
+                                <span style={{ position: 'relative' }}>
+                                    <HeartIcon />
+                                    {totalFavourites > 0 && (
+                                        <span style={{ position: 'absolute', top: -4, right: -8, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 'var(--r-4)', background: 'var(--brand-red)', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>{totalFavourites}</span>
+                                    )}
+                                </span>
+                                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>Избранное</span>
+                            </NavLink>
+                        )}
+                        <NavLink to="/cart" variant="icon" style={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column', alignItems: 'center', gap: 2, padding: isMobile ? '6px' : '6px 10px', borderRadius: 'var(--r-3)', color: 'var(--ink-1)' }}>
                             <span style={{ position: 'relative', color: 'var(--brand-red)' }}>
                                 <CartIcon />
                                 {totalItems > 0 && (
                                     <span style={{ position: 'absolute', top: -4, right: -8, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 'var(--r-4)', background: 'var(--brand-red)', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>{totalItems}</span>
                                 )}
                             </span>
-                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>Корзина</span>
+                            {!isMobile && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', whiteSpace: 'nowrap' }}>Корзина</span>}
                         </NavLink>
-                        <div style={{ width: 1, height: 28, background: 'var(--line-1)', margin: '0 4px' }} />
-                        {isAuthenticated ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <ContextSwitcher />
-                                <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
-                                    <button style={{
-                                        display: 'flex', alignItems: 'center', gap: 6,
-                                        background: 'transparent', border: '1px solid var(--line-2)',
-                                        borderRadius: 'var(--r-3)', padding: '6px 12px', cursor: 'pointer',
-                                        fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--ink-1)', fontFamily: 'var(--font-body)',
-                                    }}>
-                                        <UserIcon /> {user?.clientType === 'B2B' ? user.companyName : user?.firstname}
-                                    </button>
-                                </Dropdown>
-                            </div>
-                        ) : (
-                            <NavLink
-                                to="/login"
-                                style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                                    height: 36, padding: '0 14px',
-                                    background: 'transparent', color: 'var(--brand-navy)',
-                                    border: '1px solid var(--brand-navy)', borderRadius: 'var(--r-3)',
-                                    fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                    transition: 'background 0.12s',
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--navy-tint)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                            >
-                                <UserIcon /> Войти
-                            </NavLink>
+                        {!isMobile && (
+                            <>
+                                <div style={{ width: 1, height: 28, background: 'var(--line-1)', margin: '0 4px' }} />
+                                {isAuthenticated ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <ContextSwitcher />
+                                        <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
+                                            <button style={{
+                                                display: 'flex', alignItems: 'center', gap: 6,
+                                                background: 'transparent', border: '1px solid var(--line-2)',
+                                                borderRadius: 'var(--r-3)', padding: '6px 12px', cursor: 'pointer',
+                                                fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--ink-1)', fontFamily: 'var(--font-body)',
+                                            }}>
+                                                <UserIcon /> {user?.clientType === 'B2B' ? user.companyName : user?.firstname}
+                                            </button>
+                                        </Dropdown>
+                                    </div>
+                                ) : (
+                                    <NavLink
+                                        to="/login"
+                                        style={{
+                                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                                            height: 36, padding: '0 14px',
+                                            background: 'transparent', color: 'var(--brand-navy)',
+                                            border: '1px solid var(--brand-navy)', borderRadius: 'var(--r-3)',
+                                            fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                            transition: 'background 0.12s',
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--navy-tint)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                    >
+                                        <UserIcon /> Войти
+                                    </NavLink>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
 
-                {/* Categories nav */}
-                <div style={{
-                    background: 'var(--surface)', borderBottom: '1px solid var(--line-1)',
-                    height: CAT_H, display: 'flex', alignItems: 'center',
-                    padding: '0 var(--page-pad-x)', gap: 0,
-                }}>
-                    <NavLink
-                        to="/catalog"
-                        style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 8,
-                            height: 36, padding: '0 14px', marginRight: 8,
-                            background: 'var(--brand-red)', color: '#fff',
-                            border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 600,
-                            cursor: 'pointer', fontFamily: 'var(--font-body)',
-                        }}
-                    >
-                        <MenuIcon /> Каталог товаров
-                    </NavLink>
-                    <a style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 4,
-                        padding: '0 14px', height: '100%', fontSize: 'var(--text-md)', fontWeight: 500,
-                        color: 'var(--ink-1)', cursor: 'pointer', textDecoration: 'none',
+                {/* Categories nav — desktop only, on mobile folded into burger menu */}
+                {!isMobile && (
+                    <div style={{
+                        background: 'var(--surface)', borderBottom: '1px solid var(--line-1)',
+                        height: CAT_H, display: 'flex', alignItems: 'center',
+                        padding: '0 var(--page-pad-x)', gap: 0,
                     }}>
-                        Акции
-                    </a>
-                    <div style={{ flex: 1 }} />
-                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
-                        <span style={{ color: 'var(--brand-green)', fontWeight: 600 }}>●</span>{' '}
-                        {(availableCount ?? 12480).toLocaleString('ru-RU')} товаров в наличии · отгрузка от 1 часа
-                    </span>
-                </div>
+                        <NavLink
+                            to="/catalog"
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 8,
+                                height: 36, padding: '0 14px', marginRight: 8,
+                                background: 'var(--brand-red)', color: '#fff',
+                                border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 600,
+                                cursor: 'pointer', fontFamily: 'var(--font-body)',
+                            }}
+                        >
+                            <MenuIcon /> Каталог товаров
+                        </NavLink>
+                        <a style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '0 14px', height: '100%', fontSize: 'var(--text-md)', fontWeight: 500,
+                            color: 'var(--ink-1)', cursor: 'pointer', textDecoration: 'none',
+                        }}>
+                            Акции
+                        </a>
+                        <div style={{ flex: 1 }} />
+                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
+                            <span style={{ color: 'var(--brand-green)', fontWeight: 600 }}>●</span>{' '}
+                            {(availableCount ?? 12480).toLocaleString('ru-RU')} товаров в наличии · отгрузка от 1 часа
+                        </span>
+                    </div>
+                )}
             </header>
 
-            <div style={{ height: HEADER_TOTAL }} />
+            <Drawer
+                title="Меню"
+                placement="left"
+                open={mobileNavOpen}
+                onClose={() => setMobileNavOpen(false)}
+                width={280}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <NavLink to="/catalog" onClick={() => setMobileNavOpen(false)} style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
+                        background: 'var(--brand-red)', color: '#fff', borderRadius: 'var(--r-3)',
+                        fontSize: 'var(--text-md)', fontWeight: 600, marginBottom: 8,
+                    }}>
+                        <MenuIcon /> Каталог товаров
+                    </NavLink>
+                    <NavLink to="/catalog" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Акции</NavLink>
+                    {!isAuthenticated && (
+                        <NavLink to="/favourites" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Избранное</NavLink>
+                    )}
+                    {isAuthenticated && (
+                        <NavLink to="/favourites" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>
+                            Избранное{totalFavourites > 0 ? ` (${totalFavourites})` : ''}
+                        </NavLink>
+                    )}
+                    <div style={{ height: 1, background: 'var(--line-1)', margin: '8px 0' }} />
+                    <NavLink to="/about" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>О компании</NavLink>
+                    <NavLink to="/contacts" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Контакты</NavLink>
+                    <div style={{ height: 1, background: 'var(--line-1)', margin: '8px 0' }} />
+                    {isAuthenticated ? (
+                        <>
+                            <NavLink to="/orders" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Мои заказы</NavLink>
+                            <NavLink to="/profile" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Профиль</NavLink>
+                            {user && isAdmin(user) && (
+                                <NavLink to="/admin" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Админ-панель</NavLink>
+                            )}
+                            <div style={{ padding: '10px 12px' }}>
+                                <ContextSwitcher />
+                            </div>
+                            <button onClick={() => { setMobileNavOpen(false); handleLogout(); }} style={{
+                                textAlign: 'left', padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)',
+                                background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                            }}>Выйти</button>
+                        </>
+                    ) : (
+                        <NavLink to="/login" onClick={() => setMobileNavOpen(false)} style={{
+                            display: 'flex', alignItems: 'center', gap: 6, padding: '10px 12px',
+                            border: '1px solid var(--brand-navy)', borderRadius: 'var(--r-3)',
+                            color: 'var(--brand-navy)', fontSize: 'var(--text-md)', fontWeight: 500,
+                        }}>
+                            <UserIcon /> Войти
+                        </NavLink>
+                    )}
+                    <div style={{ height: 1, background: 'var(--line-1)', margin: '8px 0' }} />
+                    <span style={{ padding: '10px 12px', fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
+                        <span style={{ color: 'var(--brand-green)', fontWeight: 600 }}>●</span>{' '}
+                        {(availableCount ?? 12480).toLocaleString('ru-RU')} товаров в наличии
+                    </span>
+                    <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <PinIcon /> <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>{company.address.full}</span>
+                    </div>
+                </div>
+            </Drawer>
+
+            <div style={{ height: isMobile ? HEADER_TOTAL_MOBILE : HEADER_TOTAL }} />
 
             <main style={{ flex: 1, maxWidth: 'var(--page-max-w)', margin: '0 auto', width: '100%', padding: '0 var(--page-pad-x)' }}>
                 <AnimatePresence mode="wait" initial={false}>
