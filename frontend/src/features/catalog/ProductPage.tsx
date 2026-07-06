@@ -84,7 +84,9 @@ const ProductPage = () => {
         return [parentAsVariant, ...children];
     }, [product]);
 
-    const activeStock = product?.stockQuantity ?? 0;
+    const activeStock = hasVariants
+        ? activeVariants.reduce((sum, v) => sum + v.stockQuantity, 0)
+        : product?.stockQuantity ?? 0;
     const displayPrice = useDisplayPrice({ price: product?.price ?? 0, wholesalePrice: product?.wholesalePrice ?? null });
 
     const setVariantQty = (variantId: number, qty: number) =>

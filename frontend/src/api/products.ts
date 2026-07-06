@@ -43,6 +43,12 @@ export const searchProducts = async (query: string): Promise<Product[]> => {
     return data;
 };
 
+/** Получить количество товаров в наличии (публичный эндпоинт) */
+export const getAvailableProductsCount = async (): Promise<number> => {
+    const { data } = await apiClient.get<{ count: number }>('/v1/products/count-available');
+    return data.count;
+};
+
 /** Получить все товары включая неактивные (для админки) */
 export const getAdminProducts = async (params: GetProductsParams = {}): Promise<Page<Product>> => {
     const { page = 0, size = 20, sort = 'name,asc', categoryId, isActive } = params;

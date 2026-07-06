@@ -4,6 +4,8 @@ import { company } from '@/config/company';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
+import { getAvailableProductsCount } from '@/api/products';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { useFavouritesStore } from '@/store/favouritesStore';
@@ -62,16 +64,6 @@ const PinIcon = () => (
 const MenuIcon = () => (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
         <path d="M4 7h16M4 12h16M4 17h16"/>
-    </svg>
-);
-const ChevDownIcon = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m6 9 6 6 6-6"/>
-    </svg>
-);
-const DownloadIcon = () => (
-    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>
     </svg>
 );
 
@@ -182,6 +174,12 @@ const ClientLayout = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const prevIndexRef = useRef(getPageIndex(location.pathname));
 
+    const { data: availableCount } = useQuery({
+        queryKey: ['products', 'count-available'],
+        queryFn: getAvailableProductsCount,
+        staleTime: 5 * 60 * 1000,
+    });
+
     useEffect(() => {
         if (isAuthenticated) {
             fetchCart();
@@ -214,28 +212,6 @@ const ClientLayout = () => {
         { key: 'logout', label: 'Выйти', onClick: handleLogout },
     ];
 
-    const isActive = (path: string) => location.pathname === path;
-
-    const navLink = (path: string, label: string, hasChev?: boolean) => (
-        <NavLink
-            key={path}
-            to={path}
-            style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                padding: '0 14px', height: '100%', fontSize: 'var(--text-md)', fontWeight: 500,
-                color: isActive(path) ? 'var(--brand-red)' : 'var(--ink-1)',
-                borderBottom: isActive(path) ? '2px solid var(--brand-red)' : '2px solid transparent',
-                marginBottom: -1, cursor: 'pointer', textDecoration: 'none',
-                transition: 'color 0.12s',
-            }}
-            onMouseEnter={(e) => { if (!isActive(path)) (e.currentTarget as HTMLElement).style.color = 'var(--brand-navy)'; }}
-            onMouseLeave={(e) => { if (!isActive(path)) (e.currentTarget as HTMLElement).style.color = 'var(--ink-1)'; }}
-        >
-            {label}
-            {hasChev && <ChevDownIcon />}
-        </NavLink>
-    );
-
     return (
         <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
             <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 'var(--z-header)' as any }}>
@@ -254,9 +230,6 @@ const ClientLayout = () => {
                     <div style={{ flex: 1 }} />
                     <NavLink to="/about" style={{ opacity: 0.85, color: 'inherit' }}>О компании</NavLink>
                     <NavLink to="/contacts" style={{ opacity: 0.85, color: 'inherit' }}>Контакты</NavLink>
-                    <a style={{ opacity: 0.85, cursor: 'pointer', color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        Прайс-листы <DownloadIcon />
-                    </a>
                     <span style={{ opacity: 0.35 }}>·</span>
                     <a style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#fff', cursor: 'pointer', textDecoration: 'none' }}>
                         <PhoneIcon /> {company.phone.free}
@@ -396,8 +369,6 @@ const ClientLayout = () => {
                     >
                         <MenuIcon /> Каталог товаров
                     </NavLink>
-                    {navLink('/about', 'О компании')}
-                    {navLink('/contacts', 'Контакты')}
                     <a style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4,
                         padding: '0 14px', height: '100%', fontSize: 'var(--text-md)', fontWeight: 500,
@@ -408,7 +379,7 @@ const ClientLayout = () => {
                     <div style={{ flex: 1 }} />
                     <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
                         <span style={{ color: 'var(--brand-green)', fontWeight: 600 }}>●</span>{' '}
-                        12 480 товаров в наличии · отгрузка от 1 часа
+                        {(availableCount ?? 12480).toLocaleString('ru-RU')} товаров в наличии · отгрузка от 1 часа
                     </span>
                 </div>
             </header>
