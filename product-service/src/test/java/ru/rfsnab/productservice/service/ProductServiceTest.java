@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import ru.rfsnab.productservice.exception.BusinessException;
 import ru.rfsnab.productservice.exception.CategoryNotFoundException;
 import ru.rfsnab.productservice.exception.ProductNotFoundException;
@@ -416,15 +417,17 @@ class ProductServiceTest {
     class GetProductsByCategoryPageTests {
 
         @Test
-        @DisplayName("для листовой категории фильтрует только по её id")
+        @DisplayName("для листовой категории фильтрует только по её id и добавляет тайбрейкер id к сортировке")
         void getProductsByCategoryPage_LeafCategory_FiltersBySingleId() {
             // Given
-            Pageable pageable = PageRequest.of(0, 20);
-            Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 1);
+            Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "displayOrder"));
+            Pageable expectedPageable = PageRequest.of(0, 20,
+                    Sort.by(Sort.Direction.ASC, "displayOrder").and(Sort.by(Sort.Direction.ASC, "id")));
+            Page<Product> page = new PageImpl<>(List.of(testProduct), expectedPageable, 1);
 
             when(categoryRepository.existsById(1L)).thenReturn(true);
             when(categoryService.getSubtreeCategoryIds(1L)).thenReturn(List.of(1L));
-            when(productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(List.of(1L), pageable))
+            when(productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(List.of(1L), expectedPageable))
                     .thenReturn(page);
 
             // When
@@ -432,7 +435,7 @@ class ProductServiceTest {
 
             // Then
             assertThat(result.getContent()).containsExactly(testProduct);
-            verify(productRepository).findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(List.of(1L), pageable);
+            verify(productRepository).findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(List.of(1L), expectedPageable);
         }
 
         @Test
@@ -440,12 +443,13 @@ class ProductServiceTest {
         void getProductsByCategoryPage_ParentCategory_FiltersBySubtreeIds() {
             // Given
             Pageable pageable = PageRequest.of(0, 20);
+            Pageable expectedPageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "id"));
             List<Long> subtreeIds = List.of(5L, 6L, 7L);
-            Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 1);
+            Page<Product> page = new PageImpl<>(List.of(testProduct), expectedPageable, 1);
 
             when(categoryRepository.existsById(5L)).thenReturn(true);
             when(categoryService.getSubtreeCategoryIds(5L)).thenReturn(subtreeIds);
-            when(productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(subtreeIds, pageable))
+            when(productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(subtreeIds, expectedPageable))
                     .thenReturn(page);
 
             // When
@@ -453,7 +457,7 @@ class ProductServiceTest {
 
             // Then
             assertThat(result.getContent()).hasSize(1);
-            verify(productRepository).findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(subtreeIds, pageable);
+            verify(productRepository).findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(subtreeIds, expectedPageable);
         }
 
         @Test

@@ -11,14 +11,16 @@ interface GetProductsParams {
 
 /** Получить товары с пагинацией */
 export const getProducts = async (params: GetProductsParams = {}): Promise<Page<Product>> => {
-    const { page = 0, size = 20, sort = 'createdAt,desc', categoryId } = params;
+    // sort не подставляем по умолчанию: без него бэкенд сортирует категорию
+    // по displayOrder (порядок из админки), общий список — по createdAt desc
+    const { page = 0, size = 20, sort, categoryId } = params;
 
     const url = categoryId
         ? `/v1/products/category/${categoryId}`
         : '/v1/products';
 
     const { data } = await apiClient.get<Page<Product>>(url, {
-        params: { page, size, sort },
+        params: sort ? { page, size, sort } : { page, size },
     });
     return data;
 };

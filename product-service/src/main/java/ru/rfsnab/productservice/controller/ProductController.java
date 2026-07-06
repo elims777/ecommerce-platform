@@ -106,7 +106,7 @@ public class ProductController {
     @GetMapping("/category/{categoryId}")
     public ResponseEntity<Page<ProductResponse>> getProductsByCategory(
             @PathVariable Long categoryId,
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @PageableDefault(size = 20, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable pageable
             ){
         Page<Product> products = productService.getProductsByCategoryPage(categoryId, pageable);
         var parentIds = productService.findParentIdsWithActiveChildren(

@@ -3,7 +3,9 @@ package ru.rfsnab.productservice.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.productservice.exception.BusinessException;
@@ -185,6 +187,7 @@ public class ProductService {
     }
 
     public Page<Product> getAllProductsAdminPage(Long categoryId, Boolean isActive, Pageable pageable) {
+        pageable = withIdTiebreaker(pageable);
         if (categoryId != null) {
             if (!categoryRepository.existsById(categoryId)) {
                 throw new CategoryNotFoundException(categoryId);
@@ -207,7 +210,17 @@ public class ProductService {
             throw new CategoryNotFoundException(categoryId);
         }
         List<Long> categoryIds = categoryService.getSubtreeCategoryIds(categoryId);
-        return productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(categoryIds, pageable);
+        return productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(categoryIds, withIdTiebreaker(pageable));
+    }
+
+    /**
+     * Сортировка по displayOrder/name неуникальна (дубли значений) — без тайбрейкера
+     * порядок строк между страницами недетерминирован: строка может пропасть из выдачи
+     * или задублироваться на соседних страницах.
+     */
+    private static Pageable withIdTiebreaker(Pageable pageable) {
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                pageable.getSort().and(Sort.by(Sort.Direction.ASC, "id")));
     }
 
     /**
