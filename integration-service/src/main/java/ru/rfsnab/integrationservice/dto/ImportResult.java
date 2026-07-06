@@ -9,6 +9,7 @@ public record ImportResult(
         int totalItems,
         int createdCount,
         int updatedCount,
+        int unchangedCount,
         int failedCount,
         List<String> errors
 ) {

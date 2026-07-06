@@ -25,6 +25,7 @@ import java.util.Set;
 public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService;
     private final SlugGeneratorService slugGenerator;
 
     /***
@@ -34,6 +35,15 @@ public class ProductService {
      */
     public long countByCategoryId(Long parentId){
         return productRepository.countByCategoryId(parentId);
+    }
+
+    /**
+     * Количество активных товаров в наличии (эффективный остаток > 0:
+     * собственный stock + stock активных дочерних вариантов)
+     */
+    @Transactional(readOnly = true)
+    public long countAvailableProducts() {
+        return productRepository.countAvailableProducts();
     }
 
     /**
@@ -144,9 +154,9 @@ public class ProductService {
     /**
      * Поиск товаров по названию
      */
-    public List<Product> searchProducts(String query) {
+    public Page<Product> searchProducts(String query, Pageable pageable) {
         log.debug("Searching products with query: {}", query);
-        return productRepository.searchByName(query);
+        return productRepository.searchByName(query, pageable);
     }
 
     /**
@@ -189,13 +199,15 @@ public class ProductService {
     }
 
     /**
-     * Пагинация товаров по категории
+     * Пагинация товаров по категории (включая товары всех подкатегорий поддерева,
+     * т.к. товары привязываются только к листовым категориям)
      */
     public Page<Product> getProductsByCategoryPage(Long categoryId, Pageable pageable) {
         if (!categoryRepository.existsById(categoryId)) {
             throw new CategoryNotFoundException(categoryId);
         }
-        return productRepository.findByCategoryIdAndIsActiveTrueAndIsVariantChildFalse(categoryId, pageable);
+        List<Long> categoryIds = categoryService.getSubtreeCategoryIds(categoryId);
+        return productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(categoryIds, pageable);
     }
 
     /**

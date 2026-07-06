@@ -289,7 +289,7 @@ const AdminCatalogPage = () => {
 
     const { data: searchResults } = useQuery({
         queryKey: ['adminProductSearch', searchQuery],
-        queryFn: () => searchProducts(searchQuery),
+        queryFn: async () => (await searchProducts(searchQuery, 0, 1000)).content,
         enabled: searchQuery.length >= 2,
     });
 

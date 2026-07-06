@@ -8,6 +8,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.rfsnab.productservice.dto.AvailableCountResponse;
 import ru.rfsnab.productservice.dto.ProductRequest;
 import ru.rfsnab.productservice.dto.ProductResponse;
 import ru.rfsnab.productservice.mapper.ProductMapper;
@@ -114,12 +115,22 @@ public class ProductController {
     }
 
     /**
+     * Количество активных товаров в наличии (для счётчика на главной странице)
+     */
+    @GetMapping("/count-available")
+    public ResponseEntity<AvailableCountResponse> countAvailableProducts() {
+        return ResponseEntity.ok(new AvailableCountResponse(productService.countAvailableProducts()));
+    }
+
+    /**
      * Поиск товаров по названию
      */
     @GetMapping("/search")
-    public ResponseEntity<List<ProductResponse>> searchProducts(@RequestParam String query){
-        List<Product> products = productService.searchProducts(query);
-        return ResponseEntity.ok(products.stream().map(ProductMapper::mapToResponse).toList());
+    public ResponseEntity<Page<ProductResponse>> searchProducts(
+            @RequestParam String query,
+            @PageableDefault(size = 20) Pageable pageable){
+        Page<Product> products = productService.searchProducts(query, pageable);
+        return ResponseEntity.ok(products.map(ProductMapper::mapToResponse));
     }
 
     /**

@@ -41,6 +41,9 @@ class ProductServiceTest {
     private CategoryRepository categoryRepository;
 
     @Mock
+    private CategoryService categoryService;
+
+    @Mock
     private SlugGeneratorService slugGenerator;
 
     @InjectMocks
@@ -325,17 +328,54 @@ class ProductServiceTest {
     class SearchQueryTests {
 
         @Test
-        @DisplayName("searchProducts() возвращает результаты поиска")
-        void searchProducts_ReturnsResults() {
+        @DisplayName("searchProducts() возвращает страницу результатов поиска")
+        void searchProducts_ReturnsPageOfResults() {
             // Given
-            when(productRepository.searchByName("огне")).thenReturn(List.of(testProduct));
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 1);
+            when(productRepository.searchByName("огне", pageable)).thenReturn(page);
 
             // When
-            List<Product> results = productService.searchProducts("огне");
+            Page<Product> results = productService.searchProducts("огне", pageable);
 
             // Then
-            assertThat(results).hasSize(1);
-            assertThat(results.get(0).getName()).contains("Огнетушитель");
+            assertThat(results.getContent()).hasSize(1);
+            assertThat(results.getContent().get(0).getName()).contains("Огнетушитель");
+            assertThat(results.getTotalElements()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("searchProducts() возвращает пустую страницу, если ничего не найдено")
+        void searchProducts_NoMatches_ReturnsEmptyPage() {
+            // Given
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<Product> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+            when(productRepository.searchByName("несуществующий", pageable)).thenReturn(emptyPage);
+
+            // When
+            Page<Product> results = productService.searchProducts("несуществующий", pageable);
+
+            // Then
+            assertThat(results.getContent()).isEmpty();
+            assertThat(results.getTotalElements()).isEqualTo(0);
+            assertThat(results.getTotalPages()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("searchProducts() возвращает вторую страницу результатов")
+        void searchProducts_SecondPage_ReturnsCorrectPage() {
+            // Given
+            Pageable pageable = PageRequest.of(1, 1);
+            Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 2);
+            when(productRepository.searchByName("огне", pageable)).thenReturn(page);
+
+            // When
+            Page<Product> results = productService.searchProducts("огне", pageable);
+
+            // Then
+            assertThat(results.getNumber()).isEqualTo(1);
+            assertThat(results.getTotalPages()).isEqualTo(2);
+            assertThat(results.getTotalElements()).isEqualTo(2);
         }
 
         @Test
@@ -366,6 +406,86 @@ class ProductServiceTest {
             // Then
             assertThat(result.getContent()).hasSize(1);
             assertThat(result.getTotalElements()).isEqualTo(1);
+        }
+    }
+
+    // ==================== getProductsByCategoryPage() Tests ====================
+
+    @Nested
+    @DisplayName("getProductsByCategoryPage()")
+    class GetProductsByCategoryPageTests {
+
+        @Test
+        @DisplayName("для листовой категории фильтрует только по её id")
+        void getProductsByCategoryPage_LeafCategory_FiltersBySingleId() {
+            // Given
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 1);
+
+            when(categoryRepository.existsById(1L)).thenReturn(true);
+            when(categoryService.getSubtreeCategoryIds(1L)).thenReturn(List.of(1L));
+            when(productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(List.of(1L), pageable))
+                    .thenReturn(page);
+
+            // When
+            Page<Product> result = productService.getProductsByCategoryPage(1L, pageable);
+
+            // Then
+            assertThat(result.getContent()).containsExactly(testProduct);
+            verify(productRepository).findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(List.of(1L), pageable);
+        }
+
+        @Test
+        @DisplayName("для родительской категории возвращает товары всего поддерева")
+        void getProductsByCategoryPage_ParentCategory_FiltersBySubtreeIds() {
+            // Given
+            Pageable pageable = PageRequest.of(0, 20);
+            List<Long> subtreeIds = List.of(5L, 6L, 7L);
+            Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 1);
+
+            when(categoryRepository.existsById(5L)).thenReturn(true);
+            when(categoryService.getSubtreeCategoryIds(5L)).thenReturn(subtreeIds);
+            when(productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(subtreeIds, pageable))
+                    .thenReturn(page);
+
+            // When
+            Page<Product> result = productService.getProductsByCategoryPage(5L, pageable);
+
+            // Then
+            assertThat(result.getContent()).hasSize(1);
+            verify(productRepository).findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(subtreeIds, pageable);
+        }
+
+        @Test
+        @DisplayName("выбрасывает исключение для несуществующей категории")
+        void getProductsByCategoryPage_CategoryNotFound_ThrowsException() {
+            // Given
+            Pageable pageable = PageRequest.of(0, 20);
+            when(categoryRepository.existsById(999L)).thenReturn(false);
+
+            // When & Then
+            assertThatThrownBy(() -> productService.getProductsByCategoryPage(999L, pageable))
+                    .isInstanceOf(CategoryNotFoundException.class);
+        }
+    }
+
+    // ==================== countAvailableProducts() Tests ====================
+
+    @Nested
+    @DisplayName("countAvailableProducts()")
+    class CountAvailableProductsTests {
+
+        @Test
+        @DisplayName("возвращает количество активных товаров с положительным эффективным остатком")
+        void countAvailableProducts_ReturnsCount() {
+            // Given
+            when(productRepository.countAvailableProducts()).thenReturn(3300L);
+
+            // When
+            long result = productService.countAvailableProducts();
+
+            // Then
+            assertThat(result).isEqualTo(3300L);
         }
     }
 

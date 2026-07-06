@@ -61,3 +61,6 @@ ARCHITECTURE.md
 
 # graphify — графы знаний и иерархическая визуализация (локальные артефакты)
 graphify-out/
+
+# MCP-конфиг локальной сессии Claude Code
+.mcp.json

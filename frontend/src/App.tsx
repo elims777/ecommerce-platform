@@ -39,6 +39,7 @@ const LogisticsPage = lazy(() => import('@/features/admin/LogisticsPage'));
 const FavouritesPage = lazy(() => import('@/features/favourites/FavouritesPage'));
 const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage'));
 const OAuth2SuccessPage = lazy(() => import('@/pages/OAuth2SuccessPage'));
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 const antTheme = {
   token: {
@@ -132,6 +133,8 @@ const AppRoutes = () => {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/favourites" element={<FavouritesPage />} />
             </Route>
+
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
 
           <Route element={<ProtectedRoute adminOnly />}>

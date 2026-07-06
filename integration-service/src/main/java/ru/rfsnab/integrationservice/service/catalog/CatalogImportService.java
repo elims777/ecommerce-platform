@@ -98,7 +98,7 @@ public class CatalogImportService {
             if (products.isEmpty()) {
                 log.warn("import.xml не содержит товаров. Session: {}", sessionId);
                 saveImportLog(sessionId, "CATALOG", ImportStatus.SUCCESS,
-                        0, 0, 0, 0, null, startedAt);
+                        0, 0, 0, 0, 0, null, startedAt);
                 return "success";
             }
 
@@ -131,12 +131,12 @@ public class CatalogImportService {
             // 5. Log
             ImportStatus status = resolveStatus(result);
             ImportLog logEntry = saveImportLog(sessionId, "CATALOG", status, result.totalItems(),
-                    result.createdCount(), result.updatedCount(), result.failedCount(),
+                    result.createdCount(), result.updatedCount(), result.unchangedCount(), result.failedCount(),
                     result.errors().isEmpty() ? null : String.join("; ", result.errors()),
                     startedAt);
 
-            log.info("Импорт завершён. Status: {}, created: {}, updated: {}, failed: {}. Session: {}",
-                    status, result.createdCount(), result.updatedCount(), result.failedCount(), sessionId);
+            log.info("Импорт завершён. Status: {}, created: {}, updated: {}, unchanged: {}, failed: {}. Session: {}",
+                    status, result.createdCount(), result.updatedCount(), result.unchangedCount(), result.failedCount(), sessionId);
 
             // 6. Ожидание картинок в отдельном virtual thread (не блокирует ответ 1С)
             if (enqueuedImages > 0 && logEntry != null) {
@@ -151,7 +151,7 @@ public class CatalogImportService {
         } catch (Exception e) {
             log.error("Критическая ошибка импорта каталога. Session: {}", sessionId, e);
             saveImportLog(sessionId, "CATALOG", ImportStatus.FAILED,
-                    0, 0, 0, 0, e.getMessage(), startedAt);
+                    0, 0, 0, 0, 0, e.getMessage(), startedAt);
             return "failure\n" + e.getMessage();
         }
     }
@@ -446,6 +446,7 @@ public class CatalogImportService {
         int totalItems = 0;
         int createdCount = 0;
         int updatedCount = 0;
+        int unchangedCount = 0;
         int failedCount = 0;
         List<String> allErrors = new ArrayList<>();
 
@@ -455,6 +456,7 @@ public class CatalogImportService {
                 totalItems += response.getTotalReceived();
                 createdCount += response.getCreated();
                 updatedCount += response.getUpdated();
+                unchangedCount += response.getUnchanged();
                 failedCount += response.getFailed();
                 if (response.getErrors() != null) {
                     allErrors.addAll(response.getErrors());
@@ -465,7 +467,7 @@ public class CatalogImportService {
             }
         }
 
-        return new ImportResult(totalItems, createdCount, updatedCount, failedCount, allErrors);
+        return new ImportResult(totalItems, createdCount, updatedCount, unchangedCount, failedCount, allErrors);
     }
 
     // ==================== Image Tasks ====================
@@ -547,7 +549,7 @@ public class CatalogImportService {
     }
 
     private ImportLog saveImportLog(String sessionId, String exchangeType, ImportStatus status,
-                                    int totalItems, int createdCount, int updatedCount,
+                                    int totalItems, int createdCount, int updatedCount, int unchangedCount,
                                     int failedCount, String errorMessage,
                                     LocalDateTime startedAt) {
         try {
@@ -561,6 +563,7 @@ public class CatalogImportService {
                     .totalReceived(totalItems)
                     .created(createdCount)
                     .updated(updatedCount)
+                    .unchanged(unchangedCount)
                     .failed(failedCount)
                     .durationMs(durationMs)
                     .errorMessage(errorMessage)

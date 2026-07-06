@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Product, ProductImage, ProductAttribute } from '@/types/product';
+import type { Product, ProductImage, ProductAttribute, Page } from '@/types/product';
 
 /** Запрос на создание/обновление товара */
 export interface ProductRequest {
@@ -131,8 +131,8 @@ export const setParentProduct = async (id: number, parentProductId: number | nul
 
 /** Поиск товаров по имени (для выбора родителя) */
 export const searchProducts = async (query: string): Promise<Product[]> => {
-    const { data } = await apiClient.get<Product[]>('/v1/products/search', { params: { query } });
-    return data;
+    const { data } = await apiClient.get<Page<Product>>('/v1/products/search', { params: { query, size: 20 } });
+    return data.content;
 };
 
 /** Массовая активация/деактивация товаров */

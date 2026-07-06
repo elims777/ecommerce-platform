@@ -398,6 +398,64 @@ class CategoryServiceTest {
         }
     }
 
+    // ==================== getSubtreeCategoryIds() Tests ====================
+
+    @Nested
+    @DisplayName("getSubtreeCategoryIds()")
+    class GetSubtreeCategoryIdsTests {
+
+        @Test
+        @DisplayName("для листовой категории возвращает только её id")
+        void getSubtreeCategoryIds_LeafCategory_ReturnsOwnIdOnly() {
+            // Given
+            when(categoryRepository.findAll()).thenReturn(List.of(rootCategory, childCategory));
+            categoryService.refreshCategoryTree();
+
+            // When
+            List<Long> ids = categoryService.getSubtreeCategoryIds(2L);
+
+            // Then
+            assertThat(ids).containsExactly(2L);
+        }
+
+        @Test
+        @DisplayName("для родительской категории возвращает id всех потомков и себя")
+        void getSubtreeCategoryIds_ParentCategory_ReturnsSelfAndDescendants() {
+            // Given
+            Category grandChild = Category.builder()
+                    .id(3L)
+                    .name("Ватники")
+                    .slug("vatniki")
+                    .isActive(true)
+                    .displayOrder(1)
+                    .parent(childCategory)
+                    .build();
+
+            when(categoryRepository.findAll()).thenReturn(List.of(rootCategory, childCategory, grandChild));
+            categoryService.refreshCategoryTree();
+
+            // When
+            List<Long> ids = categoryService.getSubtreeCategoryIds(1L);
+
+            // Then
+            assertThat(ids).containsExactlyInAnyOrder(1L, 2L, 3L);
+        }
+
+        @Test
+        @DisplayName("для неизвестной категории возвращает только переданный id")
+        void getSubtreeCategoryIds_UnknownCategory_ReturnsGivenIdOnly() {
+            // Given
+            when(categoryRepository.findAll()).thenReturn(List.of());
+            categoryService.refreshCategoryTree();
+
+            // When
+            List<Long> ids = categoryService.getSubtreeCategoryIds(999L);
+
+            // Then
+            assertThat(ids).containsExactly(999L);
+        }
+    }
+
     // ==================== getCategoryTree() Tests ====================
 
     @Nested

@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react';
 import { Form, Input, App } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { NavLink } from '@/components/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { consumePendingAddToCart } from '@/utils/pendingCart';
+import { getAvailableProductsCount } from '@/api/products';
 import type { LoginRequest } from '@/types/auth';
 import { AxiosError } from 'axios';
 
-const BrandPanel = () => (
+const BrandPanel = () => {
+    const { data: availableCount } = useQuery({
+        queryKey: ['products', 'count-available'],
+        queryFn: getAvailableProductsCount,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    return (
     <div style={{
         background: 'var(--gradient-brand-panel)',
         color: '#fff', padding: 48, position: 'relative', overflow: 'hidden',
@@ -49,7 +58,7 @@ const BrandPanel = () => (
                 Заявки, документы, согласования, ЭДО, история закупок — в одном защищённом аккаунте.
             </p>
             <div style={{ display: 'flex', gap: 28 }}>
-                {[['18 200', 'организаций'], ['12 480', 'товаров'], ['4.9 ★', 'рейтинг']].map(([n, l]) => (
+                {[['18 200', 'организаций'], [(availableCount ?? 12480).toLocaleString('ru-RU'), 'товаров'], ['4.9 ★', 'рейтинг']].map(([n, l]) => (
                     <div key={l}>
                         <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-3xl)', color: '#fff', letterSpacing: '-0.01em' }}>{n}</div>
                         <div style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-60)', marginTop: 2 }}>{l}</div>
@@ -58,7 +67,8 @@ const BrandPanel = () => (
             </div>
         </div>
     </div>
-);
+    );
+};
 
 const LoginPage = () => {
     const [loading, setLoading] = useState(false);
