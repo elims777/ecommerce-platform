@@ -328,17 +328,54 @@ class ProductServiceTest {
     class SearchQueryTests {
 
         @Test
-        @DisplayName("searchProducts() возвращает результаты поиска")
-        void searchProducts_ReturnsResults() {
+        @DisplayName("searchProducts() возвращает страницу результатов поиска")
+        void searchProducts_ReturnsPageOfResults() {
             // Given
-            when(productRepository.searchByName("огне")).thenReturn(List.of(testProduct));
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 1);
+            when(productRepository.searchByName("огне", pageable)).thenReturn(page);
 
             // When
-            List<Product> results = productService.searchProducts("огне");
+            Page<Product> results = productService.searchProducts("огне", pageable);
 
             // Then
-            assertThat(results).hasSize(1);
-            assertThat(results.get(0).getName()).contains("Огнетушитель");
+            assertThat(results.getContent()).hasSize(1);
+            assertThat(results.getContent().get(0).getName()).contains("Огнетушитель");
+            assertThat(results.getTotalElements()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("searchProducts() возвращает пустую страницу, если ничего не найдено")
+        void searchProducts_NoMatches_ReturnsEmptyPage() {
+            // Given
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<Product> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+            when(productRepository.searchByName("несуществующий", pageable)).thenReturn(emptyPage);
+
+            // When
+            Page<Product> results = productService.searchProducts("несуществующий", pageable);
+
+            // Then
+            assertThat(results.getContent()).isEmpty();
+            assertThat(results.getTotalElements()).isEqualTo(0);
+            assertThat(results.getTotalPages()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("searchProducts() возвращает вторую страницу результатов")
+        void searchProducts_SecondPage_ReturnsCorrectPage() {
+            // Given
+            Pageable pageable = PageRequest.of(1, 1);
+            Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 2);
+            when(productRepository.searchByName("огне", pageable)).thenReturn(page);
+
+            // When
+            Page<Product> results = productService.searchProducts("огне", pageable);
+
+            // Then
+            assertThat(results.getNumber()).isEqualTo(1);
+            assertThat(results.getTotalPages()).isEqualTo(2);
+            assertThat(results.getTotalElements()).isEqualTo(2);
         }
 
         @Test

@@ -154,9 +154,9 @@ public class ProductService {
     /**
      * Поиск товаров по названию
      */
-    public List<Product> searchProducts(String query) {
+    public Page<Product> searchProducts(String query, Pageable pageable) {
         log.debug("Searching products with query: {}", query);
-        return productRepository.searchByName(query);
+        return productRepository.searchByName(query, pageable);
     }
 
     /**

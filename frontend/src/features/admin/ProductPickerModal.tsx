@@ -320,7 +320,7 @@ const ProductPickerModal = ({ open, alreadySelected, onConfirm, onClose }: Props
             setLoading(true);
             try {
                 const data = await searchProducts(query.trim());
-                setResults(data);
+                setResults(data.content);
             } finally {
                 setLoading(false);
             }

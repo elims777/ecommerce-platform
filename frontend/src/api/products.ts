@@ -36,9 +36,9 @@ export const getProductBySlug = async (slug: string): Promise<Product> => {
 };
 
 /** Поиск товаров по названию */
-export const searchProducts = async (query: string): Promise<Product[]> => {
-    const { data } = await apiClient.get<Product[]>('/v1/products/search', {
-        params: { query },
+export const searchProducts = async (query: string, page = 0, size = 20): Promise<Page<Product>> => {
+    const { data } = await apiClient.get<Page<Product>>('/v1/products/search', {
+        params: { query, page, size },
     });
     return data;
 };

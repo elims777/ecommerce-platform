@@ -126,9 +126,11 @@ public class ProductController {
      * Поиск товаров по названию
      */
     @GetMapping("/search")
-    public ResponseEntity<List<ProductResponse>> searchProducts(@RequestParam String query){
-        List<Product> products = productService.searchProducts(query);
-        return ResponseEntity.ok(products.stream().map(ProductMapper::mapToResponse).toList());
+    public ResponseEntity<Page<ProductResponse>> searchProducts(
+            @RequestParam String query,
+            @PageableDefault(size = 20) Pageable pageable){
+        Page<Product> products = productService.searchProducts(query, pageable);
+        return ResponseEntity.ok(products.map(ProductMapper::mapToResponse));
     }
 
     /**

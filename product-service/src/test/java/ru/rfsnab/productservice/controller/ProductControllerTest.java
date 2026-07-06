@@ -143,12 +143,48 @@ class ProductControllerTest {
         }
 
         @Test
-        @DisplayName("поиск продуктов работает без авторизации")
+        @DisplayName("поиск продуктов работает без авторизации и возвращает страницу")
         void searchProducts_NoAuth_ReturnsResults() throws Exception {
             mockMvc.perform(get("/api/v1/products/search")
                             .param("query", "огне"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$", hasSize(1)));
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.content[0].name", is("Огнетушитель ОП-4")))
+                    .andExpect(jsonPath("$.totalElements", is(1)))
+                    .andExpect(jsonPath("$.totalPages", is(1)));
+        }
+
+        @Test
+        @DisplayName("поиск без совпадений возвращает пустую страницу")
+        void searchProducts_NoMatches_ReturnsEmptyPage() throws Exception {
+            mockMvc.perform(get("/api/v1/products/search")
+                            .param("query", "несуществующий-товар"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(0)))
+                    .andExpect(jsonPath("$.totalElements", is(0)));
+        }
+
+        @Test
+        @DisplayName("поиск возвращает вторую страницу результатов")
+        void searchProducts_SecondPage_ReturnsRemainingResults() throws Exception {
+            productRepository.save(Product.builder()
+                    .name("Огнетушитель ОП-8")
+                    .slug("ognetushitel-op-8")
+                    .price(new BigDecimal("2000.00"))
+                    .stockQuantity(50)
+                    .isActive(true)
+                    .isFeatured(false)
+                    .category(testCategory)
+                    .build());
+
+            mockMvc.perform(get("/api/v1/products/search")
+                            .param("query", "огне")
+                            .param("page", "1")
+                            .param("size", "1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.totalElements", is(2)))
+                    .andExpect(jsonPath("$.totalPages", is(2)));
         }
     }
 

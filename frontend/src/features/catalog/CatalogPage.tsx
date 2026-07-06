@@ -103,17 +103,7 @@ const CatalogPage = () => {
         queryKey: ['products', { page: currentPage, categoryId, q: searchQuery }],
         queryFn: async () => {
             if (searchQuery) {
-                const results = await searchProducts(searchQuery);
-                return {
-                    content: results,
-                    totalElements: results.length,
-                    totalPages: 1,
-                    number: 0,
-                    size: results.length,
-                    first: true,
-                    last: true,
-                    empty: results.length === 0,
-                };
+                return searchProducts(searchQuery, currentPage - 1);
             }
             return getProducts({ page: currentPage - 1, categoryId });
         },
