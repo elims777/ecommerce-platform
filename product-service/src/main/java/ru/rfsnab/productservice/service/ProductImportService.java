@@ -17,6 +17,7 @@ import ru.rfsnab.productservice.model.ProductAttribute;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -98,6 +99,8 @@ public class ProductImportService {
         try {
             Product product = existingProducts.get(item.getExternalId());
             boolean isNew = (product == null);
+            ProductSnapshot beforeSnapshot = isNew ? null : ProductSnapshot.of(product);
+
             if (isNew) {
                 product = new Product();
                 product.setExternalId(item.getExternalId());
@@ -108,10 +111,10 @@ public class ProductImportService {
                         ? categoryRepository.findById(item.getCategoryId()).orElse(importCategory)
                         : importCategory;
                 product.setCategory(resolvedCategory);
+                product.setSlug(slugService.generateUniqueSlug(item.getName(), reservedSlugs));
             }
 
             product.setName(item.getName());
-            product.setSlug(slugService.generateUniqueSlug(product.getName(), reservedSlugs));
             product.setShortDescription(item.getShortDescription());
             if (item.getDescription() != null) {
                 product.setDescription(item.getDescription());
@@ -142,18 +145,30 @@ public class ProductImportService {
                 product.setStockQuantity(item.getStockQuantity());
             }
 
+            boolean attributesChanged = !isNew && attributesChanged(product, item.getAttributes());
             updateAttributes(product, item.getAttributes());
 
             Product savedProduct = productRepository.save(product);
 
+            boolean childrenChanged = false;
             if (item.getVariants() != null && !item.getVariants().isEmpty()) {
-                upsertChildVariants(savedProduct, item.getVariants(), existingProducts, reservedSlugs, importCategory);
+                childrenChanged = upsertChildVariants(savedProduct, item.getVariants(), existingProducts, reservedSlugs, importCategory);
+            }
+
+            ImportAction action;
+            if (isNew) {
+                action = ImportAction.CREATED;
+            } else {
+                boolean fieldsChanged = !beforeSnapshot.equals(ProductSnapshot.of(savedProduct));
+                action = (fieldsChanged || attributesChanged || childrenChanged)
+                        ? ImportAction.UPDATED
+                        : ImportAction.UNCHANGED;
             }
 
             return ImportItemResult.builder()
                     .externalId(item.getExternalId())
                     .productId(savedProduct.getId())
-                    .action(isNew ? ImportAction.CREATED : ImportAction.UPDATED)
+                    .action(action)
                     .success(true)
                     .build();
         } catch (Exception e) {
@@ -169,8 +184,11 @@ public class ProductImportService {
     /**
      * Создаёт или обновляет варианты как дочерние записи Product.
      * Матчинг по externalId варианта. Новые создаются с isVariantChild=true.
+     *
+     * @return true, если хотя бы один вариант был создан или реально изменён
+     *         (используется для честного счётчика "обновлено" родительского товара)
      */
-    private void upsertChildVariants(Product parent,
+    private boolean upsertChildVariants(Product parent,
                                      List<ProductImportItem.VariantImportItem> variantItems,
                                      Map<String, Product> existingProducts,
                                      Set<String> reservedSlugs,
@@ -185,11 +203,15 @@ public class ProductImportService {
                 : productRepository.findByExternalIdIn(externalIds).stream()
                         .collect(Collectors.toMap(Product::getExternalId, Function.identity()));
 
+        boolean anyChanged = false;
+
         for (ProductImportItem.VariantImportItem vi : variantItems) {
             if (vi.getExternalId() == null) continue;
 
             Product child = existingChildren.get(vi.getExternalId());
             boolean isNew = (child == null);
+            ProductSnapshot beforeSnapshot = isNew ? null : ProductSnapshot.of(child);
+
             if (isNew) {
                 child = new Product();
                 child.setExternalId(vi.getExternalId());
@@ -213,15 +235,22 @@ public class ProductImportService {
             if (vi.getBarcode() != null) child.setBarcode(vi.getBarcode());
             if (vi.getCountryOfOrigin() != null) child.setCountryOfOrigin(vi.getCountryOfOrigin());
 
-            if (vi.getAttributes() != null && !vi.getAttributes().isEmpty()) {
-                List<ProductImportItem.ProductAttributeImportItem> attrs = vi.getAttributes().entrySet().stream()
-                        .map(e -> new ProductImportItem.ProductAttributeImportItem(e.getKey(), e.getValue()))
-                        .toList();
-                updateAttributes(child, attrs);
-            }
+            List<ProductImportItem.ProductAttributeImportItem> attrs = (vi.getAttributes() != null && !vi.getAttributes().isEmpty())
+                    ? vi.getAttributes().entrySet().stream()
+                            .map(e -> new ProductImportItem.ProductAttributeImportItem(e.getKey(), e.getValue()))
+                            .toList()
+                    : null;
+            boolean attributesChanged = !isNew && attributesChanged(child, attrs);
+            updateAttributes(child, attrs);
 
-            productRepository.save(child);
+            Product savedChild = productRepository.save(child);
+
+            if (isNew || attributesChanged || !beforeSnapshot.equals(ProductSnapshot.of(savedChild))) {
+                anyChanged = true;
+            }
         }
+
+        return anyChanged;
     }
 
     private Map<String, Product> loadExistingProducts(List<ProductImportItem> items) {
@@ -247,12 +276,80 @@ public class ProductImportService {
         }
     }
 
+    /**
+     * Сравнивает текущие атрибуты товара с атрибутами из импорта по значению (имя+значение),
+     * не по identity — иначе updateAttributes() (clear + пересоздание) всегда бы считался изменением.
+     * Если attrItems==null/пусто — updateAttributes() ничего не делает, значит изменений нет.
+     */
+    private boolean attributesChanged(Product product, List<ProductImportItem.ProductAttributeImportItem> attrItems) {
+        if (attrItems == null || attrItems.isEmpty()) {
+            return false;
+        }
+        Set<String> currentPairs = product.getAttributes().stream()
+                .map(a -> a.getAttributeName() + " " + a.getAttributeValue())
+                .collect(Collectors.toSet());
+        Set<String> newPairs = attrItems.stream()
+                .map(a -> a.getName() + " " + a.getValue())
+                .collect(Collectors.toSet());
+        return !currentPairs.equals(newPairs);
+    }
+
+    /**
+     * Снимок значимых полей товара, маппящихся из импорта (1С/ФТК).
+     * Используется для честного счётчика "обновлено": если снимок до и после
+     * применения импортируемых данных совпадает — товар не менялся (UNCHANGED).
+     * Slug сознательно не входит в сравнение.
+     */
+    private record ProductSnapshot(
+            String name,
+            String shortDescription,
+            String description,
+            String material,
+            String externalCode,
+            String sku,
+            String unitOfMeasure,
+            Integer vatRate,
+            String source,
+            String barcode,
+            String countryOfOrigin,
+            BigDecimal price,
+            BigDecimal wholesalePrice,
+            Integer stockQuantity,
+            Long categoryId
+    ) {
+        static ProductSnapshot of(Product p) {
+            return new ProductSnapshot(
+                    p.getName(),
+                    p.getShortDescription(),
+                    p.getDescription(),
+                    p.getMaterial(),
+                    p.getExternalCode(),
+                    p.getSku(),
+                    p.getUnitOfMeasure(),
+                    p.getVatRate(),
+                    p.getSource(),
+                    p.getBarcode(),
+                    p.getCountryOfOrigin(),
+                    normalize(p.getPrice()),
+                    normalize(p.getWholesalePrice()),
+                    p.getStockQuantity(),
+                    p.getCategory() != null ? p.getCategory().getId() : null
+            );
+        }
+
+        // BigDecimal.equals() чувствителен к scale (8000 != 8000.00) — нормализуем перед сравнением
+        private static BigDecimal normalize(BigDecimal value) {
+            return value != null ? value.stripTrailingZeros() : null;
+        }
+    }
+
     private BatchProductImportResponse buildResponse(int totalReceived, List<ImportItemResult> results) {
-        int created = 0, updated = 0, failed = 0;
+        int created = 0, updated = 0, unchanged = 0, failed = 0;
         for (ImportItemResult result : results) {
             switch (result.getAction()) {
                 case CREATED -> created++;
                 case UPDATED -> updated++;
+                case UNCHANGED -> unchanged++;
                 case FAILED -> failed++;
             }
         }
@@ -260,6 +357,7 @@ public class ProductImportService {
                 .totalReceived(totalReceived)
                 .created(created)
                 .updated(updated)
+                .unchanged(unchanged)
                 .failed(failed)
                 .results(results)
                 .build();

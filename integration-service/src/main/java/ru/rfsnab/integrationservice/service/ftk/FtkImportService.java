@@ -191,8 +191,8 @@ public class FtkImportService {
                     .toList();
 
             BatchImportResult batchResult = sendBatch(dtos);
-            log.info("ФТК batch-импорт: created={}, updated={}, failed={}",
-                    batchResult.created(), batchResult.updated(), batchResult.failed());
+            log.info("ФТК batch-импорт: created={}, updated={}, unchanged={}, failed={}",
+                    batchResult.created(), batchResult.updated(), batchResult.unchanged(), batchResult.failed());
 
             // 9. Изображения — все картинки каждого товара, кроме уже загруженных ранее
             List<String> externalIdsWithImages = limited.stream()
@@ -222,7 +222,7 @@ public class FtkImportService {
             log.info("ФТК изображения: ok={}, failed={}, skipped={}", imagesOk, imagesFailed, imagesSkipped);
 
             FtkImportResult result = new FtkImportResult(limited.size(), batchResult.created(),
-                    batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed, imagesSkipped);
+                    batchResult.updated(), batchResult.unchanged(), batchResult.failed(), imagesOk, imagesFailed, imagesSkipped);
             saveFtkLog(logEntry, startedAt, resumeAttempts, result, null);
             return result;
 
@@ -258,8 +258,8 @@ public class FtkImportService {
                     .toList();
 
             BatchImportResult batchResult = sendBatch(importItems);
-            log.info("ФТК XLS batch-импорт: created={}, updated={}, failed={}",
-                    batchResult.created(), batchResult.updated(), batchResult.failed());
+            log.info("ФТК XLS batch-импорт: created={}, updated={}, unchanged={}, failed={}",
+                    batchResult.created(), batchResult.updated(), batchResult.unchanged(), batchResult.failed());
 
             int imagesOk = 0, imagesFailed = 0;
             for (FtkProduct p : products) {
@@ -271,7 +271,7 @@ public class FtkImportService {
             }
 
             FtkImportResult result = new FtkImportResult(products.size(), batchResult.created(),
-                    batchResult.updated(), batchResult.failed(), imagesOk, imagesFailed, 0);
+                    batchResult.updated(), batchResult.unchanged(), batchResult.failed(), imagesOk, imagesFailed, 0);
             saveFtkLog(null, startedAt, 0, result, null);
             return result;
 
@@ -355,10 +355,10 @@ public class FtkImportService {
     // ══════════════════════════════════════════════════════════════
 
     private BatchImportResult sendBatch(List<ProductImportItemDto> items) {
-        if (items.isEmpty()) return new BatchImportResult(0, 0, 0);
+        if (items.isEmpty()) return new BatchImportResult(0, 0, 0, 0);
 
         int chunkSize = properties.getImportConfig().getChunkSize();
-        int created = 0, updated = 0, failed = 0;
+        int created = 0, updated = 0, unchanged = 0, failed = 0;
 
         for (int i = 0; i < items.size(); i += chunkSize) {
             List<ProductImportItemDto> chunk = items.subList(i, Math.min(i + chunkSize, items.size()));
@@ -370,6 +370,7 @@ public class FtkImportService {
                 if (body != null) {
                     created += body.getCreated();
                     updated += body.getUpdated();
+                    unchanged += body.getUnchanged();
                     failed  += body.getFailed();
                 }
             } catch (Exception e) {
@@ -378,7 +379,7 @@ public class FtkImportService {
             }
         }
 
-        return new BatchImportResult(created, updated, failed);
+        return new BatchImportResult(created, updated, unchanged, failed);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -436,6 +437,7 @@ public class FtkImportService {
             logEntry.setTotalReceived(result != null ? result.totalProducts() : 0);
             logEntry.setCreated(result != null ? result.created() : 0);
             logEntry.setUpdated(result != null ? result.updated() : 0);
+            logEntry.setUnchanged(result != null ? result.unchanged() : 0);
             logEntry.setFailed(result != null ? result.failed() : 0);
             logEntry.setImagesProcessed(result != null ? result.imagesOk() + result.imagesFailed() : 0);
             logEntry.setImagesFailed(result != null ? result.imagesFailed() : 0);
@@ -452,12 +454,13 @@ public class FtkImportService {
     // Result types
     // ══════════════════════════════════════════════════════════════
 
-    private record BatchImportResult(int created, int updated, int failed) {}
+    private record BatchImportResult(int created, int updated, int unchanged, int failed) {}
 
     public record FtkImportResult(
             int totalProducts,
             int created,
             int updated,
+            int unchanged,
             int failed,
             int imagesOk,
             int imagesFailed,

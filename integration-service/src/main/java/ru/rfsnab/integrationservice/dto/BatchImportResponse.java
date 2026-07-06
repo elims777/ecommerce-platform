@@ -21,6 +21,8 @@ public class BatchImportResponse {
     private int totalReceived;
     private int created;
     private int updated;
+    /** Товары без изменений значимых полей — не считаются как updated */
+    private int unchanged;
     private int failed;
     private List<String> errors = new ArrayList<>();
 }

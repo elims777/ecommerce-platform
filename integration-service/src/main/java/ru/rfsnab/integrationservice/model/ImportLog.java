@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
  * Лог импорта — фиксирует результат каждого запуска обмена.
  * Колонки из V1: exchange_type, total_received, created, updated, failed, duration_ms, error_message, created_at.
  * Колонки из V2: session_id, status, started_at, completed_at.
+ * unchanged — количество записей без изменений значимых полей (честный счётчик "обновлено").
  */
 @Entity
 @Table(name = "import_log")
@@ -61,6 +62,11 @@ public class ImportLog {
     @Column(name = "updated", nullable = false)
     @Builder.Default
     private int updated = 0;
+
+    /** Количество записей без изменений значимых полей (не считаются как updated) */
+    @Column(name = "unchanged", nullable = false)
+    @Builder.Default
+    private int unchanged = 0;
 
     /** Количество ошибок */
     @Column(name = "failed", nullable = false)

@@ -17,6 +17,8 @@ public class BatchProductImportResponse {
     private int totalReceived;
     private int created;
     private int updated;
+    /** Товары без изменений значимых полей — не считаются как updated */
+    private int unchanged;
     private int failed;
     private List<ImportItemResult> results;
 
@@ -35,6 +37,6 @@ public class BatchProductImportResponse {
     }
 
     public enum ImportAction {
-        CREATED, UPDATED, FAILED
+        CREATED, UPDATED, UNCHANGED, FAILED
     }
 }

@@ -318,6 +318,129 @@ class ProductImportControllerTest {
 
     @Test
     @WithMockUser
+    @DisplayName("POST /import/batch — новый товар: CREATED и slug сгенерирован")
+    void shouldGenerateSlugAndCreatedForNewProduct() throws Exception {
+        BatchProductImportRequest request = new BatchProductImportRequest(List.of(
+                ProductImportItem.builder()
+                        .externalId("FTK-NEW-001")
+                        .name("Новый костюм")
+                        .price(new BigDecimal("1000"))
+                        .wholesalePrice(new BigDecimal("1000"))
+                        .source("FTK")
+                        .build()
+        ));
+
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created").value(1))
+                .andExpect(jsonPath("$.updated").value(0))
+                .andExpect(jsonPath("$.unchanged").value(0));
+
+        Product saved = productRepository.findAll().stream()
+                .filter(p -> "FTK-NEW-001".equals(p.getExternalId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(saved.getSlug()).isEqualTo("novyy-kostyum");
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /import/batch — повторный импорт без изменений: slug не меняется, счётчик unchanged растёт")
+    void shouldKeepSlugAndCountAsUnchangedWhenNothingChanged() throws Exception {
+        ProductImportItem item = ProductImportItem.builder()
+                .externalId("FTK-SAME-001")
+                .name("Товар без изменений")
+                .price(new BigDecimal("1500"))
+                .wholesalePrice(new BigDecimal("1500"))
+                .source("FTK")
+                .build();
+        BatchProductImportRequest request = new BatchProductImportRequest(List.of(item));
+
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created").value(1));
+
+        Product afterFirst = productRepository.findAll().stream()
+                .filter(p -> "FTK-SAME-001".equals(p.getExternalId()))
+                .findFirst()
+                .orElseThrow();
+        String slugAfterFirst = afterFirst.getSlug();
+
+        // Повторный импорт — абсолютно те же данные
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created").value(0))
+                .andExpect(jsonPath("$.updated").value(0))
+                .andExpect(jsonPath("$.unchanged").value(1));
+
+        Product afterSecond = productRepository.findAll().stream()
+                .filter(p -> "FTK-SAME-001".equals(p.getExternalId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(afterSecond.getSlug()).isEqualTo(slugAfterFirst);
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /import/batch — повторный импорт с изменённой ценой: UPDATED, slug не меняется")
+    void shouldCountAsUpdatedAndKeepSlugWhenFieldChanged() throws Exception {
+        ProductImportItem first = ProductImportItem.builder()
+                .externalId("FTK-CHANGED-001")
+                .name("Товар с изменением цены")
+                .price(new BigDecimal("1000"))
+                .wholesalePrice(new BigDecimal("1000"))
+                .source("FTK")
+                .build();
+
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new BatchProductImportRequest(List.of(first)))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created").value(1));
+
+        Product afterFirst = productRepository.findAll().stream()
+                .filter(p -> "FTK-CHANGED-001".equals(p.getExternalId()))
+                .findFirst()
+                .orElseThrow();
+        String slugAfterFirst = afterFirst.getSlug();
+
+        ProductImportItem second = ProductImportItem.builder()
+                .externalId("FTK-CHANGED-001")
+                .name("Товар с изменением цены")
+                .price(new BigDecimal("1200"))
+                .wholesalePrice(new BigDecimal("1000"))
+                .source("FTK")
+                .build();
+
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new BatchProductImportRequest(List.of(second)))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created").value(0))
+                .andExpect(jsonPath("$.updated").value(1))
+                .andExpect(jsonPath("$.unchanged").value(0));
+
+        Product afterSecond = productRepository.findAll().stream()
+                .filter(p -> "FTK-CHANGED-001".equals(p.getExternalId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(afterSecond.getSlug()).isEqualTo(slugAfterFirst);
+        assertThat(afterSecond.getPrice()).isEqualByComparingTo("1200");
+    }
+
+    @Test
+    @WithMockUser
     @DisplayName("POST /import/batch — импорт barcode и countryOfOrigin на уровне товара")
     void shouldImportBarcodeAndCountryOfOrigin() throws Exception {
         BatchProductImportRequest request = new BatchProductImportRequest(List.of(
