@@ -7,7 +7,7 @@ import { isAxiosError } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import {
     getAllUsers, getAllLegalEntities, changeUserRole, changeUserStatus, verifyLegalEntity, rejectLegalEntity,
-    deleteUser, deleteLegalEntity,
+    deleteUser, deleteLegalEntity, resendLegalVerification,
 } from '@/api/adminUsers';
 import type { AdminUserDto, LegalEntityDto } from '@/api/adminUsers';
 
@@ -72,6 +72,14 @@ const AdminUsersPage = () => {
         mutationFn: ({ id, managerEmail }: { id: number; managerEmail: string }) => rejectLegalEntity(id, managerEmail, ''),
         onSuccess: () => { messageApi.success('Отклонено'); queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] }); },
         onError: () => messageApi.error('Ошибка отклонения'),
+    });
+
+    const resendLegalVerificationMutation = useMutation({
+        mutationFn: (id: number) => resendLegalVerification(id),
+        onSuccess: () => messageApi.success('Письмо отправлено'),
+        onError: (err) => messageApi.error(
+            isAxiosError(err) && err.response?.status === 409 ? 'Email уже подтверждён' : 'Не удалось отправить',
+        ),
     });
 
     const extractErrorMessage = (err: unknown, fallback: string): string => {
@@ -449,6 +457,17 @@ const AdminUsersPage = () => {
                                                     </td>
                                                     <td>
                                                         <div style={{ display: 'flex', gap: 4 }}>
+                                                            {!le.emailVerified && (
+                                                                <button
+                                                                    className="rf-btn rf-btn-sm rf-btn-ghost"
+                                                                    style={{ height: 28, padding: '0 8px', fontSize: 11 }}
+                                                                    title="Отправить письмо повторно"
+                                                                    disabled={resendLegalVerificationMutation.isPending}
+                                                                    onClick={() => resendLegalVerificationMutation.mutate(le.id)}
+                                                                >
+                                                                    Письмо повторно
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 className="rf-btn rf-btn-sm rf-btn-ghost"
                                                                 style={{ padding: '4px 8px', color: 'var(--danger, #d4380d)' }}

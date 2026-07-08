@@ -75,6 +75,12 @@ public class LegalEntityAdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/resend-verification")
+    public ResponseEntity<Void> resendVerification(@PathVariable Long id) {
+        legalEntityService.resendEmailConfirmation(id);
+        return ResponseEntity.ok().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
             @PathVariable Long id,

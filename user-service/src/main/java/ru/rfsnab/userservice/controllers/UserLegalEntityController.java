@@ -4,7 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import ru.rfsnab.userservice.exceptions.LegalEntityNotFoundException;
 import ru.rfsnab.userservice.mappers.LegalEntityMapper;
+import ru.rfsnab.userservice.models.UserLegalEntity;
 import ru.rfsnab.userservice.models.dto.legal.LegalEntityDto;
 import ru.rfsnab.userservice.services.LegalEntityService;
 
@@ -33,6 +35,18 @@ public class UserLegalEntityController {
     public ResponseEntity<Void> resendLink(Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
         legalEntityService.resendLink(userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Void> resendVerification(Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        UserLegalEntity link = legalEntityService.getAllLinksForUser(userId).stream()
+                .filter(l -> !l.getLegalEntity().isEmailVerified())
+                .findFirst()
+                .orElseThrow(() -> new LegalEntityNotFoundException(
+                        "Нет привязанного юрлица с неподтверждённым email"));
+        legalEntityService.resendEmailConfirmation(link.getLegalEntity().getId());
         return ResponseEntity.ok().build();
     }
 

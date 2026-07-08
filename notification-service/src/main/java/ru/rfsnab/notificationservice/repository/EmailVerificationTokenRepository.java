@@ -13,4 +13,6 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
     Optional<EmailVerificationToken> findByUserId(Long userId);
 
     boolean existsByToken(String token);
+
+    void deleteAllByUserId(Long userId);
 }

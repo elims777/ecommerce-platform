@@ -3,7 +3,8 @@ import { useParams } from 'react-router-dom';
 import { NavLink } from '@/components/navigation';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getLegalEntityById, verifyLegalEntity, rejectLegalEntity } from '@/api/adminUsers';
+import { isAxiosError } from 'axios';
+import { getLegalEntityById, verifyLegalEntity, rejectLegalEntity, resendLegalVerification } from '@/api/adminUsers';
 import { useAuthStore } from '@/store/authStore';
 
 const formatDate = (d: string) =>
@@ -58,6 +59,14 @@ const AdminLegalEntityDetailPage = () => {
             invalidate();
         },
         onError: () => messageApi.error('Ошибка отклонения'),
+    });
+
+    const resendVerificationMutation = useMutation({
+        mutationFn: () => resendLegalVerification(legalId),
+        onSuccess: () => messageApi.success('Письмо отправлено'),
+        onError: (err) => messageApi.error(
+            isAxiosError(err) && err.response?.status === 409 ? 'Email уже подтверждён' : 'Не удалось отправить',
+        ),
     });
 
     if (isLoading || !le) {
@@ -122,6 +131,23 @@ const AdminLegalEntityDetailPage = () => {
                     <Row label="Юр. адрес" value={[le.legalCity, le.legalStreet, le.legalBuilding, le.legalPostalCode].filter(Boolean).join(', ') || null} />
                     <Row label="Дата регистрации" value={formatDate(le.createdAt)} />
                     {le.verifiedAt && <Row label="Дата верификации" value={formatDate(le.verifiedAt)} />}
+                    <Row label="Email подтверждён" value={
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span className={`rf-badge ${le.emailVerified ? 'rf-badge-success' : 'rf-badge-warn'}`}>
+                                {le.emailVerified ? 'Да' : 'Нет'}
+                            </span>
+                            {!le.emailVerified && (
+                                <button
+                                    className="rf-btn rf-btn-sm rf-btn-ghost"
+                                    style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                                    disabled={resendVerificationMutation.isPending}
+                                    onClick={() => resendVerificationMutation.mutate()}
+                                >
+                                    {resendVerificationMutation.isPending ? 'Отправка…' : 'Отправить письмо повторно'}
+                                </button>
+                            )}
+                        </div>
+                    } />
                     <Row label="Статус" value={
                         <select
                             value={le.verificationStatus}

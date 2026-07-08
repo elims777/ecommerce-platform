@@ -7,6 +7,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.rfsnab.userservice.exceptions.EmailAlreadyVerifiedException;
 import ru.rfsnab.userservice.exceptions.LegalEntityAlreadyExistsException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotFoundException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotVerifiedException;
@@ -367,6 +368,27 @@ public class LegalEntityService {
         LegalEntity entity = getById(id);
         legalEntityRepository.delete(entity);
         log.info("Legal entity hard-deleted: id={}, inn={}", id, entity.getInn());
+    }
+
+    @Transactional
+    public void resendEmailConfirmation(Long legalEntityId) {
+        LegalEntity entity = getById(legalEntityId);
+        if (entity.isEmailVerified()) {
+            throw new EmailAlreadyVerifiedException("Email уже подтверждён");
+        }
+
+        String confirmToken = UUID.randomUUID().toString();
+        entity.setEmailConfirmToken(confirmToken);
+        legalEntityRepository.save(entity);
+
+        kafkaProducerService.send(new LegalEntityEvent(
+                "LEGAL_ENTITY_REGISTERED",
+                entity.getId(), entity.getInn(), entity.getFullName(),
+                entity.getEmail(), entity.getEmail(),
+                null, LocalDateTime.now(), confirmToken
+        ));
+
+        log.info("Resend email confirmation: legalEntityId={}", legalEntityId);
     }
 
     @Transactional
