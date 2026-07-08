@@ -66,6 +66,7 @@ public class OrderHandlerTest {
                 new OrderEvent.DeliveryAddressDto("Москва", "Ленина", "1", "10", "123456", PHONE, NAME),
                 "B2C",
                 null,
+                null,
                 null
         );
     }

@@ -73,6 +73,7 @@ class EmailServiceTest {
                 new OrderEvent.DeliveryAddressDto("Москва", "Ленина", "1", "10", "123456", "+79001234567", "Иванов Иван"),
                 "B2C",
                 null,
+                null,
                 null
         );
     }
