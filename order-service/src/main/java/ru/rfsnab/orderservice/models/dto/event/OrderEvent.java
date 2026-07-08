@@ -29,10 +29,14 @@ public record OrderEvent(
         DeliveryAddressDto deliveryAddress,
         String customerType,
         String companyName,
-        String inn
+        String inn,
+        PickupPointDto pickupPoint
 ) {
     public record OrderItemLine(String productName, Integer quantity, BigDecimal price, String variantAttributes) {}
 
     public record DeliveryAddressDto(String city, String street, String building, String apartment,
                                       String postalCode, String phone, String recipientName) {}
+
+    public record PickupPointDto(String name, String city, String street, String building,
+                                  String postalCode, String phoneNumber, String workingHours) {}
 }
