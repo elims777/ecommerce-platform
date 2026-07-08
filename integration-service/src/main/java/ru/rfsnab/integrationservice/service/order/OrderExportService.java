@@ -141,11 +141,28 @@ public class OrderExportService {
 
     private CmlContragent buidContragent(JsonNode json){
         CmlContragent contragent = new CmlContragent();
-        contragent.setId(json.get("userId").asText());
+        // Ид оставляем пустым: 1С матчит контрагента по ИНН или наименованию.
 
-        //ФИО или fallback на email
-        String name = getTextOrNull(json, "recipientName");
-        contragent.setName(name != null ? name : json.get("customerEmail").asText());
+        String customerType = getTextOrNull(json, "customerType");
+        if ("B2B".equals(customerType)) {
+            String companyName = getTextOrNull(json, "companyName");
+            contragent.setName(companyName);
+            contragent.setFullName(companyName);
+            contragent.setInn(getTextOrNull(json, "inn"));
+        } else {
+            String name = getTextOrNull(json, "recipientName");
+            contragent.setName(name);
+            contragent.setFullName(name);
+            if (name != null) {
+                int spaceIndex = name.indexOf(' ');
+                if (spaceIndex >= 0) {
+                    contragent.setLastName(name.substring(0, spaceIndex));
+                    contragent.setFirstName(name.substring(spaceIndex + 1));
+                } else {
+                    contragent.setFirstName(name);
+                }
+            }
+        }
 
         contragent.setEmail(getTextOrNull(json, "customerEmail"));
         contragent.setPhone(getTextOrNull(json, "recipientPhone"));

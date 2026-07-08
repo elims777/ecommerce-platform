@@ -23,6 +23,18 @@ public class CmlContragent {
     @XmlElement(name = "Роль")
     private String role;
 
+    @XmlElement(name = "ПолноеНаименование")
+    private String fullName;
+
+    @XmlElement(name = "Фамилия")
+    private String lastName;
+
+    @XmlElement(name = "Имя")
+    private String firstName;
+
+    @XmlElement(name = "ИНН")
+    private String inn;
+
     @XmlElement(name = "ПочтовыйАдрес")
     private String postalAddress;
 

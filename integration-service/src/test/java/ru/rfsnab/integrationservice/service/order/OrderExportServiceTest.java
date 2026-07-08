@@ -71,6 +71,45 @@ class OrderExportServiceTest extends BaseIntegrationTest {
                 .build());
     }
 
+    private PendingOrder saveB2BPendingOrder(String orderId, String orderNumber) {
+        String orderData = """
+                {
+                    "orderId": "%s",
+                    "orderNumber": "%s",
+                    "createdAt": "2026-03-20T10:00:00",
+                    "userId": 100,
+                    "customerType": "B2B",
+                    "companyName": "ООО Ромашка",
+                    "inn": "7701234567",
+                    "customerEmail": "b2b@email.com",
+                    "recipientName": "Петров Петр",
+                    "recipientPhone": "+79001234567",
+                    "deliveryMethod": "SUPPLIER_DELIVERY",
+                    "city": "Сыктывкар",
+                    "street": "Октябрьский проспект",
+                    "building": "1",
+                    "paymentMethod": "CARD",
+                    "totalAmount": 15000.00,
+                    "comment": "Тестовый B2B заказ",
+                    "items": [
+                        {
+                            "productId": 1,
+                            "externalId": "ext-001",
+                            "productName": "Перчатки нитриловые L",
+                            "quantity": 10,
+                            "price": 250.50
+                        }
+                    ]
+                }
+                """.formatted(orderId, orderNumber);
+
+        return pendingOrderRepository.save(PendingOrder.builder()
+                .orderId(orderId)
+                .orderData(orderData)
+                .externalId(orderNumber)
+                .build());
+    }
+
     @Nested
     @DisplayName("exportPendingOrders")
     class ExportTests {
@@ -101,7 +140,33 @@ class OrderExportServiceTest extends BaseIntegrationTest {
 
             assertThat(result.xml()).contains("Контрагент");
             assertThat(result.xml()).contains("Иванов Иван");
-            assertThat(result.xml()).contains("test@email.com");
+            assertThat(result.xml()).contains("<Фамилия>Иванов</Фамилия>");
+            assertThat(result.xml()).contains("<Имя>Иван</Имя>");
+            assertThat(result.xml()).contains("<Почта>test@email.com</Почта>");
+            assertThat(result.xml()).doesNotContain("<Наименование>test@email.com");
+        }
+
+        @Test
+        @DisplayName("B2B заказ: контрагент — организация с ИНН, без фамилии")
+        void shouldIncludeCompanyContragentForB2B() {
+            saveB2BPendingOrder("uuid-b2b-001", "ORD-B2B-001");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml()).contains("<Наименование>ООО Ромашка</Наименование>");
+            assertThat(result.xml()).contains("<ИНН>7701234567</ИНН>");
+            assertThat(result.xml()).doesNotContain("<Фамилия>");
+        }
+
+        @Test
+        @DisplayName("Ид контрагента не заполняется (матчинг в 1С по ИНН/наименованию)")
+        void shouldNotSetContragentId() {
+            savePendingOrder("uuid-003", "ORD-00003");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            // userId=100 нигде не должен фигурировать как Ид (документа или товара - строковый UUID/externalId)
+            assertThat(result.xml()).doesNotContain("<Ид>100</Ид>");
         }
 
         @Test
