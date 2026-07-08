@@ -2,6 +2,7 @@ package ru.rfsnab.userservice.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,9 @@ public class LegalEntityService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final LegalEntityKafkaProducerService kafkaProducerService;
+
+    @Value("${app.manager-email:manager@rfsnab.ru}")
+    private String managerEmail;
 
     @Transactional
     public LegalEntity register(RegisterLegalEntityRequest request) {
@@ -97,7 +101,7 @@ public class LegalEntityService {
         kafkaProducerService.send(new LegalEntityEvent(
                 "LEGAL_ENTITY_EMAIL_CONFIRMED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
-                entity.getEmail(), "manager@rfsnab.ru",
+                entity.getEmail(), managerEmail,
                 null, LocalDateTime.now(), null
         ));
 
