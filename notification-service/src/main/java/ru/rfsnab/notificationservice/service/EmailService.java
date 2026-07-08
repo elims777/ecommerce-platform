@@ -1,19 +1,27 @@
 package ru.rfsnab.notificationservice.service;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import java.math.BigDecimal;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
     private final JavaMailSender mailSender;
+    private final TemplateEngine templateEngine;
     @Value("${app.email.from}")
     private String fromEmail;
 
@@ -406,5 +414,31 @@ public class EmailService {
                 orderNumber, newStatus
         ));
         mailSender.send(message);
+    }
+
+    /**
+     * Отправка HTML-письма по Thymeleaf-шаблону с inline-логотипом (CID).
+     */
+    private void sendHtml(String to, String subject, String template, Map<String, Object> model) {
+        MimeMessage message = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            Context context = new Context();
+            context.setVariables(model);
+            String html = templateEngine.process("mail/" + template, context);
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(html, true);
+            helper.addInline("logo", new ClassPathResource("static/mail/logo-light.png"), "image/png");
+
+            mailSender.send(message);
+            log.info("HTML email '{}' sent successfully to: {}", template, to);
+        } catch (MessagingException e) {
+            log.error("Failed to build HTML email '{}' for: {}", template, to, e);
+        } catch (Exception e) {
+            log.error("Failed to send HTML email '{}' to: {}", template, to, e);
+        }
     }
 }
