@@ -178,6 +178,34 @@ public class OrderHandlerTest {
             verify(emailService).sendOrderStatusChangedEmail(EMAIL, ORDER_NUMBER, "Передан в доставку");
             verifyNoMoreInteractions(emailService);
         }
+
+        @Test
+        @DisplayName("статус «Счёт выставлен» (displayName) → sendInvoiceSentEmail")
+        void handle_InvoiceSent_SendsInvoiceEmail() throws Exception {
+            // Given — продюсер шлёт displayName, не enum-код
+            OrderEvent event = createOrderEvent("ORDER_STATUS_CHANGED", "Счёт выставлен");
+
+            // When
+            handler.handle(toJson(event));
+
+            // Then
+            verify(emailService).sendInvoiceSentEmail(EMAIL, ORDER_NUMBER);
+            verifyNoMoreInteractions(emailService);
+        }
+
+        @Test
+        @DisplayName("статус «Ожидает подтверждения» (displayName) → sendAwaitingConfirmationEmail")
+        void handle_AwaitingConfirmation_SendsAwaitingEmail() throws Exception {
+            // Given
+            OrderEvent event = createOrderEvent("ORDER_STATUS_CHANGED", "Ожидает подтверждения");
+
+            // When
+            handler.handle(toJson(event));
+
+            // Then
+            verify(emailService).sendAwaitingConfirmationEmail(EMAIL, ORDER_NUMBER);
+            verifyNoMoreInteractions(emailService);
+        }
     }
 
     // ==================== handle() — edge cases ====================

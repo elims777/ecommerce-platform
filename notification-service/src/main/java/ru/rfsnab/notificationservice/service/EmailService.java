@@ -56,6 +56,7 @@ public class EmailService {
         model.put("totalAmount", event.totalAmount());
         model.put("items", event.items());
         model.put("deliveryAddress", event.deliveryAddress());
+        model.put("addressLine", formatAddress(event.deliveryAddress()));
         model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
@@ -80,6 +81,7 @@ public class EmailService {
         model.put("inn", event.inn());
         model.put("customerType", event.customerType());
         model.put("deliveryAddress", event.deliveryAddress());
+        model.put("addressLine", formatAddress(event.deliveryAddress()));
         model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
@@ -236,6 +238,33 @@ public class EmailService {
 
         sendHtml(toEmail, "Статус заказа " + orderNumber + " обновлён — РФСнаб",
                 "order-status-changed", model);
+    }
+
+    /**
+     * Собирает адрес в одну строку из непустых полей — чтобы в письме не появлялось "null".
+     */
+    private String formatAddress(OrderEvent.DeliveryAddressDto a) {
+        if (a == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        appendPart(sb, a.postalCode());
+        appendPart(sb, a.city());
+        appendPart(sb, a.street());
+        appendPart(sb, a.building());
+        if (a.apartment() != null && !a.apartment().isBlank()) {
+            appendPart(sb, "кв. " + a.apartment());
+        }
+        return sb.isEmpty() ? null : sb.toString();
+    }
+
+    private void appendPart(StringBuilder sb, String part) {
+        if (part != null && !part.isBlank()) {
+            if (!sb.isEmpty()) {
+                sb.append(", ");
+            }
+            sb.append(part);
+        }
     }
 
     private String deliveryMethodLabel(String deliveryMethod) {

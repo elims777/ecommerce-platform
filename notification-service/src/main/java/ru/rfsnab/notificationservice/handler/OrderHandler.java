@@ -72,12 +72,14 @@ public class OrderHandler implements NotificationHandler{
     }
 
     private void handleStatusChanged(OrderEvent event){
+        // event.status() — это displayName (продюсер шлёт getDisplayName()).
+        // displayName зафиксированы под 1С УНФ и не меняются — матчим по ним, не по enum-коду.
         switch (event.status()) {
-            case "INVOICE_SENT" -> {
+            case "Счёт выставлен" -> {
                 emailService.sendInvoiceSentEmail(event.customerEmail(), event.orderNumber());
                 log.info("Invoice sent email: order={}, email={}", event.orderNumber(), event.customerEmail());
             }
-            case "AWAITING_CONFIRMATION" -> {
+            case "Ожидает подтверждения" -> {
                 emailService.sendAwaitingConfirmationEmail(event.customerEmail(), event.orderNumber());
                 log.info("Awaiting confirmation email: order={}, email={}", event.orderNumber(), event.customerEmail());
             }

@@ -56,10 +56,8 @@
                 <strong>Способ оплаты:</strong> <span th:text="${paymentMethod}"></span>
             </p>
             <div th:if="${deliveryAddress != null}">
-                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
-                    <strong>Адрес доставки:</strong>
-                    <span th:text="${deliveryAddress.postalCode} + ', ' + ${deliveryAddress.city} + ', ' + ${deliveryAddress.street} + ', ' + ${deliveryAddress.building}"></span>
-                    <span th:if="${deliveryAddress.apartment}" th:text="', кв. ' + ${deliveryAddress.apartment}"></span>
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${addressLine}">
+                    <strong>Адрес доставки:</strong> <span th:text="${addressLine}"></span>
                 </p>
                 <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
                     <strong>Получатель:</strong> <span th:text="${deliveryAddress.recipientName}"></span>,
