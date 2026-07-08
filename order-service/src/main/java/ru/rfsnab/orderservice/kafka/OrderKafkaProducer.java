@@ -29,6 +29,25 @@ public class OrderKafkaProducer {
                 .customerName(order.getCustomerName())
                 .customerPhone(order.getCustomerPhone())
                 .timestamp(LocalDateTime.now())
+                .items(order.getItems().stream()
+                        .map(i -> new OrderEvent.OrderItemLine(i.getProductName(), i.getQuantity(), i.getPrice(), i.getVariantAttributes()))
+                        .toList())
+                .deliveryMethod(order.getDeliveryMethod() != null ? order.getDeliveryMethod().name() : null)
+                .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
+                .comment(order.getComment())
+                .deliveryAddress(order.getDeliveryAddress() != null
+                        ? new OrderEvent.DeliveryAddressDto(
+                                order.getDeliveryAddress().getCity(),
+                                order.getDeliveryAddress().getStreet(),
+                                order.getDeliveryAddress().getBuilding(),
+                                order.getDeliveryAddress().getApartment(),
+                                order.getDeliveryAddress().getPostalCode(),
+                                order.getDeliveryAddress().getPhone(),
+                                order.getDeliveryAddress().getRecipientName())
+                        : null)
+                .customerType(order.getCustomerType() != null ? order.getCustomerType().name() : null)
+                .companyName(order.getCompanyName())
+                .inn(order.getInn())
                 .build();
 
         kafkaTemplate.send(topics.getOrderEvents(), order.getId().toString(), event);
