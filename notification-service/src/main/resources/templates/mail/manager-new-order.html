@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+</head>
+<body style="margin:0; padding:0; background-color:#F2F2F2;">
+
+<div th:replace="~{mail/layout :: header}"></div>
+
+<table width="600" cellpadding="0" cellspacing="0" border="0"
+       style="width:600px; max-width:600px; margin:0 auto; background-color:#FFFFFF;">
+    <tr>
+        <td style="padding:32px 24px; font-family:Arial, system-ui, sans-serif;">
+            <h2 style="color:#1E3A5F; margin:0 0 16px;">Новый заказ <span th:text="${orderNumber}"></span></h2>
+            <p style="color:#1A1A1A; font-size:14px; line-height:20px; margin:0 0 16px;">
+                Поступил новый заказ. Войдите в панель управления для подтверждения.
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+                <tr style="background-color:#1E3A5F;">
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Товар</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="center">Кол-во</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Цена</td>
+                </tr>
+                <tr th:each="item : ${items}" style="border-bottom:1px solid #EEEEEE;">
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;">
+                        <span th:text="${item.productName}"></span>
+                        <span th:if="${item.variantAttributes}" th:text="' (' + ${item.variantAttributes} + ')'" style="color:#666666;"></span>
+                    </td>
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="center" th:text="${item.quantity}"></td>
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${item.price} + ' ₽'"></td>
+                </tr>
+            </table>
+
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Покупатель:</strong> <span th:text="${customerName} ?: '—'"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Телефон:</strong> <span th:text="${customerPhone} ?: '—'"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Email:</strong> <span th:text="${customerEmail} ?: '—'"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${customerType}">
+                <strong>Тип клиента:</strong> <span th:text="${customerType}"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${companyName}">
+                <strong>Организация:</strong> <span th:text="${companyName}"></span>
+                <span th:if="${inn}" th:text="' (ИНН ' + ${inn} + ')'"></span>
+            </p>
+
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Способ доставки:</strong> <span th:text="${deliveryMethod}"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Способ оплаты:</strong> <span th:text="${paymentMethod}"></span>
+            </p>
+            <div th:if="${deliveryAddress != null}">
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                    <strong>Адрес доставки:</strong>
+                    <span th:text="${deliveryAddress.postalCode} + ', ' + ${deliveryAddress.city} + ', ' + ${deliveryAddress.street} + ', ' + ${deliveryAddress.building}"></span>
+                    <span th:if="${deliveryAddress.apartment}" th:text="', кв. ' + ${deliveryAddress.apartment}"></span>
+                </p>
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                    <strong>Получатель:</strong> <span th:text="${deliveryAddress.recipientName}"></span>,
+                    <span th:text="${deliveryAddress.phone}"></span>
+                </p>
+            </div>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${comment}">
+                <strong>Комментарий:</strong> <span th:text="${comment}"></span>
+            </p>
+
+            <p style="color:#1A1A1A; font-size:16px; font-weight:bold; margin:16px 0;">
+                Итого: <span th:text="${totalAmount}"></span> ₽
+            </p>
+
+            <div th:replace="~{mail/layout :: button(${adminUrl}, 'Перейти в панель управления')}"></div>
+        </td>
+    </tr>
+</table>
+
+<div th:replace="~{mail/layout :: footer}"></div>
+
+</body>
+</html>

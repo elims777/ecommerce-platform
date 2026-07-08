@@ -47,18 +47,8 @@ public class OrderHandler implements NotificationHandler{
     }
 
     private void handleOrderCreated(OrderEvent event) {
-        emailService.sendOrderCreatedEmail(
-                event.customerEmail(),
-                event.orderNumber(),
-                event.totalAmount()
-        );
-        emailService.sendManagerOrderNotification(
-                event.orderNumber(),
-                event.totalAmount(),
-                event.customerEmail(),
-                event.customerName(),
-                event.customerPhone()
-        );
+        emailService.sendOrderCreatedEmail(event);
+        emailService.sendManagerOrderNotification(event);
         log.info("Order created email: order={}, customer={}", event.orderNumber(), event.customerEmail());
     }
 

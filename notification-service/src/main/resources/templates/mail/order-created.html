@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+</head>
+<body style="margin:0; padding:0; background-color:#F2F2F2;">
+
+<div th:replace="~{mail/layout :: header}"></div>
+
+<table width="600" cellpadding="0" cellspacing="0" border="0"
+       style="width:600px; max-width:600px; margin:0 auto; background-color:#FFFFFF;">
+    <tr>
+        <td style="padding:32px 24px; font-family:Arial, system-ui, sans-serif;">
+            <h2 style="color:#1E3A5F; margin:0 0 16px;">Заказ <span th:text="${orderNumber}"></span> оформлен</h2>
+            <p style="color:#1A1A1A; font-size:14px; line-height:20px; margin:0 0 16px;">
+                Спасибо за заказ! Он передан менеджеру. После подтверждения заказ перейдёт в статус ожидания оплаты.
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+                <tr style="background-color:#1E3A5F;">
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Товар</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="center">Кол-во</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Цена</td>
+                </tr>
+                <tr th:each="item : ${items}" style="border-bottom:1px solid #EEEEEE;">
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;">
+                        <span th:text="${item.productName}"></span>
+                        <span th:if="${item.variantAttributes}" th:text="' (' + ${item.variantAttributes} + ')'" style="color:#666666;"></span>
+                    </td>
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="center" th:text="${item.quantity}"></td>
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${item.price} + ' ₽'"></td>
+                </tr>
+            </table>
+
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Способ доставки:</strong> <span th:text="${deliveryMethod}"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Способ оплаты:</strong> <span th:text="${paymentMethod}"></span>
+            </p>
+            <div th:if="${deliveryAddress != null}">
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                    <strong>Адрес доставки:</strong>
+                    <span th:text="${deliveryAddress.postalCode} + ', ' + ${deliveryAddress.city} + ', ' + ${deliveryAddress.street} + ', ' + ${deliveryAddress.building}"></span>
+                    <span th:if="${deliveryAddress.apartment}" th:text="', кв. ' + ${deliveryAddress.apartment}"></span>
+                </p>
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                    <strong>Получатель:</strong> <span th:text="${deliveryAddress.recipientName}"></span>,
+                    <span th:text="${deliveryAddress.phone}"></span>
+                </p>
+            </div>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${comment}">
+                <strong>Комментарий:</strong> <span th:text="${comment}"></span>
+            </p>
+
+            <p style="color:#1A1A1A; font-size:16px; font-weight:bold; margin:16px 0;">
+                Итого: <span th:text="${totalAmount}"></span> ₽
+            </p>
+
+            <div th:replace="~{mail/layout :: button(${trackUrl}, 'Перейти к заказам')}"></div>
+
+            <p style="color:#1A1A1A; font-size:14px; margin:16px 0 0;">С уважением, команда РФСнаб</p>
+        </td>
+    </tr>
+</table>
+
+<div th:replace="~{mail/layout :: footer}"></div>
+
+</body>
+</html>
