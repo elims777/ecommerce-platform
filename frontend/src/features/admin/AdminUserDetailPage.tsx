@@ -3,9 +3,10 @@ import { useParams } from 'react-router-dom';
 import { RowLink, NavLink } from '@/components/navigation';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import {
   getUserById, changeUserRole, changeUserStatus, updateUserAdmin,
-  getUserLegalEntities, verifyLegalEntity, detachLegalEntity,
+  getUserLegalEntities, verifyLegalEntity, detachLegalEntity, resendUserVerification,
 } from '@/api/adminUsers';
 import type { UpdateUserAdminRequest, LegalEntityDto } from '@/api/adminUsers';
 import { getAdminOrders } from '@/api/adminOrders';
@@ -126,6 +127,14 @@ const AdminUserDetailPage = () => {
     onError: () => messageApi.error('Ошибка отвязки организации'),
   });
 
+  const resendVerificationMutation = useMutation({
+    mutationFn: () => resendUserVerification(userId),
+    onSuccess: () => messageApi.success('Письмо отправлено'),
+    onError: (err) => messageApi.error(
+      isAxiosError(err) && err.response?.status === 409 ? 'Email уже подтверждён' : 'Не удалось отправить',
+    ),
+  });
+
   const openEditModal = () => {
     if (!user) return;
     setEditForm({ firstname: user.firstname, lastname: user.lastname, phone: user.phone ?? '' });
@@ -194,10 +203,20 @@ const AdminUserDetailPage = () => {
           <div className="rf-detail-value rf-tabular">{formatDate(user.createdAt)}</div>
 
           <div className="rf-detail-label">Email подтверждён</div>
-          <div className="rf-detail-value">
+          <div className="rf-detail-value" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className={`rf-badge ${user.emailVerified ? 'rf-badge-success' : 'rf-badge-warn'}`}>
               {user.emailVerified ? 'Да' : 'Нет'}
             </span>
+            {!user.emailVerified && (
+              <button
+                className="rf-btn rf-btn-sm rf-btn-ghost"
+                style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                disabled={resendVerificationMutation.isPending}
+                onClick={() => resendVerificationMutation.mutate()}
+              >
+                {resendVerificationMutation.isPending ? 'Отправка…' : 'Отправить письмо повторно'}
+              </button>
+            )}
           </div>
 
           <div className="rf-detail-label">Роль</div>

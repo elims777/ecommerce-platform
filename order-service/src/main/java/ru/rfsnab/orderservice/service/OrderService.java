@@ -69,12 +69,12 @@ public class OrderService {
         t.put(OrderStatus.PENDING_PAYMENT,       Set.of(OrderStatus.PAID, OrderStatus.PARTIALLY_PAID, OrderStatus.PAYMENT_FAILED, OrderStatus.CANCELLED));
         t.put(OrderStatus.PAYMENT_FAILED,        Set.of(OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
         t.put(OrderStatus.AWAITING_CONFIRMATION, Set.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED));
-        t.put(OrderStatus.PAID,                  Set.of(OrderStatus.SHIPPED, OrderStatus.REFUNDED));
+        t.put(OrderStatus.PAID,                  Set.of(OrderStatus.SHIPPED, OrderStatus.REFUNDED, OrderStatus.COMPLETED));
         t.put(OrderStatus.PARTIALLY_PAID,        Set.of(OrderStatus.SHIPPED, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
         t.put(OrderStatus.SHIPPED,               Set.of(OrderStatus.IN_TRANSIT, OrderStatus.DELIVERED));
         t.put(OrderStatus.IN_TRANSIT,            Set.of(OrderStatus.DELIVERED));
         t.put(OrderStatus.DELIVERED,             Set.of(OrderStatus.PAID, OrderStatus.PENDING_PAYMENT, OrderStatus.COMPLETED));
-        t.put(OrderStatus.CANCELLED,             Set.of(OrderStatus.REFUNDED));
+        t.put(OrderStatus.CANCELLED,             Set.of(OrderStatus.REFUNDED, OrderStatus.COMPLETED));
         t.put(OrderStatus.REFUNDED,              Set.of(OrderStatus.COMPLETED));
         ALLOWED_TRANSITIONS = java.util.Collections.unmodifiableMap(t);
     }

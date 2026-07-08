@@ -1,9 +1,11 @@
 package ru.rfsnab.userservice.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.rfsnab.userservice.exceptions.EmailAlreadyVerifiedException;
 import ru.rfsnab.userservice.exceptions.UserAlreadyExistsException;
 import ru.rfsnab.userservice.models.RoleEntity;
 import ru.rfsnab.userservice.models.UserEntity;
@@ -15,6 +17,7 @@ import java.util.*;
 import java.util.UUID;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -160,5 +163,28 @@ public class UserService {
         if (lastname != null) user.setLastname(lastname);
         if (phone != null) user.setPhone(phone);
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public void resendVerification(Long userId) {
+        UserEntity user = findById(userId);
+        if (user.isEmailVerified()) {
+            throw new EmailAlreadyVerifiedException("Email уже подтверждён");
+        }
+
+        String verificationToken = UUID.randomUUID().toString();
+
+        UserEvent event = UserEvent.builder()
+                .eventType("USER_REGISTERED")
+                .userId(user.getId())
+                .email(user.getEmail())
+                .firstName(user.getFirstname())
+                .lastName(user.getLastname())
+                .verificationToken(verificationToken)
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        kafkaProducerService.sendUserRegisteredEvent(event);
+        log.info("Resend verification requested: userId={}", userId);
     }
 }

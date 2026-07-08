@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.orderservice.models.dto.event.PaymentEvent;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
@@ -24,6 +25,7 @@ public class PaymentEventConsumer {
             topics = "${app.kafka.topics.payment-processed}",
             groupId = "${spring.kafka.consumer.group-id}"
     )
+    @Transactional
     public void onPaymentEvent(ConsumerRecord<String, String> record) {
         try {
             PaymentEvent event = objectMapper.readValue(record.value(), PaymentEvent.class);

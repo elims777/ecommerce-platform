@@ -16,10 +16,11 @@ import ru.rfsnab.notificationservice.service.EmailService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,7 +58,16 @@ public class OrderHandlerTest {
                 EMAIL,
                 NAME,
                 PHONE,
-                LocalDateTime.now()
+                LocalDateTime.now(),
+                List.of(new OrderEvent.OrderItemLine("Товар 1", 2, new BigDecimal("7500.00"), null)),
+                "PICKUP",
+                "CARD",
+                null,
+                new OrderEvent.DeliveryAddressDto("Москва", "Ленина", "1", "10", "123456", PHONE, NAME),
+                "B2C",
+                null,
+                null,
+                null
         );
     }
 
@@ -102,8 +112,8 @@ public class OrderHandlerTest {
             handler.handle(toJson(event));
 
             // Then
-            verify(emailService).sendOrderCreatedEmail(EMAIL, ORDER_NUMBER, TOTAL);
-            verify(emailService).sendManagerOrderNotification(ORDER_NUMBER, TOTAL, EMAIL, NAME, PHONE);
+            verify(emailService).sendOrderCreatedEmail(any(OrderEvent.class));
+            verify(emailService).sendManagerOrderNotification(any(OrderEvent.class));
             verifyNoMoreInteractions(emailService);
         }
     }
@@ -169,6 +179,34 @@ public class OrderHandlerTest {
             verify(emailService).sendOrderStatusChangedEmail(EMAIL, ORDER_NUMBER, "Передан в доставку");
             verifyNoMoreInteractions(emailService);
         }
+
+        @Test
+        @DisplayName("статус «Счёт выставлен» (displayName) → sendInvoiceSentEmail")
+        void handle_InvoiceSent_SendsInvoiceEmail() throws Exception {
+            // Given — продюсер шлёт displayName, не enum-код
+            OrderEvent event = createOrderEvent("ORDER_STATUS_CHANGED", "Счёт выставлен");
+
+            // When
+            handler.handle(toJson(event));
+
+            // Then
+            verify(emailService).sendInvoiceSentEmail(EMAIL, ORDER_NUMBER);
+            verifyNoMoreInteractions(emailService);
+        }
+
+        @Test
+        @DisplayName("статус «Ожидает подтверждения» (displayName) → sendAwaitingConfirmationEmail")
+        void handle_AwaitingConfirmation_SendsAwaitingEmail() throws Exception {
+            // Given
+            OrderEvent event = createOrderEvent("ORDER_STATUS_CHANGED", "Ожидает подтверждения");
+
+            // When
+            handler.handle(toJson(event));
+
+            // Then
+            verify(emailService).sendAwaitingConfirmationEmail(EMAIL, ORDER_NUMBER);
+            verifyNoMoreInteractions(emailService);
+        }
     }
 
     // ==================== handle() — edge cases ====================
@@ -206,13 +244,13 @@ public class OrderHandlerTest {
             // Given
             OrderEvent event = createOrderEvent("ORDER_CREATED", "Создан");
             doThrow(new RuntimeException("SMTP error"))
-                    .when(emailService).sendOrderCreatedEmail(anyString(), anyString(), any(BigDecimal.class));
+                    .when(emailService).sendOrderCreatedEmail(any(OrderEvent.class));
 
             // When — не должно выбрасывать исключение
             handler.handle(toJson(event));
 
             // Then
-            verify(emailService).sendOrderCreatedEmail(anyString(), anyString(), any(BigDecimal.class));
+            verify(emailService).sendOrderCreatedEmail(any(OrderEvent.class));
         }
     }
 }

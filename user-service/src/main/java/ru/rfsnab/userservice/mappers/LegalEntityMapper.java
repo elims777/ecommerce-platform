@@ -27,6 +27,7 @@ public class LegalEntityMapper {
                 entity.getLegalBuilding(),
                 entity.getLegalPostalCode(),
                 entity.getVerificationStatus(),
+                entity.isEmailVerified(),
                 entity.getVerifiedAt(),
                 entity.getBankAccounts().stream().map(LegalEntityMapper::toBankAccountDto).toList(),
                 entity.getAddresses().stream().map(LegalEntityMapper::toAddressDto).toList(),

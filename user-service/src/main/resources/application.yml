@@ -27,6 +27,7 @@ app:
       user-events: user-events
       legal-entity-events: legal-entity-events
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  manager-email: ${MANAGER_EMAIL:manager@rfsnab.ru}
 
 services:
   order:

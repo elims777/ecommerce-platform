@@ -182,4 +182,11 @@ public class UserController {
         return ResponseEntity.ok(UserMapper.mapToUserDto(
             userService.updateUserAdmin(id, request.firstname(), request.lastname(), request.phone())));
     }
+
+    @PostMapping("/me/resend-verification")
+    public ResponseEntity<Void> resendVerification(Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        userService.resendVerification(userId);
+        return ResponseEntity.ok().build();
+    }
 }

@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { CreateOrderRequest, OrderDto, OrderSummaryDto } from '@/types/order';
+import type { CreateOrderRequest, OrderDto, OrderSummaryDto, UpdateOrderRequest } from '@/types/order';
 import type { Page } from '@/types/product';
 
 /** Создать заказ из серверной корзины — POST /api/v1/orders */
@@ -30,6 +30,12 @@ export const getOrderById = async (id: string): Promise<OrderDto> => {
 /** Отменить заказ — POST /api/v1/orders/{orderId}/cancel */
 export const cancelOrder = async (id: string): Promise<OrderDto> => {
     const { data } = await apiClient.post<OrderDto>(`/v1/orders/${id}/cancel`);
+    return data;
+};
+
+/** Редактировать заказ — разрешено только в статусе CREATED — PUT /api/v1/orders/{orderId} */
+export const updateOrder = async (id: string, request: UpdateOrderRequest): Promise<OrderDto> => {
+    const { data } = await apiClient.put<OrderDto>(`/v1/orders/${id}`, request);
     return data;
 };
 

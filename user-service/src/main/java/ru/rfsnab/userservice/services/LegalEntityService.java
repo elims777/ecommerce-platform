@@ -2,10 +2,12 @@ package ru.rfsnab.userservice.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.rfsnab.userservice.exceptions.EmailAlreadyVerifiedException;
 import ru.rfsnab.userservice.exceptions.LegalEntityAlreadyExistsException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotFoundException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotVerifiedException;
@@ -40,6 +42,9 @@ public class LegalEntityService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final LegalEntityKafkaProducerService kafkaProducerService;
+
+    @Value("${app.manager-email:manager@rfsnab.ru}")
+    private String managerEmail;
 
     @Transactional
     public LegalEntity register(RegisterLegalEntityRequest request) {
@@ -97,7 +102,7 @@ public class LegalEntityService {
         kafkaProducerService.send(new LegalEntityEvent(
                 "LEGAL_ENTITY_EMAIL_CONFIRMED",
                 entity.getId(), entity.getInn(), entity.getFullName(),
-                entity.getEmail(), "manager@rfsnab.ru",
+                entity.getEmail(), managerEmail,
                 null, LocalDateTime.now(), null
         ));
 
@@ -363,6 +368,27 @@ public class LegalEntityService {
         LegalEntity entity = getById(id);
         legalEntityRepository.delete(entity);
         log.info("Legal entity hard-deleted: id={}, inn={}", id, entity.getInn());
+    }
+
+    @Transactional
+    public void resendEmailConfirmation(Long legalEntityId) {
+        LegalEntity entity = getById(legalEntityId);
+        if (entity.isEmailVerified()) {
+            throw new EmailAlreadyVerifiedException("Email уже подтверждён");
+        }
+
+        String confirmToken = UUID.randomUUID().toString();
+        entity.setEmailConfirmToken(confirmToken);
+        legalEntityRepository.save(entity);
+
+        kafkaProducerService.send(new LegalEntityEvent(
+                "LEGAL_ENTITY_REGISTERED",
+                entity.getId(), entity.getInn(), entity.getFullName(),
+                entity.getEmail(), entity.getEmail(),
+                null, LocalDateTime.now(), confirmToken
+        ));
+
+        log.info("Resend email confirmation: legalEntityId={}", legalEntityId);
     }
 
     @Transactional
