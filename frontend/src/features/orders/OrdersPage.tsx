@@ -1,14 +1,24 @@
 import { useState } from 'react';
 import { Table, Skeleton, Pagination, Spin, Button, message, Modal, QRCode } from 'antd';
 import { ShoppingOutlined, CreditCardOutlined } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
-import { getMyOrders, getOrderById, initiatePayment } from '@/api/orders';
-import { OrderStatusLabels, PaymentMethodLabels, DeliveryMethodLabels, PaymentMethod } from '@/types/order';
+import { getMyOrders, getOrderById, initiatePayment, cancelOrder } from '@/api/orders';
+import { OrderStatusLabels, PaymentMethodLabels, DeliveryMethodLabels, PaymentMethod, OrderStatus } from '@/types/order';
 import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
-import type { OrderSummaryDto, OrderDto, OrderItemDto, OrderStatus } from '@/types/order';
+import type { OrderSummaryDto, OrderDto, OrderItemDto } from '@/types/order';
 import type { ColumnsType } from 'antd/es/table';
 import { formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
+import EditOrderModal from './EditOrderModal';
+
+/** Статусы, в которых заказ ещё можно отменить (до отгрузки) */
+const CANCELLABLE_STATUSES: OrderStatus[] = [
+    OrderStatus.CREATED,
+    OrderStatus.PROCESSING,
+    OrderStatus.INVOICE_SENT,
+    OrderStatus.PENDING_PAYMENT,
+    OrderStatus.PAYMENT_FAILED,
+];
 
 const formatPrice = formatPriceOrPlaceholder;
 
@@ -49,17 +59,43 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 const OrdersPage = () => {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [currentPage, setCurrentPage] = useState(1);
     const [expandedOrderDetails, setExpandedOrderDetails] = useState<Record<string, OrderDto>>({});
     const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
     const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
     const [sbpModal, setSbpModal] = useState<{ orderNumber: string; paymentLink: string } | null>(null);
+    const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+    const [editingOrder, setEditingOrder] = useState<OrderDto | null>(null);
     const pageSize = 10;
 
     const { data: ordersPage, isLoading, isError } = useQuery({
         queryKey: ['myOrders', currentPage],
         queryFn: () => getMyOrders(currentPage - 1, pageSize),
     });
+
+    const handleCancelOrder = (orderId: string, orderNumber: string) => {
+        Modal.confirm({
+            title: `Отменить заказ ${orderNumber}?`,
+            content: 'Действие нельзя отменить.',
+            okText: 'Отменить заказ',
+            okButtonProps: { danger: true },
+            cancelText: 'Не отменять',
+            onOk: async () => {
+                setCancellingOrderId(orderId);
+                try {
+                    const updated = await cancelOrder(orderId);
+                    setExpandedOrderDetails((prev) => ({ ...prev, [orderId]: updated }));
+                    message.success('Заказ отменён');
+                    queryClient.invalidateQueries({ queryKey: ['myOrders'] });
+                } catch {
+                    message.error('Не удалось отменить заказ. Попробуйте позже.');
+                } finally {
+                    setCancellingOrderId(null);
+                }
+            },
+        });
+    };
 
     const handlePayCard = async (orderId: string) => {
         setPayingOrderId(orderId);
@@ -274,6 +310,22 @@ const OrdersPage = () => {
                         )}
                     </div>
                 )}
+                {CANCELLABLE_STATUSES.includes(extractEnumCode(order.status) as OrderStatus) && (
+                    <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                        {extractEnumCode(order.status) === OrderStatus.CREATED && (
+                            <Button onClick={() => setEditingOrder(order)}>
+                                Редактировать заказ
+                            </Button>
+                        )}
+                        <Button
+                            danger
+                            loading={cancellingOrderId === order.id}
+                            onClick={() => handleCancelOrder(order.id, order.orderNumber)}
+                        >
+                            Отменить заказ
+                        </Button>
+                    </div>
+                )}
             </div>
         );
     };
@@ -355,6 +407,14 @@ const OrdersPage = () => {
                     </div>
                 </div>
             </Modal>
+            {editingOrder && (
+                <EditOrderModal
+                    order={editingOrder}
+                    open={!!editingOrder}
+                    onClose={() => setEditingOrder(null)}
+                    onSuccess={(updated) => setExpandedOrderDetails((prev) => ({ ...prev, [updated.id]: updated }))}
+                />
+            )}
             <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-5xl)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-1)', marginBottom: 24 }}>
                 Мои заказы
             </h1>
