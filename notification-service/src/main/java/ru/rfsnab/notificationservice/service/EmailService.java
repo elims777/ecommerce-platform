@@ -57,6 +57,8 @@ public class EmailService {
         model.put("items", event.items());
         model.put("deliveryAddress", event.deliveryAddress());
         model.put("addressLine", formatAddress(event.deliveryAddress()));
+        model.put("pickupPoint", event.pickupPoint());
+        model.put("pickupLine", formatPickupAddress(event.pickupPoint()));
         model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
@@ -82,6 +84,8 @@ public class EmailService {
         model.put("customerType", event.customerType());
         model.put("deliveryAddress", event.deliveryAddress());
         model.put("addressLine", formatAddress(event.deliveryAddress()));
+        model.put("pickupPoint", event.pickupPoint());
+        model.put("pickupLine", formatPickupAddress(event.pickupPoint()));
         model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
@@ -131,7 +135,7 @@ public class EmailService {
         Map<String, Object> model = new HashMap<>();
         model.put("orderNumber", orderNumber);
 
-        sendHtml(toEmail, "Заказ " + orderNumber + " отгружен — ожидаем подтверждения оплаты",
+        sendHtml(toEmail, "Заказ " + orderNumber + " принят в работу — постоплата",
                 "awaiting-confirmation", model);
     }
 
@@ -255,6 +259,21 @@ public class EmailService {
         if (a.apartment() != null && !a.apartment().isBlank()) {
             appendPart(sb, "кв. " + a.apartment());
         }
+        return sb.isEmpty() ? null : sb.toString();
+    }
+
+    /**
+     * Собирает адрес пункта самовывоза в одну строку из непустых полей.
+     */
+    private String formatPickupAddress(OrderEvent.PickupPointDto p) {
+        if (p == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        appendPart(sb, p.postalCode());
+        appendPart(sb, p.city());
+        appendPart(sb, p.street());
+        appendPart(sb, p.building());
         return sb.isEmpty() ? null : sb.toString();
     }
 

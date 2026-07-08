@@ -11,26 +11,30 @@
        style="width:600px; max-width:600px; margin:0 auto; background-color:#FFFFFF;">
     <tr>
         <td style="padding:32px 24px; font-family:Arial, system-ui, sans-serif;">
-            <h2 style="color:#1E3A5F; margin:0 0 16px;">Заказ <span th:text="${orderNumber}"></span> оформлен</h2>
+            <h2 style="color:#1E3A5F; margin:0 0 16px; text-align:center;">Заказ <span th:text="${orderNumber}"></span> оформлен</h2>
             <p style="color:#1A1A1A; font-size:14px; line-height:20px; margin:0 0 16px;">
                 Спасибо за заказ! Он передан менеджеру. После подтверждения заказ перейдёт в статус ожидания оплаты.
             </p>
 
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
                 <tr style="background-color:#1E3A5F;">
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Товар</td>
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="center">Кол-во</td>
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Цена</td>
+                    <td width="64%" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Товар</td>
+                    <td width="14%" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif; white-space:nowrap;" align="center">Кол-во</td>
+                    <td width="22%" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif; white-space:nowrap;" align="right">Цена</td>
                 </tr>
                 <tr th:each="item : ${items}" style="border-bottom:1px solid #EEEEEE;">
-                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;">
+                    <td width="64%" style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif; word-break:break-word;">
                         <span th:text="${item.productName}"></span>
                         <span th:if="${item.variantAttributes}" th:text="' (' + ${item.variantAttributes} + ')'" style="color:#666666;"></span>
                     </td>
-                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="center" th:text="${item.quantity}"></td>
-                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${item.price} + ' ₽'"></td>
+                    <td width="14%" style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif; white-space:nowrap;" align="center" th:text="${item.quantity}"></td>
+                    <td width="22%" style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif; white-space:nowrap;" align="right" th:text="${item.price} + ' ₽'"></td>
                 </tr>
             </table>
+
+            <p style="color:#1A1A1A; font-size:16px; font-weight:bold; margin:0 0 16px;">
+                Итого: <span th:text="${totalAmount}"></span> ₽
+            </p>
 
             <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
                 <strong>Способ доставки:</strong> <span th:text="${deliveryMethod}"></span>
@@ -47,12 +51,22 @@
                     <span th:text="${deliveryAddress.phone}"></span>
                 </p>
             </div>
+            <div th:if="${pickupPoint != null}">
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                    <strong>Пункт самовывоза:</strong> <span th:text="${pickupPoint.name}"></span>
+                </p>
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${pickupLine}">
+                    <span th:text="${pickupLine}"></span>
+                </p>
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                    <strong>Телефон:</strong> <span th:text="${pickupPoint.phoneNumber}"></span>
+                </p>
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${pickupPoint.workingHours}">
+                    <strong>Часы работы:</strong> <span th:text="${pickupPoint.workingHours}"></span>
+                </p>
+            </div>
             <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${comment}">
                 <strong>Комментарий:</strong> <span th:text="${comment}"></span>
-            </p>
-
-            <p style="color:#1A1A1A; font-size:16px; font-weight:bold; margin:16px 0;">
-                Итого: <span th:text="${totalAmount}"></span> ₽
             </p>
 
             <div th:replace="~{mail/layout :: button(${trackUrl}, 'Перейти к заказам')}"></div>
