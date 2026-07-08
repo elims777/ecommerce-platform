@@ -11,6 +11,7 @@ import ru.rfsnab.userservice.exceptions.EmailAlreadyVerifiedException;
 import ru.rfsnab.userservice.exceptions.LegalEntityAlreadyExistsException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotFoundException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotVerifiedException;
+import ru.rfsnab.userservice.exceptions.ResendTooSoonException;
 import ru.rfsnab.userservice.models.*;
 import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthResponse;
 import ru.rfsnab.userservice.models.dto.legal.RegisterLegalEntityRequest;
@@ -75,6 +76,7 @@ public class LegalEntityService {
                 .verificationStatus(VerificationStatus.PENDING)
                 .emailConfirmToken(confirmToken)
                 .emailVerified(false)
+                .emailConfirmSentAt(LocalDateTime.now())
                 .build();
 
         entity = legalEntityRepository.save(entity);
@@ -377,8 +379,15 @@ public class LegalEntityService {
             throw new EmailAlreadyVerifiedException("Email уже подтверждён");
         }
 
+        LocalDateTime lastSent = entity.getEmailConfirmSentAt();
+        if (lastSent != null && lastSent.isAfter(LocalDateTime.now().minusMinutes(10))) {
+            long secondsLeft = java.time.Duration.between(LocalDateTime.now(), lastSent.plusMinutes(10)).getSeconds();
+            throw new ResendTooSoonException("Повторная отправка будет доступна через " + secondsLeft + " сек.");
+        }
+
         String confirmToken = UUID.randomUUID().toString();
         entity.setEmailConfirmToken(confirmToken);
+        entity.setEmailConfirmSentAt(LocalDateTime.now());
         legalEntityRepository.save(entity);
 
         kafkaProducerService.send(new LegalEntityEvent(
