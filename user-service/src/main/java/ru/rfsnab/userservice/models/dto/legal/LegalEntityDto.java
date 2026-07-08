@@ -24,6 +24,7 @@ public record LegalEntityDto(
         String legalBuilding,
         String legalPostalCode,
         VerificationStatus verificationStatus,
+        boolean emailVerified,
         LocalDateTime verifiedAt,
         List<BankAccountDto> bankAccounts,
         List<LegalEntityAddressDto> addresses,

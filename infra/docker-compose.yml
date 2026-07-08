@@ -230,6 +230,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SECRET_JWT: ${SECRET_JWT}
       ORDER_SERVICE_URL: http://order-service:8084
+      MANAGER_EMAIL: ${MANAGER_EMAIL:-info@rfsnab.ru}
     volumes:
       - /var/log/rfsnab/user-service:/var/log/rfsnab/user-service
     depends_on:

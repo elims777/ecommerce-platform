@@ -40,6 +40,9 @@ public class UserRegisteredHandler implements NotificationHandler{
                 log.warn("Дубликат verification token: {}", event.getVerificationToken());
                 return;
             }
+            // Гасим прежние неиспользованные токены этого пользователя, чтобы старая ссылка не работала после resend
+            tokenService.invalidateOldTokens(event.getUserId());
+
             // Сохраняем токен в БД
             EmailVerificationToken token = EmailVerificationToken.builder()
                     .token(event.getVerificationToken())

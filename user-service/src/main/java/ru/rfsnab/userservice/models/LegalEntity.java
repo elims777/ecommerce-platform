@@ -80,6 +80,8 @@ public class LegalEntity {
     @Builder.Default
     private boolean emailVerified = false;
 
+    private LocalDateTime emailConfirmSentAt;
+
     @OneToMany(mappedBy = "legalEntity", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<LegalEntityBankAccount> bankAccounts = new ArrayList<>();

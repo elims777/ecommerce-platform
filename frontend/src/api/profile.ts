@@ -15,6 +15,11 @@ export const getProfile = async (): Promise<User> => {
     return data;
 };
 
+/** Отправить письмо подтверждения email повторно */
+export const resendMyVerification = async (): Promise<void> => {
+    await apiClient.post('/v1/users/me/resend-verification');
+};
+
 /** Обновить профиль (напрямую в user-service) */
 export const updateProfile = async (
     userId: number,

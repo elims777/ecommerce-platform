@@ -5,7 +5,7 @@ import { RowLink } from '@/components/navigation';
 import { getAdminOrders, changeOrderStatus } from '@/api/adminOrders';
 import { OrderStatus, OrderStatusLabels } from '@/types/order';
 import { extractEnumCode } from '@/utils/enumUtils';
-import { getAllowedTransitions } from '@/utils/orderTransitions';
+import { getAllowedTransitions, ALLOWED_TRANSITIONS } from '@/utils/orderTransitions';
 import type { OrderSummaryDto } from '@/types/order';
 
 const { RangePicker } = DatePicker;
@@ -28,9 +28,65 @@ const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
   COMPLETED:             { cls: 'rf-badge-neutral',              label: 'Завершено' },
   PAYMENT_FAILED:        { cls: 'rf-badge-red',                  label: 'Ошибка оплаты' },
   CANCELLED:             { cls: 'rf-badge-red',                  label: 'Отменено' },
-  REFUNDED:              { cls: 'rf-badge-neutral',              label: 'Возврат' },
+  REFUNDED:              { cls: 'rf-badge-neutral',              label: 'Возврат средств' },
   AWAITING_CONFIRMATION: { cls: 'rf-badge-warn',                 label: 'Ожид. подтверждения' },
 };
+
+/** Порядок вывода в памятке — совпадает с жизненным циклом заказа */
+const TRANSITION_ORDER: OrderStatus[] = [
+  OrderStatus.CREATED,
+  OrderStatus.PROCESSING,
+  OrderStatus.INVOICE_SENT,
+  OrderStatus.PENDING_PAYMENT,
+  OrderStatus.PAYMENT_FAILED,
+  OrderStatus.AWAITING_CONFIRMATION,
+  OrderStatus.PARTIALLY_PAID,
+  OrderStatus.PAID,
+  OrderStatus.SHIPPED,
+  OrderStatus.IN_TRANSIT,
+  OrderStatus.DELIVERED,
+  OrderStatus.CANCELLED,
+  OrderStatus.REFUNDED,
+  OrderStatus.COMPLETED,
+];
+
+const StatusGuide = () => (
+  <details className="rf-card" style={{ marginBottom: 16, overflow: 'hidden' }}>
+    <summary
+      style={{
+        cursor: 'pointer',
+        padding: '10px 16px',
+        fontWeight: 600,
+        fontSize: 13,
+        color: 'var(--brand-navy)',
+        userSelect: 'none',
+      }}
+    >
+      Как менять статусы заказа
+    </summary>
+    <div style={{ padding: '4px 16px 14px', borderTop: '1px solid var(--line, #eee)' }}>
+      <p style={{ margin: '10px 0', fontSize: 12.5, color: 'var(--ink-3)' }}>
+        Статус меняется только на один из допустимых следующих. Ниже — от какого статуса
+        в какие можно перейти.
+      </p>
+      <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 6 }}>
+        {TRANSITION_ORDER.map((from) => {
+          const next = ALLOWED_TRANSITIONS[from] ?? [];
+          return (
+            <li key={from} style={{ fontSize: 12.5, display: 'flex', gap: 8, alignItems: 'baseline' }}>
+              <span style={{ fontWeight: 600, minWidth: 150 }}>{OrderStatusLabels[from]}</span>
+              <span style={{ color: 'var(--ink-3)' }}>
+                {next.length > 0
+                  ? next.map((s) => OrderStatusLabels[s]).join(' · ')
+                  : 'финальный — переходов нет'}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  </details>
+);
 
 const STATUS_TABS = [
   { label: 'Все',               value: undefined },
@@ -86,6 +142,9 @@ const AdminOrdersPage = () => {
 
   return (
     <div>
+      {/* Status transitions guide */}
+      <StatusGuide />
+
       {/* Status tabs */}
       <div className="rf-admin-tabs">
         {STATUS_TABS.map((tab) => (

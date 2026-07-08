@@ -27,7 +27,7 @@ const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
   COMPLETED:             { cls: 'rf-badge-neutral',              label: 'Завершено' },
   PAYMENT_FAILED:        { cls: 'rf-badge-red',                  label: 'Ошибка оплаты' },
   CANCELLED:             { cls: 'rf-badge-red',                  label: 'Отменено' },
-  REFUNDED:              { cls: 'rf-badge-neutral',              label: 'Возврат' },
+  REFUNDED:              { cls: 'rf-badge-neutral',              label: 'Возврат средств' },
   AWAITING_CONFIRMATION: { cls: 'rf-badge-warn',                 label: 'Ожид. подтверждения' },
 };
 

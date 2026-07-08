@@ -449,7 +449,7 @@ const ClientLayout = () => {
                 placement="left"
                 open={mobileNavOpen}
                 onClose={() => setMobileNavOpen(false)}
-                width={280}
+                size={280}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <NavLink to="/catalog" onClick={() => setMobileNavOpen(false)} style={{

@@ -248,6 +248,40 @@ class ProductControllerTest {
             mockMvc.perform(get("/api/v1/products/category/{categoryId}", 999L))
                     .andExpect(status().isNotFound());
         }
+
+        @Test
+        @DisplayName("по умолчанию сортирует по displayOrder (порядок из админки)")
+        void getProductsByCategory_DefaultSort_OrdersByDisplayOrder() throws Exception {
+            // testProduct имеет displayOrder=0 (дефолт)
+            productRepository.save(Product.builder()
+                    .name("Огнетушитель ОП-8")
+                    .slug("ognetushitel-op-8")
+                    .price(new BigDecimal("2000.00"))
+                    .stockQuantity(50)
+                    .isActive(true)
+                    .isFeatured(false)
+                    .displayOrder(10)
+                    .category(testCategory)
+                    .build());
+
+            productRepository.save(Product.builder()
+                    .name("Огнетушитель ОУ-2")
+                    .slug("ognetushitel-ou-2")
+                    .price(new BigDecimal("3000.00"))
+                    .stockQuantity(30)
+                    .isActive(true)
+                    .isFeatured(false)
+                    .displayOrder(5)
+                    .category(testCategory)
+                    .build());
+
+            mockMvc.perform(get("/api/v1/products/category/{categoryId}", testCategory.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(3)))
+                    .andExpect(jsonPath("$.content[0].name", is("Огнетушитель ОП-4")))
+                    .andExpect(jsonPath("$.content[1].name", is("Огнетушитель ОУ-2")))
+                    .andExpect(jsonPath("$.content[2].name", is("Огнетушитель ОП-8")));
+        }
     }
 
     // ==================== GET /count-available ====================

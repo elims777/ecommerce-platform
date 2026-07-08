@@ -37,6 +37,7 @@ export interface LegalEntityDto {
   legalPostalCode: string | null;
   verificationStatus: string;
   verifiedAt: string | null;
+  emailVerified: boolean;
   bankAccounts: { id: number; bankName: string; bik: string; correspondentAccount: string; settlementAccount: string; primary: boolean }[];
   addresses: { id: number; city: string; street: string; building: string; apartment: string | null; postalCode: string; primary: boolean }[];
   createdAt: string;
@@ -112,4 +113,14 @@ export const deleteUser = async (id: number): Promise<void> => {
 // DELETE /api/v1/admin/legal-entities/{id}
 export const deleteLegalEntity = async (id: number): Promise<void> => {
   await apiClient.delete(`/v1/admin/legal-entities/${id}`);
+};
+
+// POST /api/v1/admin/users/{id}/resend-verification
+export const resendUserVerification = async (id: number): Promise<void> => {
+  await apiClient.post(`/v1/admin/users/${id}/resend-verification`);
+};
+
+// POST /api/v1/admin/legal-entities/{id}/resend-verification
+export const resendLegalVerification = async (id: number): Promise<void> => {
+  await apiClient.post(`/v1/admin/legal-entities/${id}/resend-verification`);
 };

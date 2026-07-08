@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        body, table, td { font-family: Arial, system-ui, sans-serif; }
+    </style>
+</head>
+<body>
+
+<!--/* Хедер письма: тёмная навигационная плашка с логотипом (CID) */-->
+<table th:fragment="header" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="max-width:600px; margin:0 auto; background-color:#1E3A5F;">
+    <tr>
+        <td align="center" style="width:100%; padding:24px 0; background-color:#1E3A5F;">
+            <img src="cid:logo" alt="РФСнаб" height="48"
+                 style="height:48px; display:block; border:0; outline:none;"/>
+        </td>
+    </tr>
+</table>
+
+<!--/* Кнопка-хелпер: стилизованная ссылка красного цвета */-->
+<table th:fragment="button(url, text)" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+        <td align="center" style="padding:16px 0;">
+            <a th:href="${url}" th:text="${text}"
+               style="display:inline-block; padding:12px 32px; background-color:#C0272D; color:#FFFFFF;
+                      font-family:Arial, system-ui, sans-serif; font-size:14px; font-weight:bold;
+                      text-decoration:none; border-radius:6px;">Кнопка</a>
+        </td>
+    </tr>
+</table>
+
+<!--/* Футер письма: серый фон, контакты компании */-->
+<table th:fragment="footer" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="max-width:600px; margin:0 auto; background-color:#F2F2F2;">
+    <tr>
+        <td align="center"
+            style="width:100%; padding:20px 24px; background-color:#F2F2F2; color:#666666; font-size:12px; font-family:Arial, system-ui, sans-serif; line-height:18px;">
+            8-800-201-78-01 &middot; 8-8212-29-69-71 &middot; info@rfsnab.ru &middot; rfsnab.ru
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

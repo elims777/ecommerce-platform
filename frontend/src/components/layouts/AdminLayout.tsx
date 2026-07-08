@@ -103,14 +103,6 @@ function ChevronDownIcon() {
   );
 }
 
-function SearchIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="6" cy="6" r="4"/><path d="M10 10l2.5 2.5"/>
-    </svg>
-  );
-}
-
 const AdminLayout = () => {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
@@ -184,10 +176,6 @@ const AdminLayout = () => {
           <h1>{pageTitle}</h1>
           <span className="rf-admin-date-chip">{today}</span>
           <div style={{ flex: 1 }} />
-          <div className="rf-admin-search">
-            <SearchIcon />
-            <input placeholder="Поиск по заявкам, артикулам, клиентам…" />
-          </div>
           <NavLink
             to="/"
             className="rf-btn rf-btn-quiet rf-btn-sm"

@@ -4,14 +4,16 @@ import { EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import { updateProfile } from '@/api/profile';
+import { updateProfile, resendMyVerification } from '@/api/profile';
 import type { UpdateProfileRequest } from '@/api/profile';
 import type { AxiosError } from 'axios';
+import { isAxiosError } from 'axios';
 import {
     getLinkStatus,
     getLegalEntity,
     linkLegalEntityByInn,
     resendLegalEntityLink,
+    resendMyLegalVerification,
     unlinkLegalEntity,
     updateLegalEntity,
     type UpdateLegalEntityRequest,
@@ -313,6 +315,20 @@ const UnlinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResponse
         onError: () => { messageApi.error('Не удалось отвязать организацию'); },
     });
 
+    const resendVerificationMutation = useMutation({
+        mutationFn: resendMyLegalVerification,
+        onSuccess: () => messageApi.success('Письмо отправлено'),
+        onError: (err) => {
+            if (isAxiosError(err) && err.response?.status === 409) {
+                messageApi.error('Email уже подтверждён');
+            } else if (isAxiosError(err) && err.response?.status === 429) {
+                messageApi.error(err.response?.data?.message || 'Слишком часто, попробуйте позже');
+            } else {
+                messageApi.error('Не удалось отправить');
+            }
+        },
+    });
+
     const confirmUnlink = () => {
         modal.confirm({
             title: 'Отвязать организацию?',
@@ -334,6 +350,17 @@ const UnlinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResponse
                 <Row label="Организация" value={legalEntity.fullName} />
                 <Row label="ИНН" value={legalEntity.inn} />
                 <Row label="Email" value={legalEntity.email} last />
+                {!legalEntity.emailVerified && (
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line-1)' }}>
+                        <button
+                            onClick={() => resendVerificationMutation.mutate()}
+                            disabled={resendVerificationMutation.isPending}
+                            style={{ height: 'var(--btn-h-md)', padding: '0 14px', background: 'transparent', color: 'var(--brand-navy)', border: '1px solid var(--brand-navy)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: resendVerificationMutation.isPending ? 'not-allowed' : 'pointer', opacity: resendVerificationMutation.isPending ? 0.6 : 1, fontFamily: 'var(--font-body)' }}
+                        >
+                            {resendVerificationMutation.isPending ? 'Отправка...' : 'Отправить письмо подтверждения email повторно'}
+                        </button>
+                    </div>
+                )}
                 <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line-1)' }}>
                     <button
                         onClick={confirmUnlink}
@@ -531,6 +558,20 @@ const B2CProfilePage = () => {
         },
     });
 
+    const resendVerificationMutation = useMutation({
+        mutationFn: resendMyVerification,
+        onSuccess: () => messageApi.success('Письмо отправлено'),
+        onError: (err) => {
+            if (isAxiosError(err) && err.response?.status === 409) {
+                messageApi.error('Email уже подтверждён');
+            } else if (isAxiosError(err) && err.response?.status === 429) {
+                messageApi.error(err.response?.data?.message || 'Слишком часто, попробуйте позже');
+            } else {
+                messageApi.error('Не удалось отправить');
+            }
+        },
+    });
+
     const handleEdit = () => {
         form.setFieldsValue({ firstname: user.firstname, lastname: user.lastname, surname: user.surname || '', phone: user.phone || '' });
         setEditing(true);
@@ -611,6 +652,15 @@ const B2CProfilePage = () => {
                             <span style={{ display: 'inline-flex', alignItems: 'center', height: 22, padding: '0 8px', borderRadius: 11, fontSize: 'var(--text-sm)', fontWeight: 500, background: user.emailVerified ? 'var(--brand-green-soft)' : 'var(--warn-tint)', color: user.emailVerified ? 'var(--brand-green)' : 'var(--warn)' }}>
                                 {user.emailVerified ? 'Подтверждён' : 'Не подтверждён'}
                             </span>
+                            {!user.emailVerified && (
+                                <button
+                                    onClick={() => resendVerificationMutation.mutate()}
+                                    disabled={resendVerificationMutation.isPending}
+                                    style={{ height: 28, padding: '0 12px', background: 'transparent', color: 'var(--brand-navy)', border: '1px solid var(--brand-navy)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-sm)', fontWeight: 500, cursor: resendVerificationMutation.isPending ? 'not-allowed' : 'pointer', opacity: resendVerificationMutation.isPending ? 0.6 : 1, fontFamily: 'var(--font-body)' }}
+                                >
+                                    {resendVerificationMutation.isPending ? 'Отправка...' : 'Отправить письмо повторно'}
+                                </button>
+                            )}
                         </div>
                     } />
                     <Row label="Дата регистрации" value={formatDate(user.createdAt)} last />

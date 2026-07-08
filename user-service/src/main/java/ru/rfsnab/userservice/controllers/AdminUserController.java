@@ -7,6 +7,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -55,5 +56,11 @@ public class AdminUserController {
         userService.deleteUser(id);
         log.info("Пользователь {} удалён администратором {}", id, callerUserId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/resend-verification")
+    public ResponseEntity<Void> resendVerification(@PathVariable Long id) {
+        userService.resendVerification(id);
+        return ResponseEntity.ok().build();
     }
 }

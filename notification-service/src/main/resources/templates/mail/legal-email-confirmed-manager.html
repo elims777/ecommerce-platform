@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+</head>
+<body style="margin:0; padding:0; background-color:#F2F2F2;">
+
+<div th:replace="~{mail/layout :: header}"></div>
+
+<table width="600" cellpadding="0" cellspacing="0" border="0"
+       style="width:600px; max-width:600px; margin:0 auto; background-color:#FFFFFF;">
+    <tr>
+        <td style="padding:32px 24px; font-family:Arial, system-ui, sans-serif;">
+            <h2 style="color:#1E3A5F; margin:0 0 16px; text-align:center;">Новое юрлицо на верификацию</h2>
+            <p style="color:#1A1A1A; font-size:14px; line-height:20px; margin:0 0 8px;">
+                Требуется верификация нового юридического лица:
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Организация:</strong> <span th:text="${companyName}"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 16px;">
+                <strong>ИНН:</strong> <span th:text="${inn}"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; line-height:20px; margin:0 0 16px;">
+                Перейдите в панель администратора для проверки документов.
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:16px 0 0;">С уважением, команда РФСнаб</p>
+        </td>
+    </tr>
+</table>
+
+<div th:replace="~{mail/layout :: footer}"></div>
+
+</body>
+</html>

@@ -25,6 +25,12 @@ public class EmailVerificationTokenService {
         return tokenRepository.save(token);
     }
 
+    @Transactional
+    public void invalidateOldTokens(Long userId){
+        tokenRepository.deleteAllByUserId(userId);
+        log.info("Старые verification token удалены для userId: {}", userId);
+    }
+
     public Optional<EmailVerificationToken> findByToken(String token){
         return tokenRepository.findByToken(token);
     }

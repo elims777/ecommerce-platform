@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+</head>
+<body style="margin:0; padding:0; background-color:#F2F2F2;">
+
+<div th:replace="~{mail/layout :: header}"></div>
+
+<table width="600" cellpadding="0" cellspacing="0" border="0"
+       style="width:600px; max-width:600px; margin:0 auto; background-color:#FFFFFF;">
+    <tr>
+        <td style="padding:32px 24px; font-family:Arial, system-ui, sans-serif;">
+            <h2 style="color:#1E3A5F; margin:0 0 16px; text-align:center;">Добрый день, <span th:text="${firstname}"></span>!</h2>
+            <p style="color:#1A1A1A; font-size:14px; line-height:20px; margin:0 0 16px;">
+                Мы заметили, что вас давно не было на нашей платформе РФСнаб.
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; line-height:20px; margin:0 0 16px;">
+                У нас появились новые товары, акции и специальные предложения для наших клиентов.
+                Загляните в каталог — возможно, найдёте что-то интересное:
+            </p>
+            <div th:replace="~{mail/layout :: button(${catalogUrl}, 'Перейти в каталог')}"></div>
+            <p style="color:#1A1A1A; font-size:14px; line-height:20px; margin:16px 0;">
+                Если у вас есть вопросы или нужна помощь с заказом — наши менеджеры всегда на связи.
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:16px 0 0 0;">С уважением, команда РФСнаб</p>
+            <hr style="border:none; border-top:1px solid #EEEEEE; margin:24px 0;"/>
+            <p style="color:#666666; font-size:12px; line-height:16px; margin:0;">
+                Вы получили это письмо, так как зарегистрированы на rfsnab.ru.
+                Чтобы отписаться от рассылки, <a th:href="${unsubscribeUrl}" style="color:#C0272D;">перейдите по ссылке</a>.
+            </p>
+        </td>
+    </tr>
+</table>
+
+<div th:replace="~{mail/layout :: footer}"></div>
+
+</body>
+</html>

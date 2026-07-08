@@ -17,6 +17,7 @@ export interface LegalEntityResponse {
     legalPostalCode: string | null;
     verificationStatus: string;
     verifiedAt: string | null;
+    emailVerified: boolean;
     createdAt: string;
 }
 
@@ -64,6 +65,10 @@ export const linkLegalEntityByInn = async (inn: string): Promise<void> => {
 
 export const resendLegalEntityLink = async (): Promise<void> => {
     await apiClient.post('/v1/users/me/legal-entities/resend-link');
+};
+
+export const resendMyLegalVerification = async (): Promise<void> => {
+    await apiClient.post('/v1/users/me/legal-entities/resend-verification');
 };
 
 export const unlinkLegalEntity = async (legalEntityId: number): Promise<void> => {
