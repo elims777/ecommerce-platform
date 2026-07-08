@@ -63,7 +63,7 @@ export const OrderStatusLabels: Record<OrderStatus, string> = {
     [OrderStatus.IN_TRANSIT]: 'В пути',
     [OrderStatus.DELIVERED]: 'Доставлен',
     [OrderStatus.CANCELLED]: 'Отменён',
-    [OrderStatus.REFUNDED]: 'Возврат',
+    [OrderStatus.REFUNDED]: 'Возврат средств',
     [OrderStatus.AWAITING_CONFIRMATION]: 'Ожидает подтверждения',
     [OrderStatus.INVOICE_SENT]: 'Счёт выставлен',
     [OrderStatus.PARTIALLY_PAID]: 'Частично оплачен',
@@ -90,6 +90,22 @@ export interface OrderItemDto {
     quantity: number;
     price: number;
     subtotal: number;
+}
+
+/** Позиция заказа в запросе на редактирование */
+export interface UpdateOrderItemRequest {
+    productId: number;
+    quantity: number;
+}
+
+/** Запрос на редактирование заказа — разрешён только в статусе CREATED */
+export interface UpdateOrderRequest {
+    paymentMethod: PaymentMethod;
+    deliveryMethod: DeliveryMethod;
+    deliveryAddress?: AddressDto;
+    warehousePointId?: number;
+    items: UpdateOrderItemRequest[];
+    comment?: string;
 }
 
 /** Точка самовывоза */
