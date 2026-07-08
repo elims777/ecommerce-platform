@@ -41,6 +41,7 @@ public class UserEntity {
     private LocalDateTime updatedAt;
     private LocalDateTime lastLoginAt;
     private LocalDateTime lastInactivityEmailAt;
+    private LocalDateTime lastVerificationEmailAt;
 
     @Column(unique = true)
     private String unsubscribeToken;

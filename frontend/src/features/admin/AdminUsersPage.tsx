@@ -74,14 +74,6 @@ const AdminUsersPage = () => {
         onError: () => messageApi.error('Ошибка отклонения'),
     });
 
-    const resendLegalVerificationMutation = useMutation({
-        mutationFn: (id: number) => resendLegalVerification(id),
-        onSuccess: () => messageApi.success('Письмо отправлено'),
-        onError: (err) => messageApi.error(
-            isAxiosError(err) && err.response?.status === 409 ? 'Email уже подтверждён' : 'Не удалось отправить',
-        ),
-    });
-
     const extractErrorMessage = (err: unknown, fallback: string): string => {
         if (isAxiosError(err)) {
             const data = err.response?.data as { message?: string } | undefined;
@@ -89,6 +81,20 @@ const AdminUsersPage = () => {
         }
         return fallback;
     };
+
+    const resendLegalVerificationMutation = useMutation({
+        mutationFn: (id: number) => resendLegalVerification(id),
+        onSuccess: () => messageApi.success('Письмо отправлено'),
+        onError: (err) => {
+            if (isAxiosError(err) && err.response?.status === 409) {
+                messageApi.error('Email уже подтверждён');
+            } else if (isAxiosError(err) && err.response?.status === 429) {
+                messageApi.error(extractErrorMessage(err, 'Слишком часто, попробуйте позже'));
+            } else {
+                messageApi.error('Не удалось отправить');
+            }
+        },
+    });
 
     const deleteUserMutation = useMutation({
         mutationFn: (id: number) => deleteUser(id),

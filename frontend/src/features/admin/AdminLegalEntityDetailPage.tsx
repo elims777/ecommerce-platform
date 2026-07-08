@@ -64,9 +64,15 @@ const AdminLegalEntityDetailPage = () => {
     const resendVerificationMutation = useMutation({
         mutationFn: () => resendLegalVerification(legalId),
         onSuccess: () => messageApi.success('Письмо отправлено'),
-        onError: (err) => messageApi.error(
-            isAxiosError(err) && err.response?.status === 409 ? 'Email уже подтверждён' : 'Не удалось отправить',
-        ),
+        onError: (err) => {
+            if (isAxiosError(err) && err.response?.status === 409) {
+                messageApi.error('Email уже подтверждён');
+            } else if (isAxiosError(err) && err.response?.status === 429) {
+                messageApi.error(err.response?.data?.message || 'Слишком часто, попробуйте позже');
+            } else {
+                messageApi.error('Не удалось отправить');
+            }
+        },
     });
 
     if (isLoading || !le) {
