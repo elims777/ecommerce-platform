@@ -3,8 +3,11 @@ package ru.rfsnab.integrationservice.model.commerceml;
 import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlElementWrapper;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 
 /**
  * Контрагент в документе заказа CommerceML.
@@ -38,9 +41,7 @@ public class CmlContragent {
     @XmlElement(name = "ПочтовыйАдрес")
     private String postalAddress;
 
-    @XmlElement(name = "Телефон")
-    private String phone;
-
-    @XmlElement(name = "Почта")
-    private String email;
+    @XmlElementWrapper(name = "Контакты")
+    @XmlElement(name = "Контакт")
+    private List<CmlContact> contacts;
 }

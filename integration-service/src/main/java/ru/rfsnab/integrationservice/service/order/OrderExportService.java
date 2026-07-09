@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.integrationservice.model.PendingOrder;
+import ru.rfsnab.integrationservice.model.commerceml.CmlContact;
 import ru.rfsnab.integrationservice.model.commerceml.CmlContragent;
 import ru.rfsnab.integrationservice.model.commerceml.CmlDocument;
 import ru.rfsnab.integrationservice.model.commerceml.CmlOrderProduct;
@@ -141,7 +142,8 @@ public class OrderExportService {
 
     private CmlContragent buidContragent(JsonNode json){
         CmlContragent contragent = new CmlContragent();
-        // Ид оставляем пустым: 1С матчит контрагента по ИНН или наименованию.
+        // Ид = userId: стабильный идентификатор, по нему 1С матчит контрагента при повторных обменах.
+        contragent.setId(getTextOrNull(json, "userId"));
 
         String customerType = getTextOrNull(json, "customerType");
         if ("B2B".equals(customerType)) {
@@ -150,22 +152,32 @@ public class OrderExportService {
             contragent.setFullName(companyName);
             contragent.setInn(getTextOrNull(json, "inn"));
         } else {
+            // B2C: получатель доставки → имя заказчика → email как последний fallback,
+            // иначе Наименование пустое и 1С не создаёт контрагента.
             String name = getTextOrNull(json, "recipientName");
+            if (name == null) {
+                name = getTextOrNull(json, "customerName");
+            }
+            if (name == null) {
+                name = getTextOrNull(json, "customerEmail");
+            }
             contragent.setName(name);
             contragent.setFullName(name);
-            if (name != null) {
-                int spaceIndex = name.indexOf(' ');
-                if (spaceIndex >= 0) {
-                    contragent.setLastName(name.substring(0, spaceIndex));
-                    contragent.setFirstName(name.substring(spaceIndex + 1));
-                } else {
-                    contragent.setFirstName(name);
-                }
-            }
         }
 
-        contragent.setEmail(getTextOrNull(json, "customerEmail"));
-        contragent.setPhone(getTextOrNull(json, "recipientPhone"));
+        // Контакты: email и телефон блоком <Контакты> — плоские теги 1С не показывает.
+        List<CmlContact> contacts = new ArrayList<>();
+        String email = getTextOrNull(json, "customerEmail");
+        if (email != null) {
+            contacts.add(contact("Электронная почта", email));
+        }
+        String phone = getTextOrNull(json, "recipientPhone");
+        if (phone != null) {
+            contacts.add(contact("Телефон рабочий", phone));
+        }
+        if (!contacts.isEmpty()) {
+            contragent.setContacts(contacts);
+        }
 
         // Адрес
         String city = getTextOrNull(json, "city");
@@ -177,6 +189,13 @@ public class OrderExportService {
         }
 
         return contragent;
+    }
+
+    private CmlContact contact(String type, String value) {
+        CmlContact contact = new CmlContact();
+        contact.setType(type);
+        contact.setValue(value);
+        return contact;
     }
 
     private List<CmlOrderProduct> buildProducts(JsonNode json) {

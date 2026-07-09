@@ -23,6 +23,7 @@ public record Order1CExportEvent(
         String customerType,
         String companyName,
         String inn,
+        String customerName,
         String recipientName,
         String recipientPhone,
 
