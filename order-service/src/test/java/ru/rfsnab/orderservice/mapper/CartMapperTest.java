@@ -33,9 +33,9 @@ class CartMapperTest {
             Cart cart = buildCartWithItems();
             Map<Long, ProductDto> products = Map.of(
                     1L, new ProductDto(1L, "Доска обрезная", new BigDecimal("1500.00"),
-                            null, 100, true, "ext-001"),
+                            null, 100, true, "ext-001", null, null),
                     2L, new ProductDto(2L, "Брус 100x100", new BigDecimal("3200.00"),
-                            null, 50, true, "ext-002")
+                            null, 50, true, "ext-002", null, null)
             );
 
             CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2C);
@@ -52,7 +52,7 @@ class CartMapperTest {
             Cart cart = buildCartWithSingleItem(1L, 10);
             Map<Long, ProductDto> products = Map.of(
                     1L, new ProductDto(1L, "Доска обрезная", new BigDecimal("1500.00"),
-                            null, 100, true, "ext-001")
+                            null, 100, true, "ext-001", null, null)
             );
 
             CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2C);
@@ -72,7 +72,7 @@ class CartMapperTest {
             // Только один товар в map — второй "удалён"
             Map<Long, ProductDto> products = Map.of(
                     1L, new ProductDto(1L, "Доска обрезная", new BigDecimal("1500.00"),
-                            null, 100, true, "ext-001")
+                            null, 100, true, "ext-001", null, null)
             );
 
             CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2C);
@@ -117,7 +117,7 @@ class CartMapperTest {
                     1L, new ProductDto(1L, "Доска обрезная",
                             new BigDecimal("1000.00"),   // price (оптовая, B2B)
                             new BigDecimal("1500.00"),   // wholesalePrice (розничная, B2C)
-                            100, true, "ext-001")
+                            100, true, "ext-001", null, null)
             );
 
             CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2C);
@@ -134,7 +134,7 @@ class CartMapperTest {
                     1L, new ProductDto(1L, "Доска обрезная",
                             new BigDecimal("1000.00"),   // price (оптовая, B2B)
                             new BigDecimal("1500.00"),   // wholesalePrice (розничная, B2C)
-                            100, true, "ext-001")
+                            100, true, "ext-001", null, null)
             );
 
             CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2B);
@@ -151,7 +151,7 @@ class CartMapperTest {
                     1L, new ProductDto(1L, "Доска обрезная",
                             new BigDecimal("1500.00"),
                             null,
-                            100, true, "ext-001")
+                            100, true, "ext-001", null, null)
             );
 
             CartDto dto = CartMapper.toDto(cart, products, CustomerType.B2C);

@@ -286,6 +286,8 @@ public class OrderService {
                     .quantity(sourceItem.getQuantity())
                     .price(snapshotPrice)
                     .externalId(product.externalId())
+                    .sku(product.sku())
+                    .unitOfMeasure(product.unitOfMeasure())
                     .build();
 
             newOrder.getItems().add(newItem);
@@ -612,6 +614,8 @@ public class OrderService {
                     .quantity(cartItem.getQuantity())
                     .price(snapshotPrice)
                     .externalId(product.externalId())
+                    .sku(product.sku())
+                    .unitOfMeasure(product.unitOfMeasure())
                     .build();
 
             order.getItems().add(orderItem);
@@ -643,6 +647,8 @@ public class OrderService {
                     .quantity(itemDto.quantity())
                     .price(snapshotPrice)
                     .externalId(product.externalId())
+                    .sku(product.sku())
+                    .unitOfMeasure(product.unitOfMeasure())
                     .build();
 
             order.getItems().add(orderItem);

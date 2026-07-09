@@ -197,6 +197,7 @@ class ProductImportControllerTest {
                         .price(new BigDecimal("5000"))
                         .wholesalePrice(new BigDecimal("5000"))
                         .source("FTK")
+                        .unitOfMeasure("Пара")
                         .variants(List.of(
                                 ProductImportItem.VariantImportItem.builder()
                                         .externalId("FTK-PARENT-001.001")
@@ -252,6 +253,10 @@ class ProductImportControllerTest {
         assertThat(childS.getBarcode()).isEqualTo("4607032891234");
         assertThat(childS.getCountryOfOrigin()).isEqualTo("Россия");
         assertThat(childS.getStockQuantity()).isEqualTo(10);
+        // единица измерения наследуется от родителя
+        assertThat(childS.getUnitOfMeasure()).isEqualTo("Пара");
+        // имя варианта содержит размер из атрибутов, а не артикул
+        assertThat(childS.getName()).isEqualTo("Костюм защитный (размер S)");
     }
 
     @Test

@@ -15,6 +15,7 @@ import ru.rfsnab.integrationservice.model.commerceml.CmlContragent;
 import ru.rfsnab.integrationservice.model.commerceml.CmlDocument;
 import ru.rfsnab.integrationservice.model.commerceml.CmlOrderProduct;
 import ru.rfsnab.integrationservice.model.commerceml.CommerceInfo;
+import ru.rfsnab.integrationservice.model.commerceml.OkeiUnits;
 import ru.rfsnab.integrationservice.repository.PendingOrderRepository;
 
 import java.io.StringWriter;
@@ -206,11 +207,11 @@ public class OrderExportService {
             for (JsonNode item : items) {
                 CmlOrderProduct product = new CmlOrderProduct();
                 product.setId(getTextOrNull(item, "externalId"));
+                product.setSku(getTextOrNull(item, "sku"));
                 product.setName(item.get("productName").asText());
+                product.setBaseUnit(OkeiUnits.resolve(getTextOrNull(item, "unitOfMeasure")));
                 product.setQuantity(item.get("quantity").asText());
                 product.setPricePerUnit(item.get("price").asText());
-                product.setCatalogId(getTextOrNull(item, "externalId")); // тот же externalId
-                product.setBaseUnit("шт");
 
                 // Сумма = цена * количество
                 BigDecimal price = new BigDecimal(item.get("price").asText());

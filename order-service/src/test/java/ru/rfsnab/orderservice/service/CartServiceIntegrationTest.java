@@ -175,7 +175,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @DisplayName("бросает ProductNotFoundException для неактивного товара")
         void shouldThrowWhenProductInactive() {
             when(productServiceClient.getProduct(PRODUCT_ID_1))
-                    .thenReturn(new ProductDto(PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"), null, 100, false, "ext-001"));
+                    .thenReturn(new ProductDto(PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"), null, 100, false, "ext-001", null, null));
 
             assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1))
                     .isInstanceOf(ProductNotFoundException.class);
@@ -376,14 +376,14 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
     // ==================== Helpers ====================
 
     private void mockProduct(Long id, String name, String price, int stock, String externalId) {
-        ProductDto product = new ProductDto(id, name, new BigDecimal(price), null, stock, true, externalId);
+        ProductDto product = new ProductDto(id, name, new BigDecimal(price), null, stock, true, externalId, null, null);
         when(productServiceClient.getProduct(id)).thenReturn(product);
         when(productServiceClient.getProducts(Set.of(id)))
                 .thenReturn(Map.of(id, product));
     }
 
     private ProductDto buildProduct(Long id, String name, String price, String externalId) {
-        return new ProductDto(id, name, new BigDecimal(price), null, 100, true, externalId);
+        return new ProductDto(id, name, new BigDecimal(price), null, 100, true, externalId, null, null);
     }
 }
 

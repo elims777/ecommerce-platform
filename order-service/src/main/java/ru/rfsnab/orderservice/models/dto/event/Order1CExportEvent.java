@@ -52,6 +52,8 @@ public record Order1CExportEvent(
             Long productId,
             String externalId,
             String productName,
+            String sku,
+            String unitOfMeasure,
             Integer quantity,
             BigDecimal price
     ) {}

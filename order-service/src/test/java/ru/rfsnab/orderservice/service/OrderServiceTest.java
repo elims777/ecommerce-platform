@@ -77,10 +77,10 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
     private static final ProductDto PRODUCT_1 = new ProductDto(
             PRODUCT_ID_1, "Доска обрезная 50x150", new BigDecimal("1500.00"),
-            null, 100, true, "ext-001");
+            null, 100, true, "ext-001", "ART-001", "шт");
     private static final ProductDto PRODUCT_2 = new ProductDto(
             PRODUCT_ID_2, "Брус 100x100", new BigDecimal("1000.00"),
-            null, 50, true, "ext-002");
+            null, 50, true, "ext-002", "ART-002", "м3");
 
     private final ObjectMapper jsonMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule());
@@ -278,7 +278,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         void createOrder_B2B_usesWholesalePrice() {
             Long productId = 10L;
             ProductDto product = new ProductDto(productId, "Товар B2B", new BigDecimal("1000.00"),
-                    new BigDecimal("800.00"), 100, true, "ext-010");
+                    new BigDecimal("800.00"), 100, true, "ext-010", null, null);
 
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
             when(productServiceClient.getProduct(productId)).thenReturn(product);
@@ -302,7 +302,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         void createOrder_B2C_usesRetailPrice() {
             Long productId = 11L;
             ProductDto product = new ProductDto(productId, "Товар B2C", new BigDecimal("1000.00"),
-                    new BigDecimal("800.00"), 100, true, "ext-011");
+                    new BigDecimal("800.00"), 100, true, "ext-011", null, null);
 
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
             when(productServiceClient.getProduct(productId)).thenReturn(product);

@@ -125,6 +125,8 @@ public class Order1CKafkaProducer {
                         .productId(item.getProductId())
                         .externalId(item.getExternalId())
                         .productName(item.getProductName())
+                        .sku(item.getSku())
+                        .unitOfMeasure(item.getUnitOfMeasure())
                         .quantity(item.getQuantity())
                         .price(item.getPrice())
                         .build())

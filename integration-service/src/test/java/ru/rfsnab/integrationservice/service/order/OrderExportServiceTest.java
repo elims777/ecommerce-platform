@@ -50,6 +50,8 @@ class OrderExportServiceTest extends BaseIntegrationTest {
                             "productId": 1,
                             "externalId": "ext-001",
                             "productName": "Перчатки нитриловые L",
+                            "sku": "ART-001",
+                            "unitOfMeasure": "шт",
                             "quantity": 10,
                             "price": 250.50
                         },
@@ -57,6 +59,8 @@ class OrderExportServiceTest extends BaseIntegrationTest {
                             "productId": 2,
                             "externalId": "ext-002",
                             "productName": "Каска строительная",
+                            "sku": "ART-002",
+                            "unitOfMeasure": "упак",
                             "quantity": 5,
                             "price": 890.00
                         }
@@ -190,6 +194,20 @@ class OrderExportServiceTest extends BaseIntegrationTest {
             assertThat(result.xml()).contains("ORD-00001");
             assertThat(result.xml()).contains("Перчатки нитриловые L");
             assertThat(result.xml()).contains("ext-001");
+        }
+
+        @Test
+        @DisplayName("товар: Артикул и БазоваяЕдиница с кодом ОКЕИ для сопоставления/создания в 1С")
+        void shouldExportProductWithSkuAndBaseUnit() {
+            savePendingOrder("uuid-prod", "ORD-PROD");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml()).contains("<Артикул>ART-001</Артикул>");
+            assertThat(result.xml()).contains(
+                    "<БазоваяЕдиница Код=\"796\" НаименованиеПолное=\"Штука\" МеждународноеСокращение=\"PCE\">шт</БазоваяЕдиница>");
+            assertThat(result.xml()).contains(
+                    "<БазоваяЕдиница Код=\"778\" НаименованиеПолное=\"Упаковка\" МеждународноеСокращение=\"NMP\">упак</БазоваяЕдиница>");
         }
 
         @Test

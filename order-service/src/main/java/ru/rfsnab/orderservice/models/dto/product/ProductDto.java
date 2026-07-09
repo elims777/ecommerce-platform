@@ -12,6 +12,8 @@ public record ProductDto(
         BigDecimal wholesalePrice,
         Integer stockQuantity,
         Boolean isActive,
-        String externalId
+        String externalId,
+        String sku,
+        String unitOfMeasure
 ) {
 }

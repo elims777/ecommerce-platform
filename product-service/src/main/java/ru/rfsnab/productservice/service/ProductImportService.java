@@ -225,7 +225,8 @@ public class ProductImportService {
             }
 
             if (vi.getSku() != null) child.setSku(vi.getSku());
-            child.setName(parent.getName() + (vi.getSku() != null ? " (" + vi.getSku() + ")" : ""));
+            child.setUnitOfMeasure(parent.getUnitOfMeasure());
+            child.setName(buildVariantName(parent.getName(), vi));
             if (isNew) {
                 child.setSlug(slugService.generateUniqueSlug(child.getName(), reservedSlugs));
             }
@@ -251,6 +252,33 @@ public class ProductImportService {
         }
 
         return anyChanged;
+    }
+
+    /**
+     * Имя варианта: "{имя родителя} ({размер}, {цвет})".
+     * Размер и цвет берутся из атрибутов варианта; цвет добавляется, только если его
+     * ещё нет в имени родителя (чтобы не дублировать). Если ни размера, ни цвета нет —
+     * fallback на артикул, как раньше.
+     */
+    private String buildVariantName(String parentName, ProductImportItem.VariantImportItem vi) {
+        Map<String, String> attrs = vi.getAttributes() != null ? vi.getAttributes() : Map.of();
+        List<String> parts = new ArrayList<>();
+
+        String size = attrs.get("Размер");
+        if (size != null && !size.isBlank()) {
+            parts.add("размер " + size.trim());
+        }
+
+        String color = attrs.getOrDefault("Основной цвет", attrs.get("Цвет"));
+        if (color != null && !color.isBlank()
+                && !parentName.toLowerCase().contains(color.trim().toLowerCase())) {
+            parts.add(color.trim());
+        }
+
+        if (!parts.isEmpty()) {
+            return parentName + " (" + String.join(", ", parts) + ")";
+        }
+        return parentName + (vi.getSku() != null ? " (" + vi.getSku() + ")" : "");
     }
 
     private Map<String, Product> loadExistingProducts(List<ProductImportItem> items) {

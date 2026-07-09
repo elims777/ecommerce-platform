@@ -10,7 +10,7 @@ import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDisplayPrice, formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 import { savePendingAddToCart, clearPendingAddToCart } from '@/utils/pendingCart';
-import { unitShort } from '@/utils/unitOfMeasure';
+import { unitShort, unitPlural } from '@/utils/unitOfMeasure';
 
 const sortImages = (images: ProductImage[]): ProductImage[] =>
     [...images].sort((a, b) => {
@@ -252,7 +252,7 @@ const ProductPage = () => {
                         {inStock ? (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>
                                 <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', flexShrink: 0 }} />
-                                В наличии {activeStock} {unitShort(product.unitOfMeasure)}
+                                В наличии {activeStock} {unitPlural(activeStock, product.unitOfMeasure)}
                             </span>
                         ) : (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--red-tint)', color: 'var(--brand-red)' }}>
@@ -374,7 +374,7 @@ const ProductPage = () => {
                                                         {formatPriceOrPlaceholder(variantPrice)}
                                                     </td>
                                                     <td style={{ padding: '7px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: inStockV ? 'var(--brand-green)' : 'var(--brand-red)', fontVariantNumeric: 'tabular-nums' }}>
-                                                        {inStockV ? `${v.stockQuantity} ${unitShort(product.unitOfMeasure)}` : 'под заказ'}
+                                                        {inStockV ? `${v.stockQuantity} ${unitPlural(v.stockQuantity, product.unitOfMeasure)}` : 'под заказ'}
                                                     </td>
                                                     <td style={{ padding: '7px 0 7px 6px' }}>
                                                         <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', height: 28, alignItems: 'center', minWidth: 80 }}>
