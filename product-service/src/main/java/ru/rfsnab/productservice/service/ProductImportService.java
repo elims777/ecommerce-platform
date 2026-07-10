@@ -18,6 +18,7 @@ import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,12 +42,15 @@ import java.util.stream.Collectors;
 public class ProductImportService {
 
     private static final String IMPORT_CATEGORY_SLUG = "import-1c";
+    private static final Long SALE_CATEGORY_ID = 17L;
+    private static final BigDecimal FTK_SALE_MARKUP = new BigDecimal("1.10");
 
     @Value("${product-service.import.chunk-size:25}")
     private int chunkSize;
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService;
     private final PlatformTransactionManager transactionManager;
     private final SlugGeneratorService slugService;
 
@@ -136,10 +140,10 @@ public class ProductImportService {
                 product.setCountryOfOrigin(item.getCountryOfOrigin());
             }
             if (item.getPrice() != null) {
-                product.setPrice(item.getPrice());
+                product.setPrice(applyFtkSaleMarkup(item.getPrice(), product.getSource(), product.getCategory()));
             }
             if (item.getWholesalePrice() != null) {
-                product.setWholesalePrice(item.getWholesalePrice());
+                product.setWholesalePrice(applyFtkSaleMarkup(item.getWholesalePrice(), product.getSource(), product.getCategory()));
             }
             if (item.getStockQuantity() != null) {
                 product.setStockQuantity(item.getStockQuantity());
@@ -179,6 +183,20 @@ public class ProductImportService {
                     .errorMessage(e.getMessage())
                     .build();
         }
+    }
+
+    /**
+     * ФТК отдаёт нам товары по себестоимости — продавать без наценки нельзя.
+     * +10% на лету для товаров ФТК в категории "Распродажа" (id=17) и всех её подкатегориях.
+     */
+    private BigDecimal applyFtkSaleMarkup(BigDecimal price, String source, Category category) {
+        if (category == null || !"FTK".equals(source)) {
+            return price;
+        }
+        if (!categoryService.getSubtreeCategoryIds(SALE_CATEGORY_ID).contains(category.getId())) {
+            return price;
+        }
+        return price.multiply(FTK_SALE_MARKUP).setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -230,8 +248,8 @@ public class ProductImportService {
             if (isNew) {
                 child.setSlug(slugService.generateUniqueSlug(child.getName(), reservedSlugs));
             }
-            if (vi.getPrice() != null) child.setPrice(vi.getPrice());
-            if (vi.getWholesalePrice() != null) child.setWholesalePrice(vi.getWholesalePrice());
+            if (vi.getPrice() != null) child.setPrice(applyFtkSaleMarkup(vi.getPrice(), child.getSource(), child.getCategory()));
+            if (vi.getWholesalePrice() != null) child.setWholesalePrice(applyFtkSaleMarkup(vi.getWholesalePrice(), child.getSource(), child.getCategory()));
             if (vi.getStockQuantity() != null) child.setStockQuantity(vi.getStockQuantity());
             if (vi.getBarcode() != null) child.setBarcode(vi.getBarcode());
             if (vi.getCountryOfOrigin() != null) child.setCountryOfOrigin(vi.getCountryOfOrigin());
