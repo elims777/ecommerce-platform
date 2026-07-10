@@ -51,7 +51,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
 
     private static final ProductDto PRODUCT = new ProductDto(
             PRODUCT_ID, "Болт М8", new BigDecimal("50.00"),
-            new BigDecimal("40.00"), 500, true, "ext-005", null, null);
+            new BigDecimal("40.00"), 500, true, "ext-005", null, null, null, null);
 
     @BeforeEach
     void setUp() {

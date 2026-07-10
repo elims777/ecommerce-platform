@@ -220,11 +220,11 @@ public class ProductImportService {
                 child.setStockQuantity(0);
                 child.setIsVariantChild(true);
                 child.setParentProductId(parent.getId());
-                child.setCategory(parent.getCategory() != null ? parent.getCategory() : importCategory);
                 child.setSource(parent.getSource());
             }
 
             if (vi.getSku() != null) child.setSku(vi.getSku());
+            child.setCategory(parent.getCategory() != null ? parent.getCategory() : importCategory);
             child.setUnitOfMeasure(parent.getUnitOfMeasure());
             child.setName(buildVariantName(parent.getName(), vi));
             if (isNew) {

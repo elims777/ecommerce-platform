@@ -203,7 +203,7 @@ const OrdersPage = () => {
                 dataIndex: 'productName',
                 key: 'productName',
                 render: (name: string, item) => (
-                    <Link to={`/products/${item.productId}`} style={{ color: 'var(--brand-navy)', fontWeight: 500, textDecoration: 'none' }}>{name}</Link>
+                    <Link to={`/products/${item.parentProductId ?? item.productId}`} style={{ color: 'var(--brand-navy)', fontWeight: 500, textDecoration: 'none' }}>{name}</Link>
                 ),
             },
             {

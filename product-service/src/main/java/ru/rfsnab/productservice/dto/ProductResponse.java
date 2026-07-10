@@ -22,6 +22,7 @@ public class ProductResponse {
     private Integer stockQuantity;
     private Long categoryId;
     private String categoryName;  // для удобства фронтенда
+    private String categoryExternalId;
     private Boolean isActive;
     private Boolean isFeatured;
 

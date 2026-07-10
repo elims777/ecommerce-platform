@@ -14,6 +14,8 @@ public record ProductDto(
         Boolean isActive,
         String externalId,
         String sku,
-        String unitOfMeasure
+        String unitOfMeasure,
+        String categoryExternalId,
+        Long parentProductId
 ) {
 }

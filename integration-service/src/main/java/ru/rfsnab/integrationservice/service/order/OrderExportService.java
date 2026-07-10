@@ -209,6 +209,12 @@ public class OrderExportService {
                 product.setId(getTextOrNull(item, "externalId"));
                 product.setSku(getTextOrNull(item, "sku"));
                 product.setName(item.get("productName").asText());
+
+                String categoryExternalId = getTextOrNull(item, "categoryExternalId");
+                if (categoryExternalId != null) {
+                    product.setGroupIds(List.of(categoryExternalId));
+                }
+
                 product.setBaseUnit(OkeiUnits.resolve(getTextOrNull(item, "unitOfMeasure")));
                 product.setQuantity(item.get("quantity").asText());
                 product.setPricePerUnit(item.get("price").asText());

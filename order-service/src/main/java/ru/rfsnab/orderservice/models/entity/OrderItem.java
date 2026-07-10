@@ -44,6 +44,12 @@ public class OrderItem {
     @Column(name = "unit_of_measure", length = 20)
     private String unitOfMeasure;
 
+    @Column(name = "category_external_id", length = 50)
+    private String categoryExternalId;
+
+    @Column(name = "parent_product_id")
+    private Long parentProductId;
+
     @Column(name = "variant_id")
     private Long variantId;
 

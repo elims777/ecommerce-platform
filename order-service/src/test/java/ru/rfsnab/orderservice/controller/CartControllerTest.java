@@ -372,6 +372,6 @@ class CartControllerTest extends BaseIntegrationTest {
     }
 
     private ProductDto buildProduct(Long id, String name, String price) {
-        return new ProductDto(id, name, new BigDecimal(price), null, 100, true, "ext-001", null, null);
+        return new ProductDto(id, name, new BigDecimal(price), null, 100, true, "ext-001", null, null, null, null);
     }
 }

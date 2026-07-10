@@ -75,6 +75,38 @@ class OrderExportServiceTest extends BaseIntegrationTest {
                 .build());
     }
 
+    private PendingOrder savePendingOrderWithCategory(String orderId, String orderNumber, String categoryExternalId) {
+        String orderData = """
+                {
+                    "orderId": "%s",
+                    "orderNumber": "%s",
+                    "createdAt": "2026-03-20T10:00:00",
+                    "userId": 100,
+                    "customerEmail": "test@email.com",
+                    "recipientName": "Иванов Иван",
+                    "totalAmount": 15000.00,
+                    "items": [
+                        {
+                            "productId": 1,
+                            "externalId": "ext-001",
+                            "productName": "Перчатки нитриловые L",
+                            "sku": "ART-001",
+                            "unitOfMeasure": "шт",
+                            "quantity": 10,
+                            "price": 250.50,
+                            "categoryExternalId": %s
+                        }
+                    ]
+                }
+                """.formatted(orderId, orderNumber, categoryExternalId == null ? "null" : "\"" + categoryExternalId + "\"");
+
+        return pendingOrderRepository.save(PendingOrder.builder()
+                .orderId(orderId)
+                .orderData(orderData)
+                .externalId(orderNumber)
+                .build());
+    }
+
     private PendingOrder saveB2BPendingOrder(String orderId, String orderNumber) {
         String orderData = """
                 {
@@ -263,6 +295,28 @@ class OrderExportServiceTest extends BaseIntegrationTest {
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
             assertThat(result.xml()).contains("<Ид>100</Ид>");
+        }
+
+        @Test
+        @DisplayName("товар с categoryExternalId: содержит тег Группы с Ид категории")
+        void shouldIncludeGroupsWhenCategoryExternalIdPresent() {
+            savePendingOrderWithCategory("uuid-cat", "ORD-CAT", "cat-uuid-123");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml())
+                    .contains("<Группы>")
+                    .contains("<Ид>cat-uuid-123</Ид>");
+        }
+
+        @Test
+        @DisplayName("товар без categoryExternalId: тег Группы отсутствует")
+        void shouldNotIncludeGroupsWhenCategoryExternalIdMissing() {
+            savePendingOrderWithCategory("uuid-nocat", "ORD-NOCAT", null);
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml()).doesNotContain("Группы");
         }
 
         @Test

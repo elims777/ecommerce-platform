@@ -16,6 +16,7 @@ public record OrderItemDto(
         BigDecimal subtotal,
         String externalId,
         Long variantId,
-        String variantAttributes
+        String variantAttributes,
+        Long parentProductId
 ) {
 }

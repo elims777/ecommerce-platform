@@ -288,6 +288,8 @@ public class OrderService {
                     .externalId(product.externalId())
                     .sku(product.sku())
                     .unitOfMeasure(product.unitOfMeasure())
+                    .categoryExternalId(product.categoryExternalId())
+                    .parentProductId(product.parentProductId())
                     .build();
 
             newOrder.getItems().add(newItem);
@@ -616,6 +618,8 @@ public class OrderService {
                     .externalId(product.externalId())
                     .sku(product.sku())
                     .unitOfMeasure(product.unitOfMeasure())
+                    .categoryExternalId(product.categoryExternalId())
+                    .parentProductId(product.parentProductId())
                     .build();
 
             order.getItems().add(orderItem);
@@ -649,6 +653,8 @@ public class OrderService {
                     .externalId(product.externalId())
                     .sku(product.sku())
                     .unitOfMeasure(product.unitOfMeasure())
+                    .categoryExternalId(product.categoryExternalId())
+                    .parentProductId(product.parentProductId())
                     .build();
 
             order.getItems().add(orderItem);
