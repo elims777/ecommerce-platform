@@ -243,7 +243,7 @@ class OrderExportServiceTest extends BaseIntegrationTest {
         }
 
         @Test
-        @DisplayName("включает контрагента с ФИО и контактами")
+        @DisplayName("включает контрагента с ФИО")
         void shouldIncludeContragent() {
             savePendingOrder("uuid-003", "ORD-00003");
 
@@ -251,8 +251,26 @@ class OrderExportServiceTest extends BaseIntegrationTest {
 
             assertThat(result.xml()).contains("Контрагент");
             assertThat(result.xml()).contains("<Наименование>Иванов Иван</Наименование>");
+        }
+
+        @Test
+        @DisplayName("включает email и телефон контрагента блоками Контакты и Адреса (оба нужны для карточки контрагента в 1С)")
+        void shouldIncludeContragentAddresses() {
+            savePendingOrder("uuid-addr", "ORD-ADDR");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml()).contains("<Контакты>");
             assertThat(result.xml()).contains("<Тип>Электронная почта</Тип>");
             assertThat(result.xml()).contains("<Значение>test@email.com</Значение>");
+            assertThat(result.xml()).contains("<Тип>Телефон рабочий</Тип>");
+            assertThat(result.xml()).contains("<Значение>+79001234567</Значение>");
+
+            assertThat(result.xml()).contains("<Адреса>");
+            assertThat(result.xml()).contains("<Тип>Email</Тип>");
+            assertThat(result.xml()).contains("<Представление>test@email.com</Представление>");
+            assertThat(result.xml()).contains("<Тип>Телефон</Тип>");
+            assertThat(result.xml()).contains("<Представление>+79001234567</Представление>");
         }
 
         @Test

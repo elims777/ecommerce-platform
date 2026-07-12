@@ -44,4 +44,8 @@ public class CmlContragent {
     @XmlElementWrapper(name = "Контакты")
     @XmlElement(name = "Контакт")
     private List<CmlContact> contacts;
+
+    @XmlElementWrapper(name = "Адреса")
+    @XmlElement(name = "Адрес")
+    private List<CmlAddress> addresses;
 }

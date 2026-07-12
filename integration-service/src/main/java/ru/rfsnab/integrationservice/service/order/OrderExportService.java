@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.integrationservice.model.PendingOrder;
+import ru.rfsnab.integrationservice.model.commerceml.CmlAddress;
 import ru.rfsnab.integrationservice.model.commerceml.CmlContact;
 import ru.rfsnab.integrationservice.model.commerceml.CmlContragent;
 import ru.rfsnab.integrationservice.model.commerceml.CmlDocument;
@@ -166,18 +167,32 @@ public class OrderExportService {
             contragent.setFullName(name);
         }
 
-        // Контакты: email и телефон блоком <Контакты> — плоские теги 1С не показывает.
-        List<CmlContact> contacts = new ArrayList<>();
+        // Email и телефон — сразу двумя блоками: <Контакты> (контактное лицо)
+        // и <Адреса> (поля "Адреса, телефоны" в самой карточке контрагента УНФ).
+        // На новом контрагенте один <Адреса> без <Контакты> не создал ничего — нужны оба.
         String email = getTextOrNull(json, "customerEmail");
+        String phone = getTextOrNull(json, "recipientPhone");
+
+        List<CmlContact> contacts = new ArrayList<>();
         if (email != null) {
             contacts.add(contact("Электронная почта", email));
         }
-        String phone = getTextOrNull(json, "recipientPhone");
         if (phone != null) {
             contacts.add(contact("Телефон рабочий", phone));
         }
         if (!contacts.isEmpty()) {
             contragent.setContacts(contacts);
+        }
+
+        List<CmlAddress> addresses = new ArrayList<>();
+        if (email != null) {
+            addresses.add(address("Email", email));
+        }
+        if (phone != null) {
+            addresses.add(address("Телефон", phone));
+        }
+        if (!addresses.isEmpty()) {
+            contragent.setAddresses(addresses);
         }
 
         // Адрес
@@ -197,6 +212,13 @@ public class OrderExportService {
         contact.setType(type);
         contact.setValue(value);
         return contact;
+    }
+
+    private CmlAddress address(String type, String representation) {
+        CmlAddress address = new CmlAddress();
+        address.setType(type);
+        address.setRepresentation(representation);
+        return address;
     }
 
     private List<CmlOrderProduct> buildProducts(JsonNode json) {
