@@ -1,6 +1,7 @@
 import { Button, Typography, Divider, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { CartItemDto } from '@/api/cart';
+import { NavLink } from '@/components/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 
@@ -9,7 +10,14 @@ const { Title, Text } = Typography;
 const formatPrice = formatPriceOrPlaceholder;
 
 const columns: ColumnsType<CartItemDto> = [
-    { title: 'Товар', dataIndex: 'productName', key: 'productName' },
+    {
+        title: 'Товар',
+        dataIndex: 'productName',
+        key: 'productName',
+        render: (name: string, item) => (
+            <NavLink to={`/products/${item.parentProductId ?? item.productId}`}>{name}</NavLink>
+        ),
+    },
     { title: 'Кол-во', dataIndex: 'quantity', key: 'quantity', width: 80 },
     {
         title: 'Сумма',
