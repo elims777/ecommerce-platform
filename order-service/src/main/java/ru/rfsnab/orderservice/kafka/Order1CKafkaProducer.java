@@ -46,6 +46,7 @@ public class Order1CKafkaProducer {
                 .companyName(order.getCompanyName())
                 .inn(order.getInn())
                 .customerName(order.getCustomerName())
+                .customerPhone(order.getCustomerPhone())
                 .recipientName(isPickup ? order.getPickupRecipientName() : address.getRecipientName())
                 .recipientPhone(isPickup ? order.getPickupRecipientPhone() : address.getPhone())
                 .deliveryMethod(order.getDeliveryMethod().name())

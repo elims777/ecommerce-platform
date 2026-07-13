@@ -24,6 +24,7 @@ public record Order1CExportEvent(
         String companyName,
         String inn,
         String customerName,
+        String customerPhone,
         String recipientName,
         String recipientPhone,
 

@@ -7,16 +7,12 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Адрес контрагента — пара "тип → представление".
- * Тип "Email"/"Телефон" — та же группа полей, что "Юр. адрес"/"Факт. адрес" в карточке контрагента УНФ.
+ * Блок <АдресРегистрации> контрагента в orders.xml — адрес строкой.
  */
 @Getter
 @Setter
 @XmlAccessorType(XmlAccessType.FIELD)
-public class CmlAddress {
-
-    @XmlElement(name = "Тип")
-    private String type;
+public class CmlRegistrationAddress {
 
     @XmlElement(name = "Представление")
     private String representation;

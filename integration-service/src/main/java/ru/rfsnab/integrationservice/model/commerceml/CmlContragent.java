@@ -11,6 +11,7 @@ import java.util.List;
 
 /**
  * Контрагент в документе заказа CommerceML.
+ * Формат сверен с реальной выгрузкой из 1С УНФ: реквизиты юрлица и контакты — плоскими тегами.
  */
 @Getter
 @Setter
@@ -23,11 +24,21 @@ public class CmlContragent {
     @XmlElement(name = "Наименование")
     private String name;
 
-    @XmlElement(name = "Роль")
-    private String role;
-
     @XmlElement(name = "ПолноеНаименование")
     private String fullName;
+
+    /** Только для юрлиц: наличие делает контрагента организацией в 1С. */
+    @XmlElement(name = "ОфициальноеНаименование")
+    private String officialName;
+
+    @XmlElement(name = "ИНН")
+    private String inn;
+
+    @XmlElement(name = "КПП")
+    private String kpp;
+
+    @XmlElement(name = "Роль")
+    private String role;
 
     @XmlElement(name = "Фамилия")
     private String lastName;
@@ -35,17 +46,15 @@ public class CmlContragent {
     @XmlElement(name = "Имя")
     private String firstName;
 
-    @XmlElement(name = "ИНН")
-    private String inn;
+    @XmlElement(name = "АдресРегистрации")
+    private CmlRegistrationAddress registrationAddress;
 
-    @XmlElement(name = "ПочтовыйАдрес")
-    private String postalAddress;
-
+    /** Email — единственный формат CommerceML, который 1С кладёт в карточку: <Контакты> с Тип=Почта. */
     @XmlElementWrapper(name = "Контакты")
     @XmlElement(name = "Контакт")
     private List<CmlContact> contacts;
 
-    @XmlElementWrapper(name = "Адреса")
-    @XmlElement(name = "Адрес")
-    private List<CmlAddress> addresses;
+    /** Телефон 1С принимает плоским тегом (нестандартная доработка обмена). */
+    @XmlElement(name = "Телефон")
+    private String phone;
 }

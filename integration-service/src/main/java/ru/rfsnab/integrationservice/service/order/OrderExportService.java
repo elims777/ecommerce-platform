@@ -10,11 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.integrationservice.model.PendingOrder;
-import ru.rfsnab.integrationservice.model.commerceml.CmlAddress;
 import ru.rfsnab.integrationservice.model.commerceml.CmlContact;
 import ru.rfsnab.integrationservice.model.commerceml.CmlContragent;
 import ru.rfsnab.integrationservice.model.commerceml.CmlDocument;
 import ru.rfsnab.integrationservice.model.commerceml.CmlOrderProduct;
+import ru.rfsnab.integrationservice.model.commerceml.CmlRegistrationAddress;
 import ru.rfsnab.integrationservice.model.commerceml.CommerceInfo;
 import ru.rfsnab.integrationservice.model.commerceml.OkeiUnits;
 import ru.rfsnab.integrationservice.repository.PendingOrderRepository;
@@ -143,68 +143,94 @@ public class OrderExportService {
     }
 
     private CmlContragent buidContragent(JsonNode json){
+        String customerType = getTextOrNull(json, "customerType");
+        return "B2B".equals(customerType)
+                ? buildLegalContragent(json)
+                : buildPhysContragent(json);
+    }
+
+    /**
+     * Юрлицо. Признак организации в 1С — плоские теги ОфициальноеНаименование + ИНН
+     * прямо в контрагенте (сверено с реальной выгрузкой 1С). Без них 1С создаёт физлицо.
+     * КПП в данных заказа нет — не передаём.
+     */
+    private CmlContragent buildLegalContragent(JsonNode json) {
         CmlContragent contragent = new CmlContragent();
-        // Ид = userId: стабильный идентификатор, по нему 1С матчит контрагента при повторных обменах.
         contragent.setId(getTextOrNull(json, "userId"));
 
-        String customerType = getTextOrNull(json, "customerType");
-        if ("B2B".equals(customerType)) {
-            String companyName = getTextOrNull(json, "companyName");
-            contragent.setName(companyName);
-            contragent.setFullName(companyName);
-            contragent.setInn(getTextOrNull(json, "inn"));
-        } else {
-            // B2C: получатель доставки → имя заказчика → email как последний fallback,
-            // иначе Наименование пустое и 1С не создаёт контрагента.
-            String name = getTextOrNull(json, "recipientName");
-            if (name == null) {
-                name = getTextOrNull(json, "customerName");
-            }
-            if (name == null) {
-                name = getTextOrNull(json, "customerEmail");
-            }
-            contragent.setName(name);
-            contragent.setFullName(name);
-        }
+        String companyName = getTextOrNull(json, "companyName");
+        contragent.setName(companyName);
+        contragent.setFullName(companyName);
+        contragent.setOfficialName(companyName);
+        contragent.setInn(getTextOrNull(json, "inn"));
 
-        // Email и телефон — сразу двумя блоками: <Контакты> (контактное лицо)
-        // и <Адреса> (поля "Адреса, телефоны" в самой карточке контрагента УНФ).
-        // На новом контрагенте один <Адреса> без <Контакты> не создал ничего — нужны оба.
+        applyAddress(contragent, json);
+        applyContacts(contragent, json);
+        return contragent;
+    }
+
+    /**
+     * Физлицо. Наименование: получатель доставки → имя заказчика → email (последний fallback,
+     * иначе пустое Наименование и 1С не создаёт контрагента).
+     */
+    private CmlContragent buildPhysContragent(JsonNode json) {
+        CmlContragent contragent = new CmlContragent();
+        contragent.setId(getTextOrNull(json, "userId"));
+
+        String name = getTextOrNull(json, "recipientName");
+        if (name == null) {
+            name = getTextOrNull(json, "customerName");
+        }
+        if (name == null) {
+            name = getTextOrNull(json, "customerEmail");
+        }
+        contragent.setName(name);
+        contragent.setFullName(name);
+
+        applyAddress(contragent, json);
+        applyContacts(contragent, json);
+        return contragent;
+    }
+
+    /** Адрес строкой — блоком <АдресРегистрации>/<Представление>. */
+    private void applyAddress(CmlContragent contragent, JsonNode json) {
+        String city = getTextOrNull(json, "city");
+        if (city == null) {
+            return;
+        }
+        String street = getTextOrNull(json, "street");
+        String building = getTextOrNull(json, "building");
+        String address = String.join(", ", nonNull(city), nonNull(street), nonNull(building)).trim();
+
+        CmlRegistrationAddress registrationAddress = new CmlRegistrationAddress();
+        registrationAddress.setRepresentation(address);
+        contragent.setRegistrationAddress(registrationAddress);
+    }
+
+    /**
+     * Телефон — плоским тегом <Телефон> (1С принимает так) И дублем в <Контакты> (Тип=Телефон)
+     * на всякий случай. Email — блоком <Контакты> с <Тип>Почта</Тип> (единственный формат
+     * CommerceML, который 1С кладёт в карточку; без <АдресРегистрации>, чтобы адрес не уходил
+     * в доставку). При самовывозе получателя нет → телефон заказчика (customerPhone).
+     */
+    private void applyContacts(CmlContragent contragent, JsonNode json) {
         String email = getTextOrNull(json, "customerEmail");
-        String phone = getTextOrNull(json, "recipientPhone");
+        String recipientPhone = getTextOrNull(json, "recipientPhone");
+        String customerPhone = getTextOrNull(json, "customerPhone");
+        String phone = recipientPhone != null ? recipientPhone : customerPhone;
+
+        contragent.setPhone(phone);
 
         List<CmlContact> contacts = new ArrayList<>();
         if (email != null) {
-            contacts.add(contact("Электронная почта", email));
+            contacts.add(contact("Почта", email));
         }
         if (phone != null) {
-            contacts.add(contact("Телефон рабочий", phone));
+            contacts.add(contact("Телефон", phone));
         }
         if (!contacts.isEmpty()) {
             contragent.setContacts(contacts);
         }
-
-        List<CmlAddress> addresses = new ArrayList<>();
-        if (email != null) {
-            addresses.add(address("Email", email));
-        }
-        if (phone != null) {
-            addresses.add(address("Телефон", phone));
-        }
-        if (!addresses.isEmpty()) {
-            contragent.setAddresses(addresses);
-        }
-
-        // Адрес
-        String city = getTextOrNull(json, "city");
-        String street = getTextOrNull(json, "street");
-        String building = getTextOrNull(json, "building");
-        if (city != null) {
-            contragent.setPostalAddress(
-                    String.join(", ", nonNull(city), nonNull(street), nonNull(building)).trim());
-        }
-
-        return contragent;
     }
 
     private CmlContact contact(String type, String value) {
@@ -212,13 +238,6 @@ public class OrderExportService {
         contact.setType(type);
         contact.setValue(value);
         return contact;
-    }
-
-    private CmlAddress address(String type, String representation) {
-        CmlAddress address = new CmlAddress();
-        address.setType(type);
-        address.setRepresentation(representation);
-        return address;
     }
 
     private List<CmlOrderProduct> buildProducts(JsonNode json) {

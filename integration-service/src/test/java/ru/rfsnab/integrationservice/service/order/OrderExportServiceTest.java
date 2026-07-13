@@ -146,6 +146,41 @@ class OrderExportServiceTest extends BaseIntegrationTest {
                 .build());
     }
 
+    private PendingOrder savePickupPendingOrder(String orderId, String orderNumber) {
+        String orderData = """
+                {
+                    "orderId": "%s",
+                    "orderNumber": "%s",
+                    "createdAt": "2026-03-20T10:00:00",
+                    "userId": 100,
+                    "customerType": "B2C",
+                    "customerEmail": "test@email.com",
+                    "customerName": "Кокорин Максим",
+                    "customerPhone": "+79998887771",
+                    "recipientName": null,
+                    "recipientPhone": null,
+                    "deliveryMethod": "PICKUP",
+                    "paymentMethod": "INVOICE",
+                    "totalAmount": 15000.00,
+                    "items": [
+                        {
+                            "productId": 1,
+                            "externalId": "ext-001",
+                            "productName": "Перчатки нитриловые L",
+                            "quantity": 10,
+                            "price": 250.50
+                        }
+                    ]
+                }
+                """.formatted(orderId, orderNumber);
+
+        return pendingOrderRepository.save(PendingOrder.builder()
+                .orderId(orderId)
+                .orderData(orderData)
+                .externalId(orderNumber)
+                .build());
+    }
+
     private PendingOrder saveOrderWithoutRecipientName(String orderId, String orderNumber) {
         String orderData = """
                 {
@@ -254,33 +289,39 @@ class OrderExportServiceTest extends BaseIntegrationTest {
         }
 
         @Test
-        @DisplayName("включает email и телефон контрагента блоками Контакты и Адреса (оба нужны для карточки контрагента в 1С)")
-        void shouldIncludeContragentAddresses() {
+        @DisplayName("телефон — плоским тегом Телефон и дублем в Контакты, email — в Контакты (Тип Почта), адрес — в АдресРегистрации")
+        void shouldIncludeContragentContacts() {
             savePendingOrder("uuid-addr", "ORD-ADDR");
 
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
+            assertThat(result.xml()).contains("<АдресРегистрации>");
+            assertThat(result.xml()).contains("<Телефон>+79001234567</Телефон>");
             assertThat(result.xml()).contains("<Контакты>");
-            assertThat(result.xml()).contains("<Тип>Электронная почта</Тип>");
+            assertThat(result.xml()).contains("<Тип>Почта</Тип>");
             assertThat(result.xml()).contains("<Значение>test@email.com</Значение>");
-            assertThat(result.xml()).contains("<Тип>Телефон рабочий</Тип>");
-            assertThat(result.xml()).contains("<Значение>+79001234567</Значение>");
-
-            assertThat(result.xml()).contains("<Адреса>");
-            assertThat(result.xml()).contains("<Тип>Email</Тип>");
-            assertThat(result.xml()).contains("<Представление>test@email.com</Представление>");
             assertThat(result.xml()).contains("<Тип>Телефон</Тип>");
-            assertThat(result.xml()).contains("<Представление>+79001234567</Представление>");
         }
 
         @Test
-        @DisplayName("B2B заказ: контрагент — организация с ИНН, без фамилии")
+        @DisplayName("самовывоз без получателя: телефон контрагента = телефон заказчика (customerPhone)")
+        void shouldFallbackToCustomerPhoneForPickup() {
+            savePickupPendingOrder("uuid-pickup", "ORD-PICKUP");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml()).contains("<Телефон>+79998887771</Телефон>");
+        }
+
+        @Test
+        @DisplayName("B2B заказ: контрагент — организация (плоские ОфициальноеНаименование+ИНН), без фамилии")
         void shouldIncludeCompanyContragentForB2B() {
             saveB2BPendingOrder("uuid-b2b-001", "ORD-B2B-001");
 
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
             assertThat(result.xml()).contains("<Наименование>ООО Ромашка</Наименование>");
+            assertThat(result.xml()).contains("<ОфициальноеНаименование>ООО Ромашка</ОфициальноеНаименование>");
             assertThat(result.xml()).contains("<ИНН>7701234567</ИНН>");
             assertThat(result.xml()).doesNotContain("<Фамилия>");
         }
