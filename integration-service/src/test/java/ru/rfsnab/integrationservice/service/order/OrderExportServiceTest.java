@@ -50,6 +50,8 @@ class OrderExportServiceTest extends BaseIntegrationTest {
                             "productId": 1,
                             "externalId": "ext-001",
                             "productName": "Перчатки нитриловые L",
+                            "sku": "ART-001",
+                            "unitOfMeasure": "шт",
                             "quantity": 10,
                             "price": 250.50
                         },
@@ -57,12 +59,46 @@ class OrderExportServiceTest extends BaseIntegrationTest {
                             "productId": 2,
                             "externalId": "ext-002",
                             "productName": "Каска строительная",
+                            "sku": "ART-002",
+                            "unitOfMeasure": "упак",
                             "quantity": 5,
                             "price": 890.00
                         }
                     ]
                 }
                 """.formatted(orderId, orderNumber);
+
+        return pendingOrderRepository.save(PendingOrder.builder()
+                .orderId(orderId)
+                .orderData(orderData)
+                .externalId(orderNumber)
+                .build());
+    }
+
+    private PendingOrder savePendingOrderWithCategory(String orderId, String orderNumber, String categoryExternalId) {
+        String orderData = """
+                {
+                    "orderId": "%s",
+                    "orderNumber": "%s",
+                    "createdAt": "2026-03-20T10:00:00",
+                    "userId": 100,
+                    "customerEmail": "test@email.com",
+                    "recipientName": "Иванов Иван",
+                    "totalAmount": 15000.00,
+                    "items": [
+                        {
+                            "productId": 1,
+                            "externalId": "ext-001",
+                            "productName": "Перчатки нитриловые L",
+                            "sku": "ART-001",
+                            "unitOfMeasure": "шт",
+                            "quantity": 10,
+                            "price": 250.50,
+                            "categoryExternalId": %s
+                        }
+                    ]
+                }
+                """.formatted(orderId, orderNumber, categoryExternalId == null ? "null" : "\"" + categoryExternalId + "\"");
 
         return pendingOrderRepository.save(PendingOrder.builder()
                 .orderId(orderId)
@@ -110,6 +146,102 @@ class OrderExportServiceTest extends BaseIntegrationTest {
                 .build());
     }
 
+    private PendingOrder savePickupPendingOrder(String orderId, String orderNumber) {
+        String orderData = """
+                {
+                    "orderId": "%s",
+                    "orderNumber": "%s",
+                    "createdAt": "2026-03-20T10:00:00",
+                    "userId": 100,
+                    "customerType": "B2C",
+                    "customerEmail": "test@email.com",
+                    "customerName": "Кокорин Максим",
+                    "customerPhone": "+79998887771",
+                    "recipientName": null,
+                    "recipientPhone": null,
+                    "deliveryMethod": "PICKUP",
+                    "paymentMethod": "INVOICE",
+                    "totalAmount": 15000.00,
+                    "items": [
+                        {
+                            "productId": 1,
+                            "externalId": "ext-001",
+                            "productName": "Перчатки нитриловые L",
+                            "quantity": 10,
+                            "price": 250.50
+                        }
+                    ]
+                }
+                """.formatted(orderId, orderNumber);
+
+        return pendingOrderRepository.save(PendingOrder.builder()
+                .orderId(orderId)
+                .orderData(orderData)
+                .externalId(orderNumber)
+                .build());
+    }
+
+    private PendingOrder saveOrderWithoutRecipientName(String orderId, String orderNumber) {
+        String orderData = """
+                {
+                    "orderId": "%s",
+                    "orderNumber": "%s",
+                    "createdAt": "2026-03-20T10:00:00",
+                    "userId": 100,
+                    "customerType": "B2C",
+                    "customerEmail": "test@email.com",
+                    "recipientName": null,
+                    "totalAmount": 15000.00,
+                    "items": [
+                        {
+                            "productId": 1,
+                            "externalId": "ext-001",
+                            "productName": "Перчатки нитриловые L",
+                            "quantity": 10,
+                            "price": 250.50
+                        }
+                    ]
+                }
+                """.formatted(orderId, orderNumber);
+
+        return pendingOrderRepository.save(PendingOrder.builder()
+                .orderId(orderId)
+                .orderData(orderData)
+                .externalId(orderNumber)
+                .build());
+    }
+
+    private PendingOrder saveOrderWithCustomerNameOnly(String orderId, String orderNumber) {
+        String orderData = """
+                {
+                    "orderId": "%s",
+                    "orderNumber": "%s",
+                    "createdAt": "2026-03-20T10:00:00",
+                    "userId": 100,
+                    "customerType": "B2C",
+                    "customerEmail": "test@email.com",
+                    "recipientName": null,
+                    "customerName": "Сидоров Сидор",
+                    "totalAmount": 15000.00,
+                    "items": [
+                        {
+                            "productId": 1,
+                            "externalId": "ext-001",
+                            "productName": "Перчатки нитриловые L",
+                            "quantity": 10,
+                            "price": 250.50
+                        }
+                    ]
+                }
+                """.formatted(orderId, orderNumber);
+
+        return pendingOrderRepository.save(PendingOrder.builder()
+                .orderId(orderId)
+                .orderData(orderData)
+                .externalId(orderNumber)
+                .build());
+    }
+
     @Nested
     @DisplayName("exportPendingOrders")
     class ExportTests {
@@ -132,41 +264,118 @@ class OrderExportServiceTest extends BaseIntegrationTest {
         }
 
         @Test
-        @DisplayName("включает контрагента с ФИО и контактами")
+        @DisplayName("товар: Артикул и БазоваяЕдиница с кодом ОКЕИ для сопоставления/создания в 1С")
+        void shouldExportProductWithSkuAndBaseUnit() {
+            savePendingOrder("uuid-prod", "ORD-PROD");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml()).contains("<Артикул>ART-001</Артикул>");
+            assertThat(result.xml()).contains(
+                    "<БазоваяЕдиница Код=\"796\" НаименованиеПолное=\"Штука\" МеждународноеСокращение=\"PCE\">шт</БазоваяЕдиница>");
+            assertThat(result.xml()).contains(
+                    "<БазоваяЕдиница Код=\"778\" НаименованиеПолное=\"Упаковка\" МеждународноеСокращение=\"NMP\">упак</БазоваяЕдиница>");
+        }
+
+        @Test
+        @DisplayName("включает контрагента с ФИО")
         void shouldIncludeContragent() {
             savePendingOrder("uuid-003", "ORD-00003");
 
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
             assertThat(result.xml()).contains("Контрагент");
-            assertThat(result.xml()).contains("Иванов Иван");
-            assertThat(result.xml()).contains("<Фамилия>Иванов</Фамилия>");
-            assertThat(result.xml()).contains("<Имя>Иван</Имя>");
-            assertThat(result.xml()).contains("<Почта>test@email.com</Почта>");
-            assertThat(result.xml()).doesNotContain("<Наименование>test@email.com");
+            assertThat(result.xml()).contains("<Наименование>Иванов Иван</Наименование>");
         }
 
         @Test
-        @DisplayName("B2B заказ: контрагент — организация с ИНН, без фамилии")
+        @DisplayName("телефон — плоским тегом Телефон и дублем в Контакты, email — в Контакты (Тип Почта), адрес — в АдресРегистрации")
+        void shouldIncludeContragentContacts() {
+            savePendingOrder("uuid-addr", "ORD-ADDR");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml()).contains("<АдресРегистрации>");
+            assertThat(result.xml()).contains("<Телефон>+79001234567</Телефон>");
+            assertThat(result.xml()).contains("<Контакты>");
+            assertThat(result.xml()).contains("<Тип>Почта</Тип>");
+            assertThat(result.xml()).contains("<Значение>test@email.com</Значение>");
+            assertThat(result.xml()).contains("<Тип>Телефон</Тип>");
+        }
+
+        @Test
+        @DisplayName("самовывоз без получателя: телефон контрагента = телефон заказчика (customerPhone)")
+        void shouldFallbackToCustomerPhoneForPickup() {
+            savePickupPendingOrder("uuid-pickup", "ORD-PICKUP");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml()).contains("<Телефон>+79998887771</Телефон>");
+        }
+
+        @Test
+        @DisplayName("B2B заказ: контрагент — организация (плоские ОфициальноеНаименование+ИНН), без фамилии")
         void shouldIncludeCompanyContragentForB2B() {
             saveB2BPendingOrder("uuid-b2b-001", "ORD-B2B-001");
 
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
             assertThat(result.xml()).contains("<Наименование>ООО Ромашка</Наименование>");
+            assertThat(result.xml()).contains("<ОфициальноеНаименование>ООО Ромашка</ОфициальноеНаименование>");
             assertThat(result.xml()).contains("<ИНН>7701234567</ИНН>");
             assertThat(result.xml()).doesNotContain("<Фамилия>");
         }
 
         @Test
-        @DisplayName("Ид контрагента не заполняется (матчинг в 1С по ИНН/наименованию)")
-        void shouldNotSetContragentId() {
+        @DisplayName("B2C без получателя: Наименование = customerName (имя заказчика)")
+        void shouldFallbackToCustomerNameWhenNoRecipientName() {
+            saveOrderWithCustomerNameOnly("uuid-cust", "ORD-CUST");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml()).contains("<Наименование>Сидоров Сидор</Наименование>");
+        }
+
+        @Test
+        @DisplayName("B2C без получателя и имени заказчика: Наименование = email (последний fallback)")
+        void shouldFallbackToEmailWhenNoRecipientName() {
+            saveOrderWithoutRecipientName("uuid-noname", "ORD-NONAME");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml()).contains("<Наименование>test@email.com</Наименование>");
+        }
+
+        @Test
+        @DisplayName("Ид контрагента = userId (стабильный матчинг в 1С)")
+        void shouldSetContragentIdFromUserId() {
             savePendingOrder("uuid-003", "ORD-00003");
 
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            // userId=100 нигде не должен фигурировать как Ид (документа или товара - строковый UUID/externalId)
-            assertThat(result.xml()).doesNotContain("<Ид>100</Ид>");
+            assertThat(result.xml()).contains("<Ид>100</Ид>");
+        }
+
+        @Test
+        @DisplayName("товар с categoryExternalId: содержит тег Группы с Ид категории")
+        void shouldIncludeGroupsWhenCategoryExternalIdPresent() {
+            savePendingOrderWithCategory("uuid-cat", "ORD-CAT", "cat-uuid-123");
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml())
+                    .contains("<Группы>")
+                    .contains("<Ид>cat-uuid-123</Ид>");
+        }
+
+        @Test
+        @DisplayName("товар без categoryExternalId: тег Группы отсутствует")
+        void shouldNotIncludeGroupsWhenCategoryExternalIdMissing() {
+            savePendingOrderWithCategory("uuid-nocat", "ORD-NOCAT", null);
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+
+            assertThat(result.xml()).doesNotContain("Группы");
         }
 
         @Test

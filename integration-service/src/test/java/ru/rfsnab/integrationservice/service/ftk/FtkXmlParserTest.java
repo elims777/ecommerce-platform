@@ -113,6 +113,10 @@ class FtkXmlParserTest {
                             <Код>796</Код>
                             <НаименованиеПолное>штука</НаименованиеПолное>
                           </ЕдиницаИзмерения>
+                          <ЕдиницаИзмерения>
+                            <Код>715</Код>
+                            <НаименованиеПолное>Пара (2 шт.)</НаименованиеПолное>
+                          </ЕдиницаИзмерения>
                         </ЕдиницыИзмерения>
                       </Классификатор>
                     </КоммерческаяИнформация>
@@ -129,6 +133,8 @@ class FtkXmlParserTest {
             assertThat(data.propertyDefs().get("PROP-001").name()).isEqualTo("Размер");
             assertThat(data.propertyDefs().get("PROP-001").values()).containsEntry("VAL-S", "S");
             assertThat(data.unitsOfMeasure()).containsEntry("796", "штука");
+            // уточняющий хвост "(2 шт.)" вырезается: "Пара (2 шт.)" → "Пара"
+            assertThat(data.unitsOfMeasure()).containsEntry("715", "Пара");
         }
     }
 

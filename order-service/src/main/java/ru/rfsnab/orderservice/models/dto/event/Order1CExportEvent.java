@@ -23,6 +23,8 @@ public record Order1CExportEvent(
         String customerType,
         String companyName,
         String inn,
+        String customerName,
+        String customerPhone,
         String recipientName,
         String recipientPhone,
 
@@ -51,6 +53,9 @@ public record Order1CExportEvent(
             Long productId,
             String externalId,
             String productName,
+            String sku,
+            String unitOfMeasure,
+            String categoryExternalId,
             Integer quantity,
             BigDecimal price
     ) {}

@@ -79,6 +79,7 @@ public class ProductMapper {
         if (product.getCategory() != null) {
             builder.categoryId(product.getCategory().getId());
             builder.categoryName(product.getCategory().getName());
+            builder.categoryExternalId(product.getCategory().getExternalId());
         }
 
         return builder.build();

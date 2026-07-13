@@ -78,9 +78,12 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
                 padding: '18px 20px', borderBottom: '1px solid var(--line-1)',
             }}>
                 <div>
-                    <div style={{ fontSize: 'var(--text-md)', fontWeight: 500, lineHeight: 1.35, color: 'var(--ink-1)' }}>
+                    <NavLink
+                        to={`/products/${item.parentProductId ?? item.productId}`}
+                        style={{ fontSize: 'var(--text-md)', fontWeight: 500, lineHeight: 1.35, color: 'var(--ink-1)' }}
+                    >
                         {item.productName}
-                    </div>
+                    </NavLink>
                 </div>
 
                 {/* Qty stepper */}

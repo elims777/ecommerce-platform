@@ -194,7 +194,11 @@ const AdminOrderDetailPage = () => {
             <tbody>
               {(order.items ?? []).map((item: OrderItemDto) => (
                 <tr key={item.productId}>
-                  <td>{item.productName}</td>
+                  <td>
+                    <NavLink to={`/products/${item.parentProductId ?? item.productId}`}>
+                      {item.productName}
+                    </NavLink>
+                  </td>
                   <td className="col-right rf-tabular">{item.quantity}</td>
                   <td className="col-right rf-tabular">{formatPrice(item.price)}</td>
                   <td className="col-right rf-tabular" style={{ fontWeight: 600 }}>
