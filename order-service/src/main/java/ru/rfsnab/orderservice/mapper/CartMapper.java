@@ -48,7 +48,8 @@ public class CartMapper {
                 product.name(),
                 item.getQuantity(),
                 price,
-                subtotal
+                subtotal,
+                product.parentProductId()
         );
     }
 }

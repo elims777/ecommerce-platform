@@ -7,6 +7,7 @@ export interface CartItemDto {
     quantity: number;
     price: number;
     subtotal: number;
+    parentProductId?: number | null;
 }
 
 /** Корзина — CartDto из Swagger */

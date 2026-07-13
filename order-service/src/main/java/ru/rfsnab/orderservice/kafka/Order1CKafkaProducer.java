@@ -8,7 +8,9 @@ import ru.rfsnab.orderservice.models.dto.event.Order1CExportEvent;
 import ru.rfsnab.orderservice.models.entity.DeliveryAddress;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
+import ru.rfsnab.orderservice.repository.WarehousePointRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -22,6 +24,7 @@ public class Order1CKafkaProducer {
 
     private final KafkaTopicsProperties topics;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final WarehousePointRepository warehousePointRepository;
 
     /**
      * Отправляет полные данные заказа для 1С.
@@ -42,6 +45,8 @@ public class Order1CKafkaProducer {
                 .customerType(order.getCustomerType() != null ? order.getCustomerType().name() : CustomerType.B2C.name())
                 .companyName(order.getCompanyName())
                 .inn(order.getInn())
+                .customerName(order.getCustomerName())
+                .customerPhone(order.getCustomerPhone())
                 .recipientName(isPickup ? order.getPickupRecipientName() : address.getRecipientName())
                 .recipientPhone(isPickup ? order.getPickupRecipientPhone() : address.getPhone())
                 .deliveryMethod(order.getDeliveryMethod().name())
@@ -53,7 +58,7 @@ public class Order1CKafkaProducer {
                 .warehousePointId(order.getWarehousePointId())
                 .paymentMethod(order.getPaymentMethod().name())
                 .totalAmount(order.getTotalAmount())
-                .comment(order.getComment())
+                .comment(buildComment(order, address, isPickup))
                 .items(mapItems(order))
                 .build();
 
@@ -68,12 +73,62 @@ public class Order1CKafkaProducer {
         });
     }
 
+    /**
+     * Собирает комментарий заказа для 1С: способ доставки + адрес (доставки или склада)
+     * + получатель. Дублирует данные, которые 1С не показывает в карточке контрагента,
+     * чтобы менеджер видел всё в одном месте.
+     */
+    private String buildComment(Order order, DeliveryAddress address, boolean isPickup) {
+        List<String> lines = new ArrayList<>();
+
+        if (order.getComment() != null && !order.getComment().isBlank()) {
+            lines.add(order.getComment());
+        }
+
+        lines.add("Способ доставки: " + order.getDeliveryMethod().getDisplayName());
+
+        if (isPickup) {
+            if (order.getWarehousePointId() != null) {
+                warehousePointRepository.findById(order.getWarehousePointId()).ifPresent(wp ->
+                        lines.add("Пункт самовывоза: " + wp.getName() + ", "
+                                + joinAddress(wp.getPostalCode(), wp.getCity(), wp.getStreet(), wp.getBuilding(), null)));
+            }
+            if (order.getPickupRecipientName() != null) {
+                lines.add("Получатель: " + order.getPickupRecipientName()
+                        + (order.getPickupRecipientPhone() != null ? ", " + order.getPickupRecipientPhone() : ""));
+            }
+        } else if (address != null) {
+            lines.add("Адрес доставки: " + joinAddress(address.getPostalCode(), address.getCity(),
+                    address.getStreet(), address.getBuilding(), address.getApartment()));
+            if (address.getRecipientName() != null) {
+                lines.add("Получатель: " + address.getRecipientName()
+                        + (address.getPhone() != null ? ", " + address.getPhone() : ""));
+            }
+        }
+
+        return String.join("\n", lines);
+    }
+
+    /** Склеивает непустые части адреса через запятую; квартиру — с префиксом «кв.». */
+    private String joinAddress(String postalCode, String city, String street, String building, String apartment) {
+        List<String> parts = new ArrayList<>();
+        if (postalCode != null) parts.add(postalCode);
+        if (city != null) parts.add(city);
+        if (street != null) parts.add(street);
+        if (building != null) parts.add("д. " + building);
+        if (apartment != null) parts.add("кв. " + apartment);
+        return String.join(", ", parts);
+    }
+
     private List<Order1CExportEvent.ExportOrderItem> mapItems(Order order){
         return order.getItems().stream()
                 .map(item -> Order1CExportEvent.ExportOrderItem.builder()
                         .productId(item.getProductId())
                         .externalId(item.getExternalId())
                         .productName(item.getProductName())
+                        .sku(item.getSku())
+                        .unitOfMeasure(item.getUnitOfMeasure())
+                        .categoryExternalId(item.getCategoryExternalId())
                         .quantity(item.getQuantity())
                         .price(item.getPrice())
                         .build())

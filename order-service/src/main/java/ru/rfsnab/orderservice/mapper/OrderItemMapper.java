@@ -25,7 +25,8 @@ public class OrderItemMapper {
                 subtotal,
                 item.getExternalId(),
                 item.getVariantId(),
-                item.getVariantAttributes()
+                item.getVariantAttributes(),
+                item.getParentProductId()
         );
     }
 

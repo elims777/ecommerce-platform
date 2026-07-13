@@ -90,6 +90,7 @@ export interface OrderItemDto {
     quantity: number;
     price: number;
     subtotal: number;
+    parentProductId?: number | null;
 }
 
 /** Позиция заказа в запросе на редактирование */

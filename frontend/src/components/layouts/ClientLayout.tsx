@@ -428,13 +428,13 @@ const ClientLayout = () => {
                         >
                             <MenuIcon /> Каталог товаров
                         </NavLink>
-                        <a style={{
+                        <NavLink to="/catalog?category=17" style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
                             padding: '0 14px', height: '100%', fontSize: 'var(--text-md)', fontWeight: 500,
                             color: 'var(--ink-1)', cursor: 'pointer', textDecoration: 'none',
                         }}>
                             Акции
-                        </a>
+                        </NavLink>
                         <div style={{ flex: 1 }} />
                         <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
                             <span style={{ color: 'var(--brand-green)', fontWeight: 600 }}>●</span>{' '}
@@ -459,7 +459,7 @@ const ClientLayout = () => {
                     }}>
                         <MenuIcon /> Каталог товаров
                     </NavLink>
-                    <NavLink to="/catalog" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Акции</NavLink>
+                    <NavLink to="/catalog?category=17" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Акции</NavLink>
                     {!isAuthenticated && (
                         <NavLink to="/favourites" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Избранное</NavLink>
                     )}

@@ -186,9 +186,17 @@ public class FtkXmlParser {
             String code = text(u, "Код");
             String name = text(u, "НаименованиеПолное");
             if (name == null) name = text(u, "Наименование");
-            if (code != null && name != null) result.put(code, name);
+            if (code != null && name != null) result.put(code, cleanUnitName(name));
         }
         return result;
+    }
+
+    /**
+     * Убирает уточняющий хвост из полного наименования единицы ОКЕИ:
+     * "Пара (2 шт.)" → "Пара". Пробелы по краям тримятся.
+     */
+    private String cleanUnitName(String name) {
+        return name.replaceFirst("\\s*\\(\\d+\\s*шт\\.?\\)\\s*$", "").trim();
     }
 
     // ──────────────────────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,12 +42,15 @@ import java.util.stream.Collectors;
 public class ProductImportService {
 
     private static final String IMPORT_CATEGORY_SLUG = "import-1c";
+    private static final Long SALE_CATEGORY_ID = 17L;
+    private static final BigDecimal FTK_SALE_MARKUP = new BigDecimal("1.10");
 
     @Value("${product-service.import.chunk-size:25}")
     private int chunkSize;
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService;
     private final PlatformTransactionManager transactionManager;
     private final SlugGeneratorService slugService;
 
@@ -136,10 +140,10 @@ public class ProductImportService {
                 product.setCountryOfOrigin(item.getCountryOfOrigin());
             }
             if (item.getPrice() != null) {
-                product.setPrice(item.getPrice());
+                product.setPrice(applyFtkSaleMarkup(item.getPrice(), product.getSource(), product.getCategory()));
             }
             if (item.getWholesalePrice() != null) {
-                product.setWholesalePrice(item.getWholesalePrice());
+                product.setWholesalePrice(applyFtkSaleMarkup(item.getWholesalePrice(), product.getSource(), product.getCategory()));
             }
             if (item.getStockQuantity() != null) {
                 product.setStockQuantity(item.getStockQuantity());
@@ -182,6 +186,20 @@ public class ProductImportService {
     }
 
     /**
+     * ФТК отдаёт нам товары по себестоимости — продавать без наценки нельзя.
+     * +10% на лету для товаров ФТК в категории "Распродажа" (id=17) и всех её подкатегориях.
+     */
+    private BigDecimal applyFtkSaleMarkup(BigDecimal price, String source, Category category) {
+        if (category == null || !"FTK".equals(source)) {
+            return price;
+        }
+        if (!categoryService.getSubtreeCategoryIds(SALE_CATEGORY_ID).contains(category.getId())) {
+            return price;
+        }
+        return price.multiply(FTK_SALE_MARKUP).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
      * Создаёт или обновляет варианты как дочерние записи Product.
      * Матчинг по externalId варианта. Новые создаются с isVariantChild=true.
      *
@@ -220,17 +238,18 @@ public class ProductImportService {
                 child.setStockQuantity(0);
                 child.setIsVariantChild(true);
                 child.setParentProductId(parent.getId());
-                child.setCategory(parent.getCategory() != null ? parent.getCategory() : importCategory);
                 child.setSource(parent.getSource());
             }
 
             if (vi.getSku() != null) child.setSku(vi.getSku());
-            child.setName(parent.getName() + (vi.getSku() != null ? " (" + vi.getSku() + ")" : ""));
+            child.setCategory(parent.getCategory() != null ? parent.getCategory() : importCategory);
+            child.setUnitOfMeasure(parent.getUnitOfMeasure());
+            child.setName(buildVariantName(parent.getName(), vi));
             if (isNew) {
                 child.setSlug(slugService.generateUniqueSlug(child.getName(), reservedSlugs));
             }
-            if (vi.getPrice() != null) child.setPrice(vi.getPrice());
-            if (vi.getWholesalePrice() != null) child.setWholesalePrice(vi.getWholesalePrice());
+            if (vi.getPrice() != null) child.setPrice(applyFtkSaleMarkup(vi.getPrice(), child.getSource(), child.getCategory()));
+            if (vi.getWholesalePrice() != null) child.setWholesalePrice(applyFtkSaleMarkup(vi.getWholesalePrice(), child.getSource(), child.getCategory()));
             if (vi.getStockQuantity() != null) child.setStockQuantity(vi.getStockQuantity());
             if (vi.getBarcode() != null) child.setBarcode(vi.getBarcode());
             if (vi.getCountryOfOrigin() != null) child.setCountryOfOrigin(vi.getCountryOfOrigin());
@@ -251,6 +270,33 @@ public class ProductImportService {
         }
 
         return anyChanged;
+    }
+
+    /**
+     * Имя варианта: "{имя родителя} ({размер}, {цвет})".
+     * Размер и цвет берутся из атрибутов варианта; цвет добавляется, только если его
+     * ещё нет в имени родителя (чтобы не дублировать). Если ни размера, ни цвета нет —
+     * fallback на артикул, как раньше.
+     */
+    private String buildVariantName(String parentName, ProductImportItem.VariantImportItem vi) {
+        Map<String, String> attrs = vi.getAttributes() != null ? vi.getAttributes() : Map.of();
+        List<String> parts = new ArrayList<>();
+
+        String size = attrs.get("Размер");
+        if (size != null && !size.isBlank()) {
+            parts.add("размер " + size.trim());
+        }
+
+        String color = attrs.getOrDefault("Основной цвет", attrs.get("Цвет"));
+        if (color != null && !color.isBlank()
+                && !parentName.toLowerCase().contains(color.trim().toLowerCase())) {
+            parts.add(color.trim());
+        }
+
+        if (!parts.isEmpty()) {
+            return parentName + " (" + String.join(", ", parts) + ")";
+        }
+        return parentName + (vi.getSku() != null ? " (" + vi.getSku() + ")" : "");
     }
 
     private Map<String, Product> loadExistingProducts(List<ProductImportItem> items) {
