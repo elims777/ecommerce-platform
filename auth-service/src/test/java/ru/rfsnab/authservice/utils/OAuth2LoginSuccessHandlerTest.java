@@ -28,6 +28,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -88,6 +89,7 @@ class OAuth2LoginSuccessHandlerTest {
         String refreshToken = "refresh.token";
 
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
+        when(request.getSession(false)).thenReturn(null);
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttributes()).thenReturn(Map.of(
                 "default_email", email,
@@ -148,6 +150,7 @@ class OAuth2LoginSuccessHandlerTest {
         PrintWriter printWriter = new PrintWriter(stringWriter);
 
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
+        when(request.getSession(false)).thenReturn(null);
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
         when(oAuth2User.getAttribute("default_email")).thenReturn(email);
@@ -176,6 +179,7 @@ class OAuth2LoginSuccessHandlerTest {
         PrintWriter printWriter = new PrintWriter(stringWriter);
 
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
+        when(request.getSession(false)).thenReturn(null);
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
         when(oAuth2User.getAttribute("default_email")).thenReturn(email);
@@ -204,6 +208,7 @@ class OAuth2LoginSuccessHandlerTest {
         String refreshToken = "refresh.token";
 
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
+        when(request.getSession(false)).thenReturn(null);
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
         when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
         when(oAuth2User.getAttribute("default_email")).thenReturn(email);
@@ -238,6 +243,99 @@ class OAuth2LoginSuccessHandlerTest {
                 eq(USER_SERVICE_URL + "/v1/users/oauth2-login"),
                 argThat((RegistrationRequest req) ->
                         "Гость".equals(req.getFirstname()) && "Фамилия".equals(req.getLastname())),
+                eq(UserDtoResponse.class)
+        );
+    }
+
+    @Test
+    @DisplayName("onAuthenticationSuccess() - телефон из Яндекса подставляется в RegistrationRequest")
+    void onAuthenticationSuccess_WithPhone_UsesRealPhone() throws Exception {
+        String email = "oauth@example.com";
+
+        when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
+        when(authentication.getPrincipal()).thenReturn(oAuth2User);
+        when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
+        when(oAuth2User.getAttribute("default_email")).thenReturn(email);
+        when(oAuth2User.getAttribute("first_name")).thenReturn("Test");
+        when(oAuth2User.getAttribute("last_name")).thenReturn("User");
+        when(oAuth2User.getAttribute("default_phone")).thenReturn(Map.of("id", 1L, "number", "+7 900 123-45-67"));
+
+        RoleEntity userRole = new RoleEntity(1L, "ROLE_USER");
+        UserDtoResponse user = new UserDtoResponse();
+        user.setId(1L);
+        user.setEmail(email);
+        user.setRoles(Set.of(userRole));
+
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed_password");
+        when(restTemplate.postForEntity(anyString(), any(RegistrationRequest.class), eq(UserDtoResponse.class)))
+                .thenReturn(ResponseEntity.ok(user));
+        when(roleExtractor.extractRoles(user)).thenReturn(List.of("ROLE_USER"));
+        when(jwtService.generateToken(anyLong(), anyString(), anyList())).thenReturn("access.token");
+        when(jwtService.generateRefreshToken(anyLong(), anyString(), anyList())).thenReturn("refresh.token");
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        verify(restTemplate).postForEntity(
+                eq(USER_SERVICE_URL + "/v1/users/oauth2-login"),
+                argThat((RegistrationRequest req) -> "79001234567".equals(req.getPhone())),
+                eq(UserDtoResponse.class)
+        );
+    }
+
+    @Test
+    @DisplayName("onAuthenticationSuccess() - регистрация без телефона → редирект на ошибку, user-service не вызывается")
+    void onAuthenticationSuccess_RegisterNoPhone_RedirectsToError() throws Exception {
+        String email = "oauth@example.com";
+        jakarta.servlet.http.HttpSession session = org.mockito.Mockito.mock(jakarta.servlet.http.HttpSession.class);
+
+        when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
+        when(request.getSession(false)).thenReturn(session);
+        when(session.getAttribute("oauth2_action")).thenReturn("register");
+        when(authentication.getPrincipal()).thenReturn(oAuth2User);
+        when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
+        when(oAuth2User.getAttribute("default_email")).thenReturn(email);
+        when(oAuth2User.getAttribute("first_name")).thenReturn("Test");
+        when(oAuth2User.getAttribute("last_name")).thenReturn("User");
+        when(oAuth2User.getAttribute("default_phone")).thenReturn(null);
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        verify(response).sendRedirect(contains("/oauth2/error?reason=phone_required"));
+        verify(restTemplate, never()).postForEntity(anyString(), any(), eq(UserDtoResponse.class));
+    }
+
+    @Test
+    @DisplayName("onAuthenticationSuccess() - вход без телефона (не register) → проходит с плейсхолдером")
+    void onAuthenticationSuccess_LoginNoPhone_UsesPlaceholder() throws Exception {
+        String email = "oauth@example.com";
+
+        when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
+        when(request.getSession(false)).thenReturn(null);
+        when(authentication.getPrincipal()).thenReturn(oAuth2User);
+        when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
+        when(oAuth2User.getAttribute("default_email")).thenReturn(email);
+        when(oAuth2User.getAttribute("first_name")).thenReturn("Test");
+        when(oAuth2User.getAttribute("last_name")).thenReturn("User");
+        when(oAuth2User.getAttribute("default_phone")).thenReturn(null);
+
+        RoleEntity userRole = new RoleEntity(1L, "ROLE_USER");
+        UserDtoResponse user = new UserDtoResponse();
+        user.setId(1L);
+        user.setEmail(email);
+        user.setRoles(Set.of(userRole));
+
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed_password");
+        when(restTemplate.postForEntity(anyString(), any(RegistrationRequest.class), eq(UserDtoResponse.class)))
+                .thenReturn(ResponseEntity.ok(user));
+        when(roleExtractor.extractRoles(user)).thenReturn(List.of("ROLE_USER"));
+        when(jwtService.generateToken(anyLong(), anyString(), anyList())).thenReturn("access.token");
+        when(jwtService.generateRefreshToken(anyLong(), anyString(), anyList())).thenReturn("refresh.token");
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        verify(restTemplate).postForEntity(
+                eq(USER_SERVICE_URL + "/v1/users/oauth2-login"),
+                argThat((RegistrationRequest req) -> "00000000000".equals(req.getPhone())),
                 eq(UserDtoResponse.class)
         );
     }

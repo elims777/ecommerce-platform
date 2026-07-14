@@ -43,6 +43,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
     private static final int TEMP_PASSWORD_LENGTH = 16;
+    private static final String PLACEHOLDER_PHONE = "00000000000";
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -59,12 +60,19 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         String email = extractEmail(oAuth2User);
         String firstName = extractFirstName(oAuth2User);
         String lastName = extractLastName(oAuth2User);
+        String phone = extractPhone(oAuth2User);
 
         log.info("OAuth2 login для email: {}, firstname: {}, lastname: {}", email, firstName, lastName);
 
+        if (phone == null && isRegisterAction(request)) {
+            log.warn("OAuth2 регистрация без доступа к телефону — отказ для email: {}", email);
+            response.sendRedirect(frontendUrl + "/oauth2/error?reason=phone_required");
+            return;
+        }
+
         try {
             // Проверяем существует ли пользователь в user-service
-            UserDtoResponse user = oauth2LoginOrRegister(email, firstName, lastName);
+            UserDtoResponse user = oauth2LoginOrRegister(email, firstName, lastName, phone);
 
             List<String> roles = roleExtractor.extractRoles(user);
 
@@ -112,7 +120,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     /**
      * Единый метод для OAuth2 login/register через user-service
      */
-    private UserDtoResponse oauth2LoginOrRegister(String email, String firstName, String lastName) {
+    private UserDtoResponse oauth2LoginOrRegister(String email, String firstName, String lastName, String phone) {
         String oauth2Url = userServiceUrl + "/v1/users/oauth2-login";
 
         // Генерируем и хешируем временный пароль заранее
@@ -125,7 +133,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 .password(hashedPassword)
                 .firstname(firstName)
                 .lastname(lastName)
-                .phone("00000000000")  // placeholder — пользователь заполнит в профиле
+                .phone(phone != null ? phone : PLACEHOLDER_PHONE)  // реальный телефон из Яндекса, иначе placeholder
                 .emailVerified(true)
                 .build();
 
@@ -195,5 +203,34 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             lastName = "Фамилия";
         }
         return lastName;
+    }
+
+    /**
+     * Извлекает телефон из атрибута default_phone (Yandex), нормализует до 11 цифр.
+     * Возвращает null, если пользователь не дал доступ к телефону.
+     */
+    @SuppressWarnings("unchecked")
+    private String extractPhone(OAuth2User oAuth2User) {
+        Object defaultPhone = oAuth2User.getAttribute("default_phone");
+        if (!(defaultPhone instanceof Map<?, ?> phoneMap)) {
+            return null;
+        }
+        Object number = ((Map<String, Object>) phoneMap).get("number");
+        if (number == null) {
+            return null;
+        }
+        String digits = number.toString().replaceAll("\\D", "");
+        if (digits.length() == 11 && digits.startsWith("8")) {
+            digits = "7" + digits.substring(1);
+        }
+        return digits.length() == 11 ? digits : null;
+    }
+
+    /**
+     * true, если текущий OAuth2-поток — регистрация (флаг проставлен OAuth2RegisterController).
+     */
+    private boolean isRegisterAction(HttpServletRequest request) {
+        var session = request.getSession(false);
+        return session != null && "register".equals(session.getAttribute("oauth2_action"));
     }
 }
