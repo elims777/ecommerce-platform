@@ -72,7 +72,7 @@ const BrandPanel = () => {
 
 const LoginPage = () => {
     const [loading, setLoading] = useState(false);
-    const [accountType, setAccountType] = useState<'legal' | 'personal'>('legal');
+    const [accountType, setAccountType] = useState<'legal' | 'personal'>('personal');
     const navigate = useNavigate();
     const location = useLocation();
     const login = useAuthStore((state) => state.login);
@@ -146,11 +146,24 @@ const LoginPage = () => {
             <BrandPanel />
 
             <div style={{ background: 'var(--surface)', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
-                    Ещё нет аккаунта?{' '}
-                    <NavLink to="/register" style={{ color: 'var(--brand-red)', fontWeight: 600, marginLeft: 6, cursor: 'pointer' }}>
-                        Регистрация
-                    </NavLink>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
+                    <a
+                        href="/instrukciya-po-registracii.pdf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--brand-navy)', fontWeight: 500, textDecoration: 'none' }}
+                    >
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+                        </svg>
+                        Инструкция по регистрации
+                    </a>
+                    <span>
+                        Ещё нет аккаунта?{' '}
+                        <NavLink to="/register" style={{ color: 'var(--brand-red)', fontWeight: 600, marginLeft: 6, cursor: 'pointer' }}>
+                            Регистрация
+                        </NavLink>
+                    </span>
                 </div>
 
                 <div style={{ maxWidth: 380, margin: '60px auto auto', width: '100%' }}>
@@ -161,17 +174,17 @@ const LoginPage = () => {
 
                     {/* Юр / Физ toggle */}
                     <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--r-4)', padding: 4, border: '1px solid var(--line-1)', marginBottom: 22 }}>
-                        <button style={tabBtn(accountType === 'legal')} onClick={() => setAccountType('legal')}>
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="4" y="4" width="16" height="16" rx="1"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M9 16h6"/>
-                            </svg>
-                            Юридическое лицо
-                        </button>
                         <button style={tabBtn(accountType === 'personal')} onClick={() => setAccountType('personal')}>
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>
                             </svg>
                             Физическое лицо
+                        </button>
+                        <button style={tabBtn(accountType === 'legal')} onClick={() => setAccountType('legal')}>
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="4" y="4" width="16" height="16" rx="1"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M9 16h6"/>
+                            </svg>
+                            Юридическое лицо
                         </button>
                     </div>
 
@@ -239,20 +252,6 @@ const LoginPage = () => {
                             <path d="M12 3 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-3z"/>
                         </svg>
                         <div>Защищённый вход в соответствии с 152-ФЗ. Данные передаются по зашифрованному каналу.</div>
-                    </div>
-
-                    <div style={{ marginTop: 20, textAlign: 'center' }}>
-                        <a
-                            href="/instrukciya-po-registracii.pdf"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-base)', color: 'var(--brand-navy)', fontWeight: 500, textDecoration: 'none' }}
-                        >
-                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
-                            </svg>
-                            Инструкция по регистрации
-                        </a>
                     </div>
                 </div>
             </div>
