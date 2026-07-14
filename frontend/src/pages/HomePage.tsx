@@ -551,23 +551,6 @@ const HomePage = () => {
                     />
                 </div>
             </div>
-
-            {/* TRUST STRIP */}
-            <div style={{ paddingTop: 36 }}>
-                <div style={{
-                    background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-5)',
-                    padding: '22px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 32,
-                }}>
-                    <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)', maxWidth: 230, color: 'var(--ink-1)' }}>
-                        Нам доверяют 18 200+ организаций
-                    </div>
-                    <div style={{ display: 'flex', gap: 36, fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--ink-3)', flex: 1, justifyContent: 'space-around' }}>
-                        {['РЖД', 'Газпром-нефть', 'Северсталь', 'Магнит', 'Сибур', 'Х5 Group'].map((b) => (
-                            <span key={b} style={{ letterSpacing: '0.05em' }}>{b}</span>
-                        ))}
-                    </div>
-                </div>
-            </div>
         </div>
     );
 };
