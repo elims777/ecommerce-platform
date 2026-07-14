@@ -38,6 +38,7 @@ const LogisticsPage = lazy(() => import('@/features/admin/LogisticsPage'));
 const FavouritesPage = lazy(() => import('@/features/favourites/FavouritesPage'));
 const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage'));
 const OAuth2SuccessPage = lazy(() => import('@/pages/OAuth2SuccessPage'));
+const OAuth2ErrorPage = lazy(() => import('@/pages/OAuth2ErrorPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 const antTheme = {
@@ -108,6 +109,7 @@ const AppRoutes = () => {
       }>
         <Routes>
           <Route path="/oauth2/success" element={<OAuth2SuccessPage />} />
+          <Route path="/oauth2/error" element={<OAuth2ErrorPage />} />
 
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
