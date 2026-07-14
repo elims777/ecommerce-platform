@@ -284,6 +284,127 @@ class ProductControllerTest {
         }
     }
 
+    // ==================== GET /featured ====================
+
+    @Nested
+    @DisplayName("GET /api/v1/products/featured (Public)")
+    class GetFeaturedProductsTests {
+
+        @Test
+        @DisplayName("возвращает только featured товары")
+        void getFeatured_ReturnsOnlyFeatured() throws Exception {
+            Product featured = productRepository.save(Product.builder()
+                    .name("Огнетушитель ОП-8 (хит)")
+                    .slug("ognetushitel-op-8-hit")
+                    .price(new BigDecimal("2000.00"))
+                    .stockQuantity(50)
+                    .isActive(true)
+                    .isFeatured(true)
+                    .category(testCategory)
+                    .build());
+
+            mockMvc.perform(get("/api/v1/products/featured"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.content[0].name", is(featured.getName())));
+        }
+
+        @Test
+        @DisplayName("без авторизации → 200 OK")
+        void getFeatured_NoAuth_Returns200() throws Exception {
+            mockMvc.perform(get("/api/v1/products/featured"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("не включает дочерние товары-варианты")
+        void getFeatured_ExcludesVariantChildren() throws Exception {
+            Product parent = productRepository.save(Product.builder()
+                    .name("Куртка утеплённая (хит)")
+                    .slug("kurtka-utheplennaya-hit")
+                    .price(new BigDecimal("3000.00"))
+                    .stockQuantity(10)
+                    .isActive(true)
+                    .isFeatured(true)
+                    .category(testCategory)
+                    .build());
+
+            productRepository.save(Product.builder()
+                    .name("Куртка утеплённая (хит) (48)")
+                    .slug("kurtka-utheplennaya-hit-48")
+                    .price(new BigDecimal("3000.00"))
+                    .stockQuantity(5)
+                    .isActive(true)
+                    .isFeatured(true)
+                    .isVariantChild(true)
+                    .parentProductId(parent.getId())
+                    .category(testCategory)
+                    .build());
+
+            mockMvc.perform(get("/api/v1/products/featured"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.content[0].name", is(parent.getName())));
+        }
+
+        @Test
+        @DisplayName("не включает неактивные товары")
+        void getFeatured_ExcludesInactive() throws Exception {
+            productRepository.save(Product.builder()
+                    .name("Неактивный хит")
+                    .slug("neaktivnyj-hit")
+                    .price(new BigDecimal("1000.00"))
+                    .stockQuantity(10)
+                    .isActive(false)
+                    .isFeatured(true)
+                    .category(testCategory)
+                    .build());
+
+            mockMvc.perform(get("/api/v1/products/featured"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(0)));
+        }
+
+        @Test
+        @DisplayName("отмечает hasVariants=true при наличии активного дочернего варианта")
+        void getFeatured_MarksHasVariants() throws Exception {
+            Product parent = productRepository.save(Product.builder()
+                    .name("Куртка утеплённая (хит)")
+                    .slug("kurtka-utheplennaya-hit")
+                    .price(new BigDecimal("3000.00"))
+                    .stockQuantity(10)
+                    .isActive(true)
+                    .isFeatured(true)
+                    .category(testCategory)
+                    .build());
+
+            productRepository.save(Product.builder()
+                    .name("Куртка утеплённая (хит) (48)")
+                    .slug("kurtka-utheplennaya-hit-48")
+                    .price(new BigDecimal("3000.00"))
+                    .stockQuantity(5)
+                    .isActive(true)
+                    .isFeatured(false)
+                    .isVariantChild(true)
+                    .parentProductId(parent.getId())
+                    .category(testCategory)
+                    .build());
+
+            mockMvc.perform(get("/api/v1/products/featured"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.content[0].hasVariants", is(true)));
+        }
+
+        @Test
+        @DisplayName("нет featured товаров → пустая страница")
+        void getFeatured_Empty_ReturnsEmptyPage() throws Exception {
+            mockMvc.perform(get("/api/v1/products/featured"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(0)));
+        }
+    }
+
     // ==================== GET /count-available ====================
 
     @Nested
