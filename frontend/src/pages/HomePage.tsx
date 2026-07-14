@@ -1,18 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClickableCard, NavLink } from '@/components/navigation';
 import { Spin, Grid } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import { getProducts } from '@/api/products';
+import { getProducts, getFeaturedProducts } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
 import ProductCard from '@/features/catalog/ProductCard';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { App } from 'antd';
 import type { CategoryTree } from '@/types/product';
-import { useSliderStore } from '@/store/sliderStore';
-import type { Slide } from '@/types/slider';
-import { GRADIENT_PRESETS } from '@/types/slider';
+import { useDisplayPrice, formatPriceOrPlaceholder } from '@/utils/priceUtils';
+
+// Категория "Распродажа" — используется для таба "Акции" и для правой колонки витрины.
+const SALES_CATEGORY_ID = 17;
 
 // ── Icons ─────────────────────────────────────────────────────
 const ArrRight = ({ width = 16, height = 16 }: { width?: number; height?: number }) => (
@@ -50,9 +51,6 @@ const ChevRight = () => (
         <path d="m9 18 6-6-6-6"/>
     </svg>
 );
-
-// ── Hero slides: берутся из sliderStore ───────────────────────
-
 // ── Primary category colors (для первых 3 категорий из API) ──
 const PRIMARY_COLORS = [
     { bg: 'var(--brand-red)', hover: 'var(--brand-red-hover)' },
@@ -74,282 +72,244 @@ const flattenCategories = (tree: CategoryTree[]): CategoryTree[] => {
 };
 
 
-const arrowBtn: React.CSSProperties = {
-    width: 30, height: 30, borderRadius: 'var(--r-full)',
-    background: 'var(--overlay-white-14)', color: '#fff',
-    border: 0, cursor: 'pointer',
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+interface ShowcaseRowProps {
+    product: import('@/types/product').Product;
+}
+
+const ShowcaseRow = ({ product }: ShowcaseRowProps) => {
+    const price = useDisplayPrice(product);
+    const imageUrl = product.images?.find((img) => img.isPrimary)?.fileUrl ?? product.images?.[0]?.fileUrl;
+    return (
+        <ClickableCard
+            to={`/products/${product.id}`}
+            style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 6px', borderRadius: 'var(--r-3)',
+                transition: 'background .12s',
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--surface-2)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
+        >
+            <div style={{
+                width: 40, height: 40, borderRadius: 'var(--r-2)', flexShrink: 0,
+                background: 'var(--surface-2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+            }}>
+                {imageUrl && <img src={imageUrl} alt={product.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                    fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-1)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                    {product.name}
+                </div>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}>
+                    {formatPriceOrPlaceholder(price)}
+                </div>
+            </div>
+            <ArrRight width={12} height={12} />
+        </ClickableCard>
+    );
 };
 
-const formatPrice = (p: number) =>
-    new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(p);
+type ShowcaseTab = 'hits' | 'sales' | 'new';
 
-const getSlideBgStyle = (slide: Slide): React.CSSProperties => {
-    if (slide.type === 'image' && slide.imageUrl) {
-        const fit = (slide.imageFit as string | undefined) ?? 'cover';
-        return {
-            backgroundImage: `url(${slide.imageUrl})`,
-            backgroundSize: fit === 'contain' ? 'contain' : fit === 'fill' ? '100% 100%' : 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-        };
-    }
-    const grad = slide.gradientPreset === 'custom' ? slide.customGradient : GRADIENT_PRESETS[slide.gradientPreset];
-    return { background: grad };
-};
+const SHOWCASE_TABS: { key: ShowcaseTab; label: string }[] = [
+    { key: 'hits', label: 'Хиты продаж' },
+    { key: 'sales', label: 'Акции' },
+    { key: 'new', label: 'Новинки' },
+];
 
-const HeroSlider = (_: { onRegister: () => void; onCatalog: () => void }) => {
-    const rawSlides = useSliderStore((s) => s.slides);
-    const slides = [...rawSlides]
-        .filter((s) => s.enabled)
-        .sort((a, b) => a.displayOrder - b.displayOrder);
+const SHOWCASE_SCROLL_STEP = 320; // ширина карточки + gap
 
-    const [idx, setIdx] = useState(0);
-    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const navigate = useNavigate();
+const SHOWCASE_ADVANTAGES = [
+    { icon: <GridIcon />, text: 'Широкий ассортимент' },
+    { icon: <TruckIcon />, text: 'Поставка в короткие сроки' },
+    { icon: <ShieldIcon />, text: 'Участвуем в торгах по 44 и 223 ФЗ' },
+    { icon: <DocIcon />, text: 'Гибкие условия оплаты' },
+];
+
+const Showcase = ({ onAddToCart }: { onAddToCart: (productId: number) => void }) => {
+    const [tab, setTab] = useState<ShowcaseTab>('hits');
     const screens = Grid.useBreakpoint();
     const isMobile = screens.md === false;
+    const scrollRef = useRef<HTMLDivElement>(null);
 
-    const activeIdx = Math.min(idx, Math.max(slides.length - 1, 0));
+    const { data: hitsPage, isLoading: hitsLoading } = useQuery({
+        queryKey: ['showcase', 'hits'],
+        queryFn: getFeaturedProducts,
+        enabled: tab === 'hits',
+        staleTime: 60_000,
+    });
+    // sales-запрос без enabled: нужен и для таба «Акции», и постоянно для правой колонки (та же категория)
+    const { data: salesPage, isLoading: salesLoading } = useQuery({
+        queryKey: ['showcase', 'sales'],
+        queryFn: () => getProducts({ categoryId: SALES_CATEGORY_ID, size: 10 }),
+        staleTime: 60_000,
+    });
+    const { data: newPage, isLoading: newLoading } = useQuery({
+        queryKey: ['showcase', 'new'],
+        queryFn: () => getProducts({ size: 10, sort: 'createdAt,desc' }),
+        enabled: tab === 'new',
+        staleTime: 60_000,
+    });
 
-    const resetTimer = () => {
-        if (timerRef.current) clearInterval(timerRef.current);
-        if (slides.length > 1) {
-            timerRef.current = setInterval(() => setIdx((i) => (i + 1) % slides.length), 7000);
-        }
+    const activeData = tab === 'hits' ? hitsPage : tab === 'sales' ? salesPage : newPage;
+    const activeLoading = tab === 'hits' ? hitsLoading : tab === 'sales' ? salesLoading : newLoading;
+    const products = activeData?.content ?? [];
+    // временно: до появления живых новостей правая колонка = товары категории Распродажа (тот же sales-запрос)
+    const sidebarProducts = (salesPage?.content ?? []).slice(0, 5);
+
+    const scrollByAmount = (dir: 1 | -1) => {
+        scrollRef.current?.scrollBy({ left: dir * SHOWCASE_SCROLL_STEP, behavior: 'smooth' });
     };
 
+    const pausedRef = useRef(false);
+
+    // при смене таба показываем карусель с начала и снимаем паузу
     useEffect(() => {
-        resetTimer();
-        return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [slides.length]);
+        scrollRef.current?.scrollTo({ left: 0 });
+        pausedRef.current = false;
+    }, [tab]);
 
-    const go = (next: number) => { setIdx(next); resetTimer(); };
-
-    if (slides.length === 0) return null;
-
-    const s = slides[activeIdx];
-    const bgStyle = getSlideBgStyle(s);
-
-    const handleCtaClick = (link: string) => {
-        if (!link) return;
-        if (link.startsWith('http')) window.open(link, '_blank');
-        else navigate(link);
-    };
-
-    // Мобильный масштаб для px-размеров шрифта из конфига слайдера (рассчитан под desktop-ширину)
-    const textScale = isMobile ? 0.55 : 1;
+    // автопрокрутка карусели: раз в 3с сдвиг на карточку, в конце — возврат в начало; пауза при наведении
+    useEffect(() => {
+        if (isMobile || products.length === 0) return;
+        const id = setInterval(() => {
+            const el = scrollRef.current;
+            if (!el || pausedRef.current) return;
+            if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 4) {
+                el.scrollTo({ left: 0, behavior: 'smooth' });
+            } else {
+                el.scrollBy({ left: SHOWCASE_SCROLL_STEP, behavior: 'smooth' });
+            }
+        }, 3000);
+        return () => clearInterval(id);
+    }, [isMobile, products.length, tab]);
 
     return (
-        <div style={{
-            ...bgStyle,
-            borderRadius: 'var(--r-5)',
-            color: '#fff',
-            position: 'relative',
-            overflow: 'hidden',
-            minHeight: isMobile ? 360 : 300,
-            transition: 'background .35s ease',
-        }}>
-            {/* Watermark */}
-            <img src="/logo-light.png" alt=""
-                style={{
-                    position: 'absolute', right: -24, bottom: -28,
-                    height: 300, width: 'auto', opacity: .12,
-                    pointerEvents: 'none',
-                }}
-            />
-
-            {/* Text blocks */}
-            {s.textBlocks?.map((block) => (
-                <div key={block.id} style={{
-                    position: 'absolute',
-                    left: `${block.x}%`,
-                    top: `${block.y}%`,
-                    width: `${block.width}%`,
-                    height: `${block.height}%`,
-                    background: block.background || 'transparent',
-                    borderRadius: block.borderRadius,
-                    padding: '8px 10px',
-                    boxSizing: 'border-box',
-                    zIndex: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'flex-start',
-                    overflow: 'hidden',
-                }}>
-                    {block.heading && (
-                        <div style={{
-                            fontFamily: 'var(--font-head)',
-                            fontSize: block.headingStyle.size * textScale,
-                            fontWeight: block.headingStyle.bold ? 700 : 400,
-                            fontStyle: block.headingStyle.italic ? 'italic' : 'normal',
-                            textDecoration: [
-                                block.headingStyle.underline ? 'underline' : '',
-                                block.headingStyle.strikethrough ? 'line-through' : '',
-                            ].filter(Boolean).join(' ') || 'none',
-                            color: block.headingStyle.color,
-                            lineHeight: 1.15,
-                            letterSpacing: '-0.02em',
-                            margin: '0 0 8px',
-                        }}>
-                            {block.heading}
-                        </div>
-                    )}
-                    {block.body && (
-                        <div style={{
-                            fontSize: block.bodyStyle.size * textScale,
-                            fontWeight: block.bodyStyle.bold ? 700 : 400,
-                            fontStyle: block.bodyStyle.italic ? 'italic' : 'normal',
-                            textDecoration: [
-                                block.bodyStyle.underline ? 'underline' : '',
-                                block.bodyStyle.strikethrough ? 'line-through' : '',
-                            ].filter(Boolean).join(' ') || 'none',
-                            color: block.bodyStyle.color,
-                            lineHeight: 1.5,
-                            margin: 0,
-                        }}>
-                            {block.body}
-                        </div>
-                    )}
+        <div>
+            {/* Заголовок + табы */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 24, marginBottom: 18, flexWrap: 'wrap' }}>
+                <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
+                    Витрина
+                </h2>
+                <div style={{ display: 'flex', gap: 20 }}>
+                    {SHOWCASE_TABS.map((t) => (
+                        <button
+                            key={t.key}
+                            type="button"
+                            onClick={() => setTab(t.key)}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontFamily: 'var(--font-body)', fontSize: 'var(--text-base)',
+                                padding: '4px 0',
+                                borderBottom: tab === t.key ? '2px solid var(--brand-red)' : '2px solid transparent',
+                                color: tab === t.key ? 'var(--ink-1)' : 'var(--ink-3)',
+                                fontWeight: tab === t.key ? 600 : 400,
+                            }}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
                 </div>
-            ))}
+            </div>
 
-            {/* CTA buttons */}
-            {s.cta?.length > 0 && (
-                <div style={{
-                    position: 'absolute',
-                    left: isMobile ? 16 : `${s.textBlocks?.[0]?.x ?? 5}%`,
-                    bottom: isMobile ? 12 : 52,
-                    display: 'flex', gap: 10, zIndex: 3,
-                }}>
-                    {s.cta.map((btn) => (
-                        btn.label ? (
-                            <button
-                                key={btn.id}
-                                onClick={() => handleCtaClick(btn.link)}
+            {/* Карусель + правая колонка */}
+            <div style={{ display: 'flex', gap: 16, flexDirection: isMobile ? 'column' : 'row' }}>
+                <div
+                    style={{ flex: isMobile ? '1 1 auto' : '0 0 68%', minWidth: 0, position: 'relative' }}
+                    onMouseEnter={() => { pausedRef.current = true; }}
+                    onMouseLeave={() => { pausedRef.current = false; }}
+                >
+                    {activeLoading ? (
+                        <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div>
+                    ) : products.length > 0 ? (
+                        <>
+                            <div
+                                ref={scrollRef}
                                 style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                                    background: btn.variant === 'primary' ? 'var(--surface)' : 'var(--overlay-white-14)',
-                                    color: btn.variant === 'primary' ? 'var(--ink-1)' : '#fff',
-                                    fontWeight: 600,
-                                    padding: isMobile ? '0 14px' : '0 18px', height: isMobile ? 'var(--btn-h-base)' : 'var(--btn-h-lg)',
-                                    border: 'none', borderRadius: 'var(--r-3)',
-                                    fontSize: 'var(--text-md)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                    transition: btn.variant === 'primary' ? 'opacity .12s' : 'background .12s',
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (btn.variant === 'primary') e.currentTarget.style.opacity = '.9';
-                                    else e.currentTarget.style.background = 'rgba(255,255,255,.22)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (btn.variant === 'primary') e.currentTarget.style.opacity = '1';
-                                    else e.currentTarget.style.background = 'var(--overlay-white-14)';
+                                    display: 'flex', gap: 14, overflowX: 'auto',
+                                    scrollSnapType: 'x mandatory',
+                                    paddingBottom: 8,
+                                    scrollbarWidth: 'thin',
+                                    scrollbarColor: 'var(--line-2) transparent',
                                 }}
                             >
-                                {btn.label} {btn.variant === 'primary' && <ArrRight />}
-                            </button>
-                        ) : null
-                    ))}
-                </div>
-            )}
-
-            {/* Products block — скрыт на мобильном: абсолютное позиционирование по % накладывается на текстовые блоки на узких экранах */}
-            {!isMobile && s.products.length > 0 && (
-                <div style={{
-                    position: 'absolute',
-                    right: `${s.productsRight}%`,
-                    top: `${s.productsTop}%`,
-                    width: `${s.productsWidth}%`,
-                    display: 'flex', flexDirection: 'column', gap: 8,
-                    zIndex: 2,
-                }}>
-                    {s.products.slice(0, 3).map((p) => (
-                        <ClickableCard
-                            key={p.id}
-                            to={`/products/${p.id}`}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: 10,
-                                background: 'rgba(255,255,255,.12)', backdropFilter: 'blur(6px)',
-                                border: '1px solid rgba(255,255,255,.2)',
-                                borderRadius: 'var(--r-3)', padding: '8px 10px',
-                                cursor: 'pointer', transition: 'background .12s',
-                                height: s.productsItemHeight ?? 56,
-                                boxSizing: 'border-box', overflow: 'hidden',
-                            }}
-                            // TODO: заменить ref-hack на useState hover-индекс внутри выделенного компонента SlideProductItem
-                            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,.2)'; }}
-                            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,.12)'; }}
-                        >
-                            {p.imageUrl && (
-                                <div style={{
-                                    width: 40, height: 40, borderRadius: 'var(--r-2)',
-                                    background: 'rgba(255,255,255,.9)', flexShrink: 0,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    overflow: 'hidden',
-                                }}>
-                                    <img src={p.imageUrl} alt={p.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                                </div>
-                            )}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                {p.fields?.showName !== false && (
-                                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {p.name}
+                                {products.map((product) => (
+                                    <div key={product.id} style={{ flex: '0 0 auto', scrollSnapAlign: 'start' }}>
+                                        <ProductCard product={product} onAddToCart={onAddToCart} />
                                     </div>
-                                )}
-                                {p.fields?.showShortDescription && p.shortDescription && (
-                                    <div style={{ fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,.7)', lineHeight: 1.3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {p.shortDescription}
-                                    </div>
-                                )}
-                                {p.fields?.showDescription && p.description && !p.fields?.showShortDescription && (
-                                    <div style={{ fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,.7)', lineHeight: 1.3, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {p.description}
-                                    </div>
-                                )}
-                                {p.fields?.showPrice !== false && (
-                                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'rgba(255,255,255,.9)', fontVariantNumeric: 'tabular-nums' }}>
-                                        {formatPrice(p.price)}
-                                    </div>
-                                )}
+                                ))}
                             </div>
-                            <ArrRight width={12} height={12} />
-                        </ClickableCard>
-                    ))}
+                            {!isMobile && (
+                                <>
+                                    <button
+                                        type="button"
+                                        aria-label="Прокрутить назад"
+                                        onClick={() => scrollByAmount(-1)}
+                                        style={{
+                                            position: 'absolute', left: -14, top: '40%',
+                                            width: 32, height: 32, borderRadius: 'var(--r-full)',
+                                            background: 'var(--surface)', border: '1px solid var(--line-1)',
+                                            color: 'var(--ink-1)', cursor: 'pointer',
+                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                            boxShadow: 'var(--shadow-2)',
+                                        }}
+                                    >
+                                        <ChevLeft />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        aria-label="Прокрутить вперёд"
+                                        onClick={() => scrollByAmount(1)}
+                                        style={{
+                                            position: 'absolute', right: -14, top: '40%',
+                                            width: 32, height: 32, borderRadius: 'var(--r-full)',
+                                            background: 'var(--surface)', border: '1px solid var(--line-1)',
+                                            color: 'var(--ink-1)', cursor: 'pointer',
+                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                            boxShadow: 'var(--shadow-2)',
+                                        }}
+                                    >
+                                        <ChevRight />
+                                    </button>
+                                </>
+                            )}
+                        </>
+                    ) : null}
                 </div>
-            )}
 
-            {/* Invisible spacer to give slide height */}
-            <div style={{ height: 300, visibility: 'hidden' }} />
-
-            {/* Slider controls */}
-            {slides.length > 1 && (
-                <div style={{
-                    position: 'absolute', left: 36, bottom: 14, right: 36,
-                    display: 'flex', alignItems: 'center', gap: 14, zIndex: 3,
-                }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                        {slides.map((_, i) => (
-                            <button key={i} onClick={() => go(i)} style={{
-                                width: i === activeIdx ? 28 : 8, height: 4, borderRadius: 2,
-                                background: i === activeIdx ? '#fff' : 'rgba(255,255,255,.4)',
-                                border: 0, padding: 0, cursor: 'pointer',
-                                transition: 'width .25s, background .25s',
-                            }}/>
-                        ))}
+                {!isMobile && (
+                    <div style={{ width: '32%', background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', padding: 16 }}>
+                        <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--ink-1)', marginBottom: 10 }}>
+                            Новости и акции
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {sidebarProducts.map((product) => (
+                                <ShowcaseRow key={product.id} product={product} />
+                            ))}
+                        </div>
                     </div>
-                    <div style={{ flex: 1 }}/>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-60)', fontVariantNumeric: 'tabular-nums' }}>
-                        {String(activeIdx + 1).padStart(2, '0')} / {String(slides.length).padStart(2, '0')}
-                    </span>
-                    <button onClick={() => go((activeIdx - 1 + slides.length) % slides.length)} style={arrowBtn}>
-                        <ChevLeft />
-                    </button>
-                    <button onClick={() => go((activeIdx + 1) % slides.length)} style={arrowBtn}>
-                        <ChevRight />
-                    </button>
-                </div>
-            )}
+                )}
+            </div>
+
+            {/* Полоса преимуществ */}
+            <div style={{
+                marginTop: 20, width: '100%',
+                display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 10,
+            }}>
+                {SHOWCASE_ADVANTAGES.map(({ icon, text }) => (
+                    <div key={text} style={{
+                        background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)',
+                        padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10,
+                    }}>
+                        <span style={{ color: 'var(--brand-navy)', display: 'inline-flex', flex: '0 0 auto' }}>{icon}</span>
+                        <span style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--ink-1)' }}>{text}</span>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 };
@@ -482,12 +442,6 @@ const HomePage = () => {
         staleTime: 5 * 60 * 1000,
     });
 
-    const { data: featuredPage, isLoading: productsLoading } = useQuery({
-        queryKey: ['products', { page: 0, size: 8 }],
-        queryFn: () => getProducts({ page: 0, size: 8, sort: 'createdAt,desc' }),
-        staleTime: 60 * 1000,
-    });
-
     const allCategories = flattenCategories(categoryTree);
     const primaryCategories = allCategories.slice(0, 3);
     const secondaryCategories = allCategories.slice(3, 11);
@@ -508,12 +462,9 @@ const HomePage = () => {
 
     return (
         <div style={{ paddingBottom: 'var(--sp-20)' }}>
-            {/* HERO SLIDER */}
+            {/* SHOWCASE */}
             <div style={{ padding: '20px 0 0' }}>
-                <HeroSlider
-                    onRegister={() => navigate('/register')}
-                    onCatalog={() => navigate('/catalog')}
-                />
+                <Showcase onAddToCart={handleAddToCart} />
             </div>
 
             {/* PRIMARY 3 CATEGORIES */}
@@ -574,42 +525,6 @@ const HomePage = () => {
                     </div>
                 </div>
             )}
-
-            {/* FEATURED PRODUCTS */}
-            <div style={{ paddingTop: 40 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
-                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
-                        Хиты снабжения
-                    </h2>
-                    <NavLink
-                        to="/catalog"
-                        style={{ fontSize: 'var(--text-base)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
-                    >
-                        Смотреть все →
-                    </NavLink>
-                </div>
-
-                {productsLoading ? (
-                    <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div>
-                ) : featuredPage && featuredPage.content.length > 0 ? (
-                    <div style={{
-                        display: 'flex', gap: 14, overflowX: 'auto',
-                        scrollSnapType: 'x mandatory',
-                        paddingBottom: 8,
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: 'var(--line-2) transparent',
-                    }}>
-                        {featuredPage.content.map((product) => (
-                            <div key={product.id} style={{ flex: '0 0 auto', scrollSnapAlign: 'start' }}>
-                                <ProductCard
-                                    product={product}
-                                    onAddToCart={handleAddToCart}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                ) : null}
-            </div>
 
             {/* SERVICE CARDS */}
             <div style={{ paddingTop: 36 }}>

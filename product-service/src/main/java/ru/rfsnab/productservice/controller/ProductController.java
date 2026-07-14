@@ -39,6 +39,18 @@ public class ProductController {
     }
 
     /**
+     * Получить рекомендуемые товары ("хиты витрины") с пагинацией
+     */
+    @GetMapping("/featured")
+    public ResponseEntity<Page<ProductResponse>> getFeaturedProducts(
+            @PageableDefault(size = 10) Pageable pageable) {
+        Page<Product> page = productService.getFeaturedProductsPage(pageable);
+        var parentIds = productService.findParentIdsWithActiveChildren(
+                page.getContent().stream().map(Product::getId).toList());
+        return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(page, parentIds));
+    }
+
+    /**
      * Получить все товары с пагинацией для админки
      */
     @GetMapping("/admin")

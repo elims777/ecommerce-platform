@@ -57,6 +57,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     Page<Product> findByIsActive(Boolean isActive, Pageable pageable);
 
+    Page<Product> findByIsFeaturedTrueAndIsActiveTrueAndIsVariantChildFalse(Pageable pageable);
+
     Page<Product> findByCategoryIdAndIsActive(Long categoryId, Boolean isActive, Pageable pageable);
 
     @Query("""

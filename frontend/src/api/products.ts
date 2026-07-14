@@ -25,6 +25,14 @@ export const getProducts = async (params: GetProductsParams = {}): Promise<Page<
     return data;
 };
 
+/** Получить рекомендуемые товары (Хиты продаж) */
+export const getFeaturedProducts = async (): Promise<Page<Product>> => {
+    const { data } = await apiClient.get<Page<Product>>('/v1/products/featured', {
+        params: { page: 0, size: 10 },
+    });
+    return data;
+};
+
 /** Получить товар по ID */
 export const getProductById = async (id: number): Promise<Product> => {
     const { data } = await apiClient.get<Product>(`/v1/products/${id}`);
