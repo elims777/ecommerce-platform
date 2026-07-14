@@ -186,6 +186,10 @@ public class ProductService {
         return productRepository.findAll(pageable);
     }
 
+    public Page<Product> getFeaturedProductsPage(Pageable pageable) {
+        return productRepository.findByIsFeaturedTrueAndIsActiveTrueAndIsVariantChildFalse(pageable);
+    }
+
     public Page<Product> getAllProductsAdminPage(Long categoryId, Boolean isActive, Pageable pageable) {
         pageable = withIdTiebreaker(pageable);
         if (categoryId != null) {
