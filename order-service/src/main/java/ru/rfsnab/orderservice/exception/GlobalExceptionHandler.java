@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -81,6 +82,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleWarehousePointNotFound(
             WarehousePointNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, "Warehouse Point Not Found", ex.getMessage(), request);
+    }
+
+    // ==================== 422 Unprocessable Entity ====================
+
+    /**
+     * Профиль пользователя не заполнен полностью — блокирует корзину и заказ.
+     */
+    @ExceptionHandler(ProfileIncompleteException.class)
+    public ResponseEntity<Map<String, Object>> handleProfileIncomplete(ProfileIncompleteException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(Map.of("message", ex.getMessage(), "missing", ex.getMissing()));
     }
 
     // ==================== 409 Conflict ====================

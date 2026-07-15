@@ -35,6 +35,7 @@ import {
 } from '@/types/order';
 import type { CreateOrderRequest } from '@/types/order';
 import type { AxiosError } from 'axios';
+import { handleProfileIncomplete } from '@/utils/profileGate';
 import DeliveryStep from './DeliveryStep';
 import RecipientStep from './RecipientStep';
 import SummaryStep from './SummaryStep';
@@ -59,7 +60,7 @@ const CheckoutPage = () => {
     const [form] = Form.useForm<CheckoutFormValues>();
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
-    const { message: messageApi } = App.useApp();
+    const { message: messageApi, modal } = App.useApp();
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const user = useAuthStore((state) => state.user);
     const { items, totalAmount, fetchCart, clearCart } = useCartStore();
@@ -214,6 +215,7 @@ const createRecipientMutation = useMutation({
 
             navigate('/orders');
         } catch (error) {
+            if (handleProfileIncomplete(error, modal, navigate)) return;
             const axiosError = error as AxiosError<{ message?: string }>;
             const errorMessage =
                 axiosError.response?.data?.message || 'Ошибка при оформлении заказа. Попробуйте позже.';

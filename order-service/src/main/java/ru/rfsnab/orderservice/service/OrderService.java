@@ -27,6 +27,7 @@ import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
 import ru.rfsnab.orderservice.repository.OrderRepository;
 import ru.rfsnab.orderservice.service.client.PaymentServiceClient;
 import ru.rfsnab.orderservice.service.client.ProductServiceClient;
+import ru.rfsnab.orderservice.service.client.UserServiceClient;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -54,6 +55,7 @@ public class OrderService {
     private final WarehousePointService warehousePointService;
     private final ProductServiceClient productServiceClient;
     private final PaymentServiceClient paymentServiceClient;
+    private final UserServiceClient userServiceClient;
     private final OrderKafkaProducer kafkaProducer;
     private final Order1CKafkaProducer order1CKafkaProducer;
     private final PaymentMethodSettingsService paymentMethodSettingsService;
@@ -113,6 +115,8 @@ public class OrderService {
      */
     @Transactional
     public Order createOrder(Long userId, String customerEmail, String clientType, CreateOrderRequest request) {
+        userServiceClient.requireCompleteProfile(userId);
+
         // 1. Получаем корзину
         Cart cart = cartService.getCart(userId);
         if (cart.getItems().isEmpty()) {

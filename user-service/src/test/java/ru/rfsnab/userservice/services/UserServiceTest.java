@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import ru.rfsnab.userservice.exceptions.UserNotFoundException;
 import ru.rfsnab.userservice.models.RoleEntity;
 import ru.rfsnab.userservice.models.UserEntity;
 import ru.rfsnab.userservice.models.kafka.UserEvent;
@@ -224,5 +225,62 @@ class UserServiceTest {
                 .hasMessageContaining("User not found");
         verify(userRepository, times(1)).findById(999L);
         verify(userRepository, never()).save(any(UserEntity.class));
+    }
+
+    @Test
+    @DisplayName("Get missing profile fields returns empty list when profile is complete")
+    void getMissingProfileFields_completeProfile_returnsEmptyList() {
+        // Given
+        user.setPhone("+79991234567");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        // When
+        List<String> result = userService.getMissingProfileFields(1L);
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(userRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    @DisplayName("Get missing profile fields returns phone when phone is missing")
+    void getMissingProfileFields_missingPhone_returnsPhone() {
+        // Given
+        user.setPhone(null);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        // When
+        List<String> result = userService.getMissingProfileFields(1L);
+
+        // Then
+        assertThat(result).containsExactly("Телефон");
+    }
+
+    @Test
+    @DisplayName("Get missing profile fields returns firstname and phone when both are missing")
+    void getMissingProfileFields_missingFirstnameAndPhone_returnsBoth() {
+        // Given
+        user.setFirstname(null);
+        user.setPhone(null);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        // When
+        List<String> result = userService.getMissingProfileFields(1L);
+
+        // Then
+        assertThat(result).containsExactly("Имя", "Телефон");
+    }
+
+    @Test
+    @DisplayName("Get missing profile fields when user not found throws exception")
+    void getMissingProfileFields_userNotFound_throwsException() {
+        // Given
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> userService.getMissingProfileFields(999L))
+                .isInstanceOf(UserNotFoundException.class)
+                .hasMessageContaining("not found");
+        verify(userRepository, times(1)).findById(999L);
     }
 }
