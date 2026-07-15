@@ -91,9 +91,6 @@ const CatalogPage = () => {
     const screens = Grid.useBreakpoint();
     const isMobile = screens.md === false;
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false);
-    // ВРЕМЕННЫЙ переключатель раскладки сайдбара (A/B/C) — убрать после выбора варианта
-    const [layout, setLayout] = useState<'A' | 'B' | 'C'>('A');
-    const [catalogCollapsed, setCatalogCollapsed] = useState(false);
 
     const currentPage = Number(searchParams.get('page')) || 1;
     const categoryId = searchParams.get('category') ? Number(searchParams.get('category')) : undefined;
@@ -205,71 +202,6 @@ const CatalogPage = () => {
         return pages;
     };
 
-    // Блок «Каталог» (дерево категорий). collapsible — только для раскладок B/C.
-    const renderCatalogBlock = (collapsible: boolean) => (
-        <div style={{ border: '1px solid var(--line-1)', borderRadius: 6, background: '#fff', overflow: 'hidden', marginBottom: 16 }}>
-            <div
-                onClick={collapsible ? () => setCatalogCollapsed((prev) => !prev) : undefined}
-                style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '10px 14px 8px', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)',
-                    textTransform: 'uppercase', letterSpacing: '0.06em',
-                    cursor: collapsible ? 'pointer' : 'default', userSelect: 'none',
-                }}
-            >
-                Каталог
-                {collapsible && (
-                    <span style={{
-                        display: 'flex', alignItems: 'center',
-                        transform: catalogCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s ease-out',
-                    }}>
-                        <ChevDown />
-                    </span>
-                )}
-            </div>
-            {(!collapsible || !catalogCollapsed) && (
-                <>
-                    {categoriesLoading ? (
-                        <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {Array.from({ length: 6 }).map((_, i) => (
-                                <div key={i} style={{ height: 14, background: 'var(--surface-3)', borderRadius: 4, width: `${70 + (i % 3) * 10}%` }}/>
-                            ))}
-                        </div>
-                    ) : (
-                        <CategoryTreeMenu
-                            categories={categoryTree}
-                            selectedId={categoryId}
-                            onSelect={(id) => handleCategorySelect([id])}
-                        />
-                    )}
-                    {categoryId && (
-                        <div style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--line-1)' }}>
-                            <span
-                                onClick={handleClearFilters}
-                                style={{ fontSize: 12.5, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
-                            >
-                                Показать все товары
-                            </span>
-                        </div>
-                    )}
-                </>
-            )}
-        </div>
-    );
-
-    // Блок «Фильтры» — только при выбранной категории
-    const renderFiltersBlock = () => categoryId ? (
-        <div style={{ marginBottom: 16 }}>
-            <FacetFilters
-                categoryId={categoryId}
-                selected={selectedFilters}
-                onChange={handleFacetChange}
-                onReset={handleResetFacets}
-            />
-        </div>
-    ) : null;
-
     return (
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
             {/* Breadcrumbs */}
@@ -329,50 +261,16 @@ const CatalogPage = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '260px 1fr', gap: 20 }}>
-                {/* Sidebar */}
-                {!isMobile && (
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile || !categoryId ? '1fr' : '260px 1fr', gap: 20 }}>
+                {/* Sidebar — только фильтры при выбранной категории */}
+                {!isMobile && categoryId && (
                     <aside>
-                        {/* ВРЕМЕННЫЙ переключатель раскладки — убрать после выбора варианта */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                            <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>раскладка (временно):</span>
-                            <div style={{ display: 'inline-flex', border: '1px solid var(--line-1)', borderRadius: 6, padding: 2, background: '#fff' }}>
-                                {(['A', 'B', 'C'] as const).map((opt) => (
-                                    <button
-                                        key={opt}
-                                        onClick={() => setLayout(opt)}
-                                        style={{
-                                            width: 24, height: 22, border: 0, borderRadius: 4,
-                                            background: layout === opt ? 'var(--brand-red)' : 'transparent',
-                                            color: layout === opt ? '#fff' : 'var(--ink-3)',
-                                            fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                                            fontFamily: 'var(--font-body)',
-                                        }}
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {layout === 'A' && (
-                            <>
-                                {renderFiltersBlock()}
-                                {renderCatalogBlock(false)}
-                            </>
-                        )}
-                        {layout === 'B' && (
-                            <>
-                                {renderCatalogBlock(true)}
-                                {renderFiltersBlock()}
-                            </>
-                        )}
-                        {layout === 'C' && (
-                            <>
-                                {renderFiltersBlock()}
-                                {renderCatalogBlock(true)}
-                            </>
-                        )}
+                        <FacetFilters
+                            categoryId={categoryId}
+                            selected={selectedFilters}
+                            onChange={handleFacetChange}
+                            onReset={handleResetFacets}
+                        />
                     </aside>
                 )}
 
