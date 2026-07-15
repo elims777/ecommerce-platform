@@ -282,6 +282,9 @@ spring:
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@ipKeyResolver}"
 
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://rfsnab.ru,https://www.rfsnab.ru}
+
 logging:
   level:
     ru.rfsnab.gatewayservice: INFO
