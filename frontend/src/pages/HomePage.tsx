@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/authStore';
 import { App } from 'antd';
 import type { CategoryTree } from '@/types/product';
 import { useDisplayPrice, formatPriceOrPlaceholder } from '@/utils/priceUtils';
+import { handleProfileIncomplete } from '@/utils/profileGate';
 
 // Категория "Распродажа" — используется для таба "Акции" и для правой колонки витрины.
 const SALES_CATEGORY_ID = 17;
@@ -432,7 +433,7 @@ const ServiceCard = ({ icon, title, text, cta, accent }: { icon: React.ReactNode
 // ── Main ──────────────────────────────────────────────────────
 const HomePage = () => {
     const navigate = useNavigate();
-    const { message: messageApi } = App.useApp();
+    const { message: messageApi, modal } = App.useApp();
     const addItem = useCartStore((state) => state.addItem);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -451,7 +452,8 @@ const HomePage = () => {
         try {
             await addItem(productId, 1);
             messageApi.success('Товар добавлен в корзину');
-        } catch {
+        } catch (err) {
+            if (handleProfileIncomplete(err, modal, navigate)) return;
             messageApi.error('Ошибка при добавлении в корзину');
         }
     };

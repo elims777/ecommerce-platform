@@ -20,6 +20,7 @@ import ru.rfsnab.userservice.models.dto.ChangeRoleRequest;
 import ru.rfsnab.userservice.models.dto.ChangeStatusRequest;
 import ru.rfsnab.userservice.models.dto.InactiveUserDto;
 import ru.rfsnab.userservice.models.dto.RegAuthResponse;
+import ru.rfsnab.userservice.models.dto.ProfileCompletenessDto;
 import ru.rfsnab.userservice.models.dto.RegistrationRequest;
 import ru.rfsnab.userservice.models.dto.SimpleAuthRequest;
 import ru.rfsnab.userservice.models.dto.UpdateUserAdminRequest;
@@ -188,5 +189,11 @@ public class UserController {
         Long userId = Long.parseLong(authentication.getName());
         userService.resendVerification(userId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/profile-completeness")
+    public ResponseEntity<ProfileCompletenessDto> getProfileCompleteness(@PathVariable Long id) {
+        List<String> missing = userService.getMissingProfileFields(id);
+        return ResponseEntity.ok(new ProfileCompletenessDto(missing.isEmpty(), missing));
     }
 }

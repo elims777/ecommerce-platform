@@ -52,6 +52,8 @@ services:
     url: ${PRODUCT_SERVICE_URL:http://localhost:8083}
   payment:
     url: ${PAYMENT_SERVICE_URL:http://localhost:8090}
+  user:
+    url: ${USER_SERVICE_URL:http://localhost:8081}
 
 internal:
   secret: ${INTERNAL_SECRET}

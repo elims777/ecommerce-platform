@@ -197,6 +197,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       LOGGING_FILE_NAME: ""
       SECRET_JWT: ${SECRET_JWT}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
       ORDER_SERVICE_URL: http://order-service:8084
     volumes:
       - /var/log/rfsnab/user-service:/var/log/rfsnab/user-service
@@ -312,6 +313,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       PRODUCT_SERVICE_URL: http://product-service:8083
       PAYMENT_SERVICE_URL: http://payment-service:8090
+      USER_SERVICE_URL: http://user-service:8081
       INTERNAL_SECRET: ${INTERNAL_SECRET}
       LOGGING_FILE_NAME: ""
       SECRET_JWT: ${SECRET_JWT}

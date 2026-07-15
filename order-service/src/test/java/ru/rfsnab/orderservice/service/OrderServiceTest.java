@@ -15,12 +15,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
 import ru.rfsnab.orderservice.exception.CartEmptyException;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
+import ru.rfsnab.orderservice.exception.ProfileIncompleteException;
 import ru.rfsnab.orderservice.models.dto.event.OrderEvent;
 import ru.rfsnab.orderservice.models.dto.order.AddressDto;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.OrderItemDto;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
+import ru.rfsnab.orderservice.models.dto.user.ProfileCompletenessDto;
 import ru.rfsnab.orderservice.models.entity.Cart;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.OrderItem;
@@ -41,6 +43,7 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
 
 /**
@@ -118,6 +121,11 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
         // Mock product-service
         stubProducts();
+
+        // Mock user-service — профиль заполнен по умолчанию
+        when(userServiceClient.getProfileCompleteness(USER_ID))
+                .thenReturn(new ProfileCompletenessDto(true, List.of()));
+        doCallRealMethod().when(userServiceClient).requireCompleteProfile(USER_ID);
     }
 
     // ==================== createOrder ====================
@@ -332,6 +340,35 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2B", request))
                     .isInstanceOf(InvalidOrderStateException.class);
+        }
+
+        @Test
+        @DisplayName("бросает ProfileIncompleteException если профиль не заполнен")
+        void shouldThrowWhenProfileIncomplete() {
+            addItemsToCart();
+            when(userServiceClient.getProfileCompleteness(USER_ID))
+                    .thenReturn(new ProfileCompletenessDto(false, List.of("Телефон")));
+
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, "Тестовый заказ", null, null, null, null);
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
+                    .isInstanceOf(ProfileIncompleteException.class);
+        }
+
+        @Test
+        @DisplayName("создаёт заказ, когда профиль заполнен")
+        void shouldCreateOrderWhenProfileComplete() {
+            addItemsToCart();
+
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, "Тестовый заказ", null, null, null, null);
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
+
+            assertThat(order.getId()).isNotNull();
         }
     }
 
