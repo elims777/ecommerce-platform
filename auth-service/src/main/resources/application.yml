@@ -20,6 +20,7 @@ spring:
             scope:
               - login:email
               - login:info
+              - login:default_phone
 
         provider:
           yandex:

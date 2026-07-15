@@ -7,6 +7,7 @@ import ru.rfsnab.productservice.dto.ProductResponse;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.model.ProductDocument;
+import ru.rfsnab.productservice.service.ProductAttributeExclusions;
 
 import java.util.List;
 import java.util.Set;
@@ -73,7 +74,9 @@ public class ProductMapper {
                 .children(childResponses)
                 .images(product.getImages().stream().map(ImageMapper::mapToResponse).toList())
                 .videos(product.getVideos().stream().map(VideoMapper::mapToResponse).toList())
-                .attributes(product.getAttributes().stream().map(AttributeMapper::mapToResponse).toList())
+                .attributes(product.getAttributes().stream()
+                        .filter(a -> !ProductAttributeExclusions.NAMES.contains(a.getAttributeName()))
+                        .map(AttributeMapper::mapToResponse).toList())
                 .documents(product.getDocuments().stream().map(ProductMapper::mapDocumentToDto).toList());
 
         if (product.getCategory() != null) {

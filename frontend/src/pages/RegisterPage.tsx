@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { Form, Input, Checkbox, App } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { NavLink } from '@/components/navigation';
 import type { RegisterRequest } from '@/types/auth';
 import type { AxiosError } from 'axios';
 import { register, registerLegal } from '@/api/auth';
-import { getAvailableProductsCount } from '@/api/products';
 import type { RegisterLegalRequest } from '@/api/auth';
 
 type AccountType = 'personal' | 'legal';
@@ -49,12 +47,6 @@ const RegisterPage = () => {
 
     const [personalForm] = Form.useForm<PersonalFormValues>();
     const [legalForm] = Form.useForm<LegalFormValues>();
-
-    const { data: availableCount } = useQuery({
-        queryKey: ['products', 'count-available'],
-        queryFn: getAvailableProductsCount,
-        staleTime: 5 * 60 * 1000,
-    });
 
     const handlePersonalSubmit = async (values: PersonalFormValues) => {
         setLoading(true);
@@ -176,24 +168,29 @@ const RegisterPage = () => {
                     <p style={{ fontSize: 'var(--text-md)', color: 'var(--overlay-white-70)', maxWidth: 420, lineHeight: 1.6, marginBottom: 32 }}>
                         Заявки, документы, согласования с менеджером, ЭДО, история закупок и аналитика — в одном защищённом аккаунте организации.
                     </p>
-                    <div style={{ display: 'flex', gap: 26, fontSize: 'var(--text-sm)' }}>
-                        {[['18 200', 'организаций'], [(availableCount ?? 12480).toLocaleString('ru-RU'), 'товаров в наличии'], ['4.9 ★', 'рейтинг']].map(([n, l]) => (
-                            <div key={l}>
-                                <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-3xl)', color: '#fff', letterSpacing: '-0.01em' }}>{n}</div>
-                                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-60)', marginTop: 2 }}>{l}</div>
-                            </div>
-                        ))}
-                    </div>
                 </div>
             </div>
 
             {/* Правая колонка */}
             <div style={{ background: 'var(--surface)', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
-                    Уже зарегистрированы?{' '}
-                    <NavLink to="/login" style={{ color: 'var(--brand-red)', fontWeight: 600, marginLeft: 6, cursor: 'pointer' }}>
-                        Войти
-                    </NavLink>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
+                    <a
+                        href="/instrukciya-po-registracii.pdf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--brand-navy)', fontWeight: 500, textDecoration: 'none' }}
+                    >
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
+                        </svg>
+                        Инструкция по регистрации
+                    </a>
+                    <span>
+                        Уже зарегистрированы?{' '}
+                        <NavLink to="/login" style={{ color: 'var(--brand-red)', fontWeight: 600, marginLeft: 6, cursor: 'pointer' }}>
+                            Войти
+                        </NavLink>
+                    </span>
                 </div>
 
                 <div style={{ maxWidth: 460, margin: '32px auto auto', width: '100%' }}>

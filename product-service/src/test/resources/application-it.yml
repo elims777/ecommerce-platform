@@ -1,0 +1,38 @@
+spring:
+  config:
+    activate:
+      on-profile: it
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  flyway:
+    enabled: true
+
+# === JWT (тестовые значения) ===
+jwt:
+  secret: dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtYXV0aGVudGljYXRpb24tdGVzdGluZy1wcm9kdWN0LXNlcnZpY2U=
+  expiration: 3600000
+
+internal:
+  secret: test-secret
+
+# === Yandex Storage (моковые значения) ===
+yandex:
+  storage:
+    access-key: test-access-key
+    secret-key: test-secret-key
+    bucket-name: test-bucket
+    endpoint: https://storage.yandexcloud.net
+
+# === Logging ===
+logging:
+  level:
+    root: WARN
+    ru.rfsnab: INFO
+    org.springframework.security: WARN
