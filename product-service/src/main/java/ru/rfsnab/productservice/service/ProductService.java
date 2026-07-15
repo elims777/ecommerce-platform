@@ -38,34 +38,6 @@ public class ProductService {
     private final SlugGeneratorService slugGenerator;
     private final ProductAttributeRepository attributeRepository;
 
-    /**
-     * Служебные/технические атрибуты Факела, которые не должны показываться
-     * как фасетные фильтры каталога (в БД сохраняются все атрибуты — нужны
-     * для карточки товара, отсеиваются только на выдаче фасетов).
-     */
-    private static final Set<String> EXCLUDED_FACET_ATTRIBUTES = Set.of(
-            "Признак акция",
-            "Признак наличия",
-            "Срок доставки заказного товара",
-            "Количество в поставке",
-            "Признак нестандартного размера",
-            "Аналоги",
-            "Видео",
-            "Сертификаты",
-            "Заключение МинПромТорг",
-            "ТР ТС",
-            "Сопутствующие",
-            "Материалы к товару",
-            "Популярность (для сортировки)",
-            "Новинка (для сортировки)",
-            "Дата ближайшей поставки",
-            "Другие цвета",
-            "Вес (кг. за 1 шт.)",
-            "Кратность",
-            "Подробнее о товаре",
-            "Тип товара"
-    );
-
     /***
      * Подсчет товаров в категории
      * @param parentId категории
@@ -305,7 +277,7 @@ public class ProductService {
         }
         List<Long> categoryIds = categoryService.getSubtreeCategoryIds(categoryId);
         Map<String, List<String>> grouped = new LinkedHashMap<>();
-        for (Object[] row : attributeRepository.findFacetRows(categoryIds, EXCLUDED_FACET_ATTRIBUTES)) {
+        for (Object[] row : attributeRepository.findFacetRows(categoryIds, ProductAttributeExclusions.NAMES)) {
             String name = (String) row[0];
             String value = (String) row[1];
             grouped.computeIfAbsent(name, k -> new ArrayList<>()).add(value);
