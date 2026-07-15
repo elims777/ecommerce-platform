@@ -28,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -114,6 +115,7 @@ public class FtkImportService {
             try (InputStream is = ftpClient.openStream(rootImportPath)) {
                 classifier = xmlParser.parseClassifier(is);
             }
+            classifier = mergePropertyClassifiers(classifier);
             categoryMapper.loadClassifier(classifier);
 
             // 2-6. Товары/офферы/цены/остатки/сборка — по каждой из трёх FTP-порций
@@ -231,6 +233,34 @@ public class FtkImportService {
             saveFtkLog(logEntry, startedAt, resumeAttempts, null, e);
             throw e;
         }
+    }
+
+    /**
+     * Классификатор свойств (Бренд, Защитные свойства и т.д.) в корневом import___.xml
+     * пустой — реальные свойства лежат в подпапках /webdata/000000003/properties/{N}/.
+     * Догружает их и сливает в propertyDefs корневого классификатора; группы и единицы
+     * измерения (они полные только в корне) остаются без изменений.
+     */
+    private ClassifierData mergePropertyClassifiers(ClassifierData root) throws IOException {
+        List<String> propertyFiles = ftpClient.listPropertyClassifierFiles();
+        if (propertyFiles.isEmpty()) {
+            log.warn("ФТК: файлы классификатора свойств не найдены на FTP");
+            return root;
+        }
+
+        Map<String, FtkXmlParser.PropertyDef> mergedDefs = new HashMap<>(root.propertyDefs());
+        for (String path : propertyFiles) {
+            try (InputStream is = ftpClient.openStream(path)) {
+                ClassifierData part = xmlParser.parseClassifier(is);
+                mergedDefs.putAll(part.propertyDefs());
+            } catch (Exception e) {
+                log.warn("ФТК: ошибка парсинга классификатора свойств {} — файл пропущен: {}", path, e.getMessage());
+            }
+        }
+
+        log.info("ФТК: классификатор свойств собран из {} файлов, всего {} свойств",
+                propertyFiles.size(), mergedDefs.size());
+        return new ClassifierData(root.groupPaths(), root.groupParents(), mergedDefs, root.unitsOfMeasure());
     }
 
     // ══════════════════════════════════════════════════════════════

@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { Form, Input, Checkbox, App } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { NavLink } from '@/components/navigation';
 import type { RegisterRequest } from '@/types/auth';
 import type { AxiosError } from 'axios';
 import { register, registerLegal } from '@/api/auth';
-import { getAvailableProductsCount } from '@/api/products';
 import type { RegisterLegalRequest } from '@/api/auth';
 
 type AccountType = 'personal' | 'legal';
@@ -49,12 +47,6 @@ const RegisterPage = () => {
 
     const [personalForm] = Form.useForm<PersonalFormValues>();
     const [legalForm] = Form.useForm<LegalFormValues>();
-
-    const { data: availableCount } = useQuery({
-        queryKey: ['products', 'count-available'],
-        queryFn: getAvailableProductsCount,
-        staleTime: 5 * 60 * 1000,
-    });
 
     const handlePersonalSubmit = async (values: PersonalFormValues) => {
         setLoading(true);
@@ -176,14 +168,6 @@ const RegisterPage = () => {
                     <p style={{ fontSize: 'var(--text-md)', color: 'var(--overlay-white-70)', maxWidth: 420, lineHeight: 1.6, marginBottom: 32 }}>
                         Заявки, документы, согласования с менеджером, ЭДО, история закупок и аналитика — в одном защищённом аккаунте организации.
                     </p>
-                    <div style={{ display: 'flex', gap: 26, fontSize: 'var(--text-sm)' }}>
-                        {[['18 200', 'организаций'], [(availableCount ?? 12480).toLocaleString('ru-RU'), 'товаров в наличии'], ['4.9 ★', 'рейтинг']].map(([n, l]) => (
-                            <div key={l}>
-                                <div style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-3xl)', color: '#fff', letterSpacing: '-0.01em' }}>{n}</div>
-                                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--overlay-white-60)', marginTop: 2 }}>{l}</div>
-                            </div>
-                        ))}
-                    </div>
                 </div>
             </div>
 

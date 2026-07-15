@@ -106,6 +106,12 @@ export interface Category {
     updatedAt: string;
 }
 
+/** Фасет каталога: свойство и его различные значения (без счётчиков) */
+export interface Facet {
+    name: string;
+    values: string[];
+}
+
 /**
  * Spring Data Page — типизированная обёртка для пагинации.
  * Маппится на org.springframework.data.domain.Page из бэкенда.

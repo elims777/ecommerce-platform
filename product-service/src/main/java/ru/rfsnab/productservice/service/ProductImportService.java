@@ -2,9 +2,11 @@ package ru.rfsnab.productservice.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import ru.rfsnab.productservice.configuration.CacheConfig;
 import ru.rfsnab.productservice.dto.BatchProductImportRequest;
 import ru.rfsnab.productservice.dto.BatchProductImportResponse;
 import ru.rfsnab.productservice.dto.BatchProductImportResponse.ImportAction;
@@ -54,6 +56,7 @@ public class ProductImportService {
     private final PlatformTransactionManager transactionManager;
     private final SlugGeneratorService slugService;
 
+    @CacheEvict(value = CacheConfig.FACETS_CACHE, allEntries = true)
     public BatchProductImportResponse importBatch(BatchProductImportRequest request) {
         List<ProductImportItem> items = request.getItems();
 
@@ -149,8 +152,9 @@ public class ProductImportService {
                 product.setStockQuantity(item.getStockQuantity());
             }
 
-            boolean attributesChanged = !isNew && attributesChanged(product, item.getAttributes());
-            updateAttributes(product, item.getAttributes());
+            List<ProductImportItem.ProductAttributeImportItem> parentAttrs = resolveParentAttributes(item);
+            boolean attributesChanged = !isNew && attributesChanged(product, parentAttrs);
+            updateAttributes(product, parentAttrs);
 
             Product savedProduct = productRepository.save(product);
 
@@ -305,6 +309,22 @@ public class ProductImportService {
                 .toList();
         return productRepository.findByExternalIdIn(externalIds).stream()
                 .collect(Collectors.toMap(Product::getExternalId, Function.identity()));
+    }
+
+    /**
+     * Атрибуты родителя для импорта: явные attributes имеют приоритет; если их нет,
+     * берём свойства из properties (ФТК прокидывает характеристики именно так).
+     */
+    private List<ProductImportItem.ProductAttributeImportItem> resolveParentAttributes(ProductImportItem item) {
+        if (item.getAttributes() != null && !item.getAttributes().isEmpty()) {
+            return item.getAttributes();
+        }
+        if (item.getProperties() != null && !item.getProperties().isEmpty()) {
+            return item.getProperties().entrySet().stream()
+                    .map(e -> new ProductImportItem.ProductAttributeImportItem(e.getKey(), e.getValue()))
+                    .toList();
+        }
+        return null;
     }
 
     private void updateAttributes(Product product, List<ProductImportItem.ProductAttributeImportItem> attrItems) {

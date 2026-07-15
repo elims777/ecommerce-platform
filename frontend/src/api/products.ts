@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Product, Page } from '@/types/product';
+import type { Product, Page, Facet } from '@/types/product';
 
 interface GetProductsParams {
     page?: number;
@@ -7,20 +7,35 @@ interface GetProductsParams {
     sort?: string;
     categoryId?: number;
     isActive?: boolean;
+    attr?: string[];
 }
 
 /** Получить товары с пагинацией */
 export const getProducts = async (params: GetProductsParams = {}): Promise<Page<Product>> => {
     // sort не подставляем по умолчанию: без него бэкенд сортирует категорию
     // по displayOrder (порядок из админки), общий список — по createdAt desc
-    const { page = 0, size = 20, sort, categoryId } = params;
+    const { page = 0, size = 20, sort, categoryId, attr } = params;
 
     const url = categoryId
         ? `/v1/products/category/${categoryId}`
         : '/v1/products';
 
+    const query: Record<string, unknown> = sort ? { page, size, sort } : { page, size };
+    // attr-фильтры применимы только к категорийному листингу
+    if (categoryId && attr && attr.length > 0) query.attr = attr;
+
     const { data } = await apiClient.get<Page<Product>>(url, {
-        params: sort ? { page, size, sort } : { page, size },
+        params: query,
+        // axios сериализует массив attr как повторяющиеся ключи attr=...&attr=... (не attr[0]=...)
+        paramsSerializer: { indexes: null },
+    });
+    return data;
+};
+
+/** Получить фасеты каталога для категории */
+export const getFacets = async (categoryId: number): Promise<Facet[]> => {
+    const { data } = await apiClient.get<Facet[]>('/v1/products/facets', {
+        params: { categoryId },
     });
     return data;
 };

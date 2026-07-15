@@ -18,7 +18,9 @@ import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -262,5 +264,37 @@ class ProductImportServiceTest {
             verify(productRepository, org.mockito.Mockito.atLeastOnce()).save(captor.capture());
             assertThat(captor.getValue().getPrice()).isEqualByComparingTo("100.00");
         }
+    }
+
+    // ==================== processItem() — properties родителя → attributes ====================
+
+    @Test
+    @DisplayName("свойства (properties) родителя сохраняются как ProductAttribute")
+    void shouldPersistParentPropertiesAsAttributes() {
+        ProductImportItem item = ProductImportItem.builder()
+                .externalId("FTK-100")
+                .name("Костюм летний")
+                .source("FTK")
+                .properties(new LinkedHashMap<>(Map.of(
+                        "Состав ткани", "100% хлопок",
+                        "Защитные свойства", "Ми")))
+                .build();
+
+        when(slugService.generateUniqueSlug(anyString(), any())).thenReturn("kostyum-letniy");
+        when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        BatchProductImportResponse response = importService.importBatch(
+                BatchProductImportRequest.builder().items(List.of(item)).build());
+
+        assertThat(response.getResults().get(0).isSuccess()).isTrue();
+        org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
+        verify(productRepository, org.mockito.Mockito.atLeastOnce()).save(captor.capture());
+        Product saved = captor.getAllValues().stream()
+                .filter(p -> "FTK-100".equals(p.getExternalId()))
+                .findFirst().orElseThrow();
+
+        assertThat(saved.getAttributes())
+                .extracting(a -> a.getAttributeName() + "=" + a.getAttributeValue())
+                .containsExactlyInAnyOrder("Состав ткани=100% хлопок", "Защитные свойства=Ми");
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import ru.rfsnab.productservice.model.ProductAttribute;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface ProductAttributeRepository extends JpaRepository<ProductAttribute, Long> {
@@ -35,4 +36,21 @@ public interface ProductAttributeRepository extends JpaRepository<ProductAttribu
     @Modifying
     @Query("DELETE FROM ProductAttribute pa WHERE pa.product.id = :productId")
     void deleteAllByProduct(@Param("productId") Long id);
+
+    /**
+     * Строки фасетов (имя, значение) для категорий поддерева: только атрибуты
+     * активных товаров-родителей (не дочерних вариантов), кроме служебных
+     * атрибутов из excludedNames.
+     */
+    @Query("""
+            SELECT DISTINCT a.attributeName, a.attributeValue
+            FROM ProductAttribute a
+            WHERE a.product.category.id IN :categoryIds
+              AND a.product.isActive = true
+              AND a.product.isVariantChild = false
+              AND a.attributeName NOT IN :excludedNames
+            ORDER BY a.attributeName ASC, a.attributeValue ASC
+            """)
+    List<Object[]> findFacetRows(@Param("categoryIds") List<Long> categoryIds,
+                                  @Param("excludedNames") Set<String> excludedNames);
 }

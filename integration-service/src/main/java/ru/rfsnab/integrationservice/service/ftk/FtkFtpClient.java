@@ -14,6 +14,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Тонкий helper для FTP-доступа к серверу ФТК.
@@ -124,6 +126,45 @@ public class FtkFtpClient {
 
     public String getGoodsDir(int part) { return "/webdata/000000003/goods/" + part + "/"; }
     public String getRootDir()  { return ROOT_DIR; }
+
+    /**
+     * Классификатор свойств (Бренд, Защитные свойства и т.д.) лежит не в корне,
+     * а в подпапках /webdata/000000003/properties/{N}/ — их набор варьируется,
+     * поэтому подпапки определяются листингом, а не хардкодом.
+     * В каждой подпапке несёт свойства каждый файл, начинающийся с "import" и
+     * заканчивающийся ".xml" (import___*.xml и import1___*.xml).
+     *
+     * Возвращает полные FTP-пути ко всем найденным файлам — вызывающий код
+     * открывает их через {@link #openStream(String)} и парсит по отдельности.
+     */
+    public List<String> listPropertyClassifierFiles() throws IOException {
+        String propertiesDir = ROOT_DIR + "properties";
+        FTPClient ftp = connect();
+        try {
+            List<String> result = new ArrayList<>();
+            FTPFile[] subDirs = ftp.listFiles(propertiesDir);
+            log.info("FTP listFiles '{}': папок={}, reply={}", propertiesDir,
+                    subDirs == null ? "null" : subDirs.length, ftp.getReplyString().trim());
+            if (subDirs == null) return result;
+
+            for (FTPFile subDir : subDirs) {
+                if (!subDir.isDirectory()) continue;
+                String subDirPath = propertiesDir + "/" + subDir.getName();
+                FTPFile[] files = ftp.listFiles(subDirPath);
+                if (files == null) continue;
+                for (FTPFile f : files) {
+                    if (f.isFile() && f.getName().startsWith("import") && f.getName().endsWith(".xml")) {
+                        String fullPath = subDirPath + "/" + f.getName();
+                        result.add(fullPath);
+                        log.info("FTP: найден файл классификатора свойств → {}", fullPath);
+                    }
+                }
+            }
+            return result;
+        } finally {
+            disconnect(ftp);
+        }
+    }
 
     private FTPClient connect() throws IOException {
         FtpProperties cfg = properties.getFtk().getFtp();

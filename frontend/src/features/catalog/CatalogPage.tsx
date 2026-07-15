@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import type { CategoryTree } from '@/types/product';
 import CategoryTreeMenu from './CategoryTreeMenu';
 import ProductCard from './ProductCard';
+import FacetFilters from './FacetFilters';
 
 // ── Icons ────────────────────────────────────────────────────
 const SearchIcon = () => (
@@ -90,11 +91,24 @@ const CatalogPage = () => {
     const screens = Grid.useBreakpoint();
     const isMobile = screens.md === false;
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false);
+    // ВРЕМЕННЫЙ переключатель раскладки сайдбара (A/B/C) — убрать после выбора варианта
+    const [layout, setLayout] = useState<'A' | 'B' | 'C'>('A');
+    const [catalogCollapsed, setCatalogCollapsed] = useState(false);
 
     const currentPage = Number(searchParams.get('page')) || 1;
     const categoryId = searchParams.get('category') ? Number(searchParams.get('category')) : undefined;
     const searchQuery = searchParams.get('q') || '';
     const [searchInput, setSearchInput] = useState(searchQuery);
+
+    const attrParams = searchParams.getAll('attr'); // ["Состав ткани:100% хлопок", ...]
+    const selectedFilters: Record<string, string[]> = {};
+    for (const raw of attrParams) {
+        const idx = raw.indexOf(':');
+        if (idx <= 0 || idx === raw.length - 1) continue;
+        const name = raw.slice(0, idx);
+        const value = raw.slice(idx + 1);
+        (selectedFilters[name] ??= []).push(value);
+    }
 
     const { data: categoryTree = [], isLoading: categoriesLoading } = useQuery({
         queryKey: ['categories', 'tree'],
@@ -103,12 +117,12 @@ const CatalogPage = () => {
     });
 
     const { data: productsPage, isLoading: productsLoading, isError } = useQuery({
-        queryKey: ['products', { page: currentPage, categoryId, q: searchQuery }],
+        queryKey: ['products', { page: currentPage, categoryId, q: searchQuery, attr: attrParams }],
         queryFn: async () => {
             if (searchQuery) {
                 return searchProducts(searchQuery, currentPage - 1);
             }
-            return getProducts({ page: currentPage - 1, categoryId });
+            return getProducts({ page: currentPage - 1, categoryId, attr: attrParams });
         },
     });
 
@@ -147,6 +161,27 @@ const CatalogPage = () => {
         setSearchInput('');
     };
 
+    const handleFacetChange = (name: string, values: string[]) => {
+        const newParams = new URLSearchParams(searchParams);
+        // удалить все attr данного свойства, оставив остальные
+        const kept = newParams.getAll('attr').filter((raw) => {
+            const idx = raw.indexOf(':');
+            return idx <= 0 || raw.slice(0, idx) !== name;
+        });
+        newParams.delete('attr');
+        kept.forEach((raw) => newParams.append('attr', raw));
+        values.forEach((v) => newParams.append('attr', `${name}:${v}`));
+        newParams.delete('page');
+        setSearchParams(newParams);
+    };
+
+    const handleResetFacets = () => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('attr');
+        newParams.delete('page');
+        setSearchParams(newParams);
+    };
+
     const handleAddToCart = async (productId: number) => {
         if (!isAuthenticated) { navigate('/login'); return; }
         try {
@@ -169,6 +204,71 @@ const CatalogPage = () => {
         pages.push(totalPages);
         return pages;
     };
+
+    // Блок «Каталог» (дерево категорий). collapsible — только для раскладок B/C.
+    const renderCatalogBlock = (collapsible: boolean) => (
+        <div style={{ border: '1px solid var(--line-1)', borderRadius: 6, background: '#fff', overflow: 'hidden', marginBottom: 16 }}>
+            <div
+                onClick={collapsible ? () => setCatalogCollapsed((prev) => !prev) : undefined}
+                style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 14px 8px', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)',
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                    cursor: collapsible ? 'pointer' : 'default', userSelect: 'none',
+                }}
+            >
+                Каталог
+                {collapsible && (
+                    <span style={{
+                        display: 'flex', alignItems: 'center',
+                        transform: catalogCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease-out',
+                    }}>
+                        <ChevDown />
+                    </span>
+                )}
+            </div>
+            {(!collapsible || !catalogCollapsed) && (
+                <>
+                    {categoriesLoading ? (
+                        <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <div key={i} style={{ height: 14, background: 'var(--surface-3)', borderRadius: 4, width: `${70 + (i % 3) * 10}%` }}/>
+                            ))}
+                        </div>
+                    ) : (
+                        <CategoryTreeMenu
+                            categories={categoryTree}
+                            selectedId={categoryId}
+                            onSelect={(id) => handleCategorySelect([id])}
+                        />
+                    )}
+                    {categoryId && (
+                        <div style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--line-1)' }}>
+                            <span
+                                onClick={handleClearFilters}
+                                style={{ fontSize: 12.5, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
+                            >
+                                Показать все товары
+                            </span>
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
+
+    // Блок «Фильтры» — только при выбранной категории
+    const renderFiltersBlock = () => categoryId ? (
+        <div style={{ marginBottom: 16 }}>
+            <FacetFilters
+                categoryId={categoryId}
+                selected={selectedFilters}
+                onChange={handleFacetChange}
+                onReset={handleResetFacets}
+            />
+        </div>
+    ) : null;
 
     return (
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
@@ -233,34 +333,46 @@ const CatalogPage = () => {
                 {/* Sidebar */}
                 {!isMobile && (
                     <aside>
-                        <div style={{ border: '1px solid var(--line-1)', borderRadius: 6, background: '#fff', overflow: 'hidden', marginBottom: 16 }}>
-                            <div style={{ padding: '10px 14px 8px', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                Каталог
-                            </div>
-                            {categoriesLoading ? (
-                                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                    {Array.from({ length: 6 }).map((_, i) => (
-                                        <div key={i} style={{ height: 14, background: 'var(--surface-3)', borderRadius: 4, width: `${70 + (i % 3) * 10}%` }}/>
-                                    ))}
-                                </div>
-                            ) : (
-                                <CategoryTreeMenu
-                                    categories={categoryTree}
-                                    selectedId={categoryId}
-                                    onSelect={(id) => handleCategorySelect([id])}
-                                />
-                            )}
-                            {categoryId && (
-                                <div style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--line-1)' }}>
-                                    <span
-                                        onClick={handleClearFilters}
-                                        style={{ fontSize: 12.5, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
+                        {/* ВРЕМЕННЫЙ переключатель раскладки — убрать после выбора варианта */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                            <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>раскладка (временно):</span>
+                            <div style={{ display: 'inline-flex', border: '1px solid var(--line-1)', borderRadius: 6, padding: 2, background: '#fff' }}>
+                                {(['A', 'B', 'C'] as const).map((opt) => (
+                                    <button
+                                        key={opt}
+                                        onClick={() => setLayout(opt)}
+                                        style={{
+                                            width: 24, height: 22, border: 0, borderRadius: 4,
+                                            background: layout === opt ? 'var(--brand-red)' : 'transparent',
+                                            color: layout === opt ? '#fff' : 'var(--ink-3)',
+                                            fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                                            fontFamily: 'var(--font-body)',
+                                        }}
                                     >
-                                        Показать все товары
-                                    </span>
-                                </div>
-                            )}
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
+
+                        {layout === 'A' && (
+                            <>
+                                {renderFiltersBlock()}
+                                {renderCatalogBlock(false)}
+                            </>
+                        )}
+                        {layout === 'B' && (
+                            <>
+                                {renderCatalogBlock(true)}
+                                {renderFiltersBlock()}
+                            </>
+                        )}
+                        {layout === 'C' && (
+                            <>
+                                {renderFiltersBlock()}
+                                {renderCatalogBlock(true)}
+                            </>
+                        )}
                     </aside>
                 )}
 
@@ -306,6 +418,16 @@ const CatalogPage = () => {
                                     >
                                         Показать все товары
                                     </span>
+                                </div>
+                            )}
+                            {categoryId && (
+                                <div style={{ marginTop: 16 }}>
+                                    <FacetFilters
+                                        categoryId={categoryId}
+                                        selected={selectedFilters}
+                                        onChange={handleFacetChange}
+                                        onReset={handleResetFacets}
+                                    />
                                 </div>
                             )}
                         </Drawer>
@@ -429,16 +551,20 @@ const CatalogPage = () => {
                     {productsPage?.empty && !productsLoading && (
                         <div style={{ textAlign: 'center', padding: '60px 0' }}>
                             <div style={{ fontFamily: 'var(--font-head)', fontSize: 18, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>
-                                {searchQuery ? `По запросу «${searchQuery}» ничего не найдено` : 'В этой категории пока нет товаров'}
+                                {attrParams.length > 0
+                                    ? 'Ничего не найдено под выбранные фильтры'
+                                    : searchQuery ? `По запросу «${searchQuery}» ничего не найдено` : 'В этой категории пока нет товаров'}
                             </div>
                             <div style={{ fontSize: 14, color: 'var(--ink-3)', marginBottom: 20 }}>
-                                {searchQuery ? 'Попробуйте изменить запрос или выбрать другую категорию' : 'Скоро здесь появятся новинки — загляните в другие разделы'}
+                                {attrParams.length > 0
+                                    ? 'Попробуйте сбросить фильтры или выбрать другие значения'
+                                    : searchQuery ? 'Попробуйте изменить запрос или выбрать другую категорию' : 'Скоро здесь появятся новинки — загляните в другие разделы'}
                             </div>
                             <button
-                                onClick={handleClearFilters}
+                                onClick={attrParams.length > 0 ? handleResetFacets : handleClearFilters}
                                 style={{ height: 40, padding: '0 20px', border: '1px solid var(--brand-navy)', color: 'var(--brand-navy)', background: 'transparent', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
                             >
-                                Все товары
+                                {attrParams.length > 0 ? 'Сбросить фильтры' : 'Все товары'}
                             </button>
                         </div>
                     )}
