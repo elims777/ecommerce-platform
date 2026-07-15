@@ -2,21 +2,28 @@ package ru.rfsnab.productservice.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.rfsnab.productservice.configuration.CacheConfig;
+import ru.rfsnab.productservice.dto.FacetDto;
 import ru.rfsnab.productservice.exception.BusinessException;
 import ru.rfsnab.productservice.exception.CategoryNotFoundException;
 import ru.rfsnab.productservice.exception.ProductNotFoundException;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.repository.CategoryRepository;
+import ru.rfsnab.productservice.repository.ProductAttributeRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
+import ru.rfsnab.productservice.spec.ProductSpecifications;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +36,7 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
     private final SlugGeneratorService slugGenerator;
+    private final ProductAttributeRepository attributeRepository;
 
     /***
      * Подсчет товаров в категории
@@ -215,6 +223,68 @@ public class ProductService {
         }
         List<Long> categoryIds = categoryService.getSubtreeCategoryIds(categoryId);
         return productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(categoryIds, withIdTiebreaker(pageable));
+    }
+
+    /** Разбирает список "Имя:Значение" в Map свойство → список значений (OR внутри). */
+    public static Map<String, List<String>> parseAttrFilters(List<String> attr) {
+        Map<String, List<String>> result = new LinkedHashMap<>();
+        if (attr == null) {
+            return result;
+        }
+        for (String raw : attr) {
+            int idx = raw.indexOf(':');
+            if (idx <= 0 || idx == raw.length() - 1) {
+                continue;
+            }
+            String name = raw.substring(0, idx).trim();
+            String value = raw.substring(idx + 1).trim();
+            if (name.isEmpty() || value.isEmpty()) {
+                continue;
+            }
+            result.computeIfAbsent(name, k -> new ArrayList<>()).add(value);
+        }
+        return result;
+    }
+
+    /**
+     * Пагинация товаров по категории (поддерево) с опциональной фильтрацией по атрибутам.
+     * Без фильтров — тот же листинг, что и getProductsByCategoryPage.
+     */
+    public Page<Product> getProductsByCategoryFiltered(Long categoryId,
+                                                         Map<String, List<String>> attrFilters,
+                                                         Pageable pageable) {
+        if (!categoryRepository.existsById(categoryId)) {
+            throw new CategoryNotFoundException(categoryId);
+        }
+        List<Long> categoryIds = categoryService.getSubtreeCategoryIds(categoryId);
+        if (attrFilters == null || attrFilters.isEmpty()) {
+            return productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(
+                    categoryIds, withIdTiebreaker(pageable));
+        }
+        return productRepository.findAll(
+                ProductSpecifications.categoryWithAttributes(categoryIds, attrFilters),
+                withIdTiebreaker(pageable));
+    }
+
+    /**
+     * Фасеты каталога для категории (поддерева): свойства и их различные значения,
+     * только по активным товарам-родителям. Результат кэшируется по categoryId.
+     */
+    @Cacheable(value = CacheConfig.FACETS_CACHE, key = "#categoryId")
+    public List<FacetDto> getFacets(Long categoryId) {
+        if (!categoryRepository.existsById(categoryId)) {
+            throw new CategoryNotFoundException(categoryId);
+        }
+        List<Long> categoryIds = categoryService.getSubtreeCategoryIds(categoryId);
+        Map<String, List<String>> grouped = new LinkedHashMap<>();
+        for (Object[] row : attributeRepository.findFacetRows(categoryIds, ProductAttributeExclusions.NAMES)) {
+            String name = (String) row[0];
+            String value = (String) row[1];
+            grouped.computeIfAbsent(name, k -> new ArrayList<>()).add(value);
+        }
+        return grouped.entrySet().stream()
+                .map(e -> new FacetDto(e.getKey(), e.getValue()))
+                .toList();
     }
 
     /**

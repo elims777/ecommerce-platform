@@ -321,10 +321,13 @@ services:
       YANDEX_STORAGE_SECRET_KEY: ${YANDEX_STORAGE_SECRET_KEY}
       SECRET_JWT: ${SECRET_JWT}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
+      SPRING_DATA_REDIS_HOST: redis
     volumes:
       - /var/log/rfsnab/product-service:/var/log/rfsnab/product-service
     depends_on:
       product-db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - ecommerce-net

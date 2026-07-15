@@ -9,6 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import type { CategoryTree } from '@/types/product';
 import CategoryTreeMenu from './CategoryTreeMenu';
 import ProductCard from './ProductCard';
+import FacetFilters from './FacetFilters';
 
 // ── Icons ────────────────────────────────────────────────────
 const SearchIcon = () => (
@@ -96,6 +97,16 @@ const CatalogPage = () => {
     const searchQuery = searchParams.get('q') || '';
     const [searchInput, setSearchInput] = useState(searchQuery);
 
+    const attrParams = searchParams.getAll('attr'); // ["Состав ткани:100% хлопок", ...]
+    const selectedFilters: Record<string, string[]> = {};
+    for (const raw of attrParams) {
+        const idx = raw.indexOf(':');
+        if (idx <= 0 || idx === raw.length - 1) continue;
+        const name = raw.slice(0, idx);
+        const value = raw.slice(idx + 1);
+        (selectedFilters[name] ??= []).push(value);
+    }
+
     const { data: categoryTree = [], isLoading: categoriesLoading } = useQuery({
         queryKey: ['categories', 'tree'],
         queryFn: getCategoryTree,
@@ -103,12 +114,12 @@ const CatalogPage = () => {
     });
 
     const { data: productsPage, isLoading: productsLoading, isError } = useQuery({
-        queryKey: ['products', { page: currentPage, categoryId, q: searchQuery }],
+        queryKey: ['products', { page: currentPage, categoryId, q: searchQuery, attr: attrParams }],
         queryFn: async () => {
             if (searchQuery) {
                 return searchProducts(searchQuery, currentPage - 1);
             }
-            return getProducts({ page: currentPage - 1, categoryId });
+            return getProducts({ page: currentPage - 1, categoryId, attr: attrParams });
         },
     });
 
@@ -145,6 +156,27 @@ const CatalogPage = () => {
     const handleClearFilters = () => {
         setSearchParams({});
         setSearchInput('');
+    };
+
+    const handleFacetChange = (name: string, values: string[]) => {
+        const newParams = new URLSearchParams(searchParams);
+        // удалить все attr данного свойства, оставив остальные
+        const kept = newParams.getAll('attr').filter((raw) => {
+            const idx = raw.indexOf(':');
+            return idx <= 0 || raw.slice(0, idx) !== name;
+        });
+        newParams.delete('attr');
+        kept.forEach((raw) => newParams.append('attr', raw));
+        values.forEach((v) => newParams.append('attr', `${name}:${v}`));
+        newParams.delete('page');
+        setSearchParams(newParams);
+    };
+
+    const handleResetFacets = () => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('attr');
+        newParams.delete('page');
+        setSearchParams(newParams);
     };
 
     const handleAddToCart = async (productId: number) => {
@@ -229,38 +261,16 @@ const CatalogPage = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '260px 1fr', gap: 20 }}>
-                {/* Sidebar */}
-                {!isMobile && (
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile || !categoryId ? '1fr' : '260px 1fr', gap: 20 }}>
+                {/* Sidebar — только фильтры при выбранной категории */}
+                {!isMobile && categoryId && (
                     <aside>
-                        <div style={{ border: '1px solid var(--line-1)', borderRadius: 6, background: '#fff', overflow: 'hidden', marginBottom: 16 }}>
-                            <div style={{ padding: '10px 14px 8px', fontSize: 12, fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                Каталог
-                            </div>
-                            {categoriesLoading ? (
-                                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                    {Array.from({ length: 6 }).map((_, i) => (
-                                        <div key={i} style={{ height: 14, background: 'var(--surface-3)', borderRadius: 4, width: `${70 + (i % 3) * 10}%` }}/>
-                                    ))}
-                                </div>
-                            ) : (
-                                <CategoryTreeMenu
-                                    categories={categoryTree}
-                                    selectedId={categoryId}
-                                    onSelect={(id) => handleCategorySelect([id])}
-                                />
-                            )}
-                            {categoryId && (
-                                <div style={{ padding: '8px 14px 12px', borderTop: '1px solid var(--line-1)' }}>
-                                    <span
-                                        onClick={handleClearFilters}
-                                        style={{ fontSize: 12.5, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
-                                    >
-                                        Показать все товары
-                                    </span>
-                                </div>
-                            )}
-                        </div>
+                        <FacetFilters
+                            categoryId={categoryId}
+                            selected={selectedFilters}
+                            onChange={handleFacetChange}
+                            onReset={handleResetFacets}
+                        />
                     </aside>
                 )}
 
@@ -306,6 +316,16 @@ const CatalogPage = () => {
                                     >
                                         Показать все товары
                                     </span>
+                                </div>
+                            )}
+                            {categoryId && (
+                                <div style={{ marginTop: 16 }}>
+                                    <FacetFilters
+                                        categoryId={categoryId}
+                                        selected={selectedFilters}
+                                        onChange={handleFacetChange}
+                                        onReset={handleResetFacets}
+                                    />
                                 </div>
                             )}
                         </Drawer>
@@ -429,16 +449,20 @@ const CatalogPage = () => {
                     {productsPage?.empty && !productsLoading && (
                         <div style={{ textAlign: 'center', padding: '60px 0' }}>
                             <div style={{ fontFamily: 'var(--font-head)', fontSize: 18, fontWeight: 600, color: 'var(--ink-1)', marginBottom: 8 }}>
-                                {searchQuery ? `По запросу «${searchQuery}» ничего не найдено` : 'В этой категории пока нет товаров'}
+                                {attrParams.length > 0
+                                    ? 'Ничего не найдено под выбранные фильтры'
+                                    : searchQuery ? `По запросу «${searchQuery}» ничего не найдено` : 'В этой категории пока нет товаров'}
                             </div>
                             <div style={{ fontSize: 14, color: 'var(--ink-3)', marginBottom: 20 }}>
-                                {searchQuery ? 'Попробуйте изменить запрос или выбрать другую категорию' : 'Скоро здесь появятся новинки — загляните в другие разделы'}
+                                {attrParams.length > 0
+                                    ? 'Попробуйте сбросить фильтры или выбрать другие значения'
+                                    : searchQuery ? 'Попробуйте изменить запрос или выбрать другую категорию' : 'Скоро здесь появятся новинки — загляните в другие разделы'}
                             </div>
                             <button
-                                onClick={handleClearFilters}
+                                onClick={attrParams.length > 0 ? handleResetFacets : handleClearFilters}
                                 style={{ height: 40, padding: '0 20px', border: '1px solid var(--brand-navy)', color: 'var(--brand-navy)', background: 'transparent', borderRadius: 6, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}
                             >
-                                Все товары
+                                {attrParams.length > 0 ? 'Сбросить фильтры' : 'Все товары'}
                             </button>
                         </div>
                     )}

@@ -57,7 +57,7 @@ class FtkImportServiceTest {
     private FtkImportService service;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws IOException {
         properties = new IntegrationProperties();
         properties.getFtk().setImportLimit(0);
         properties.getProductService().setUrl("http://product-service:8083");
@@ -66,6 +66,10 @@ class FtkImportServiceTest {
         // lenient: тест чекпоинта переопределяет save своим Answer
         org.mockito.Mockito.lenient()
                 .when(importLogRepository.save(any(ImportLog.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // lenient: нужен только тестам doImportFromFtp (FtpThreePartsTests), остальные (XLS) его не вызывают
+        org.mockito.Mockito.lenient()
+                .when(ftpClient.listPropertyClassifierFiles()).thenReturn(List.of());
 
         service = new FtkImportService(
                 xlsParser, xmlParser, ftpClient, categoryMapper, imageDownloader,

@@ -6,12 +6,14 @@ import { NavLink } from '@/components/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { getAvailableProductsCount } from '@/api/products';
+import { getCategoryTree } from '@/api/categories';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { useFavouritesStore } from '@/store/favouritesStore';
 import { isAdmin } from '@/types/auth';
 import type { ClientType } from '@/types/auth';
 import type { MenuProps } from 'antd';
+import CatalogMegaMenu from '@/features/catalog/CatalogMegaMenu';
 
 const TOPBAR_H = 36;
 const MAIN_H = 76;
@@ -177,6 +179,8 @@ const ClientLayout = () => {
     const totalFavourites = useFavouritesStore((s) => s.ids.size);
     const [searchQuery, setSearchQuery] = useState('');
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    const [megaMenuOpen, setMegaMenuOpen] = useState(false);
+    const megaMenuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const prevIndexRef = useRef(getPageIndex(location.pathname));
     const screens = Grid.useBreakpoint();
     const isMobile = screens.md === false;
@@ -186,6 +190,21 @@ const ClientLayout = () => {
         queryFn: getAvailableProductsCount,
         staleTime: 5 * 60 * 1000,
     });
+
+    const { data: categoryTree = [] } = useQuery({
+        queryKey: ['categories', 'tree'],
+        queryFn: getCategoryTree,
+        staleTime: 5 * 60 * 1000,
+        enabled: !isMobile,
+    });
+
+    const openMegaMenu = () => {
+        if (megaMenuCloseTimer.current) clearTimeout(megaMenuCloseTimer.current);
+        setMegaMenuOpen(true);
+    };
+    const closeMegaMenuDelayed = () => {
+        megaMenuCloseTimer.current = setTimeout(() => setMegaMenuOpen(false), 150);
+    };
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -416,18 +435,27 @@ const ClientLayout = () => {
                         height: CAT_H, display: 'flex', alignItems: 'center',
                         padding: '0 var(--page-pad-x)', gap: 0,
                     }}>
-                        <NavLink
-                            to="/catalog"
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 8,
-                                height: 36, padding: '0 14px', marginRight: 8,
-                                background: 'var(--brand-red)', color: '#fff',
-                                border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 600,
-                                cursor: 'pointer', fontFamily: 'var(--font-body)',
-                            }}
+                        <div
+                            style={{ position: 'relative', marginRight: 8 }}
+                            onMouseEnter={openMegaMenu}
+                            onMouseLeave={closeMegaMenuDelayed}
                         >
-                            <MenuIcon /> Каталог товаров
-                        </NavLink>
+                            <NavLink
+                                to="/catalog"
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                                    height: 36, padding: '0 14px',
+                                    background: 'var(--brand-red)', color: '#fff',
+                                    border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 600,
+                                    cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                }}
+                            >
+                                <MenuIcon /> Каталог товаров
+                            </NavLink>
+                            {megaMenuOpen && categoryTree.length > 0 && (
+                                <CatalogMegaMenu categories={categoryTree} onClose={() => setMegaMenuOpen(false)} />
+                            )}
+                        </div>
                         <NavLink to="/catalog?category=17" style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
                             padding: '0 14px', height: '100%', fontSize: 'var(--text-md)', fontWeight: 500,

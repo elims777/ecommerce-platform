@@ -9,6 +9,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.productservice.dto.AvailableCountResponse;
+import ru.rfsnab.productservice.dto.FacetDto;
 import ru.rfsnab.productservice.dto.ProductRequest;
 import ru.rfsnab.productservice.dto.ProductResponse;
 import ru.rfsnab.productservice.mapper.ProductMapper;
@@ -113,17 +114,27 @@ public class ProductController {
     }
 
     /**
-     * Получить товары по категории
+     * Получить товары по категории (опционально фильтруются по атрибутам через attr=Имя:Значение)
      */
     @GetMapping("/category/{categoryId}")
     public ResponseEntity<Page<ProductResponse>> getProductsByCategory(
             @PathVariable Long categoryId,
+            @RequestParam(name = "attr", required = false) List<String> attr,
             @PageableDefault(size = 20, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable pageable
             ){
-        Page<Product> products = productService.getProductsByCategoryPage(categoryId, pageable);
+        Map<String, List<String>> attrFilters = ProductService.parseAttrFilters(attr);
+        Page<Product> products = productService.getProductsByCategoryFiltered(categoryId, attrFilters, pageable);
         var parentIds = productService.findParentIdsWithActiveChildren(
                 products.getContent().stream().map(Product::getId).toList());
         return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(products, parentIds));
+    }
+
+    /**
+     * Фасеты каталога для категории (свойства и их значения, без счётчиков)
+     */
+    @GetMapping("/facets")
+    public ResponseEntity<List<FacetDto>> getFacets(@RequestParam Long categoryId) {
+        return ResponseEntity.ok(productService.getFacets(categoryId));
     }
 
     /**
