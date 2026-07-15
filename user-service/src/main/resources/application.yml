@@ -33,6 +33,9 @@ services:
   order:
     url: ${ORDER_SERVICE_URL:http://localhost:8084}
 
+internal:
+  secret: ${INTERNAL_SECRET}
+
 springdoc:
   api-docs:
     path: /api-docs

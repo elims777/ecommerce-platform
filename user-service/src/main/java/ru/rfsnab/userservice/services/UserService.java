@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.userservice.exceptions.EmailAlreadyVerifiedException;
 import ru.rfsnab.userservice.exceptions.ResendTooSoonException;
 import ru.rfsnab.userservice.exceptions.UserAlreadyExistsException;
+import ru.rfsnab.userservice.exceptions.UserNotFoundException;
 import ru.rfsnab.userservice.models.RoleEntity;
 import ru.rfsnab.userservice.models.UserEntity;
 import ru.rfsnab.userservice.models.kafka.UserEvent;
@@ -196,5 +197,21 @@ public class UserService {
         user.setLastVerificationEmailAt(LocalDateTime.now());
         userRepository.save(user);
         log.info("Resend verification requested: userId={}", userId);
+    }
+
+    public List<String> getMissingProfileFields(Long userId) {
+        UserEntity user = findUserById(userId)
+                .orElseThrow(() -> new UserNotFoundException(String.format("User with id = %s not found", userId)));
+
+        List<String> missing = new ArrayList<>();
+        if (isBlank(user.getFirstname())) missing.add("Имя");
+        if (isBlank(user.getLastname())) missing.add("Фамилия");
+        if (isBlank(user.getEmail())) missing.add("Электронная почта");
+        if (isBlank(user.getPhone())) missing.add("Телефон");
+        return missing;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

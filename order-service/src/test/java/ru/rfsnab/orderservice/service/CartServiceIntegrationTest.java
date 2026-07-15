@@ -8,19 +8,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
 import ru.rfsnab.orderservice.exception.InsufficientStockException;
 import ru.rfsnab.orderservice.exception.ProductNotFoundException;
+import ru.rfsnab.orderservice.exception.ProfileIncompleteException;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
+import ru.rfsnab.orderservice.models.dto.user.ProfileCompletenessDto;
 import ru.rfsnab.orderservice.models.entity.Cart;
 import ru.rfsnab.orderservice.models.entity.CartItem;
 import ru.rfsnab.orderservice.repository.CartRedisRepository;
 import ru.rfsnab.orderservice.repository.CartRepository;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.when;
 
 /**
@@ -56,6 +60,9 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
     void cleanUp() {
         cartRedisRepository.clearCart(USER_ID);
         cartRepository.deleteByUserId(USER_ID);
+        when(userServiceClient.getProfileCompleteness(USER_ID))
+                .thenReturn(new ProfileCompletenessDto(true, List.of()));
+        doCallRealMethod().when(userServiceClient).requireCompleteProfile(USER_ID);
     }
 
     // ==================== getCart ====================
@@ -179,6 +186,26 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1))
                     .isInstanceOf(ProductNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("бросает ProfileIncompleteException если профиль не заполнен")
+        void shouldThrowWhenProfileIncomplete() {
+            when(userServiceClient.getProfileCompleteness(USER_ID))
+                    .thenReturn(new ProfileCompletenessDto(false, List.of("Телефон")));
+
+            assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1))
+                    .isInstanceOf(ProfileIncompleteException.class);
+        }
+
+        @Test
+        @DisplayName("добавляет товар, когда профиль заполнен")
+        void shouldAddItemWhenProfileComplete() {
+            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
+
+            Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 5);
+
+            assertThat(cart.getItems()).hasSize(1);
         }
     }
 

@@ -10,6 +10,7 @@ import type { CategoryTree } from '@/types/product';
 import CategoryTreeMenu from './CategoryTreeMenu';
 import ProductCard from './ProductCard';
 import FacetFilters from './FacetFilters';
+import { handleProfileIncomplete } from '@/utils/profileGate';
 
 // ── Icons ────────────────────────────────────────────────────
 const SearchIcon = () => (
@@ -85,7 +86,7 @@ const SkeletonCard = () => (
 const CatalogPage = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { message: messageApi } = App.useApp();
+    const { message: messageApi, modal } = App.useApp();
     const addItem = useCartStore((state) => state.addItem);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const screens = Grid.useBreakpoint();
@@ -184,7 +185,8 @@ const CatalogPage = () => {
         try {
             await addItem(productId, 1);
             messageApi.success('Товар добавлен в корзину');
-        } catch {
+        } catch (err) {
+            if (handleProfileIncomplete(err, modal, navigate)) return;
             messageApi.error('Ошибка при добавлении в корзину');
         }
     };

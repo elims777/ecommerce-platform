@@ -14,6 +14,7 @@ import ru.rfsnab.orderservice.models.entity.CartItem;
 import ru.rfsnab.orderservice.repository.CartRedisRepository;
 import ru.rfsnab.orderservice.repository.CartRepository;
 import ru.rfsnab.orderservice.service.client.ProductServiceClient;
+import ru.rfsnab.orderservice.service.client.UserServiceClient;
 
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +38,7 @@ public class CartService {
     private final CartRedisRepository cartRedisRepository;
     private final CartRepository cartRepository;
     private final ProductServiceClient productServiceClient;
+    private final UserServiceClient userServiceClient;
 
     public Cart getCart(Long userId) {
         Map<Long, Integer> items = cartRedisRepository.getCart(userId);
@@ -54,6 +56,8 @@ public class CartService {
     }
 
     public Cart addItemToCart(Long userId, Long productId, int quantity) {
+        userServiceClient.requireCompleteProfile(userId);
+
         ProductDto product = productServiceClient.getProduct(productId);
 
         if (!product.isActive()) {

@@ -229,6 +229,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SECRET_JWT: ${SECRET_JWT}
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
       ORDER_SERVICE_URL: http://order-service:8084
       MANAGER_EMAIL: ${MANAGER_EMAIL:-info@rfsnab.ru}
     volumes:
@@ -347,6 +348,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       PRODUCT_SERVICE_URL: http://product-service:8083
+      USER_SERVICE_URL: http://user-service:8081
       INTERNAL_SECRET: ${INTERNAL_SECRET}
       SECRET_JWT: ${SECRET_JWT}
     volumes:

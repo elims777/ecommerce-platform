@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useDisplayPrice, formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 import { savePendingAddToCart, clearPendingAddToCart } from '@/utils/pendingCart';
 import { unitShort, unitPlural } from '@/utils/unitOfMeasure';
+import { handleProfileIncomplete } from '@/utils/profileGate';
 
 const sortImages = (images: ProductImage[]): ProductImage[] =>
     [...images].sort((a, b) => {
@@ -49,7 +50,7 @@ const ProductPage = () => {
     const location = useLocation();
     const screens = Grid.useBreakpoint();
     const isMobile = screens.md === false;
-    const { message: messageApi } = App.useApp();
+    const { message: messageApi, modal } = App.useApp();
     const [quantity, setQuantity] = useState(1);
     const [variantQtys, setVariantQtys] = useState<Record<number, number>>({});
     const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -118,7 +119,8 @@ const ProductPage = () => {
             try {
                 await Promise.all(toAdd.map(v => addItem(v.id, variantQtys[v.id])));
                 messageApi.success(`${product.name} добавлен в корзину`);
-            } catch {
+            } catch (err) {
+                if (handleProfileIncomplete(err, modal, navigate)) return;
                 messageApi.error('Ошибка при добавлении в корзину');
             }
         } else {
@@ -126,7 +128,8 @@ const ProductPage = () => {
                 await addItem(product.id, quantity);
                 messageApi.success(`${product.name} (${quantity} шт.) добавлен в корзину`);
                 setQuantity(1);
-            } catch {
+            } catch (err) {
+                if (handleProfileIncomplete(err, modal, navigate)) return;
                 messageApi.error('Ошибка при добавлении в корзину');
             }
         }

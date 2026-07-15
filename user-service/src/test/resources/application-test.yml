@@ -29,6 +29,10 @@ app:
 jwt:
   secret: test-secret-key-for-testing-must-be-at-least-256-bits-long-for-hs256
 
+# S2S internal token (InternalTokenFilter — @Component, поднимается и в тестах)
+internal:
+  secret: test-secret
+
 # Минимальное логирование
 logging:
   level:

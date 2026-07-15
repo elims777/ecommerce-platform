@@ -25,6 +25,7 @@ import java.time.LocalDateTime;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final InternalTokenFilter internalTokenFilter;
 
 
     @Bean
@@ -57,6 +58,9 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/v1/legal-entities/*"
                         ).permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/v1/users/*/profile-completeness"
+                        ).hasRole("INTERNAL")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptions -> exceptions
@@ -101,7 +105,8 @@ public class SecurityConfig {
                             response.getWriter().write(mapper.writeValueAsString(errorResponse));
                         })
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(internalTokenFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

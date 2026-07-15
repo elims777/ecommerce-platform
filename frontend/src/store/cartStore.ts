@@ -49,9 +49,9 @@ export const useCartStore = create<CartState>((set, get) => ({
         try {
             await cartApi.addToCart({ productId, quantity });
             await get().fetchCart();
-        } catch {
+        } catch (err) {
             set({ items: prev.items, ...calcTotals(prev.items) });
-            throw new Error('Не удалось добавить товар');
+            throw err;
         }
     },
 
