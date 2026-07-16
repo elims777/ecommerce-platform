@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -205,12 +206,25 @@ public class ProductService {
                 throw new CategoryNotFoundException(categoryId);
             }
             return isActive == null
-                    ? productRepository.findByCategoryId(categoryId, pageable)
-                    : productRepository.findByCategoryIdAndIsActive(categoryId, isActive, pageable);
+                    ? productRepository.findByCategoryIdAndIsVariantChildFalse(categoryId, pageable)
+                    : productRepository.findByCategoryIdAndIsActiveAndIsVariantChildFalse(categoryId, isActive, pageable);
         }
         return isActive == null
-                ? productRepository.findAll(pageable)
-                : productRepository.findByIsActive(isActive, pageable);
+                ? productRepository.findByIsVariantChildFalse(pageable)
+                : productRepository.findByIsActiveAndIsVariantChildFalse(isActive, pageable);
+    }
+
+    /**
+     * Дозагрузка детей-вариантов для страницы родителей одним запросом (без N+1).
+     * Загружаются независимо от isActive — в админке видны и неактивные дети.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, List<Product>> getChildrenForParents(List<Long> parentIds) {
+        if (parentIds.isEmpty()) {
+            return Map.of();
+        }
+        return productRepository.findByParentProductIdInOrderByParentProductIdAscDisplayOrderAsc(parentIds)
+                .stream().collect(Collectors.groupingBy(Product::getParentProductId));
     }
 
     /**

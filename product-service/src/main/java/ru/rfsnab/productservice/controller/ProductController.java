@@ -60,7 +60,10 @@ public class ProductController {
             @RequestParam(required = false) Boolean isActive,
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
         Page<Product> productsPage = productService.getAllProductsAdminPage(categoryId, isActive, pageable);
-        return ResponseEntity.ok(productsPage.map(ProductMapper::mapToResponse));
+        List<Long> parentIds = productsPage.getContent().stream().map(Product::getId).toList();
+        Map<Long, List<Product>> childrenByParent = productService.getChildrenForParents(parentIds);
+        return ResponseEntity.ok(productsPage.map(p ->
+                ProductMapper.mapToResponse(p, childrenByParent.getOrDefault(p.getId(), List.of()))));
     }
 
     /**
