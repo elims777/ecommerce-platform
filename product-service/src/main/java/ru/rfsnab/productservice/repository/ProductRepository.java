@@ -62,6 +62,21 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     Page<Product> findByCategoryIdAndIsActive(Long categoryId, Boolean isActive, Pageable pageable);
 
+    Page<Product> findByIsVariantChildFalse(Pageable pageable);
+
+    Page<Product> findByIsActiveAndIsVariantChildFalse(Boolean isActive, Pageable pageable);
+
+    Page<Product> findByCategoryIdAndIsVariantChildFalse(Long categoryId, Pageable pageable);
+
+    Page<Product> findByCategoryIdAndIsActiveAndIsVariantChildFalse(Long categoryId, Boolean isActive, Pageable pageable);
+
+    @Query("""
+            SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.attributes
+            WHERE p.parentProductId IN :parentIds
+            ORDER BY p.parentProductId ASC, p.displayOrder ASC
+            """)
+    List<Product> findByParentProductIdInOrderByParentProductIdAscDisplayOrderAsc(@Param("parentIds") List<Long> parentIds);
+
     @Query("""
             SELECT COUNT(p) FROM Product p
             WHERE p.isActive = true AND p.isVariantChild = false

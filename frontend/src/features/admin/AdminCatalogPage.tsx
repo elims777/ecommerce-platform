@@ -313,41 +313,70 @@ const AdminCatalogPage = () => {
     }, [searchQuery, searchPage, productsPage, activeLetter]);
 
     // Grouped rows: parents first, children inserted right after their parent.
-    // Ребёнок, чьего родителя нет на текущей странице (серверная пагинация поиска
-    // рвёт семьи), отображается самостоятельной строкой — иначе он пропадает из таблицы.
     const groupedRows = useMemo(() => {
-        const rootIds = new Set(
-            displayProducts.filter((p) => !(p.isVariantChild && p.parentProductId != null)).map((p) => p.id),
-        );
-        const childrenByParent = new Map<number, Product[]>();
-        const roots: Product[] = [];
-        const orphans: Product[] = [];
-        for (const p of displayProducts) {
-            if (p.isVariantChild && p.parentProductId != null) {
-                if (rootIds.has(p.parentProductId)) {
-                    const arr = childrenByParent.get(p.parentProductId) ?? [];
-                    arr.push(p);
-                    childrenByParent.set(p.parentProductId, arr);
-                } else {
-                    orphans.push(p);
-                }
-            } else {
-                roots.push(p);
-            }
-        }
         const result: { product: Product; isChild: boolean; childCount: number }[] = [];
-        for (const root of roots) {
-            const children = childrenByParent.get(root.id) ?? [];
-            result.push({ product: root, isChild: false, childCount: children.length });
-            for (const child of children) {
-                result.push({ product: child, isChild: true, childCount: 0 });
+
+        if (searchQuery.length >= 2) {
+            // Поиск отдаёт content плоско — дети и родители вперемешку. Ребёнок, чьего
+            // родителя нет на текущей странице, отображается самостоятельной строкой.
+            const rootIds = new Set(
+                displayProducts.filter((p) => !(p.isVariantChild && p.parentProductId != null)).map((p) => p.id),
+            );
+            const childrenByParent = new Map<number, Product[]>();
+            const roots: Product[] = [];
+            const orphans: Product[] = [];
+            for (const p of displayProducts) {
+                if (p.isVariantChild && p.parentProductId != null) {
+                    if (rootIds.has(p.parentProductId)) {
+                        const arr = childrenByParent.get(p.parentProductId) ?? [];
+                        arr.push(p);
+                        childrenByParent.set(p.parentProductId, arr);
+                    } else {
+                        orphans.push(p);
+                    }
+                } else {
+                    roots.push(p);
+                }
             }
+            for (const root of roots) {
+                const children = childrenByParent.get(root.id) ?? [];
+                result.push({ product: root, isChild: false, childCount: children.length });
+                for (const child of children) {
+                    result.push({ product: child, isChild: true, childCount: 0 });
+                }
+            }
+            for (const orphan of orphans) {
+                result.push({ product: orphan, isChild: false, childCount: 0 });
+            }
+            return result;
         }
-        for (const orphan of orphans) {
-            result.push({ product: orphan, isChild: false, childCount: 0 });
+
+        // Обычный список категории: дети приходят вложенными в parent.children.
+        for (const parent of displayProducts) {
+            result.push({ product: parent, isChild: false, childCount: parent.children.length });
+            for (const child of parent.children) {
+                result.push({
+                    product: {
+                        ...parent,
+                        ...child,
+                        categoryId: parent.categoryId,
+                        categoryName: parent.categoryName,
+                        images: parent.images,
+                        videos: [],
+                        attributes: child.attributes,
+                        isVariantChild: true,
+                        parentProductId: parent.id,
+                        children: [],
+                        hasVariants: false,
+                        displayOrder: parent.displayOrder,
+                    },
+                    isChild: true,
+                    childCount: 0,
+                });
+            }
         }
         return result;
-    }, [displayProducts]);
+    }, [displayProducts, searchQuery]);
 
     const invalidateAll = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
@@ -438,16 +467,12 @@ const AdminCatalogPage = () => {
 
         const reordered = arrayMove(roots, oldIndex, newIndex);
 
-        // Оптимистичное обновление кэша
+        // Оптимистичное обновление кэша — дети остаются внутри каждого родителя (spread ...p)
         queryClient.setQueryData<{ content: Product[]; totalElements: number }>(
-            ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder }],
+            ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder, isActive: isActiveParam }],
             (old) => {
                 if (!old) return old;
-                const children = old.content.filter((p) => p.isVariantChild);
-                const newContent = [
-                    ...reordered.map((p, i) => ({ ...p, displayOrder: i * 10 })),
-                    ...children,
-                ];
+                const newContent = reordered.map((p, i) => ({ ...p, displayOrder: i * 10 }));
                 return { ...old, content: newContent };
             },
         );
@@ -1002,7 +1027,7 @@ const AdminCatalogPage = () => {
                                     </button>
                                 ))}
                             </div>
-                            {isPaginated && totalPages > 1 && (
+                            {isPaginated && (activePage?.totalElements ?? 0) > 0 && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <select
                                         value={pageSize}
@@ -1017,19 +1042,21 @@ const AdminCatalogPage = () => {
                                             <option key={n} value={n}>{n} / стр.</option>
                                         ))}
                                     </select>
-                                    <div className="rf-admin-pagination-pages" style={{ margin: 0 }}>
-                                        <button
-                                            className="rf-admin-page-btn"
-                                            disabled={currentPage === 1}
-                                            onClick={() => { setCurrentPage((p) => p - 1); setSelectedRowKeys([]); }}
-                                        >‹</button>
-                                        {renderPageButtons()}
-                                        <button
-                                            className="rf-admin-page-btn"
-                                            disabled={currentPage === totalPages}
-                                            onClick={() => { setCurrentPage((p) => p + 1); setSelectedRowKeys([]); }}
-                                        >›</button>
-                                    </div>
+                                    {totalPages > 1 && (
+                                        <div className="rf-admin-pagination-pages" style={{ margin: 0 }}>
+                                            <button
+                                                className="rf-admin-page-btn"
+                                                disabled={currentPage === 1}
+                                                onClick={() => { setCurrentPage((p) => p - 1); setSelectedRowKeys([]); }}
+                                            >‹</button>
+                                            {renderPageButtons()}
+                                            <button
+                                                className="rf-admin-page-btn"
+                                                disabled={currentPage === totalPages}
+                                                onClick={() => { setCurrentPage((p) => p + 1); setSelectedRowKeys([]); }}
+                                            >›</button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             </div>
