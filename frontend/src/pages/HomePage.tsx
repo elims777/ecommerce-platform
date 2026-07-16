@@ -14,7 +14,7 @@ import { useDisplayPrice, formatPriceOrPlaceholder } from '@/utils/priceUtils';
 import { handleProfileIncomplete } from '@/utils/profileGate';
 
 // Категория "Распродажа" — используется для таба "Акции" и для правой колонки витрины.
-const SALES_CATEGORY_ID = 17;
+const SALES_CATEGORY_ID = 31;
 
 // ── Icons ─────────────────────────────────────────────────────
 const ArrRight = ({ width = 16, height = 16 }: { width?: number; height?: number }) => (
