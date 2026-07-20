@@ -59,19 +59,8 @@ const PRIMARY_COLORS = [
     { bg: 'var(--brand-navy)', hover: 'var(--brand-navy-hover)' },
 ];
 
-// ── Helpers ───────────────────────────────────────────────────
-const flattenCategories = (tree: CategoryTree[]): CategoryTree[] => {
-    const result: CategoryTree[] = [];
-    const traverse = (nodes: CategoryTree[]) => {
-        for (const node of nodes) {
-            result.push(node);
-            if (node.children?.length) traverse(node.children);
-        }
-    };
-    traverse(tree);
-    return result;
-};
-
+// Служебная категория «Импорт из 1С» — не показываем на главной.
+const HIDDEN_CATEGORY_IDS = new Set([1]);
 
 interface ShowcaseRowProps {
     product: import('@/types/product').Product;
@@ -443,9 +432,9 @@ const HomePage = () => {
         staleTime: 5 * 60 * 1000,
     });
 
-    const allCategories = flattenCategories(categoryTree);
-    const primaryCategories = allCategories.slice(0, 3);
-    const secondaryCategories = allCategories.slice(3, 11);
+    const rootCategories = categoryTree.filter((c) => !HIDDEN_CATEGORY_IDS.has(c.id));
+    const primaryCategories = rootCategories.slice(0, 3);
+    const secondaryCategories = rootCategories.slice(3, 11);
 
     const handleAddToCart = async (productId: number) => {
         if (!isAuthenticated) { navigate('/login'); return; }
