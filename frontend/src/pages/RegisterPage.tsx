@@ -125,7 +125,7 @@ const RegisterPage = () => {
             >
                 <Checkbox style={{ fontSize: 'var(--text-base)', color: 'var(--ink-2)' }}>
                     Я ознакомлен(а) с{' '}
-                    <a href="/privacy-policy" target="_blank" style={{ color: 'var(--brand-navy)' }}>Политикой конфиденциальности</a>
+                    <a href="/privacy-policy" target="_blank" className="consent-link">Политикой конфиденциальности</a>
                 </Checkbox>
             </Form.Item>
             <Form.Item
@@ -134,7 +134,7 @@ const RegisterPage = () => {
             >
                 <Checkbox style={{ fontSize: 'var(--text-base)', color: 'var(--ink-2)' }}>
                     Я даю согласие на{' '}
-                    <a href="/personal-data" target="_blank" style={{ color: 'var(--brand-navy)' }}>обработку персональных данных</a>
+                    <a href="/personal-data" target="_blank" className="consent-link">обработку персональных данных</a>
                 </Checkbox>
             </Form.Item>
             <Form.Item name="newsletterConsent" valuePropName="checked" noStyle>

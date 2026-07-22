@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClickableCard, NavLink } from '@/components/navigation';
+import { ClickableCard } from '@/components/navigation';
 import { Spin, Grid } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { getProducts, getFeaturedProducts } from '@/api/products';
@@ -59,19 +59,8 @@ const PRIMARY_COLORS = [
     { bg: 'var(--brand-navy)', hover: 'var(--brand-navy-hover)' },
 ];
 
-// ── Helpers ───────────────────────────────────────────────────
-const flattenCategories = (tree: CategoryTree[]): CategoryTree[] => {
-    const result: CategoryTree[] = [];
-    const traverse = (nodes: CategoryTree[]) => {
-        for (const node of nodes) {
-            result.push(node);
-            if (node.children?.length) traverse(node.children);
-        }
-    };
-    traverse(tree);
-    return result;
-};
-
+// Служебная категория «Импорт из 1С» — не показываем на главной.
+const HIDDEN_CATEGORY_IDS = new Set([1]);
 
 interface ShowcaseRowProps {
     product: import('@/types/product').Product;
@@ -443,9 +432,9 @@ const HomePage = () => {
         staleTime: 5 * 60 * 1000,
     });
 
-    const allCategories = flattenCategories(categoryTree);
-    const primaryCategories = allCategories.slice(0, 3);
-    const secondaryCategories = allCategories.slice(3, 11);
+    const rootCategories = categoryTree.filter((c) => !HIDDEN_CATEGORY_IDS.has(c.id));
+    const primaryCategories = rootCategories.slice(0, 3);
+    const secondaryCategories = rootCategories.slice(3, 11);
 
     const handleAddToCart = async (productId: number) => {
         if (!isAuthenticated) { navigate('/login'); return; }
@@ -471,21 +460,13 @@ const HomePage = () => {
 
             {/* PRIMARY 3 CATEGORIES */}
             <div style={{ paddingTop: 36 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <div>
-                        <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
-                            Основные направления
-                        </h2>
-                        <p style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)', marginTop: 4, marginBottom: 0 }}>
-                            Три направления, которые закрывают 80% заявок снабженца
-                        </p>
-                    </div>
-                    <NavLink
-                        to="/catalog"
-                        style={{ fontSize: 'var(--text-base)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                    >
-                        Все разделы каталога →
-                    </NavLink>
+                <div style={{ marginBottom: 16 }}>
+                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
+                        Основные направления
+                    </h2>
+                    <p style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)', marginTop: 4, marginBottom: 0 }}>
+                        Три направления, которые закрывают 80% заявок снабженца
+                    </p>
                 </div>
 
                 {categoriesLoading ? (
