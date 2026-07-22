@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClickableCard, NavLink } from '@/components/navigation';
+import { ClickableCard } from '@/components/navigation';
 import { Spin, Grid } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { getProducts, getFeaturedProducts } from '@/api/products';
@@ -460,21 +460,13 @@ const HomePage = () => {
 
             {/* PRIMARY 3 CATEGORIES */}
             <div style={{ paddingTop: 36 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <div>
-                        <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
-                            Основные направления
-                        </h2>
-                        <p style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)', marginTop: 4, marginBottom: 0 }}>
-                            Три направления, которые закрывают 80% заявок снабженца
-                        </p>
-                    </div>
-                    <NavLink
-                        to="/catalog"
-                        style={{ fontSize: 'var(--text-base)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                    >
-                        Все разделы каталога →
-                    </NavLink>
+                <div style={{ marginBottom: 16 }}>
+                    <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
+                        Основные направления
+                    </h2>
+                    <p style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)', marginTop: 4, marginBottom: 0 }}>
+                        Три направления, которые закрывают 80% заявок снабженца
+                    </p>
                 </div>
 
                 {categoriesLoading ? (

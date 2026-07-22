@@ -440,18 +440,17 @@ const ClientLayout = () => {
                             onMouseEnter={openMegaMenu}
                             onMouseLeave={closeMegaMenuDelayed}
                         >
-                            <NavLink
-                                to="/catalog"
+                            <div
                                 style={{
                                     display: 'inline-flex', alignItems: 'center', gap: 8,
                                     height: 36, padding: '0 14px',
                                     background: 'var(--brand-red)', color: '#fff',
                                     border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 600,
-                                    cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                    cursor: 'default', fontFamily: 'var(--font-body)', userSelect: 'none',
                                 }}
                             >
                                 <MenuIcon /> Каталог товаров
-                            </NavLink>
+                            </div>
                             {megaMenuOpen && categoryTree.length > 0 && (
                                 <CatalogMegaMenu categories={categoryTree} onClose={() => setMegaMenuOpen(false)} />
                             )}

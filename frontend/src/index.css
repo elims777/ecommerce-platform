@@ -29,6 +29,27 @@ html {
   overflow-x: hidden;
 }
 
+/* Брендовый шрифт заголовков Ant Design (Typography.Title) — как на маркетинговых страницах */
+h1.ant-typography,
+h2.ant-typography,
+h3.ant-typography,
+h4.ant-typography,
+h5.ant-typography,
+.ant-typography h1,
+.ant-typography h2,
+.ant-typography h3,
+.ant-typography h4,
+.ant-typography h5 {
+  font-family: var(--font-head);
+}
+
+/* Ссылки на документы в чекбоксах согласия (регистрация) */
+.consent-link {
+  color: var(--brand-navy) !important;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* rf-* utility classes (from tokens.css) */
 .rf-btn {
   display: inline-flex;

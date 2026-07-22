@@ -66,7 +66,7 @@ const SummaryStep = ({ items, totalAmount, loading }: SummaryStepProps) => {
             }}
         >
             <Text style={{ fontSize: 16 }}>Итого:</Text>
-            <Title level={3} style={{ margin: 0, color: '#1677ff' }}>
+            <Title level={3} style={{ margin: 0, color: 'var(--brand-red)' }}>
                 {formatPrice(totalAmount)}
             </Title>
         </div>

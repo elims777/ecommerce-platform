@@ -23,17 +23,6 @@ const ChevRight = () => (
         <path d="m9 18 6-6-6-6"/>
     </svg>
 );
-const GridIcon = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-    </svg>
-);
-const ListIcon = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-    </svg>
-);
 const ChevDown = () => (
     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="m6 9 6 6 6-6"/>
@@ -94,6 +83,7 @@ const CatalogPage = () => {
     const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false);
 
     const currentPage = Number(searchParams.get('page')) || 1;
+    const pageSize = Number(searchParams.get('size')) || 20;
     const categoryId = searchParams.get('category') ? Number(searchParams.get('category')) : undefined;
     const searchQuery = searchParams.get('q') || '';
     const [searchInput, setSearchInput] = useState(searchQuery);
@@ -115,12 +105,12 @@ const CatalogPage = () => {
     });
 
     const { data: productsPage, isLoading: productsLoading, isError } = useQuery({
-        queryKey: ['products', { page: currentPage, categoryId, q: searchQuery, attr: attrParams }],
+        queryKey: ['products', { page: currentPage, size: pageSize, categoryId, q: searchQuery, attr: attrParams }],
         queryFn: async () => {
             if (searchQuery) {
-                return searchProducts(searchQuery, currentPage - 1);
+                return searchProducts(searchQuery, currentPage - 1, pageSize);
             }
-            return getProducts({ page: currentPage - 1, categoryId, attr: attrParams });
+            return getProducts({ page: currentPage - 1, size: pageSize, categoryId, attr: attrParams });
         },
     });
 
@@ -150,6 +140,14 @@ const CatalogPage = () => {
     const handlePageChange = (page: number) => {
         const newParams = new URLSearchParams(searchParams);
         newParams.set('page', String(page));
+        setSearchParams(newParams);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handlePageSizeChange = (size: number) => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('size', String(size));
+        newParams.set('page', '1');
         setSearchParams(newParams);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -242,15 +240,24 @@ const CatalogPage = () => {
                         </p>
                     )}
                 </div>
-                {/* View toggle + sort */}
+                {/* Page size + sort */}
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                     <div style={{ display: 'inline-flex', border: '1px solid var(--line-1)', borderRadius: 6, padding: 2, background: '#fff' }}>
-                        <button style={{ width: 30, height: 28, border: 0, background: 'var(--surface-3)', borderRadius: 4, color: 'var(--ink-1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <GridIcon />
-                        </button>
-                        <button style={{ width: 30, height: 28, border: 0, background: 'transparent', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <ListIcon />
-                        </button>
+                        {[20, 50, 100].map((size) => (
+                            <button
+                                key={size}
+                                onClick={() => handlePageSizeChange(size)}
+                                style={{
+                                    minWidth: 34, height: 28, padding: '0 8px', border: 0, borderRadius: 4,
+                                    background: size === pageSize ? 'var(--surface-3)' : 'transparent',
+                                    color: size === pageSize ? 'var(--ink-1)' : 'var(--ink-3)',
+                                    fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500,
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}
+                            >
+                                {size}
+                            </button>
+                        ))}
                     </div>
                     <button style={{
                         display: 'inline-flex', alignItems: 'center', gap: 6,
