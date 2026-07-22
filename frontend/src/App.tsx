@@ -36,6 +36,7 @@ const AdminLegalEntityDetailPage = lazy(() => import('@/features/admin/AdminLega
 const AdminSettingsPage = lazy(() => import('@/features/admin/AdminSettingsPage'));
 const LogisticsPage = lazy(() => import('@/features/admin/LogisticsPage'));
 const FavouritesPage = lazy(() => import('@/features/favourites/FavouritesPage'));
+const PriceListsPage = lazy(() => import('@/features/priceLists/PriceListsPage'));
 const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage'));
 const OAuth2SuccessPage = lazy(() => import('@/pages/OAuth2SuccessPage'));
 const OAuth2ErrorPage = lazy(() => import('@/pages/OAuth2ErrorPage'));
@@ -133,6 +134,7 @@ const AppRoutes = () => {
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/favourites" element={<FavouritesPage />} />
+              <Route path="/price-lists" element={<PriceListsPage />} />
             </Route>
 
             <Route path="*" element={<NotFoundPage />} />

@@ -24,7 +24,7 @@ const TOPBAR_H_MOBILE = 32;
 const MAIN_H_MOBILE = 60;
 const HEADER_TOTAL_MOBILE = TOPBAR_H_MOBILE + MAIN_H_MOBILE;
 
-const PAGE_ORDER = ['/about', '/contacts', '/', '/catalog', '/cart', '/orders', '/profile', '/privacy-policy', '/personal-data'];
+const PAGE_ORDER = ['/about', '/contacts', '/', '/catalog', '/cart', '/orders', '/price-lists', '/profile', '/privacy-policy', '/personal-data'];
 const getPageIndex = (pathname: string): number => {
     if (pathname.startsWith('/products/')) return 2.5;
     if (pathname.startsWith('/checkout')) return 4.5;
@@ -229,6 +229,7 @@ const ClientLayout = () => {
 
     const userMenuItems: MenuProps['items'] = [
         { key: 'orders', label: <NavLink to="/orders">Мои заказы</NavLink> },
+        { key: 'price-lists', label: <NavLink to="/price-lists">Прайс-листы</NavLink> },
         { key: 'profile', label: <NavLink to="/profile">Профиль</NavLink> },
         ...(user && !user.companyName ? [
             { type: 'divider' as const },
@@ -502,6 +503,7 @@ const ClientLayout = () => {
                     {isAuthenticated ? (
                         <>
                             <NavLink to="/orders" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Мои заказы</NavLink>
+                            <NavLink to="/price-lists" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Прайс-листы</NavLink>
                             <NavLink to="/profile" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Профиль</NavLink>
                             {user && isAdmin(user) && (
                                 <NavLink to="/admin" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Админ-панель</NavLink>
