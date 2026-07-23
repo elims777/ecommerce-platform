@@ -14,6 +14,7 @@ import { isAdmin } from '@/types/auth';
 import type { ClientType } from '@/types/auth';
 import type { MenuProps } from 'antd';
 import CatalogMegaMenu from '@/features/catalog/CatalogMegaMenu';
+import PriceListModal from '@/components/PriceListModal';
 
 const TOPBAR_H = 36;
 const MAIN_H = 76;
@@ -24,7 +25,7 @@ const TOPBAR_H_MOBILE = 32;
 const MAIN_H_MOBILE = 60;
 const HEADER_TOTAL_MOBILE = TOPBAR_H_MOBILE + MAIN_H_MOBILE;
 
-const PAGE_ORDER = ['/about', '/contacts', '/', '/catalog', '/cart', '/orders', '/profile', '/privacy-policy', '/personal-data'];
+const PAGE_ORDER = ['/about', '/contacts', '/', '/catalog', '/cart', '/orders', '/price-lists', '/profile', '/privacy-policy', '/personal-data'];
 const getPageIndex = (pathname: string): number => {
     if (pathname.startsWith('/products/')) return 2.5;
     if (pathname.startsWith('/checkout')) return 4.5;
@@ -180,6 +181,7 @@ const ClientLayout = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [megaMenuOpen, setMegaMenuOpen] = useState(false);
+    const [priceListModalOpen, setPriceListModalOpen] = useState(false);
     const megaMenuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const prevIndexRef = useRef(getPageIndex(location.pathname));
     const screens = Grid.useBreakpoint();
@@ -220,6 +222,11 @@ const ClientLayout = () => {
         navigate('/');
     };
 
+    const handlePriceListClick = () => {
+        if (!isAuthenticated) { navigate('/login'); return; }
+        setPriceListModalOpen(true);
+    };
+
     const currentIndex = getPageIndex(location.pathname);
     prevIndexRef.current = currentIndex;
 
@@ -229,6 +236,7 @@ const ClientLayout = () => {
 
     const userMenuItems: MenuProps['items'] = [
         { key: 'orders', label: <NavLink to="/orders">Мои заказы</NavLink> },
+        { key: 'price-lists', label: <NavLink to="/price-lists">Прайс-листы</NavLink> },
         { key: 'profile', label: <NavLink to="/profile">Профиль</NavLink> },
         ...(user && !user.companyName ? [
             { type: 'divider' as const },
@@ -266,6 +274,8 @@ const ClientLayout = () => {
                         <>
                             <NavLink to="/about" style={{ opacity: 0.85, color: 'inherit' }}>О компании</NavLink>
                             <NavLink to="/contacts" style={{ opacity: 0.85, color: 'inherit' }}>Контакты</NavLink>
+                            <span style={{ opacity: 0.35 }}>·</span>
+                            <span onClick={handlePriceListClick} style={{ opacity: 0.85, color: 'inherit', cursor: 'pointer' }}>Прайс-лист</span>
                             <span style={{ opacity: 0.35 }}>·</span>
                         </>
                     )}
@@ -502,6 +512,8 @@ const ClientLayout = () => {
                     {isAuthenticated ? (
                         <>
                             <NavLink to="/orders" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Мои заказы</NavLink>
+                            <NavLink to="/price-lists" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Прайс-листы</NavLink>
+                            <span onClick={() => { setMobileNavOpen(false); handlePriceListClick(); }} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)', cursor: 'pointer' }}>Заказать прайс-лист</span>
                             <NavLink to="/profile" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Профиль</NavLink>
                             {user && isAdmin(user) && (
                                 <NavLink to="/admin" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Админ-панель</NavLink>
@@ -602,6 +614,8 @@ const ClientLayout = () => {
                     </div>
                 </div>
             </footer>
+
+            <PriceListModal open={priceListModalOpen} onClose={() => setPriceListModalOpen(false)} />
         </div>
     );
 };

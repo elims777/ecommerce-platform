@@ -32,6 +32,10 @@ spring:
       port: 6379
       timeout: 2000ms
 
+  # Kafka
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
   servlet:
     multipart:
       max-file-size: 50MB
@@ -84,3 +88,10 @@ springdoc:
 product-service:
   import:
     chunk-size: 25
+
+app:
+  kafka:
+    topic:
+      price-list-requests: price-list-requests
+    consumer:
+      group-id: product-service-price-list-group

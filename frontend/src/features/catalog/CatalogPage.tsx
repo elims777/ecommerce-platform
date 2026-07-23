@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { App, Drawer, Grid } from 'antd';
+import { isAxiosError } from 'axios';
 import { getProducts, searchProducts } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
+import { createPriceList } from '@/api/priceLists';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import type { CategoryTree } from '@/types/product';
@@ -113,6 +115,25 @@ const CatalogPage = () => {
             return getProducts({ page: currentPage - 1, size: pageSize, categoryId, attr: attrParams });
         },
     });
+
+    const priceListMutation = useMutation({
+        mutationFn: () => createPriceList([categoryId!]),
+        onSuccess: () => {
+            messageApi.success('Прайс формируется. Готовый файл появится в личном кабинете → «Прайс-листы».');
+        },
+        onError: (err) => {
+            if (isAxiosError(err) && err.response?.status === 422) {
+                messageApi.warning('У вас уже формируется прайс — дождитесь готовности.');
+            } else {
+                messageApi.error('Не удалось заказать прайс-лист. Попробуйте позже.');
+            }
+        },
+    });
+
+    const handlePriceListClick = () => {
+        if (!isAuthenticated) { navigate('/login'); return; }
+        priceListMutation.mutate();
+    };
 
     const breadcrumbItems = categoryId ? buildBreadcrumb(categoryTree, categoryId) : [];
     const currentCategory = categoryId ? findCategoryInTree(categoryTree, categoryId) : null;
@@ -267,6 +288,20 @@ const CatalogPage = () => {
                     }}>
                         Сначала популярные <ChevDown />
                     </button>
+                    {categoryId && !searchQuery && (
+                        <button
+                            onClick={handlePriceListClick}
+                            disabled={priceListMutation.isPending}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                height: 32, padding: '0 12px',
+                                background: 'var(--surface-2)', border: '1px solid var(--line-1)',
+                                borderRadius: 6, fontSize: 13, color: 'var(--ink-1)', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                            }}
+                        >
+                            {priceListMutation.isPending ? 'Формируем...' : 'Сформировать прайс по категории'}
+                        </button>
+                    )}
                 </div>
             </div>
 

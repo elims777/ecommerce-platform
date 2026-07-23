@@ -97,6 +97,106 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Несуществующая категория при создании прайс-листа (400, а не 404 — не путать с CategoryNotFoundException)
+     */
+    @ExceptionHandler(CategoryValidationException.class)
+    public ResponseEntity<ErrorResponse> handleCategoryValidation(
+            CategoryValidationException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Category validation failed: {}", ex.getMessage());
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
+     * Прайс-лист не найден (или чужой — не раскрываем существование)
+     */
+    @ExceptionHandler(PriceListNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handlePriceListNotFound(
+            PriceListNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Price list not found: {}", ex.getMessage());
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    /**
+     * У пользователя уже есть формирующийся прайс-лист
+     */
+    @ExceptionHandler(PriceListPendingException.class)
+    public ResponseEntity<ErrorResponse> handlePriceListPending(
+            PriceListPendingException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Price list pending limit: {}", ex.getMessage());
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.UNPROCESSABLE_ENTITY.value(),
+                "Unprocessable Entity",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(error);
+    }
+
+    /**
+     * Прайс-лист ещё не готов к скачиванию
+     */
+    @ExceptionHandler(PriceListNotReadyException.class)
+    public ResponseEntity<ErrorResponse> handlePriceListNotReady(
+            PriceListNotReadyException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Price list not ready: {}", ex.getMessage());
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    /**
+     * Сбой отправки события генерации прайс-листа в Kafka
+     */
+    @ExceptionHandler(PriceListDispatchException.class)
+    public ResponseEntity<ErrorResponse> handlePriceListDispatch(
+            PriceListDispatchException ex,
+            HttpServletRequest request
+    ) {
+        log.error("Price list dispatch failed: {}", ex.getMessage());
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "Service Unavailable",
+                "Сервис формирования прайс-листов временно недоступен, попробуйте позже",
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+    }
+
+    /**
      * Валидация (@Valid)
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)

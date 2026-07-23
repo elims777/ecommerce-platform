@@ -12,6 +12,7 @@ import { App } from 'antd';
 import type { CategoryTree } from '@/types/product';
 import { useDisplayPrice, formatPriceOrPlaceholder } from '@/utils/priceUtils';
 import { handleProfileIncomplete } from '@/utils/profileGate';
+import PriceListModal from '@/components/PriceListModal';
 
 // Категория "Распродажа" — используется для таба "Акции" и для правой колонки витрины.
 const SALES_CATEGORY_ID = 31;
@@ -398,11 +399,14 @@ const SecondaryCatTile = ({ category, onClick }: { category: CategoryTree; onCli
     );
 };
 
-const ServiceCard = ({ icon, title, text, cta, accent }: { icon: React.ReactNode; title: string; text: string; cta: string; accent?: string }) => {
+const ServiceCard = ({ icon, title, text, cta, accent, onClick }: { icon: React.ReactNode; title: string; text: string; cta: string; accent?: string; onClick?: () => void }) => {
     const color = accent === 'navy' ? 'var(--brand-navy)' : accent === 'green' ? 'var(--brand-green)' : 'var(--brand-red)';
     const tint  = accent === 'navy' ? 'var(--navy-tint)' : accent === 'green' ? 'var(--brand-green-soft)' : 'var(--red-tint)';
     return (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-5)', padding: 22, display: 'flex', gap: 16 }}>
+        <div
+            onClick={onClick}
+            style={{ background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-5)', padding: 22, display: 'flex', gap: 16, cursor: onClick ? 'pointer' : undefined }}
+        >
             <div style={{
                 width: 44, height: 44, borderRadius: 'var(--r-4)',
                 background: tint, color, flex: '0 0 auto',
@@ -425,6 +429,7 @@ const HomePage = () => {
     const { message: messageApi, modal } = App.useApp();
     const addItem = useCartStore((state) => state.addItem);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const [priceListModalOpen, setPriceListModalOpen] = useState(false);
 
     const { data: categoryTree = [], isLoading: categoriesLoading } = useQuery({
         queryKey: ['categories', 'tree'],
@@ -449,6 +454,11 @@ const HomePage = () => {
 
     const handleCategoryClick = (categoryId: number) => {
         navigate(`/catalog?category=${categoryId}`);
+    };
+
+    const handlePriceListClick = () => {
+        if (!isAuthenticated) { navigate('/login'); return; }
+        setPriceListModalOpen(true);
     };
 
     return (
@@ -514,9 +524,10 @@ const HomePage = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
                     <ServiceCard
                         icon={<DocIcon />}
-                        title="Прайс-лист одним XLS"
-                        text="Скачайте полный прайс с актуальными остатками и ценами для вашей категории клиента."
-                        cta="Скачать прайс"
+                        title="Прайс-лист одним кликом в XLS"
+                        text="Выберите нужные категории — сформируем актуальный прайс с ценами для вашей категории клиента."
+                        cta="Заказать прайс"
+                        onClick={handlePriceListClick}
                     />
                     <ServiceCard
                         icon={<TruckIcon />}
@@ -534,6 +545,8 @@ const HomePage = () => {
                     />
                 </div>
             </div>
+
+            <PriceListModal open={priceListModalOpen} onClose={() => setPriceListModalOpen(false)} />
         </div>
     );
 };
