@@ -56,6 +56,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     Page<Product> findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(List<Long> categoryIds, Pageable pageable);
 
+    Page<Product> findByCategoryIdInAndIsActiveTrue(List<Long> categoryIds, Pageable pageable);
+
     Page<Product> findByIsActive(Boolean isActive, Pageable pageable);
 
     Page<Product> findByIsFeaturedTrueAndIsActiveTrueAndIsVariantChildFalse(Pageable pageable);

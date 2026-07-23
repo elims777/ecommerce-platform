@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import ru.rfsnab.productservice.exception.InvalidFileException;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
@@ -106,6 +107,44 @@ public class StorageService {
             return false;
         } catch (S3Exception e) {
             throw new InvalidFileException("Ошибка при проверке файла: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Загрузить произвольные байты в Yandex Object Storage
+     * @param data содержимое файла
+     * @param fileKey путь в bucket
+     * @param contentType MIME тип содержимого
+     */
+    public void uploadBytes(byte[] data, String fileKey, String contentType) {
+        try {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileKey)
+                    .contentType(contentType)
+                    .build();
+
+            s3Client.putObject(request, RequestBody.fromBytes(data));
+        } catch (S3Exception e) {
+            throw new InvalidFileException("Ошибка при загрузке файла: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Открыть поток на скачивание файла из Yandex Object Storage
+     * @param fileKey путь к файлу в bucket
+     * @return поток содержимого файла
+     */
+    public ResponseInputStream<GetObjectResponse> downloadStream(String fileKey) {
+        try {
+            GetObjectRequest request = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(fileKey)
+                    .build();
+
+            return s3Client.getObject(request);
+        } catch (S3Exception e) {
+            throw new InvalidFileException("Ошибка при скачивании файла: " + e.getMessage());
         }
     }
 

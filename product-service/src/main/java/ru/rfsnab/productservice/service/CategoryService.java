@@ -279,6 +279,27 @@ public class CategoryService {
         return ids;
     }
 
+    /**
+     * Собрать id категорий и всех их потомков для списка категорий (дедуп пересекающихся поддеревьев).
+     * Порядок детерминированный (порядок первого появления).
+     */
+    public List<Long> getSubtreeCategoryIds(List<Long> categoryIds) {
+        Set<Long> ids = new LinkedHashSet<>();
+        for (Long categoryId : categoryIds) {
+            ids.addAll(getSubtreeCategoryIds(categoryId));
+        }
+        return new ArrayList<>(ids);
+    }
+
+    /**
+     * Получить имя категории по id из закэшированного дерева (без похода в БД).
+     * Возвращает null, если категория не найдена в кэше.
+     */
+    public String getCategoryNameById(Long categoryId) {
+        CategoryTreeDTO node = findNodeById(cachedCategoryTree, categoryId);
+        return node != null ? node.getName() : null;
+    }
+
     private CategoryTreeDTO findNodeById(List<CategoryTreeDTO> nodes, Long categoryId) {
         for (CategoryTreeDTO node : nodes) {
             if (node.getId().equals(categoryId)) {

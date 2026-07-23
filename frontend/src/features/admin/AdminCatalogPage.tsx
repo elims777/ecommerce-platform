@@ -49,6 +49,15 @@ const findCatName = (tree: CategoryTree[], id: number): string => {
     return '';
 };
 
+const findCatById = (tree: CategoryTree[], id: number): CategoryTree | null => {
+    for (const cat of tree) {
+        if (cat.id === id) return cat;
+        const found = findCatById(cat.children, id);
+        if (found) return found;
+    }
+    return null;
+};
+
 const flattenForSelect = (
     categories: CategoryTree[],
     excludeId?: number,
@@ -536,6 +545,17 @@ const AdminCatalogPage = () => {
         onError: () => messageApi.error('Ошибка. Возможно есть товары или подкатегории.'),
     });
 
+    const toggleCategoryActiveMutation = useMutation({
+        mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+            await apiClient.put(`/v1/categories/${id}/${isActive ? 'deactivate' : 'activate'}`);
+        },
+        onSuccess: (_, { isActive }) => {
+            messageApi.success(isActive ? 'Категория скрыта' : 'Категория показана');
+            invalidateAll();
+        },
+        onError: () => messageApi.error('Ошибка при обновлении статуса категории'),
+    });
+
     // ── Product mutations ─────────────────────────────────────────────────────
 
     const moveProductMutation = useMutation({
@@ -731,6 +751,8 @@ const AdminCatalogPage = () => {
     const parentOptions = flattenForSelect(categoryTree, editingCatId || undefined);
     const flatCategoryOptions = flattenForSelect(categoryTree);
 
+    const selectedCategory = selectedCategoryId ? findCatById(categoryTree, selectedCategoryId) : null;
+
     const activePage = searchQuery.length >= 2 ? searchPage : productsPage;
     const totalPages = activePage ? Math.ceil(activePage.totalElements / pageSize) : 0;
     const isPaginated = !activeLetter;
@@ -827,7 +849,7 @@ const AdminCatalogPage = () => {
                     </button>
                     <NavLink
                         to="/admin/products/new"
-                        className="rf-btn rf-btn-sm rf-btn-primary"
+                        className="rf-btn rf-btn-sm rf-btn-quiet"
                     >
                         <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                             <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -941,6 +963,28 @@ const AdminCatalogPage = () => {
                                     <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
                                         <path d="M11 2l3 3-8 8H3v-3L11 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
                                     </svg>
+                                </button>
+                                {/* Показать / скрыть категорию */}
+                                <button
+                                    className="rf-btn rf-btn-ghost"
+                                    style={{ height: 28, width: 28, padding: 0, color: 'var(--ink-2)', opacity: selectedCategory ? 1 : 0.35 }}
+                                    disabled={!selectedCategory || toggleCategoryActiveMutation.isPending}
+                                    onClick={() => selectedCategory && toggleCategoryActiveMutation.mutate({ id: selectedCategory.id, isActive: selectedCategory.isActive })}
+                                    title={selectedCategory && !selectedCategory.isActive ? 'Показать категорию' : 'Скрыть категорию'}
+                                >
+                                    {selectedCategory && !selectedCategory.isActive ? (
+                                        // Глаз перечёркнутый — категория скрыта, клик покажет
+                                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                            <path d="M2 2l12 12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                                            <path d="M6.5 6.5a2 2 0 0 0 2.8 2.8M4.3 4.4C2.7 5.4 1.5 7 1.5 8c0 0 2.5 4 6.5 4 1 0 1.9-.25 2.7-.65M11.4 11.3C13 10.3 14.5 8 14.5 8s-2.5-4-6.5-4c-.6 0-1.2.1-1.7.25" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    ) : (
+                                        // Глаз — категория видна, клик скроет
+                                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                            <path d="M1.5 8s2.5-4 6.5-4 6.5 4 6.5 4-2.5 4-6.5 4-6.5-4-6.5-4z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+                                            <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4" />
+                                        </svg>
+                                    )}
                                 </button>
                                 {/* Удалить */}
                                 <button
