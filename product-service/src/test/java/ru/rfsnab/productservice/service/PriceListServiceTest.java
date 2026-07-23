@@ -1,6 +1,8 @@
 package ru.rfsnab.productservice.service;
 
 import jakarta.persistence.EntityManager;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -19,6 +21,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
+import ru.rfsnab.productservice.dto.CategoryTreeDTO;
 import ru.rfsnab.productservice.dto.PriceListRequested;
 import ru.rfsnab.productservice.dto.PriceListResponse;
 import ru.rfsnab.productservice.exception.CategoryValidationException;
@@ -37,6 +40,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeoutException;
@@ -241,13 +245,16 @@ class PriceListServiceTest {
         }
 
         @Test
-        @DisplayName("B2B клиент получает цену price, B2C — wholesalePrice; XLS содержит 4 колонки без остатка")
+        @DisplayName("B2B клиент получает цену price, B2C — wholesalePrice; лист сгруппирован по категории с нумерацией")
         void generate_B2BClient_UsesPriceColumn() throws IOException {
             PriceListRequest request = PriceListRequest.builder()
                     .id(1L).userId(10L).clientType("B2B").status(PriceListStatus.PENDING)
                     .categoryIds(List.of(1L)).createdAt(LocalDateTime.now()).build();
             when(priceListRequestRepository.findById(1L)).thenReturn(java.util.Optional.of(request));
-            when(categoryService.getSubtreeCategoryIds(List.of(1L))).thenReturn(List.of(1L, 2L));
+
+            CategoryTreeDTO categoryNode = CategoryTreeDTO.builder()
+                    .id(1L).name("Огнетушители").displayOrder(0).build();
+            when(categoryService.getCategoryTree()).thenReturn(List.of(categoryNode));
 
             Product product = Product.builder()
                     .id(1L).sku("ART-1").name("Товар 1").unitOfMeasure("шт")
@@ -255,7 +262,7 @@ class PriceListServiceTest {
                     .stockQuantity(50).isActive(true).build();
 
             Page<Product> page = new PageImpl<>(List.of(product), PageRequest.of(0, 1000), 1);
-            when(productRepository.findByCategoryIdInAndIsActiveTrue(eq(List.of(1L, 2L)), any(Pageable.class)))
+            when(productRepository.findByCategoryIdAndIsActiveTrue(eq(1L), any(Pageable.class)))
                     .thenReturn(page);
 
             ByteArrayOutputStream capturedBytes = new ByteArrayOutputStream();
@@ -274,18 +281,80 @@ class PriceListServiceTest {
             try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(capturedBytes.toByteArray()))) {
                 Sheet sheet = workbook.getSheetAt(0);
 
-                Row header = sheet.getRow(0);
-                assertThat(header.getLastCellNum()).isEqualTo((short) 4);
-                assertThat(header.getCell(0).getStringCellValue()).isEqualTo("Артикул");
-                assertThat(header.getCell(1).getStringCellValue()).isEqualTo("Наименование");
-                assertThat(header.getCell(2).getStringCellValue()).isEqualTo("Ед.изм.");
-                assertThat(header.getCell(3).getStringCellValue()).isEqualTo("Цена");
+                boolean categoryHeaderFound = false;
+                Row productRow = null;
+                for (Row row : sheet) {
+                    Cell nameCell = row.getCell(2);
+                    if (nameCell != null && nameCell.getCellType() == CellType.STRING
+                            && nameCell.getStringCellValue().contains("Огнетушители")) {
+                        categoryHeaderFound = true;
+                    }
+                    Cell skuCell = row.getCell(1);
+                    if (skuCell != null && skuCell.getCellType() == CellType.STRING
+                            && "ART-1".equals(skuCell.getStringCellValue())) {
+                        productRow = row;
+                    }
+                }
 
-                Row dataRow = sheet.getRow(1);
-                assertThat(dataRow.getCell(0).getStringCellValue()).isEqualTo("ART-1");
-                assertThat(dataRow.getCell(1).getStringCellValue()).isEqualTo("Товар 1");
-                assertThat(dataRow.getCell(2).getStringCellValue()).isEqualTo("шт");
-                assertThat(dataRow.getCell(3).getStringCellValue()).isEqualTo("100.00"); // B2B -> price
+                assertThat(categoryHeaderFound).as("строка-заголовок категории 'Огнетушители' найдена").isTrue();
+                assertThat(productRow).as("товарная строка ART-1 найдена").isNotNull();
+                assertThat(productRow.getCell(0).getStringCellValue()).contains("1");
+                assertThat(productRow.getCell(1).getStringCellValue()).isEqualTo("ART-1");
+                assertThat(productRow.getCell(2).getStringCellValue()).isEqualTo("Товар 1");
+                assertThat(productRow.getCell(3).getStringCellValue()).isEqualTo("шт");
+                assertThat(productRow.getCell(4).getStringCellValue()).isEqualTo("100.00"); // B2B -> price
+            }
+        }
+
+        @Test
+        @DisplayName("родитель и потомок оба выбраны, потомок первым в списке -> потомок не дублируется top-level")
+        void generate_ParentAndChildBothSelected_ChildNotDuplicatedAsTopLevel() throws IOException {
+            PriceListRequest request = PriceListRequest.builder()
+                    .id(1L).userId(10L).clientType("B2B").status(PriceListStatus.PENDING)
+                    .categoryIds(List.of(2L, 1L)).createdAt(LocalDateTime.now()).build();
+            when(priceListRequestRepository.findById(1L)).thenReturn(java.util.Optional.of(request));
+
+            CategoryTreeDTO childNode = CategoryTreeDTO.builder()
+                    .id(2L).name("Порошковые").displayOrder(0).build();
+            CategoryTreeDTO parentNode = CategoryTreeDTO.builder()
+                    .id(1L).name("Огнетушители").displayOrder(0)
+                    .children(new ArrayList<>(List.of(childNode))).build();
+            when(categoryService.getCategoryTree()).thenReturn(List.of(parentNode));
+
+            Product product = Product.builder()
+                    .id(1L).sku("ART-2").name("Товар 2").unitOfMeasure("шт")
+                    .price(new BigDecimal("50.00")).wholesalePrice(new BigDecimal("60.00"))
+                    .stockQuantity(10).isActive(true).build();
+
+            when(productRepository.findByCategoryIdAndIsActiveTrue(eq(1L), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 1000), 0));
+            when(productRepository.findByCategoryIdAndIsActiveTrue(eq(2L), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(product), PageRequest.of(0, 1000), 1));
+
+            ByteArrayOutputStream capturedBytes = new ByteArrayOutputStream();
+            doAnswer(inv -> {
+                byte[] data = inv.getArgument(0);
+                capturedBytes.write(data);
+                return null;
+            }).when(storageService).uploadBytes(any(byte[].class), anyString(), anyString());
+
+            priceListService.generate(1L);
+
+            assertThat(request.getRowCount()).isEqualTo(1);
+
+            try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(capturedBytes.toByteArray()))) {
+                Sheet sheet = workbook.getSheetAt(0);
+
+                int childHeaderCount = 0;
+                for (Row row : sheet) {
+                    Cell nameCell = row.getCell(2);
+                    if (nameCell != null && nameCell.getCellType() == CellType.STRING
+                            && "Порошковые".equals(nameCell.getStringCellValue())) {
+                        childHeaderCount++;
+                    }
+                }
+
+                assertThat(childHeaderCount).as("заголовок дочерней категории выведен ровно один раз").isEqualTo(1);
             }
         }
 
@@ -296,8 +365,7 @@ class PriceListServiceTest {
                     .id(1L).userId(10L).clientType("B2B").status(PriceListStatus.PENDING)
                     .categoryIds(List.of(1L)).createdAt(LocalDateTime.now()).build();
             when(priceListRequestRepository.findById(1L)).thenReturn(java.util.Optional.of(request));
-            when(categoryService.getSubtreeCategoryIds(List.of(1L)))
-                    .thenThrow(new RuntimeException("category tree broken"));
+            when(categoryService.getCategoryTree()).thenThrow(new RuntimeException("category tree broken"));
 
             priceListService.generate(1L);
 

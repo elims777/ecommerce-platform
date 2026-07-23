@@ -14,6 +14,7 @@ import { isAdmin } from '@/types/auth';
 import type { ClientType } from '@/types/auth';
 import type { MenuProps } from 'antd';
 import CatalogMegaMenu from '@/features/catalog/CatalogMegaMenu';
+import PriceListModal from '@/components/PriceListModal';
 
 const TOPBAR_H = 36;
 const MAIN_H = 76;
@@ -180,6 +181,7 @@ const ClientLayout = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [megaMenuOpen, setMegaMenuOpen] = useState(false);
+    const [priceListModalOpen, setPriceListModalOpen] = useState(false);
     const megaMenuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const prevIndexRef = useRef(getPageIndex(location.pathname));
     const screens = Grid.useBreakpoint();
@@ -218,6 +220,11 @@ const ClientLayout = () => {
     const handleLogout = async () => {
         await logout();
         navigate('/');
+    };
+
+    const handlePriceListClick = () => {
+        if (!isAuthenticated) { navigate('/login'); return; }
+        setPriceListModalOpen(true);
     };
 
     const currentIndex = getPageIndex(location.pathname);
@@ -267,6 +274,8 @@ const ClientLayout = () => {
                         <>
                             <NavLink to="/about" style={{ opacity: 0.85, color: 'inherit' }}>О компании</NavLink>
                             <NavLink to="/contacts" style={{ opacity: 0.85, color: 'inherit' }}>Контакты</NavLink>
+                            <span style={{ opacity: 0.35 }}>·</span>
+                            <span onClick={handlePriceListClick} style={{ opacity: 0.85, color: 'inherit', cursor: 'pointer' }}>Прайс-лист</span>
                             <span style={{ opacity: 0.35 }}>·</span>
                         </>
                     )}
@@ -504,6 +513,7 @@ const ClientLayout = () => {
                         <>
                             <NavLink to="/orders" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Мои заказы</NavLink>
                             <NavLink to="/price-lists" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Прайс-листы</NavLink>
+                            <span onClick={() => { setMobileNavOpen(false); handlePriceListClick(); }} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)', cursor: 'pointer' }}>Заказать прайс-лист</span>
                             <NavLink to="/profile" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Профиль</NavLink>
                             {user && isAdmin(user) && (
                                 <NavLink to="/admin" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Админ-панель</NavLink>
@@ -604,6 +614,8 @@ const ClientLayout = () => {
                     </div>
                 </div>
             </footer>
+
+            <PriceListModal open={priceListModalOpen} onClose={() => setPriceListModalOpen(false)} />
         </div>
     );
 };
