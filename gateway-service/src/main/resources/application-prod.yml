@@ -193,6 +193,18 @@ spring:
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@ipKeyResolver}"
 
+            - id: price-lists-api
+              uri: http://product-service:8083
+              predicates:
+                - Path=/api/v1/price-lists/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 15
+                    redis-rate-limiter.burstCapacity: 25
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
             # === ORDER-SERVICE ===
             - id: admin-orders-api
               uri: http://order-service:8084
