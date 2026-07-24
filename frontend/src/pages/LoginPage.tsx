@@ -183,7 +183,7 @@ const LoginPage = () => {
                         <div style={{ marginBottom: 14 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                                 <label style={{ ...labelStyle, marginBottom: 0 }}>Пароль</label>
-                                <a style={{ fontSize: 'var(--text-sm)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}>Забыли пароль?</a>
+                                <NavLink to="/forgot-password" style={{ fontSize: 'var(--text-sm)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer', textDecoration: 'none' }}>Забыли пароль?</NavLink>
                             </div>
                             <Form.Item name="password" noStyle rules={[{ required: true, message: 'Введите пароль' }, { min: 8, message: 'Минимум 8 символов' }]}>
                                 <Input.Password style={inputStyle} placeholder="••••••••" />
