@@ -47,6 +47,18 @@ public class EmailService {
         sendHtml(toEmail, "Подтверждение почтового адреса", "verification", model);
     }
 
+    public void sendPasswordResetEmail(String toEmail, String firstName, String rawToken) {
+        log.info("Send password reset email to: {}", toEmail);
+
+        String resetLink = frontendUrl + "/reset-password?token=" + rawToken;
+
+        Map<String, Object> model = new HashMap<>();
+        model.put("firstName", firstName);
+        model.put("resetLink", resetLink);
+
+        sendHtml(toEmail, "Сброс пароля — РФСнаб", "password-reset", model);
+    }
+
     /**
      * Уведомление о создании заказа
      */

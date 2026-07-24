@@ -5,6 +5,7 @@ import {
     TruckOutlined,
     TagOutlined,
     TeamOutlined,
+    FilePdfOutlined,
 } from '@ant-design/icons';
 
 const { Title, Paragraph, Text } = Typography;
@@ -89,6 +90,25 @@ const AboutPage = () => {
                         <Text strong>{company.ogrn}</Text>
                     </Col>
                 </Row>
+            </Card>
+
+            <Title level={3} style={{ marginTop: 24, marginBottom: 16 }}>
+                Специальная оценка условий труда (СОУТ)
+            </Title>
+            <Card>
+                <Paragraph style={{ fontSize: 16 }}>
+                    В соответствии с требованиями Федерального закона от 28.12.2013
+                    № 426-ФЗ «О специальной оценке условий труда» в ООО «МСВ» проведена
+                    специальная оценка условий труда (СОУТ) на рабочих местах.
+                </Paragraph>
+                <Space direction="vertical">
+                    <a href="/sout-svodnaya-vedomost-2026.pdf" target="_blank" rel="noopener">
+                        <FilePdfOutlined /> Сводная ведомость результатов проведения специальной оценки условий труда, 2026 г.
+                    </a>
+                    <a href="/sout-perechen-meropriyatiy-2026.pdf" target="_blank" rel="noopener">
+                        <FilePdfOutlined /> Перечень рекомендуемых мероприятий по улучшению условий труда, 2026 г.
+                    </a>
+                </Space>
             </Card>
         </div>
     );

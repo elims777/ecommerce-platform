@@ -31,7 +31,10 @@ import java.util.List;
 public class InternalTokenFilter extends OncePerRequestFilter {
 
     private static final List<String> INTERNAL_PATHS = List.of(
-            "/v1/users/*/profile-completeness"
+            "/v1/users/*/profile-completeness",
+            "/v1/users/account-by-email",
+            "/v1/users/*/password",
+            "/api/v1/legal-entities/*/password"
     );
 
     private final AntPathMatcher matcher = new AntPathMatcher();

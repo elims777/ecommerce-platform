@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import ru.rfsnab.userservice.exceptions.LegalEntityAlreadyExistsException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotFoundException;
 import ru.rfsnab.userservice.models.LegalEntity;
+import ru.rfsnab.userservice.models.dto.SetPasswordRequest;
 import ru.rfsnab.userservice.models.dto.legal.RegisterLegalEntityRequest;
 import ru.rfsnab.userservice.models.enums.VerificationStatus;
 import ru.rfsnab.userservice.services.LegalEntityService;
@@ -22,6 +23,12 @@ import ru.rfsnab.userservice.services.LegalEntityService;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -127,6 +134,51 @@ class LegalEntityControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(content().contentTypeCompatibleWith(org.springframework.http.MediaType.TEXT_HTML))
                     .andExpect(content().string(org.hamcrest.Matchers.containsString("legal_confirmed=error")));
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/v1/legal-entities/{id}/password")
+    class SetPasswordTests {
+
+        @Test
+        @DisplayName("200 OK — хеш записан как есть")
+        void shouldSetPassword() throws Exception {
+            SetPasswordRequest request = new SetPasswordRequest("already-hashed-value");
+            doNothing().when(legalEntityService).setPasswordHash(1L, "already-hashed-value");
+
+            mockMvc.perform(put("/api/v1/legal-entities/1/password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk());
+
+            verify(legalEntityService, times(1)).setPasswordHash(1L, "already-hashed-value");
+        }
+
+        @Test
+        @DisplayName("404 Not Found — юрлицо не найдено")
+        void shouldReturn404WhenNotFound() throws Exception {
+            SetPasswordRequest request = new SetPasswordRequest("hash");
+            org.mockito.Mockito.doThrow(new LegalEntityNotFoundException("Юрлицо не найдено: 99"))
+                    .when(legalEntityService).setPasswordHash(99L, "hash");
+
+            mockMvc.perform(put("/api/v1/legal-entities/99/password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("400 Bad Request — пустой passwordHash")
+        void shouldReturn400WhenPasswordHashBlank() throws Exception {
+            SetPasswordRequest request = new SetPasswordRequest("");
+
+            mockMvc.perform(put("/api/v1/legal-entities/1/password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+
+            verify(legalEntityService, never()).setPasswordHash(anyLong(), anyString());
         }
     }
 }
