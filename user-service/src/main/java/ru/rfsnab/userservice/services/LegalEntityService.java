@@ -25,6 +25,7 @@ import ru.rfsnab.userservice.repository.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -222,6 +223,18 @@ public class LegalEntityService {
         ));
 
         log.info("Link confirmed: userId={} → legalEntityId={}", user.getId(), entity.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<LegalEntity> findByEmail(String email) {
+        return legalEntityRepository.findByEmail(email);
+    }
+
+    @Transactional
+    public void setPasswordHash(Long id, String passwordHash) {
+        LegalEntity entity = getById(id);
+        entity.setPassword(passwordHash);
+        legalEntityRepository.save(entity);
     }
 
     @Transactional(readOnly = true)

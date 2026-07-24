@@ -12,6 +12,8 @@ import AdminLayout from '@/components/layouts/AdminLayout';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 const HomePage = lazy(() => import('@/pages/HomePage'));
 const CatalogPage = lazy(() => import('@/features/catalog/CatalogPage'));
 const ProductPage = lazy(() => import('@/features/catalog/ProductPage'));
@@ -115,6 +117,8 @@ const AppRoutes = () => {
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Route>
 
           <Route element={<ClientLayout />}>

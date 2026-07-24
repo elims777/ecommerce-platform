@@ -229,6 +229,7 @@ services:
       YANDEX_CLIENT_SECRET: ${YANDEX_CLIENT_SECRET}
       USER_SERVICE_URL: http://user-service:8081
       NOTIFICATION_SERVICE_URL: http://notification-service:8082
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
       LOGGING_FILE_NAME: ""
     volumes:
       - /var/log/rfsnab/auth-service:/var/log/rfsnab/auth-service
@@ -259,6 +260,7 @@ services:
       SPRING_MAIL_PORT: ${SMTP_PORT}
       SPRING_MAIL_USERNAME: ${MAIL_USER}
       SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
+      FRONTEND_URL: ${FRONTEND_URL}
       LOGGING_FILE_NAME: ""
     volumes:
       - /var/log/rfsnab/notification-service:/var/log/rfsnab/notification-service

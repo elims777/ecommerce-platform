@@ -151,6 +151,22 @@ export const refreshTokens = async (refreshToken: string): Promise<AuthTokens> =
     };
 };
 
+/** Запрос ссылки для сброса пароля — POST /v1/auth/forgot-password */
+export const forgotPassword = async (email: string): Promise<void> => {
+    await apiClient.post('/v1/auth/forgot-password', { email });
+};
+
+/** Проверка валидности токена сброса пароля — GET /v1/auth/reset-password/validate */
+export const validateResetToken = async (token: string): Promise<boolean> => {
+    const { data } = await apiClient.get<{ valid: boolean }>('/v1/auth/reset-password/validate', { params: { token } });
+    return Boolean(data.valid);
+};
+
+/** Сброс пароля по токену — POST /v1/auth/reset-password */
+export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
+    await apiClient.post('/v1/auth/reset-password', { token, newPassword });
+};
+
 /** Переключение контекста B2C↔B2B — POST /v1/auth/switch-context */
 export const switchContext = async (
     targetType: 'B2C' | 'B2B',

@@ -13,11 +13,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.rfsnab.userservice.models.LegalEntity;
 import ru.rfsnab.userservice.models.RoleEntity;
 import ru.rfsnab.userservice.models.UserEntity;
 import ru.rfsnab.userservice.models.dto.RegistrationRequest;
+import ru.rfsnab.userservice.models.dto.SetPasswordRequest;
 import ru.rfsnab.userservice.models.dto.SimpleAuthRequest;
 import ru.rfsnab.userservice.models.dto.UserDto;
+import ru.rfsnab.userservice.services.LegalEntityService;
 import ru.rfsnab.userservice.services.UserService;
 
 import java.util.HashSet;
@@ -50,6 +53,9 @@ class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private LegalEntityService legalEntityService;
 
     @MockitoBean
     private PasswordEncoder passwordEncoder;
@@ -340,5 +346,82 @@ class UserControllerTest {
                 .andExpect(content().string("User verified successfully"));
 
         verify(userService, times(1)).verifyUser(1L);
+    }
+
+    @Test
+    @DisplayName("GET /v1/users/account-by-email - найдено физлицо возвращает USER")
+    void accountByEmail_UserFound_ReturnsUser() throws Exception {
+        when(userService.findUserByEmail("test@test.com")).thenReturn(Optional.of(testUser));
+
+        mockMvc.perform(get("/v1/users/account-by-email").param("email", "test@test.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId", is(1)))
+                .andExpect(jsonPath("$.accountType", is("USER")))
+                .andExpect(jsonPath("$.email", is("test@test.com")))
+                .andExpect(jsonPath("$.firstName", is("Firstname")));
+
+        verify(userService, times(1)).findUserByEmail("test@test.com");
+        verify(legalEntityService, never()).findByEmail(anyString());
+    }
+
+    @Test
+    @DisplayName("GET /v1/users/account-by-email - физлица нет, найдено юрлицо возвращает LEGAL")
+    void accountByEmail_LegalEntityFound_ReturnsLegal() throws Exception {
+        LegalEntity legalEntity = LegalEntity.builder()
+                .id(5L)
+                .email("company@example.com")
+                .fullName("ООО Ромашка")
+                .password("encoded")
+                .build();
+
+        when(userService.findUserByEmail("company@example.com")).thenReturn(Optional.empty());
+        when(legalEntityService.findByEmail("company@example.com")).thenReturn(Optional.of(legalEntity));
+
+        mockMvc.perform(get("/v1/users/account-by-email").param("email", "company@example.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountId", is(5)))
+                .andExpect(jsonPath("$.accountType", is("LEGAL")))
+                .andExpect(jsonPath("$.email", is("company@example.com")))
+                .andExpect(jsonPath("$.firstName", is("ООО Ромашка")));
+
+        verify(legalEntityService, times(1)).findByEmail("company@example.com");
+    }
+
+    @Test
+    @DisplayName("GET /v1/users/account-by-email - ничего не найдено возвращает 404")
+    void accountByEmail_NotFound_Returns404() throws Exception {
+        when(userService.findUserByEmail("nobody@test.com")).thenReturn(Optional.empty());
+        when(legalEntityService.findByEmail("nobody@test.com")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/v1/users/account-by-email").param("email", "nobody@test.com"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PUT /v1/users/{id}/password - записывает хеш как есть")
+    void setPassword_Success_ReturnsOk() throws Exception {
+        SetPasswordRequest request = new SetPasswordRequest("already-hashed-value");
+        doNothing().when(userService).setPasswordHash(1L, "already-hashed-value");
+
+        mockMvc.perform(put("/v1/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        verify(userService, times(1)).setPasswordHash(1L, "already-hashed-value");
+        verify(passwordEncoder, never()).encode(anyString());
+    }
+
+    @Test
+    @DisplayName("PUT /v1/users/{id}/password - пустой passwordHash возвращает 400")
+    void setPassword_BlankHash_Returns400() throws Exception {
+        SetPasswordRequest request = new SetPasswordRequest("");
+
+        mockMvc.perform(put("/v1/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        verify(userService, never()).setPasswordHash(anyLong(), anyString());
     }
 }
