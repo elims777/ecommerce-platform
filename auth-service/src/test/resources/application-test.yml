@@ -31,6 +31,9 @@ notification:
     url: http://localhost:8082
     verification: /verify-email?token=
 
+internal:
+  secret: test-internal-secret
+
 # JWT настройки для тестов
 jwt:
   secret: test-secret-key-for-jwt-signing-must-be-at-least-256-bits-long-for-HS256

@@ -90,6 +90,27 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Обработка невалидного или истёкшего токена сброса пароля
+     */
+    @ExceptionHandler(InvalidResetTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidResetToken(
+            InvalidResetTokenException ex,
+            HttpServletRequest request) {
+
+        log.warn("Invalid password reset token used for request: {}", request.getRequestURI());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Bad Request")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
      * Обработка всех остальных ошибок
      */
     @ExceptionHandler(Exception.class)

@@ -29,5 +29,8 @@ notification:
   service:
     url: http://notification-service:8082
 
+internal:
+  secret: ${INTERNAL_SECRET}
+
 app:
   frontend-url: ${APP_BASE_URL:http://72.56.14.213}
