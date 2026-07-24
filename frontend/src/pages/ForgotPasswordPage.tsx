@@ -100,7 +100,7 @@ const ForgotPasswordPage = () => {
 
                     {sent ? (
                         <div style={{ padding: 14, background: 'var(--navy-tint)', borderRadius: 'var(--r-4)', fontSize: 'var(--text-sm)', color: 'var(--brand-navy)' }}>
-                            Письмо отправлено, если такой email зарегистрирован. Проверьте почту.
+                            Если этот адрес зарегистрирован, мы отправили на него письмо со ссылкой для сброса пароля. Проверьте почту, в том числе папку «Спам».
                         </div>
                     ) : (
                         <Form<ForgotPasswordFormValues> layout="vertical" onFinish={handleSubmit} autoComplete="off">

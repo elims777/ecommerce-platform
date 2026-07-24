@@ -45,7 +45,7 @@ class PasswordResetControllerTest {
     void forgotPassword_ValidEmail_Returns200() throws Exception {
         doNothing().when(passwordResetService).forgot("test@example.com");
 
-        mockMvc.perform(post("/api/v1/auth/forgot-password")
+        mockMvc.perform(post("/v1/auth/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ForgotPasswordRequest("test@example.com"))))
                 .andExpect(status().isOk())
@@ -57,7 +57,7 @@ class PasswordResetControllerTest {
     @Test
     @DisplayName("POST /api/v1/auth/forgot-password - невалидный email → 400")
     void forgotPassword_InvalidEmail_Returns400() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/forgot-password")
+        mockMvc.perform(post("/v1/auth/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ForgotPasswordRequest("not-an-email"))))
                 .andExpect(status().isBadRequest());
@@ -68,7 +68,7 @@ class PasswordResetControllerTest {
     void resetPassword_ValidToken_Returns200() throws Exception {
         doNothing().when(passwordResetService).reset("valid-token", "newPassword123");
 
-        mockMvc.perform(post("/api/v1/auth/reset-password")
+        mockMvc.perform(post("/v1/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new ResetPasswordRequest("valid-token", "newPassword123"))))
@@ -84,7 +84,7 @@ class PasswordResetControllerTest {
         doThrow(new InvalidResetTokenException("Ссылка недействительна или устарела"))
                 .when(passwordResetService).reset("bad-token", "newPassword123");
 
-        mockMvc.perform(post("/api/v1/auth/reset-password")
+        mockMvc.perform(post("/v1/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new ResetPasswordRequest("bad-token", "newPassword123"))))
@@ -95,7 +95,7 @@ class PasswordResetControllerTest {
     @Test
     @DisplayName("POST /api/v1/auth/reset-password - пароль короче 8 символов → 400")
     void resetPassword_ShortPassword_Returns400() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/reset-password")
+        mockMvc.perform(post("/v1/auth/reset-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
                                 new ResetPasswordRequest("valid-token", "short"))))
@@ -109,7 +109,7 @@ class PasswordResetControllerTest {
     void validateResetToken_ReturnsValidFlag() throws Exception {
         when(passwordResetService.validate("some-token")).thenReturn(true);
 
-        mockMvc.perform(get("/api/v1/auth/reset-password/validate").param("token", "some-token"))
+        mockMvc.perform(get("/v1/auth/reset-password/validate").param("token", "some-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.valid").value(true));
     }

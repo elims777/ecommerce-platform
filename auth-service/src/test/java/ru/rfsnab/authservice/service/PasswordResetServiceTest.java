@@ -23,6 +23,7 @@ import ru.rfsnab.authservice.models.dto.PasswordResetConsumeResponse;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -110,7 +111,7 @@ class PasswordResetServiceTest {
                 eq(AccountByEmailResponse.class)
         )).thenThrow(new RuntimeException("boom"));
 
-        assertThatThrownBy(() -> passwordResetService.forgot(EMAIL)).doesNotThrowAnyException();
+        assertThatCode(() -> passwordResetService.forgot(EMAIL)).doesNotThrowAnyException();
     }
 
     // ==================== reset() Tests ====================

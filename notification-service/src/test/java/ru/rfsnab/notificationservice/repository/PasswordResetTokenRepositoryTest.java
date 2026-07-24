@@ -70,7 +70,7 @@ class PasswordResetTokenRepositoryTest {
         tokenRepository.save(PasswordResetToken.builder()
                 .tokenHash("hash-legal-entity-1")
                 .accountId(10L)
-                .accountType("LEGAL_ENTITY")
+                .accountType("LEGAL")
                 .email("legal@example.com")
                 .createdAt(now)
                 .expiresAt(now.plusMinutes(30))

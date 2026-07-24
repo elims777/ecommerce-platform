@@ -264,6 +264,7 @@ services:
       # Internal services
       USER_SERVICE_URL: http://user-service:8081
       NOTIFICATION_SERVICE_URL: http://notification-service:8082
+      INTERNAL_SECRET: ${INTERNAL_SECRET}
       APP_BASE_URL: ${APP_BASE_URL}
     volumes:
       - /var/log/rfsnab/auth-service:/var/log/rfsnab/auth-service

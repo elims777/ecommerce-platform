@@ -16,7 +16,7 @@ import ru.rfsnab.authservice.service.PasswordResetService;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/v1/auth")
 @RequiredArgsConstructor
 public class PasswordResetController {
 
