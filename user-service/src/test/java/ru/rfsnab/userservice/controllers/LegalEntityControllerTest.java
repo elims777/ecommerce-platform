@@ -23,7 +23,10 @@ import ru.rfsnab.userservice.services.LegalEntityService;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -163,6 +166,19 @@ class LegalEntityControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("400 Bad Request — пустой passwordHash")
+        void shouldReturn400WhenPasswordHashBlank() throws Exception {
+            SetPasswordRequest request = new SetPasswordRequest("");
+
+            mockMvc.perform(put("/api/v1/legal-entities/1/password")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+
+            verify(legalEntityService, never()).setPasswordHash(anyLong(), anyString());
         }
     }
 }

@@ -411,4 +411,17 @@ class UserControllerTest {
         verify(userService, times(1)).setPasswordHash(1L, "already-hashed-value");
         verify(passwordEncoder, never()).encode(anyString());
     }
+
+    @Test
+    @DisplayName("PUT /v1/users/{id}/password - пустой passwordHash возвращает 400")
+    void setPassword_BlankHash_Returns400() throws Exception {
+        SetPasswordRequest request = new SetPasswordRequest("");
+
+        mockMvc.perform(put("/v1/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+
+        verify(userService, never()).setPasswordHash(anyLong(), anyString());
+    }
 }

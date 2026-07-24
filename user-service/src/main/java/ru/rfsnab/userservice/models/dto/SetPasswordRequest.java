@@ -1,3 +1,5 @@
 package ru.rfsnab.userservice.models.dto;
 
-public record SetPasswordRequest(String passwordHash) {}
+import jakarta.validation.constraints.NotBlank;
+
+public record SetPasswordRequest(@NotBlank String passwordHash) {}

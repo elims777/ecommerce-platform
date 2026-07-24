@@ -64,7 +64,7 @@ public class LoggingAspect {
     /**
      * Логирование вызовов сервисов с замером времени выполнения
      */
-    @Around("serviceLayer()")
+    @Around("serviceLayer() && !execution(* *..setPasswordHash(..))")
     public Object logAroundService(ProceedingJoinPoint joinPoint) throws Throwable {
         String methodName = joinPoint.getSignature().toShortString();
         Object[] args = joinPoint.getArgs();
