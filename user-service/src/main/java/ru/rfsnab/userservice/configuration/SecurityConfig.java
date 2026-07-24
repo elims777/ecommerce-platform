@@ -59,7 +59,12 @@ public class SecurityConfig {
                                 "/api/v1/legal-entities/*"
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
-                                "/v1/users/*/profile-completeness"
+                                "/v1/users/*/profile-completeness",
+                                "/v1/users/account-by-email"
+                        ).hasRole("INTERNAL")
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT,
+                                "/v1/users/*/password",
+                                "/api/v1/legal-entities/*/password"
                         ).hasRole("INTERNAL")
                         .anyRequest().authenticated()
                 )

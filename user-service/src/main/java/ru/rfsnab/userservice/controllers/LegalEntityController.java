@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.userservice.mappers.LegalEntityMapper;
+import ru.rfsnab.userservice.models.dto.SetPasswordRequest;
 import ru.rfsnab.userservice.models.dto.legal.*;
 import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthRequest;
 import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthResponse;
@@ -156,5 +157,11 @@ public class LegalEntityController {
             @PathVariable Long legalEntityId) {
         boolean confirmed = legalEntityService.isLinkConfirmed(userId, legalEntityId);
         return ResponseEntity.ok(Map.of("confirmed", confirmed));
+    }
+
+    @PutMapping("/{id}/password")
+    public ResponseEntity<Void> setPassword(@PathVariable Long id, @Valid @RequestBody SetPasswordRequest request) {
+        legalEntityService.setPasswordHash(id, request.passwordHash());
+        return ResponseEntity.ok().build();
     }
 }

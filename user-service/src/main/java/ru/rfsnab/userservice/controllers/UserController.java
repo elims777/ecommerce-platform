@@ -13,18 +13,23 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.userservice.exceptions.UserAlreadyExistsException;
+import ru.rfsnab.userservice.exceptions.UserNotFoundException;
 import ru.rfsnab.userservice.mappers.RegistrationMapper;
 import ru.rfsnab.userservice.mappers.UserMapper;
+import ru.rfsnab.userservice.models.LegalEntity;
 import ru.rfsnab.userservice.models.UserEntity;
+import ru.rfsnab.userservice.models.dto.AccountByEmailResponse;
 import ru.rfsnab.userservice.models.dto.ChangeRoleRequest;
 import ru.rfsnab.userservice.models.dto.ChangeStatusRequest;
 import ru.rfsnab.userservice.models.dto.InactiveUserDto;
 import ru.rfsnab.userservice.models.dto.RegAuthResponse;
 import ru.rfsnab.userservice.models.dto.ProfileCompletenessDto;
 import ru.rfsnab.userservice.models.dto.RegistrationRequest;
+import ru.rfsnab.userservice.models.dto.SetPasswordRequest;
 import ru.rfsnab.userservice.models.dto.SimpleAuthRequest;
 import ru.rfsnab.userservice.models.dto.UpdateUserAdminRequest;
 import ru.rfsnab.userservice.models.dto.UserDto;
+import ru.rfsnab.userservice.services.LegalEntityService;
 import ru.rfsnab.userservice.services.UserService;
 
 import java.time.LocalDateTime;
@@ -36,7 +41,11 @@ import java.util.Optional;
 @RequestMapping("/v1/users")
 @RequiredArgsConstructor
 public class UserController {
+    private static final String ACCOUNT_TYPE_USER = "USER";
+    private static final String ACCOUNT_TYPE_LEGAL = "LEGAL";
+
     private final UserService userService;
+    private final LegalEntityService legalEntityService;
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -195,5 +204,28 @@ public class UserController {
     public ResponseEntity<ProfileCompletenessDto> getProfileCompleteness(@PathVariable Long id) {
         List<String> missing = userService.getMissingProfileFields(id);
         return ResponseEntity.ok(new ProfileCompletenessDto(missing.isEmpty(), missing));
+    }
+
+    @GetMapping("/account-by-email")
+    public ResponseEntity<AccountByEmailResponse> getAccountByEmail(@RequestParam String email) {
+        Optional<UserEntity> user = userService.findUserByEmail(email);
+        if (user.isPresent()) {
+            UserEntity u = user.get();
+            return ResponseEntity.ok(new AccountByEmailResponse(u.getId(), ACCOUNT_TYPE_USER, u.getEmail(), u.getFirstname()));
+        }
+
+        Optional<LegalEntity> legalEntity = legalEntityService.findByEmail(email);
+        if (legalEntity.isPresent()) {
+            LegalEntity le = legalEntity.get();
+            return ResponseEntity.ok(new AccountByEmailResponse(le.getId(), ACCOUNT_TYPE_LEGAL, le.getEmail(), le.getFullName()));
+        }
+
+        throw new UserNotFoundException("Аккаунт с email " + email + " не найден");
+    }
+
+    @PutMapping("/{id}/password")
+    public ResponseEntity<Void> setPassword(@PathVariable Long id, @Valid @RequestBody SetPasswordRequest request) {
+        userService.setPasswordHash(id, request.passwordHash());
+        return ResponseEntity.ok().build();
     }
 }

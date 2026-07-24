@@ -199,6 +199,14 @@ public class UserService {
         log.info("Resend verification requested: userId={}", userId);
     }
 
+    @Transactional
+    public void setPasswordHash(Long id, String passwordHash) {
+        UserEntity user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(String.format("User with id = %s not found", id)));
+        user.setPassword(passwordHash);
+        userRepository.save(user);
+    }
+
     public List<String> getMissingProfileFields(Long userId) {
         UserEntity user = findUserById(userId)
                 .orElseThrow(() -> new UserNotFoundException(String.format("User with id = %s not found", userId)));
