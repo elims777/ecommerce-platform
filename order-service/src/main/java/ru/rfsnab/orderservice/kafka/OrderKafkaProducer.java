@@ -21,6 +21,10 @@ public class OrderKafkaProducer {
     private final WarehousePointRepository warehousePointRepository;
 
     private void send(String eventType, Order order){
+        send(eventType, order, null, null);
+    }
+
+    private void send(String eventType, Order order, String documentType, String documentFileName){
         OrderEvent event = OrderEvent.builder()
                 .eventType(eventType)
                 .orderId(order.getId())
@@ -52,6 +56,8 @@ public class OrderKafkaProducer {
                 .companyName(order.getCompanyName())
                 .inn(order.getInn())
                 .pickupPoint(buildPickupPoint(order))
+                .documentType(documentType)
+                .documentFileName(documentFileName)
                 .build();
 
         kafkaTemplate.send(topics.getOrderEvents(), order.getId().toString(), event);
@@ -83,5 +89,9 @@ public class OrderKafkaProducer {
 
     public void sendOrderStatusChanged(Order order) {
         send("ORDER_STATUS_CHANGED", order);
+    }
+
+    public void sendOrderDocumentAdded(Order order, String documentTypeName, String fileName) {
+        send("ORDER_DOCUMENT_ADDED", order, documentTypeName, fileName);
     }
 }

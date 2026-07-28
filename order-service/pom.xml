@@ -14,6 +14,11 @@
     <name>order-service</name>
     <description>Order and Cart management service</description>
 
+    <properties>
+        <!-- Локальная версия для AWS SDK (используется только здесь, как в product-service) -->
+        <aws-sdk.version>2.20.26</aws-sdk.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -126,6 +131,13 @@
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- ================== AWS SDK (Yandex Object Storage) ================== -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws-sdk.version}</version>
         </dependency>
     </dependencies>
 

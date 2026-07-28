@@ -46,6 +46,19 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+# Yandex Object Storage Configuration
+yandex:
+  storage:
+    access-key: "${YANDEX_STORAGE_ACCESS_KEY}"
+    secret-key: "${YANDEX_STORAGE_SECRET_KEY}"
+    bucket-name: ecommerce-products
+    endpoint: https://storage.yandexcloud.net
+    region: ru-central1
 
 services:
   product:

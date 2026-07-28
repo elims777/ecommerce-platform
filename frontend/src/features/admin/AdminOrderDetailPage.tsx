@@ -1,13 +1,36 @@
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { NavLink } from '@/components/navigation';
-import { Select, App } from 'antd';
+import { Select, App, Upload, Button, Popconfirm } from 'antd';
+import { UploadOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import apiClient from '@/api/client';
 import { changeOrderStatus } from '@/api/adminOrders';
+import {
+  getAdminOrderDocuments,
+  uploadOrderDocument,
+  deleteOrderDocument,
+  downloadAdminOrderDocument,
+  triggerBrowserDownload,
+} from '@/api/orderDocuments';
 import { OrderStatus, OrderStatusLabels, PaymentMethodLabels, DeliveryMethodLabels } from '@/types/order';
 import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
 import { getAllowedTransitions } from '@/utils/orderTransitions';
 import type { OrderDto, OrderItemDto } from '@/types/order';
+
+/** Коды типов документов заказа — соответствие бэкенду (OrderDocument.type) */
+const DOCUMENT_TYPE_OPTIONS = [
+  { value: 'COMMERCIAL_OFFER', label: 'Коммерческое предложение' },
+  { value: 'INVOICE', label: 'Счёт' },
+  { value: 'UPD', label: 'УПД' },
+  { value: 'CERTIFICATE', label: 'Сертификат' },
+];
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+  return `${Math.round(bytes / 1024)} КБ`;
+};
 
 const formatPrice = (n: number) =>
   new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(n);
@@ -54,6 +77,50 @@ const AdminOrderDetailPage = () => {
     },
     onError: () => messageApi.error('Ошибка смены статуса'),
   });
+
+  const [documentType, setDocumentType] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+
+  const { data: documents } = useQuery({
+    queryKey: ['adminOrderDocuments', id],
+    queryFn: () => getAdminOrderDocuments(id!),
+    enabled: !!id,
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: () => uploadOrderDocument(id!, documentType!, pendingFile!),
+    onSuccess: () => {
+      messageApi.success('Документ загружен');
+      queryClient.invalidateQueries({ queryKey: ['adminOrderDocuments', id] });
+      setDocumentType(null);
+      setPendingFile(null);
+    },
+    onError: (error) => {
+      if (isAxiosError(error) && error.response?.status === 400) {
+        messageApi.error(error.response.data?.message || 'Не удалось загрузить документ');
+      } else {
+        messageApi.error('Не удалось загрузить документ');
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (docId: string) => deleteOrderDocument(id!, docId),
+    onSuccess: () => {
+      messageApi.success('Документ удалён');
+      queryClient.invalidateQueries({ queryKey: ['adminOrderDocuments', id] });
+    },
+    onError: () => messageApi.error('Не удалось удалить документ'),
+  });
+
+  const handleDownload = async (doc: NonNullable<typeof documents>[number]) => {
+    try {
+      const file = await downloadAdminOrderDocument(id!, doc);
+      triggerBrowserDownload(file);
+    } catch {
+      messageApi.error('Не удалось скачать документ');
+    }
+  };
 
   if (isLoading || !order) {
     return (
@@ -206,6 +273,79 @@ const AdminOrderDetailPage = () => {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Documents */}
+      <div className="rf-card" style={{ marginTop: 16, overflow: 'hidden' }}>
+        <div className="rf-card-header"><h3>Документы</h3></div>
+        <div style={{ padding: 16, display: 'flex', gap: 8, alignItems: 'center', borderBottom: '1px solid var(--line-1)' }}>
+          <Select
+            placeholder="Тип документа"
+            style={{ width: 260 }}
+            options={DOCUMENT_TYPE_OPTIONS}
+            value={documentType}
+            onChange={setDocumentType}
+          />
+          <Upload
+            beforeUpload={(file) => { setPendingFile(file); return false; }}
+            onRemove={() => setPendingFile(null)}
+            fileList={pendingFile ? [{ uid: pendingFile.name, name: pendingFile.name }] : []}
+            maxCount={1}
+          >
+            <Button icon={<UploadOutlined />}>Выбрать файл</Button>
+          </Upload>
+          <Button
+            type="primary"
+            disabled={!documentType || !pendingFile}
+            loading={uploadMutation.isPending}
+            onClick={() => uploadMutation.mutate()}
+          >
+            Загрузить
+          </Button>
+        </div>
+        <div className="rf-admin-table-wrap">
+          <table className="rf-admin-table">
+            <thead>
+              <tr>
+                <th>Тип</th>
+                <th>Файл</th>
+                <th style={{ width: 100, textAlign: 'right' }}>Размер</th>
+                <th style={{ width: 160 }}>Дата загрузки</th>
+                <th style={{ width: 140 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {(documents ?? []).map((doc) => (
+                <tr key={doc.id}>
+                  <td>{doc.typeName}</td>
+                  <td>{doc.fileName}</td>
+                  <td className="col-right rf-tabular">{formatFileSize(doc.sizeBytes)}</td>
+                  <td className="rf-tabular">{formatDate(doc.uploadedAt)}</td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <Button size="small" icon={<DownloadOutlined />} onClick={() => handleDownload(doc)} />
+                      <Popconfirm
+                        title="Удалить документ?"
+                        okText="Удалить"
+                        cancelText="Отмена"
+                        onConfirm={() => deleteMutation.mutate(doc.id)}
+                      >
+                        <Button size="small" danger icon={<DeleteOutlined />} loading={deleteMutation.isPending} />
+                      </Popconfirm>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {(documents ?? []).length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--ink-3)', padding: 24 }}>
+                    Документов пока нет
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

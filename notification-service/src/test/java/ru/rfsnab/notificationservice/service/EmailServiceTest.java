@@ -74,6 +74,8 @@ class EmailServiceTest {
                 "B2C",
                 null,
                 null,
+                null,
+                null,
                 null
         );
     }

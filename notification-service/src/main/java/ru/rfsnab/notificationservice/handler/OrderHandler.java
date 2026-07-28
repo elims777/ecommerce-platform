@@ -39,6 +39,7 @@ public class OrderHandler implements NotificationHandler{
                 case "ORDER_PAID" -> handleOrderPaid(event);
                 case "ORDER_CANCELLED" -> handleOrderCancelled(event);
                 case "ORDER_STATUS_CHANGED" -> handleStatusChanged(event);
+                case "ORDER_DOCUMENT_ADDED" -> handleDocumentAdded(event);
                 default -> log.warn("Неизвестный order eventType: {}", event.eventType());
             }
         } catch (Exception e){
@@ -69,6 +70,16 @@ public class OrderHandler implements NotificationHandler{
         );
         log.info("Order cancelled email: order={}, email={}",
                 event.orderNumber(), event.customerEmail());
+    }
+
+    private void handleDocumentAdded(OrderEvent event){
+        emailService.sendOrderDocumentAddedEmail(
+                event.customerEmail(),
+                event.orderNumber(),
+                event.documentType()
+        );
+        log.info("Order document added email: order={}, documentType={}, email={}",
+                event.orderNumber(), event.documentType(), event.customerEmail());
     }
 
     private void handleStatusChanged(OrderEvent event){
