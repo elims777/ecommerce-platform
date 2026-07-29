@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { App, Drawer, Grid } from 'antd';
+import { App, Drawer, Grid, Select } from 'antd';
 import { isAxiosError } from 'axios';
 import { getProducts, searchProducts } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
@@ -23,11 +23,6 @@ const SearchIcon = () => (
 const ChevRight = () => (
     <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="m9 18 6-6-6-6"/>
-    </svg>
-);
-const ChevDown = () => (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m6 9 6 6 6-6"/>
     </svg>
 );
 const XIcon = () => (
@@ -89,6 +84,15 @@ const CatalogPage = () => {
     const categoryId = searchParams.get('category') ? Number(searchParams.get('category')) : undefined;
     const searchQuery = searchParams.get('q') || '';
     const [searchInput, setSearchInput] = useState(searchQuery);
+    const sortValue = searchParams.get('sort') || '';
+    const clientType = useAuthStore((s) => s.user?.clientType ?? 'B2C');
+    const priceField = clientType === 'B2B' ? 'price' : 'wholesalePrice';
+    const sortMap: Record<string, string> = {
+        price_asc: `${priceField},asc`,
+        price_desc: `${priceField},desc`,
+        name_asc: 'name,asc',
+    };
+    const sort = sortMap[sortValue];
 
     const attrParams = searchParams.getAll('attr'); // ["Состав ткани:100% хлопок", ...]
     const selectedFilters: Record<string, string[]> = {};
@@ -107,12 +111,12 @@ const CatalogPage = () => {
     });
 
     const { data: productsPage, isLoading: productsLoading, isError } = useQuery({
-        queryKey: ['products', { page: currentPage, size: pageSize, categoryId, q: searchQuery, attr: attrParams }],
+        queryKey: ['products', { page: currentPage, size: pageSize, categoryId, q: searchQuery, attr: attrParams, sort }],
         queryFn: async () => {
             if (searchQuery) {
-                return searchProducts(searchQuery, currentPage - 1, pageSize);
+                return searchProducts(searchQuery, currentPage - 1, pageSize, sort);
             }
-            return getProducts({ page: currentPage - 1, size: pageSize, categoryId, attr: attrParams });
+            return getProducts({ page: currentPage - 1, size: pageSize, categoryId, attr: attrParams, sort });
         },
     });
 
@@ -171,6 +175,14 @@ const CatalogPage = () => {
         newParams.set('page', '1');
         setSearchParams(newParams);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleSortChange = (value: string) => {
+        const newParams = new URLSearchParams(searchParams);
+        if (value) newParams.set('sort', value);
+        else newParams.delete('sort');
+        newParams.set('page', '1');
+        setSearchParams(newParams);
     };
 
     const handleClearFilters = () => {
@@ -280,14 +292,20 @@ const CatalogPage = () => {
                             </button>
                         ))}
                     </div>
-                    <button style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                        height: 32, padding: '0 12px',
-                        background: 'var(--surface-2)', border: '1px solid var(--line-1)',
-                        borderRadius: 6, fontSize: 13, color: 'var(--ink-1)', cursor: 'pointer', fontFamily: 'var(--font-body)',
-                    }}>
-                        Сначала популярные <ChevDown />
-                    </button>
+                    <Select
+                        value={sortValue}
+                        onChange={handleSortChange}
+                        size="small"
+                        variant="borderless"
+                        style={{ height: 32, background: 'var(--surface-2)', border: '1px solid var(--line-1)', borderRadius: 6 }}
+                        popupMatchSelectWidth={false}
+                        options={[
+                            { value: '', label: 'Сначала популярные' },
+                            { value: 'price_asc', label: 'Сначала дешёвые' },
+                            { value: 'price_desc', label: 'Сначала дорогие' },
+                            { value: 'name_asc', label: 'По названию' },
+                        ]}
+                    />
                     {categoryId && !searchQuery && (
                         <button
                             onClick={handlePriceListClick}

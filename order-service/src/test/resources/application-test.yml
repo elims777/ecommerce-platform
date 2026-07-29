@@ -44,3 +44,11 @@ jwt:
 
 internal:
   secret: test-secret
+
+yandex:
+  storage:
+    access-key: test-access-key
+    secret-key: test-secret-key
+    bucket-name: test-bucket
+    endpoint: https://storage.yandexcloud.net
+    region: ru-central1

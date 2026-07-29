@@ -55,6 +55,15 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Validation Failed", message, request);
     }
 
+    /**
+     * Невалидный файл документа заказа (тип, размер, пустой файл).
+     */
+    @ExceptionHandler(InvalidDocumentException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidDocument(
+            InvalidDocumentException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid Document", ex.getMessage(), request);
+    }
+
     // ==================== 404 Not Found ====================
 
     /**
@@ -82,6 +91,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleWarehousePointNotFound(
             WarehousePointNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, "Warehouse Point Not Found", ex.getMessage(), request);
+    }
+
+    /**
+     * Документ заказа не найден.
+     */
+    @ExceptionHandler(OrderDocumentNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleOrderDocumentNotFound(
+            OrderDocumentNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, "Order Document Not Found", ex.getMessage(), request);
     }
 
     // ==================== 422 Unprocessable Entity ====================

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Table, Skeleton, Pagination, Spin, Button, message, Modal, QRCode } from 'antd';
-import { ShoppingOutlined, CreditCardOutlined } from '@ant-design/icons';
+import { ShoppingOutlined, CreditCardOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { getMyOrders, getOrderById, initiatePayment, cancelOrder } from '@/api/orders';
+import { getMyOrderDocuments, downloadMyOrderDocument, triggerBrowserDownload } from '@/api/orderDocuments';
+import type { OrderDocument } from '@/api/orderDocuments';
 import { OrderStatusLabels, PaymentMethodLabels, DeliveryMethodLabels, PaymentMethod, OrderStatus } from '@/types/order';
 import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
 import type { OrderSummaryDto, OrderDto, OrderItemDto } from '@/types/order';
@@ -54,6 +56,42 @@ const StatusBadge = ({ status }: { status: string }) => {
             <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', flexShrink: 0 }} />
             {OrderStatusLabels[status as OrderStatus] || status}
         </span>
+    );
+};
+
+/** Документы заказа в раскрытой строке — грузятся только для конкретного заказа, не показываются, если их нет */
+const OrderDocumentsSection = ({ orderId }: { orderId: string }) => {
+    const { data: documents } = useQuery({
+        queryKey: ['myOrderDocuments', orderId],
+        queryFn: () => getMyOrderDocuments(orderId),
+    });
+
+    const handleDownload = async (doc: OrderDocument) => {
+        try {
+            const file = await downloadMyOrderDocument(orderId, doc);
+            triggerBrowserDownload(file);
+        } catch {
+            message.error('Не удалось скачать документ');
+        }
+    };
+
+    if (!documents || documents.length === 0) return null;
+
+    return (
+        <div style={{ marginTop: 16 }}>
+            <div style={{ color: 'var(--ink-3)', marginBottom: 8 }}>Документы:</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {documents.map((doc) => (
+                    <div key={doc.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 500 }}>{doc.typeName}</span>
+                        <span style={{ color: 'var(--ink-3)' }}>{doc.fileName}</span>
+                        <Button size="small" icon={<DownloadOutlined />} onClick={() => handleDownload(doc)}>
+                            Скачать
+                        </Button>
+                    </div>
+                ))}
+            </div>
+        </div>
     );
 };
 
@@ -326,6 +364,7 @@ const OrdersPage = () => {
                         </Button>
                     </div>
                 )}
+                <OrderDocumentsSection orderId={order.id} />
             </div>
         );
     };

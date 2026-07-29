@@ -352,6 +352,8 @@ services:
       USER_SERVICE_URL: http://user-service:8081
       INTERNAL_SECRET: ${INTERNAL_SECRET}
       SECRET_JWT: ${SECRET_JWT}
+      YANDEX_STORAGE_ACCESS_KEY: ${YANDEX_STORAGE_ACCESS_KEY}
+      YANDEX_STORAGE_SECRET_KEY: ${YANDEX_STORAGE_SECRET_KEY}
     volumes:
       - /var/log/rfsnab/order-service:/var/log/rfsnab/order-service
     depends_on:
