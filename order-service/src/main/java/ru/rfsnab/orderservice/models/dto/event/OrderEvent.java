@@ -30,7 +30,9 @@ public record OrderEvent(
         String customerType,
         String companyName,
         String inn,
-        PickupPointDto pickupPoint
+        PickupPointDto pickupPoint,
+        String documentType,
+        String documentFileName
 ) {
     public record OrderItemLine(String productName, Integer quantity, BigDecimal price, String variantAttributes) {}
 

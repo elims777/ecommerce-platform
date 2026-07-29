@@ -6,22 +6,30 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import ru.rfsnab.orderservice.mapper.OrderDocumentMapper;
 import ru.rfsnab.orderservice.mapper.OrderMapper;
 import ru.rfsnab.orderservice.models.dto.order.*;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
 import ru.rfsnab.orderservice.models.entity.Order;
+import ru.rfsnab.orderservice.models.entity.OrderDocument;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
+import ru.rfsnab.orderservice.service.OrderDocumentService;
 import ru.rfsnab.orderservice.service.OrderService;
 import ru.rfsnab.orderservice.service.WarehousePointService;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,6 +47,7 @@ public class OrderController {
 
     private final OrderService orderService;
     private final WarehousePointService warehousePointService;
+    private final OrderDocumentService orderDocumentService;
 
     @PostMapping
     @Operation(summary = "Создать заказ из корзины")
@@ -167,6 +176,41 @@ public class OrderController {
                                                             @Valid @RequestBody OrderSyncRequest request){
         return ResponseEntity.ok(OrderMapper.toDto(
                 orderService.syncFrom1CByOrderNumber(orderNumber, request.externalId(), request.newStatus())));
+    }
+
+    @GetMapping("/{orderId}/documents")
+    @Operation(summary = "Список документов своего заказа (счета, УПД, КП, сертификаты)")
+    public ResponseEntity<List<OrderDocumentDto>> listDocuments(
+            Authentication authentication,
+            @PathVariable UUID orderId) {
+        List<OrderDocumentDto> documents = orderDocumentService
+                .listForUser(orderId, getCurrentUserId(authentication)).stream()
+                .map(OrderDocumentMapper::toDto)
+                .toList();
+        return ResponseEntity.ok(documents);
+    }
+
+    @GetMapping("/{orderId}/documents/{docId}/download")
+    @Operation(summary = "Скачать документ своего заказа")
+    public ResponseEntity<InputStreamResource> downloadDocument(
+            Authentication authentication,
+            @PathVariable UUID orderId,
+            @PathVariable UUID docId) {
+        OrderDocumentService.DownloadResult result = orderDocumentService
+                .downloadForUser(orderId, docId, getCurrentUserId(authentication));
+        OrderDocument document = result.document();
+        MediaType mediaType = document.getContentType() != null
+                ? MediaType.parseMediaType(document.getContentType())
+                : MediaType.APPLICATION_OCTET_STREAM;
+
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .contentLength(document.getSizeBytes())
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename(document.getOriginalFileName(), StandardCharsets.UTF_8)
+                                .build().toString())
+                .body(new InputStreamResource(result.stream()));
     }
 
     /**

@@ -245,6 +245,19 @@ public class EmailService {
     }
 
     /**
+     * Уведомление о добавлении документа к заказу (счёт, УПД, КП, сертификат)
+     */
+    public void sendOrderDocumentAddedEmail(String toEmail, String orderNumber, String documentType) {
+        Map<String, Object> model = new HashMap<>();
+        model.put("orderNumber", orderNumber);
+        model.put("documentType", documentType);
+        model.put("trackUrl", frontendUrl + "/orders");
+
+        sendHtml(toEmail, documentType + " к заказу " + orderNumber + " — РФСнаб",
+                "order-document-added", model);
+    }
+
+    /**
      * Уведомление о смене статуса заказа
      */
     public void sendOrderStatusChangedEmail(String toEmail, String orderNumber, String newStatus) {

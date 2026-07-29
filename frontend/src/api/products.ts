@@ -61,10 +61,9 @@ export const getProductBySlug = async (slug: string): Promise<Product> => {
 };
 
 /** Поиск товаров по названию */
-export const searchProducts = async (query: string, page = 0, size = 20): Promise<Page<Product>> => {
-    const { data } = await apiClient.get<Page<Product>>('/v1/products/search', {
-        params: { query, page, size },
-    });
+export const searchProducts = async (query: string, page = 0, size = 20, sort?: string): Promise<Page<Product>> => {
+    const params: Record<string, unknown> = sort ? { query, page, size, sort } : { query, page, size };
+    const { data } = await apiClient.get<Page<Product>>('/v1/products/search', { params });
     return data;
 };
 

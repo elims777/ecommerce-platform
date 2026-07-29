@@ -46,7 +46,10 @@ frontend/design-reference/
 frontend/.vite/
 
 # Claude Code
-.claude/*
+.claude
+.superpowers/
+.impeccable/
+frontend/.impeccable/
 LLM-wiki.md
 *.txt
 docs/*
