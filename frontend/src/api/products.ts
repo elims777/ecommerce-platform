@@ -48,6 +48,14 @@ export const getFeaturedProducts = async (): Promise<Page<Product>> => {
     return data;
 };
 
+/** Получить акционные товары (метка на товаре или на его категории) */
+export const getSaleProducts = async (params?: { page?: number; size?: number }): Promise<Page<Product>> => {
+    const { data } = await apiClient.get<Page<Product>>('/v1/products/sale', {
+        params: { page: params?.page ?? 0, size: params?.size ?? 20 },
+    });
+    return data;
+};
+
 /** Получить товар по ID */
 export const getProductById = async (id: number): Promise<Product> => {
     const { data } = await apiClient.get<Product>(`/v1/products/${id}`);

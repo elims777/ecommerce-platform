@@ -1,8 +1,11 @@
 package ru.rfsnab.productservice.dto;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -21,4 +24,10 @@ public class CategoryRequest {
     private Long parentId;
     private String externalId;
     private Integer displayOrder;
+
+    /** Акционная категория: процент применяется ко всем товарам её поддерева. */
+    private Boolean isSale;
+
+    @DecimalMin(value = "-90.0", message = "Скидка не может превышать 90%")
+    private BigDecimal saleMarkupPercent;
 }

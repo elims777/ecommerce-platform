@@ -12,6 +12,10 @@ export interface ProductRequest {
     categoryId?: number | null;
     isActive?: boolean;
     isFeatured?: boolean;
+    /** Точечная акция на товаре: перебивает акцию его категории */
+    isSale?: boolean;
+    /** Процент: положительный — наценка, отрицательный — скидка (до −90) */
+    saleMarkupPercent?: number | null;
     externalId?: string;
     sku?: string;
     externalCode?: string;

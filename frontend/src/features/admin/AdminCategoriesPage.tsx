@@ -198,7 +198,7 @@ const AdminCategoriesPage = () => {
             messageApi.success('Категория создана');
             invalidate();
             dialogRef.current?.close();
-            setCatForm({ name: '', description: '', parentId: undefined });
+            setCatForm({ name: '', description: '', parentId: undefined, isSale: false, saleMarkupPercent: null });
         },
         onError: () => messageApi.error('Ошибка при создании категории'),
     });
@@ -211,7 +211,7 @@ const AdminCategoriesPage = () => {
             queryClient.invalidateQueries({ queryKey: ['category', editingId] });
             dialogRef.current?.close();
             setEditingId(null);
-            setCatForm({ name: '', description: '', parentId: undefined });
+            setCatForm({ name: '', description: '', parentId: undefined, isSale: false, saleMarkupPercent: null });
         },
         onError: () => messageApi.error('Ошибка при обновлении категории'),
     });
@@ -315,7 +315,7 @@ const AdminCategoriesPage = () => {
 
     const handleAdd = (parentId?: number) => {
         setEditingId(null);
-        setCatForm({ name: '', description: '', parentId });
+        setCatForm({ name: '', description: '', parentId, isSale: false, saleMarkupPercent: null });
         dialogRef.current?.showModal();
     };
 
@@ -326,6 +326,8 @@ const AdminCategoriesPage = () => {
             name: selectedCategory.name,
             description: selectedCategory.description || '',
             parentId: selectedCategory.parentId,
+            isSale: selectedCategory.isSale,
+            saleMarkupPercent: selectedCategory.saleMarkupPercent,
         });
         dialogRef.current?.showModal();
     };
@@ -535,6 +537,38 @@ const AdminCategoriesPage = () => {
                             ))}
                         </select>
                     </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={catForm.isSale ?? false}
+                            onChange={(e) => {
+                                const checked = e.target.checked;
+                                setCatForm((f) => ({ ...f, isSale: checked, saleMarkupPercent: checked ? f.saleMarkupPercent : null }));
+                            }}
+                        />
+                        <span style={{ color: 'var(--ink-3)', fontWeight: 500 }}>Акционная категория</span>
+                    </label>
+                    {catForm.isSale && (
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                            <span style={{ color: 'var(--ink-3)', fontWeight: 500 }}>Наценка / скидка, %</span>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min={-90}
+                                style={inputStyle}
+                                placeholder="например −15 для скидки 15%"
+                                value={catForm.saleMarkupPercent ?? ''}
+                                onChange={(e) => setCatForm((f) => ({
+                                    ...f,
+                                    saleMarkupPercent: e.target.value === '' ? null : Number(e.target.value),
+                                }))}
+                            />
+                            <span style={{ fontSize: 12, color: 'var(--ink-3)' }}>
+                                Положительное значение — наценка, отрицательное — скидка (до −90%).
+                                Действует на все товары категории и её подкатегорий. Цены в БД не меняются.
+                            </span>
+                        </label>
+                    )}
                 </div>
                 <div style={{ padding: '12px 24px 20px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                     <button className="rf-btn rf-btn-sm rf-btn-quiet" onClick={() => dialogRef.current?.close()}>Отмена</button>

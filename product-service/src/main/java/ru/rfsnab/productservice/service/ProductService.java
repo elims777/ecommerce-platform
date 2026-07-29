@@ -21,8 +21,10 @@ import ru.rfsnab.productservice.repository.ProductAttributeRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
 import ru.rfsnab.productservice.spec.ProductSpecifications;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,6 +105,12 @@ public class ProductService {
         existing.setVatRate(updatedProduct.getVatRate());
         existing.setIsActive(updatedProduct.getIsActive());
         existing.setIsFeatured(updatedProduct.getIsFeatured());
+        existing.setIsSale(Boolean.TRUE.equals(updatedProduct.getIsSale()));
+        // Снятая метка не должна оставлять «висящий» процент
+        existing.setSaleMarkupPercent(
+                Boolean.TRUE.equals(updatedProduct.getIsSale())
+                        ? updatedProduct.getSaleMarkupPercent()
+                        : null);
 
         if (updatedProduct.getCategory() != null) {
             Category category = categoryRepository.findById(updatedProduct.getCategory().getId())
@@ -189,6 +197,45 @@ public class ProductService {
      */
     public Page<Product> getProductsPage(Pageable pageable) {
         return productRepository.findByIsActiveTrueAndIsVariantChildFalse(pageable);
+    }
+
+    /**
+     * Товары раздела "Акции": с собственной меткой или из акционных категорий.
+     */
+    public Page<Product> getSaleProductsPage(Pageable pageable) {
+        return productRepository.findAll(
+                ProductSpecifications.onSale(categoryService.getSaleCategoryIds()), pageable);
+    }
+
+    /**
+     * Акционные проценты категорий указанных товаров (для расчёта цен при выдаче).
+     * Берётся из закэшированного дерева категорий — без обращений к БД.
+     */
+    public Map<Long, BigDecimal> getSaleMarkupsFor(List<Product> products) {
+        Map<Long, BigDecimal> markups = new HashMap<>();
+        for (Product product : products) {
+            if (product.getCategory() == null) {
+                continue;
+            }
+            Long categoryId = product.getCategory().getId();
+            if (markups.containsKey(categoryId)) {
+                continue;
+            }
+            BigDecimal markup = categoryService.getCategorySaleMarkup(categoryId);
+            if (markup != null) {
+                markups.put(categoryId, markup);
+            }
+        }
+        return markups;
+    }
+
+    /**
+     * Акционный процент категории одного товара (null — категория не акционная).
+     */
+    public BigDecimal getSaleMarkupFor(Product product) {
+        return product.getCategory() != null
+                ? categoryService.getCategorySaleMarkup(product.getCategory().getId())
+                : null;
     }
 
     public Page<Product> getAllProductsPage(Pageable pageable) {

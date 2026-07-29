@@ -2,6 +2,7 @@ package ru.rfsnab.productservice.dto;
 
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -20,6 +21,9 @@ public class CategoryResponse {
     private Boolean isActive;
     private Integer displayOrder;
     private String externalId;
+    /** Акционная категория: процент применяется ко всем товарам её поддерева. */
+    private Boolean isSale;
+    private BigDecimal saleMarkupPercent;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

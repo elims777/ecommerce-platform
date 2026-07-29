@@ -40,9 +40,6 @@ class ProductImportServiceTest {
     private CategoryRepository categoryRepository;
 
     @Mock
-    private CategoryService categoryService;
-
-    @Mock
     private PlatformTransactionManager transactionManager;
 
     @Mock
@@ -54,7 +51,7 @@ class ProductImportServiceTest {
 
     @BeforeEach
     void setUp() {
-        importService = new ProductImportService(productRepository, categoryRepository, categoryService, transactionManager, slugService);
+        importService = new ProductImportService(productRepository, categoryRepository, transactionManager, slugService);
         ReflectionTestUtils.setField(importService, "chunkSize", 25);
 
         importCategory = Category.builder().id(1L).name("Импорт из 1С").slug("import-1c").build();
@@ -180,28 +177,32 @@ class ProductImportServiceTest {
         }
     }
 
-    // ==================== applyFtkSaleMarkup() — наценка ФТК в "Распродаже" ====================
+    // ==================== импорт не применяет акционную наценку ====================
 
     @Nested
-    @DisplayName("наценка +10% на товары ФТК в категории \"Распродажа\"")
-    class FtkSaleMarkupTests {
+    @DisplayName("цены импорта сохраняются как есть (акции считаются при выдаче)")
+    class ImportKeepsBasePricesTests {
 
+        /**
+         * Регрессия: раньше импорт домножал цену ФТК-товаров «Распродажи» на 1.10 и писал
+         * результат в БД. Из-за захардкоженного id наценка попадала на чужую категорию,
+         * а откатить её было нечем. Теперь проценты применяются только при выдаче.
+         */
         @Test
-        @DisplayName("товар ФТК в категории из поддерева \"Распродажа\" (id=17) — цена увеличена на 10%")
-        void ftkProductInSaleSubtree_PriceIncreasedByTenPercent() {
-            Category saleSubCategory = Category.builder().id(18L).name("Спецобувь (распродажа)").slug("spetsobuv-rasprodazha").build();
+        @DisplayName("товар ФТК в акционной категории — в БД пишется базовая цена без наценки")
+        void ftkProductInSaleCategory_BasePriceStored() {
+            Category saleSubCategory = Category.builder().id(54L).name("Спецобувь (распродажа)").slug("spetsobuv-rasprodazha").build();
 
             ProductImportItem item = ProductImportItem.builder()
                     .externalId("FTK-1")
                     .name("Ботинки ФТК")
                     .source("FTK")
-                    .categoryId(18L)
+                    .categoryId(54L)
                     .price(new java.math.BigDecimal("100.00"))
                     .wholesalePrice(new java.math.BigDecimal("120.00"))
                     .build();
 
-            when(categoryRepository.findById(18L)).thenReturn(Optional.of(saleSubCategory));
-            when(categoryService.getSubtreeCategoryIds(17L)).thenReturn(List.of(17L, 18L, 41L));
+            when(categoryRepository.findById(54L)).thenReturn(Optional.of(saleSubCategory));
             when(slugService.generateUniqueSlug(anyString(), any())).thenReturn("botinki-ftk");
             when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -212,50 +213,32 @@ class ProductImportServiceTest {
             org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
             verify(productRepository, org.mockito.Mockito.atLeastOnce()).save(captor.capture());
             Product saved = captor.getValue();
-            assertThat(saved.getPrice()).isEqualByComparingTo("110.00");
-            assertThat(saved.getWholesalePrice()).isEqualByComparingTo("132.00");
+            assertThat(saved.getPrice()).isEqualByComparingTo("100.00");
+            assertThat(saved.getWholesalePrice()).isEqualByComparingTo("120.00");
         }
 
         @Test
-        @DisplayName("товар ФТК вне категории \"Распродажа\" — цена не меняется")
-        void ftkProductOutsideSaleSubtree_PriceUnchanged() {
-            Category regularCategory = Category.builder().id(50L).name("Обычная категория").slug("regular").build();
-
-            ProductImportItem item = ProductImportItem.builder()
-                    .externalId("FTK-2")
-                    .name("Куртка ФТК")
+        @DisplayName("повторный импорт не накручивает процент поверх предыдущего")
+        void repeatedImport_PriceNotCompounded() {
+            Category saleSubCategory = Category.builder().id(54L).name("Спецобувь (распродажа)").slug("spetsobuv-rasprodazha").build();
+            Product existing = Product.builder()
+                    .id(7L)
+                    .externalId("FTK-1")
+                    .name("Ботинки ФТК")
                     .source("FTK")
-                    .categoryId(50L)
+                    .category(saleSubCategory)
                     .price(new java.math.BigDecimal("100.00"))
                     .build();
-
-            when(categoryRepository.findById(50L)).thenReturn(Optional.of(regularCategory));
-            when(categoryService.getSubtreeCategoryIds(17L)).thenReturn(List.of(17L, 18L, 41L));
-            when(slugService.generateUniqueSlug(anyString(), any())).thenReturn("kurtka-ftk");
-            when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
-
-            importService.importBatch(BatchProductImportRequest.builder().items(List.of(item)).build());
-
-            org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
-            verify(productRepository, org.mockito.Mockito.atLeastOnce()).save(captor.capture());
-            assertThat(captor.getValue().getPrice()).isEqualByComparingTo("100.00");
-        }
-
-        @Test
-        @DisplayName("товар 1С (не ФТК) в категории \"Распродажа\" — цена не меняется")
-        void non1CProductInSaleSubtree_PriceUnchanged() {
-            Category saleSubCategory = Category.builder().id(18L).name("Спецобувь (распродажа)").slug("spetsobuv-rasprodazha").build();
 
             ProductImportItem item = ProductImportItem.builder()
-                    .externalId("1C-1")
-                    .name("Товар 1С")
-                    .source("INTERNAL")
-                    .categoryId(18L)
+                    .externalId("FTK-1")
+                    .name("Ботинки ФТК")
+                    .source("FTK")
+                    .categoryId(54L)
                     .price(new java.math.BigDecimal("100.00"))
                     .build();
 
-            when(categoryRepository.findById(18L)).thenReturn(Optional.of(saleSubCategory));
-            when(slugService.generateUniqueSlug(anyString(), any())).thenReturn("tovar-1c");
+            when(productRepository.findByExternalIdIn(List.of("FTK-1"))).thenReturn(List.of(existing));
             when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
             importService.importBatch(BatchProductImportRequest.builder().items(List.of(item)).build());

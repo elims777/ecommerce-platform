@@ -8,7 +8,7 @@ import { getProductById } from '@/api/products';
 import type { ProductImage, ProductChild } from '@/types/product';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
-import { useDisplayPrice, formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
+import { useDisplayPrice, useOldDisplayPrice, formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 import { savePendingAddToCart, clearPendingAddToCart } from '@/utils/pendingCart';
 import { unitShort, unitPlural } from '@/utils/unitOfMeasure';
 import { handleProfileIncomplete } from '@/utils/profileGate';
@@ -91,6 +91,7 @@ const ProductPage = () => {
         ? activeVariants.reduce((sum, v) => sum + v.stockQuantity, 0)
         : product?.stockQuantity ?? 0;
     const displayPrice = useDisplayPrice({ price: product?.price ?? 0, wholesalePrice: product?.wholesalePrice ?? null });
+    const oldDisplayPrice = useOldDisplayPrice({ oldPrice: product?.oldPrice ?? null, oldWholesalePrice: product?.oldWholesalePrice ?? null });
 
     const setVariantQty = (variantId: number, qty: number) =>
         setVariantQtys(prev => ({ ...prev, [variantId]: qty }));
@@ -336,6 +337,14 @@ const ProductPage = () => {
                                 }}>
                                     {formatPriceOrPlaceholder(displayPrice)}
                                 </span>
+                                {isPriceAvailable(displayPrice) && oldDisplayPrice !== null && (
+                                    <span style={{
+                                        marginLeft: 10, fontSize: 'var(--text-lg)', color: 'var(--ink-3)',
+                                        textDecoration: 'line-through', fontVariantNumeric: 'tabular-nums',
+                                    }}>
+                                        {formatPriceOrPlaceholder(oldDisplayPrice)}
+                                    </span>
+                                )}
                                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginTop: 2 }}>
                                     за 1 {unitShort(product.unitOfMeasure)}
                                 </div>

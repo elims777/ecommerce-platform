@@ -42,6 +42,12 @@ public class ProductRequest {
     @Builder.Default
     private Boolean isFeatured = false;
 
+    @Builder.Default
+    private Boolean isSale = false;
+
+    @DecimalMin(value = "-90.0", message = "Скидка не может превышать 90%")
+    private BigDecimal saleMarkupPercent;
+
     private String externalId;
     private String sku;
     private String externalCode;

@@ -8,8 +8,11 @@ import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.model.ProductDocument;
 import ru.rfsnab.productservice.service.ProductAttributeExclusions;
+import ru.rfsnab.productservice.service.SalePriceCalculator;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -26,6 +29,8 @@ public class ProductMapper {
                 .stockQuantity(productRequest.getStockQuantity())
                 .isActive(productRequest.getIsActive())
                 .isFeatured(productRequest.getIsFeatured())
+                .isSale(productRequest.getIsSale())
+                .saleMarkupPercent(productRequest.getSaleMarkupPercent())
                 .externalId(productRequest.getExternalId())
                 .sku(productRequest.getSku())
                 .externalCode(productRequest.getExternalCode())
@@ -38,13 +43,30 @@ public class ProductMapper {
     }
 
     public static ProductResponse mapToResponse(Product product) {
-        return mapToResponse(product, List.of());
+        return mapToResponse(product, List.of(), null);
     }
 
     public static ProductResponse mapToResponse(Product product, List<Product> children) {
+        return mapToResponse(product, children, null);
+    }
+
+    /**
+     * @param categoryMarkup акционный процент категории товара (с учётом наследования),
+     *                       null — категория не акционная. Метка на самом товаре его перебивает.
+     */
+    public static ProductResponse mapWithSale(Product product, BigDecimal categoryMarkup) {
+        return mapToResponse(product, List.of(), categoryMarkup);
+    }
+
+    public static ProductResponse mapToResponse(Product product, List<Product> children, BigDecimal categoryMarkup) {
+        // Варианты лежат в той же категории, что и родитель, — процент им достаётся тот же
         List<ProductResponse> childResponses = children.stream()
-                .map(ProductMapper::mapToResponse)
+                .map(child -> mapToResponse(child, List.of(), categoryMarkup))
                 .collect(Collectors.toList());
+
+        BigDecimal markup = SalePriceCalculator.resolveMarkup(product, categoryMarkup);
+        BigDecimal salePrice = SalePriceCalculator.apply(product.getPrice(), markup);
+        BigDecimal saleWholesalePrice = SalePriceCalculator.apply(product.getWholesalePrice(), markup);
 
         ProductResponse.ProductResponseBuilder builder = ProductResponse.builder()
                 .id(product.getId())
@@ -55,8 +77,12 @@ public class ProductMapper {
                 .material(product.getMaterial())
                 .barcode(product.getBarcode())
                 .countryOfOrigin(product.getCountryOfOrigin())
-                .price(product.getPrice())
-                .wholesalePrice(product.getWholesalePrice())
+                .price(salePrice)
+                .wholesalePrice(saleWholesalePrice)
+                .isSale(markup != null)
+                .saleMarkupPercent(markup)
+                .ownSale(Boolean.TRUE.equals(product.getIsSale()))
+                .ownSaleMarkupPercent(product.getSaleMarkupPercent())
                 .stockQuantity(product.getStockQuantity())
                 .isActive(product.getIsActive())
                 .isFeatured(product.getIsFeatured())
@@ -79,6 +105,16 @@ public class ProductMapper {
                         .map(AttributeMapper::mapToResponse).toList())
                 .documents(product.getDocuments().stream().map(ProductMapper::mapDocumentToDto).toList());
 
+        // Старую цену отдаём только если акция её реально изменила — фронт по ней рисует зачёркивание
+        if (markup != null) {
+            if (salePrice != null && salePrice.compareTo(product.getPrice()) != 0) {
+                builder.oldPrice(product.getPrice());
+            }
+            if (saleWholesalePrice != null && saleWholesalePrice.compareTo(product.getWholesalePrice()) != 0) {
+                builder.oldWholesalePrice(product.getWholesalePrice());
+            }
+        }
+
         if (product.getCategory() != null) {
             builder.categoryId(product.getCategory().getId());
             builder.categoryName(product.getCategory().getName());
@@ -89,8 +125,20 @@ public class ProductMapper {
     }
 
     public static Page<ProductResponse> mapPageWithHasVariants(Page<Product> page, Set<Long> parentIdsWithChildren) {
+        return mapPageWithHasVariants(page, parentIdsWithChildren, Map.of());
+    }
+
+    /**
+     * @param categoryMarkups карта "категория -> акционный процент" для товаров страницы
+     */
+    public static Page<ProductResponse> mapPageWithHasVariants(Page<Product> page,
+                                                               Set<Long> parentIdsWithChildren,
+                                                               Map<Long, BigDecimal> categoryMarkups) {
         return page.map(p -> {
-            ProductResponse response = mapToResponse(p);
+            BigDecimal categoryMarkup = p.getCategory() != null
+                    ? categoryMarkups.get(p.getCategory().getId())
+                    : null;
+            ProductResponse response = mapWithSale(p, categoryMarkup);
             response.setHasVariants(parentIdsWithChildren.contains(p.getId()));
             return response;
         });

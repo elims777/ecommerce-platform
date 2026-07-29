@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { App, Drawer, Grid, Select } from 'antd';
 import { isAxiosError } from 'axios';
-import { getProducts, searchProducts } from '@/api/products';
+import { getProducts, searchProducts, getSaleProducts } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
 import { createPriceList } from '@/api/priceLists';
 import { useCartStore } from '@/store/cartStore';
@@ -83,6 +83,7 @@ const CatalogPage = () => {
     const pageSize = Number(searchParams.get('size')) || 20;
     const categoryId = searchParams.get('category') ? Number(searchParams.get('category')) : undefined;
     const searchQuery = searchParams.get('q') || '';
+    const saleOnly = searchParams.get('sale') === 'true';
     const [searchInput, setSearchInput] = useState(searchQuery);
     const sortValue = searchParams.get('sort') || '';
     const clientType = useAuthStore((s) => s.user?.clientType ?? 'B2C');
@@ -111,10 +112,13 @@ const CatalogPage = () => {
     });
 
     const { data: productsPage, isLoading: productsLoading, isError } = useQuery({
-        queryKey: ['products', { page: currentPage, size: pageSize, categoryId, q: searchQuery, attr: attrParams, sort }],
+        queryKey: ['products', { page: currentPage, size: pageSize, categoryId, q: searchQuery, attr: attrParams, sort, sale: saleOnly }],
         queryFn: async () => {
             if (searchQuery) {
                 return searchProducts(searchQuery, currentPage - 1, pageSize, sort);
+            }
+            if (saleOnly) {
+                return getSaleProducts({ page: currentPage - 1, size: pageSize });
             }
             return getProducts({ page: currentPage - 1, size: pageSize, categoryId, attr: attrParams, sort });
         },
@@ -141,11 +145,13 @@ const CatalogPage = () => {
 
     const breadcrumbItems = categoryId ? buildBreadcrumb(categoryTree, categoryId) : [];
     const currentCategory = categoryId ? findCategoryInTree(categoryTree, categoryId) : null;
-    const pageTitle = categoryId
-        ? (currentCategory?.name ?? 'Товары')
-        : searchQuery
-            ? `Результаты: «${searchQuery}»`
-            : 'Все товары';
+    const pageTitle = saleOnly
+        ? 'Акции'
+        : categoryId
+            ? (currentCategory?.name ?? 'Товары')
+            : searchQuery
+                ? `Результаты: «${searchQuery}»`
+                : 'Все товары';
 
     const handleCategorySelect = (selectedKeys: React.Key[]) => {
         const newParams = new URLSearchParams();

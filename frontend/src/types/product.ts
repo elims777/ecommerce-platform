@@ -47,8 +47,19 @@ export interface Product {
     slug: string;
     description: string | null;
     shortDescription: string | null;
+    /** Акционная цена, если товар в акции; иначе базовая */
     price: number;
     wholesalePrice: number | null;
+    /** Базовая цена до акции — есть только когда акция изменила цену (для зачёркивания) */
+    oldPrice: number | null;
+    oldWholesalePrice: number | null;
+    /** Товар участвует в акции: своя метка ИЛИ метка категории (для витрины) */
+    isSale: boolean;
+    /** Действующий процент акции: положительный — наценка, отрицательный — скидка */
+    saleMarkupPercent: number | null;
+    /** Собственная метка товара без учёта категории — только для формы админки */
+    ownSale: boolean;
+    ownSaleMarkupPercent: number | null;
     stockQuantity: number;
     categoryId: number | null;
     categoryName: string | null;
@@ -102,6 +113,9 @@ export interface Category {
     isActive: boolean;
     displayOrder: number;
     externalId: string | null;
+    /** Акционная категория: процент применяется ко всем товарам её поддерева */
+    isSale: boolean;
+    saleMarkupPercent: number | null;
     createdAt: string;
     updatedAt: string;
 }
