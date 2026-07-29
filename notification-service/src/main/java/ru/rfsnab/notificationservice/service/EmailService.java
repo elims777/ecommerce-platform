@@ -253,7 +253,7 @@ public class EmailService {
         model.put("documentType", documentType);
         model.put("trackUrl", frontendUrl + "/orders");
 
-        sendHtml(toEmail, "Новый документ по заказу " + orderNumber + " — РФСнаб",
+        sendHtml(toEmail, documentType + " к заказу " + orderNumber + " — РФСнаб",
                 "order-document-added", model);
     }
 
