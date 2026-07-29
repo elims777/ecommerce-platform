@@ -101,10 +101,11 @@
                 <artifactId>scala-library</artifactId>
                 <version>2.13.16</version>
             </dependency>
+            <!-- Fix GHSA-xx22-p4ch-683r (нативный XXHash ронял JVM на невалидных диапазонах) -->
             <dependency>
                 <groupId>at.yawk.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.10.1</version>
+                <version>1.11.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
