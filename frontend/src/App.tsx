@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { ConfigProvider, App as AntApp, Spin } from 'antd';
 import ruRU from 'antd/locale/ru_RU';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import ClientLayout from '@/components/layouts/ClientLayout';
 import AuthLayout from '@/components/layouts/AuthLayout';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { initMetrika, trackPageView } from '@/lib/metrika';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'));
@@ -90,10 +91,16 @@ const antTheme = {
 
 const AppRoutes = () => {
   const { isLoading, restoreSession } = useAuthStore();
+  const location = useLocation();
 
   useEffect(() => {
     restoreSession();
   }, [restoreSession]);
+
+  useEffect(() => {
+    initMetrika();
+    trackPageView(location.pathname + location.search);
+  }, [location.pathname, location.search]);
 
   if (isLoading) {
     return (
