@@ -17,8 +17,26 @@ public class ProductResponse {
     private String slug;
     private String description;
     private String shortDescription;
+    /** Акционная цена, если товар участвует в акции; иначе базовая. */
     private BigDecimal price;
     private BigDecimal wholesalePrice;
+
+    /** Базовая цена до акции — заполняется только когда акция реально изменила цену. */
+    private BigDecimal oldPrice;
+    private BigDecimal oldWholesalePrice;
+    /** Товар участвует в акции: своя метка ИЛИ метка категории (эффективное значение для витрины). */
+    private Boolean isSale;
+    /** Действующий процент акции: положительный — наценка, отрицательный — скидка. */
+    private BigDecimal saleMarkupPercent;
+
+    /**
+     * Собственная метка товара, без учёта категории — только для админки.
+     * Форма редактирования обязана заполняться этими полями, иначе унаследованный
+     * от категории процент при сохранении «прилипнет» к товару.
+     */
+    private Boolean ownSale;
+    private BigDecimal ownSaleMarkupPercent;
+
     private Integer stockQuantity;
     private Long categoryId;
     private String categoryName;  // для удобства фронтенда

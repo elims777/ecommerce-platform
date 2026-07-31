@@ -11,18 +11,27 @@ import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class CategoryService {
 
+    /** Предохранитель от зацикливания при подъёме по родителям (данные могут быть битыми). */
+    private static final int MAX_CATEGORY_DEPTH = 100;
+
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final SlugGeneratorService slugGenerator;
 
-    // Кэш дерева категорий (в памяти)
-    private List<CategoryTreeDTO> cachedCategoryTree = new ArrayList<>();
+    // Кэш дерева категорий (в памяти). volatile: пишется в synchronized refreshCategoryTree(),
+    // читается запросами без синхронизации — нужна видимость новой ссылки другим потокам.
+    private volatile List<CategoryTreeDTO> cachedCategoryTree = new ArrayList<>();
+
+    // Кэш акционных процентов: categoryId -> процент. Наследуется вниз по дереву:
+    // потомок без собственной метки берёт процент ближайшего отмеченного предка.
+    private volatile Map<Long, BigDecimal> cachedSaleMarkups = Map.of();
 
     /**
      * Инициализация дерева категорий при старте приложения
@@ -44,16 +53,73 @@ public class CategoryService {
      */
     public synchronized void refreshCategoryTree() {
         List<Category> allCategories = categoryRepository.findAll();
-        cachedCategoryTree = buildTree(allCategories);
+        Map<Long, BigDecimal> saleMarkups = buildSaleMarkups(allCategories);
+        cachedCategoryTree = buildTree(allCategories, saleMarkups);
+        cachedSaleMarkups = saleMarkups;
+    }
+
+    /**
+     * Акционный процент категории с учётом наследования от предков.
+     * null — категория не акционная.
+     */
+    public BigDecimal getCategorySaleMarkup(Long categoryId) {
+        return categoryId != null ? cachedSaleMarkups.get(categoryId) : null;
+    }
+
+    /**
+     * Id всех категорий, попадающих в акцию (отмеченные + их потомки).
+     */
+    public Set<Long> getSaleCategoryIds() {
+        return cachedSaleMarkups.keySet();
+    }
+
+    /**
+     * Разворачивает метки категорий в плоскую карту "категория -> действующий процент".
+     * Метка на потомке перебивает унаследованную от предка.
+     */
+    private Map<Long, BigDecimal> buildSaleMarkups(List<Category> categories) {
+        Map<Long, Category> byId = new HashMap<>();
+        for (Category category : categories) {
+            byId.put(category.getId(), category);
+        }
+
+        Map<Long, BigDecimal> markups = new HashMap<>();
+        for (Category category : categories) {
+            BigDecimal markup = resolveInheritedMarkup(category, byId);
+            if (markup != null) {
+                markups.put(category.getId(), markup);
+            }
+        }
+        return markups;
+    }
+
+    /**
+     * Идёт вверх по родителям до первой акционной категории с указанным процентом.
+     * Защищён от циклов в данных ограничением на глубину подъёма.
+     */
+    private BigDecimal resolveInheritedMarkup(Category category, Map<Long, Category> byId) {
+        Category current = category;
+        int guard = 0;
+        while (current != null && guard++ < MAX_CATEGORY_DEPTH) {
+            if (Boolean.TRUE.equals(current.getIsSale()) && current.getSaleMarkupPercent() != null) {
+                return current.getSaleMarkupPercent();
+            }
+            Category parent = current.getParent();
+            current = parent != null ? byId.get(parent.getId()) : null;
+        }
+        return null;
     }
 
     /**
      * Построение дерева из плоского списка категорий
      */
-    private List<CategoryTreeDTO> buildTree(List<Category> categories) {
+    private List<CategoryTreeDTO> buildTree(List<Category> categories, Map<Long, BigDecimal> saleMarkups) {
         Map<Long, CategoryTreeDTO> map = new HashMap<>();
 
         for (Category category : categories) {
+            BigDecimal effectiveMarkup = saleMarkups.get(category.getId());
+            boolean ownSale = Boolean.TRUE.equals(category.getIsSale()) && category.getSaleMarkupPercent() != null;
+
             CategoryTreeDTO dto = CategoryTreeDTO.builder()
                     .id(category.getId())
                     .name(category.getName())
@@ -62,6 +128,9 @@ public class CategoryService {
                     .parentId(category.getParent() != null ? category.getParent().getId() : null)
                     .isActive(category.getIsActive())
                     .displayOrder(category.getDisplayOrder())
+                    .isSale(ownSale)
+                    .saleMarkupPercent(effectiveMarkup)
+                    .inheritedSale(effectiveMarkup != null && !ownSale)
                     .build();
             map.put(category.getId(), dto);
         }
@@ -147,6 +216,14 @@ public class CategoryService {
         }
         if (updatedCategory.getDisplayOrder() != null) {
             existing.setDisplayOrder(updatedCategory.getDisplayOrder());
+        }
+        if (updatedCategory.getIsSale() != null) {
+            existing.setIsSale(updatedCategory.getIsSale());
+            // Снятая метка не должна оставлять «висящий» процент
+            existing.setSaleMarkupPercent(
+                    Boolean.TRUE.equals(updatedCategory.getIsSale())
+                            ? updatedCategory.getSaleMarkupPercent()
+                            : null);
         }
 
         // Обновляем родителя: null = сделать корневой, id = подвесить под родителя

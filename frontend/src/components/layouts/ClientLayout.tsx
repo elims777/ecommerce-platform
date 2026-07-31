@@ -465,7 +465,7 @@ const ClientLayout = () => {
                                 <CatalogMegaMenu categories={categoryTree} onClose={() => setMegaMenuOpen(false)} />
                             )}
                         </div>
-                        <NavLink to="/catalog?category=31" style={{
+                        <NavLink to="/catalog?sale=true" style={{
                             display: 'inline-flex', alignItems: 'center', gap: 4,
                             padding: '0 14px', height: '100%', fontSize: 'var(--text-md)', fontWeight: 500,
                             color: 'var(--ink-1)', cursor: 'pointer', textDecoration: 'none',
@@ -496,7 +496,7 @@ const ClientLayout = () => {
                     }}>
                         <MenuIcon /> Каталог товаров
                     </NavLink>
-                    <NavLink to="/catalog?category=31" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Акции</NavLink>
+                    <NavLink to="/catalog?sale=true" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Акции</NavLink>
                     {!isAuthenticated && (
                         <NavLink to="/favourites" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Избранное</NavLink>
                     )}

@@ -12,6 +12,10 @@ export interface ProductRequest {
     categoryId?: number | null;
     isActive?: boolean;
     isFeatured?: boolean;
+    /** Точечная акция на товаре: перебивает акцию его категории */
+    isSale?: boolean;
+    /** Процент: положительный — наценка, отрицательный — скидка (до −90) */
+    saleMarkupPercent?: number | null;
     externalId?: string;
     sku?: string;
     externalCode?: string;
@@ -139,6 +143,17 @@ export const searchProducts = async (query: string): Promise<Product[]> => {
 export const batchUpdateActive = async (productIds: number[], isActive: boolean): Promise<void> => {
     await apiClient.put('/v1/products/batch/active', productIds, {
         params: { isActive },
+    });
+};
+
+/** Массовая установка/снятие акции на товарах (собственная метка, перебивает акцию категории) */
+export const batchUpdateSale = async (
+    productIds: number[],
+    isSale: boolean,
+    saleMarkupPercent: number | null,
+): Promise<void> => {
+    await apiClient.put('/v1/products/batch/sale', productIds, {
+        params: isSale ? { isSale, saleMarkupPercent } : { isSale },
     });
 };
 

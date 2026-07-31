@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ClickableCard } from '@/components/navigation';
 import { Spin, Grid } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import { getProducts, getFeaturedProducts } from '@/api/products';
+import { getProducts, getFeaturedProducts, getSaleProducts } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
 import ProductCard from '@/features/catalog/ProductCard';
 import { useCartStore } from '@/store/cartStore';
@@ -14,8 +14,7 @@ import { useDisplayPrice, formatPriceOrPlaceholder } from '@/utils/priceUtils';
 import { handleProfileIncomplete } from '@/utils/profileGate';
 import PriceListModal from '@/components/PriceListModal';
 
-// Категория "Распродажа" — используется для таба "Акции" и для правой колонки витрины.
-const SALES_CATEGORY_ID = 31;
+// Акционные товары — метка на товаре или на его категории (без привязки к конкретной категории).
 
 // ── Icons ─────────────────────────────────────────────────────
 const ArrRight = ({ width = 16, height = 16 }: { width?: number; height?: number }) => (
@@ -133,10 +132,10 @@ const Showcase = ({ onAddToCart }: { onAddToCart: (productId: number) => void })
         enabled: tab === 'hits',
         staleTime: 60_000,
     });
-    // sales-запрос без enabled: нужен и для таба «Акции», и постоянно для правой колонки (та же категория)
+    // sales-запрос без enabled: нужен и для таба «Акции», и постоянно для правой колонки (та же выборка)
     const { data: salesPage, isLoading: salesLoading } = useQuery({
         queryKey: ['showcase', 'sales'],
-        queryFn: () => getProducts({ categoryId: SALES_CATEGORY_ID, size: 10 }),
+        queryFn: () => getSaleProducts({ size: 10 }),
         staleTime: 60_000,
     });
     const { data: newPage, isLoading: newLoading } = useQuery({
@@ -149,7 +148,7 @@ const Showcase = ({ onAddToCart }: { onAddToCart: (productId: number) => void })
     const activeData = tab === 'hits' ? hitsPage : tab === 'sales' ? salesPage : newPage;
     const activeLoading = tab === 'hits' ? hitsLoading : tab === 'sales' ? salesLoading : newLoading;
     const products = activeData?.content ?? [];
-    // временно: до появления живых новостей правая колонка = товары категории Распродажа (тот же sales-запрос)
+    // временно: до появления живых новостей правая колонка = акционные товары (тот же sales-запрос)
     const sidebarProducts = (salesPage?.content ?? []).slice(0, 5);
 
     const scrollByAmount = (dir: 1 | -1) => {

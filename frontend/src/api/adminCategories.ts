@@ -8,6 +8,10 @@ export interface CategoryRequest {
     parentId?: number | null;
     externalId?: string;
     displayOrder?: number;
+    /** Акционная категория: наценка/скидка применяется ко всем товарам её поддерева */
+    isSale?: boolean;
+    /** Процент: положительный — наценка, отрицательный — скидка (до −90) */
+    saleMarkupPercent?: number | null;
 }
 
 /** Получить дерево категорий */

@@ -5,11 +5,28 @@ interface HasPrice {
     wholesalePrice?: number | null;
 }
 
+interface HasOldPrice {
+    oldPrice?: number | null;
+    oldWholesalePrice?: number | null;
+}
+
 export const useDisplayPrice = (product: HasPrice): number => {
     const clientType = useAuthStore((s) => s.user?.clientType ?? 'B2C');
     return clientType === 'B2B'
         ? product.price
         : (product.wholesalePrice ?? product.price);
+};
+
+/**
+ * Базовая цена до акции для зачёркивания. null — зачёркивать нечего
+ * (акции нет либо это наценка, а не скидка).
+ */
+export const useOldDisplayPrice = (product: HasOldPrice): number | null => {
+    const clientType = useAuthStore((s) => s.user?.clientType ?? 'B2C');
+    const oldPrice = clientType === 'B2B'
+        ? product.oldPrice
+        : (product.oldWholesalePrice ?? product.oldPrice);
+    return oldPrice ?? null;
 };
 
 export const PRICE_PLACEHOLDER = 'Уточнить стоимость';

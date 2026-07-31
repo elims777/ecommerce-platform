@@ -9,6 +9,7 @@ import ru.rfsnab.productservice.model.ProductAttribute;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public final class ProductSpecifications {
 
@@ -38,6 +39,26 @@ public final class ProductSpecifications {
                 predicates.add(cb.exists(sub));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    /**
+     * Активные товары, участвующие в акции: собственная метка ЛИБО принадлежность
+     * акционной категории (поддеревья уже развёрнуты в saleCategoryIds).
+     */
+    public static Specification<Product> onSale(Set<Long> saleCategoryIds) {
+        return (root, query, cb) -> {
+            List<Predicate> saleSources = new ArrayList<>();
+            saleSources.add(cb.isTrue(root.get("isSale")));
+            if (!saleCategoryIds.isEmpty()) {
+                saleSources.add(root.get("category").get("id").in(saleCategoryIds));
+            }
+
+            return cb.and(
+                    cb.isTrue(root.get("isActive")),
+                    cb.isFalse(root.get("isVariantChild")),
+                    cb.or(saleSources.toArray(new Predicate[0]))
+            );
         };
     }
 }

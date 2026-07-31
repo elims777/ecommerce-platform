@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ShoppingOutlined } from '@ant-design/icons';
 import type { Product, ProductImage } from '@/types/product';
-import { useDisplayPrice, formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
+import { useDisplayPrice, useOldDisplayPrice, formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 import { useFavouritesStore } from '@/store/favouritesStore';
 import { ClickableCard } from '@/components/navigation';
 
@@ -103,6 +103,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
     const displayPrice = useDisplayPrice(product);
+    const oldPrice = useOldDisplayPrice(product);
     const sortedImages = sortImages(product.images || []);
     const hasMultipleImages = sortedImages.length > 1;
 
@@ -156,6 +157,13 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
                         borderRadius: 'var(--r-full)', fontSize: 'var(--text-xs)', fontWeight: 600,
                         background: 'var(--brand-red)', color: '#fff',
                     }}>Хит</span>
+                )}
+                {product.isSale && (
+                    <span style={{
+                        display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px',
+                        borderRadius: 'var(--r-full)', fontSize: 'var(--text-xs)', fontWeight: 600,
+                        background: 'var(--brand-navy)', color: '#fff',
+                    }}>Акция</span>
                 )}
             </div>
 
@@ -213,14 +221,24 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
 
                 {/* Цена */}
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginTop: 'auto' }}>
-                    <span style={{
-                        fontFamily: 'var(--font-head)',
-                        fontWeight: isPriceAvailable(displayPrice) ? 600 : 500,
-                        fontSize: isPriceAvailable(displayPrice) ? 'var(--text-2xl)' : 'var(--text-base)',
-                        color: isPriceAvailable(displayPrice) ? 'var(--ink-1)' : 'var(--ink-3)',
-                        letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
-                    }}>
-                        {formatPriceOrPlaceholder(displayPrice)}
+                    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{
+                            fontFamily: 'var(--font-head)',
+                            fontWeight: isPriceAvailable(displayPrice) ? 600 : 500,
+                            fontSize: isPriceAvailable(displayPrice) ? 'var(--text-2xl)' : 'var(--text-base)',
+                            color: isPriceAvailable(displayPrice) ? 'var(--ink-1)' : 'var(--ink-3)',
+                            letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums',
+                        }}>
+                            {formatPriceOrPlaceholder(displayPrice)}
+                        </span>
+                        {isPriceAvailable(displayPrice) && oldPrice !== null && (
+                            <span style={{
+                                fontSize: 'var(--text-sm)', color: 'var(--ink-3)',
+                                textDecoration: 'line-through', fontVariantNumeric: 'tabular-nums',
+                            }}>
+                                {formatPriceOrPlaceholder(oldPrice)}
+                            </span>
+                        )}
                     </span>
                     {product.sku && (
                         <span style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap' }}>

@@ -2,6 +2,7 @@ package ru.rfsnab.productservice.dto;
 
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,6 +19,15 @@ public class CategoryTreeDTO {
     private Long parentId;
     private Boolean isActive;
     private Integer displayOrder;
+
+    /** Собственная метка категории: акция включена именно здесь */
+    private Boolean isSale;
+
+    /** Действующий процент: собственный или унаследованный от предка */
+    private BigDecimal saleMarkupPercent;
+
+    /** Акция действует, но включена у предка (для приглушённого бейджа в админке) */
+    private Boolean inheritedSale;
 
     @Builder.Default
     private List<CategoryTreeDTO> children = new ArrayList<>();

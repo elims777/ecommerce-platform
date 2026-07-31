@@ -95,6 +95,15 @@ public class Product {
     @Builder.Default
     private Integer displayOrder = 0;
 
+    /** Точечная акция на товаре: перебивает акцию его категории. */
+    @Column(name = "is_sale", nullable = false)
+    @Builder.Default
+    private Boolean isSale = false;
+
+    /** Процент к цене: положительный — наценка, отрицательный — скидка. */
+    @Column(name = "sale_markup_percent", precision = 5, scale = 2)
+    private BigDecimal saleMarkupPercent;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     @Builder.Default

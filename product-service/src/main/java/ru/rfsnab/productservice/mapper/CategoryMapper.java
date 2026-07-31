@@ -12,6 +12,8 @@ public class CategoryMapper {
                 .description(request.getDescription())
                 .externalId(request.getExternalId())
                 .displayOrder(request.getDisplayOrder())
+                .isSale(Boolean.TRUE.equals(request.getIsSale()))
+                .saleMarkupPercent(request.getSaleMarkupPercent())
                 .build();
 
         // Устанавливаем parent если указан
@@ -33,6 +35,8 @@ public class CategoryMapper {
                 .isActive(category.getIsActive())
                 .displayOrder(category.getDisplayOrder())
                 .externalId(category.getExternalId())
+                .isSale(category.getIsSale())
+                .saleMarkupPercent(category.getSaleMarkupPercent())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt());
 

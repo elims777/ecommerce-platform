@@ -46,7 +46,8 @@ const AdminProductEditPage = () => {
     const [form, setForm] = useState<ProductRequest>({
         name: '', description: '', shortDescription: '', price: 0, wholesalePrice: null,
         stockQuantity: 0, categoryId: undefined, isActive: true,
-        isFeatured: false, sku: '', unitOfMeasure: '', material: '',
+        isFeatured: false, isSale: false, saleMarkupPercent: null,
+        sku: '', unitOfMeasure: '', material: '',
     });
     const [formTouched, setFormTouched] = useState(false);
 
@@ -76,12 +77,17 @@ const AdminProductEditPage = () => {
                 name: product.name,
                 description: product.description || '',
                 shortDescription: product.shortDescription || '',
-                price: product.price,
-                wholesalePrice: product.wholesalePrice ?? null,
+                // редактируем БАЗОВУЮ цену: price приходит уже с акцией, базовая лежит в oldPrice
+                price: product.oldPrice ?? product.price,
+                wholesalePrice: product.oldWholesalePrice ?? product.wholesalePrice ?? null,
                 stockQuantity: product.stockQuantity,
                 categoryId: product.categoryId,
                 isActive: product.isActive,
                 isFeatured: product.isFeatured,
+                // именно own*: isSale/saleMarkupPercent включают акцию категории,
+                // и при сохранении она бы «прилипла» к товару как собственная
+                isSale: product.ownSale,
+                saleMarkupPercent: product.ownSaleMarkupPercent,
                 sku: product.sku || '',
                 unitOfMeasure: product.unitOfMeasure || '',
                 material: product.material || '',
@@ -358,7 +364,42 @@ const AdminProductEditPage = () => {
                                     />
                                     <span style={labelTextStyle}>Хит продаж</span>
                                 </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={form.isSale}
+                                        onChange={(e) => {
+                                            const checked = e.target.checked;
+                                            setForm((f) => ({ ...f, isSale: checked, saleMarkupPercent: checked ? f.saleMarkupPercent : null }));
+                                            setFormTouched(true);
+                                        }}
+                                    />
+                                    <span style={labelTextStyle}>Акция</span>
+                                </label>
                             </div>
+
+                            {form.isSale && (
+                                <div>
+                                    <label style={labelStyle}>Наценка / скидка, %</label>
+                                    <input
+                                        className="rf-input"
+                                        type="number"
+                                        step="0.01"
+                                        min={-90}
+                                        value={form.saleMarkupPercent ?? ''}
+                                        placeholder="например −15 для скидки 15%"
+                                        onChange={(e) => {
+                                            const raw = e.target.value;
+                                            setForm((f) => ({ ...f, saleMarkupPercent: raw === '' ? null : Number(raw) }));
+                                            setFormTouched(true);
+                                        }}
+                                    />
+                                    <div style={{ fontSize: 12, color: 'var(--ink-3)', marginTop: 4 }}>
+                                        Положительное значение — наценка, отрицательное — скидка (до −90%).
+                                        Перебивает акцию категории. Цена в БД не меняется.
+                                    </div>
+                                </div>
+                            )}
 
                             <div>
                                 <button

@@ -16,6 +16,7 @@ import ru.rfsnab.productservice.mapper.ProductMapper;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.service.ProductService;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -36,7 +37,8 @@ public class ProductController {
         Page<Product> productsPage = productService.getProductsPage(pageable);
         var parentIds = productService.findParentIdsWithActiveChildren(
                 productsPage.getContent().stream().map(Product::getId).toList());
-        return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(productsPage, parentIds));
+        return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(
+                productsPage, parentIds, productService.getSaleMarkupsFor(productsPage.getContent())));
     }
 
     /**
@@ -48,7 +50,21 @@ public class ProductController {
         Page<Product> page = productService.getFeaturedProductsPage(pageable);
         var parentIds = productService.findParentIdsWithActiveChildren(
                 page.getContent().stream().map(Product::getId).toList());
-        return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(page, parentIds));
+        return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(
+                page, parentIds, productService.getSaleMarkupsFor(page.getContent())));
+    }
+
+    /**
+     * Получить акционные товары (раздел "Акции")
+     */
+    @GetMapping("/sale")
+    public ResponseEntity<Page<ProductResponse>> getSaleProducts(
+            @PageableDefault(size = 20) Pageable pageable) {
+        Page<Product> page = productService.getSaleProductsPage(pageable);
+        var parentIds = productService.findParentIdsWithActiveChildren(
+                page.getContent().stream().map(Product::getId).toList());
+        return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(
+                page, parentIds, productService.getSaleMarkupsFor(page.getContent())));
     }
 
     /**
@@ -62,8 +78,11 @@ public class ProductController {
         Page<Product> productsPage = productService.getAllProductsAdminPage(categoryId, isActive, pageable);
         List<Long> parentIds = productsPage.getContent().stream().map(Product::getId).toList();
         Map<Long, List<Product>> childrenByParent = productService.getChildrenForParents(parentIds);
+        // Админка работает с БАЗОВЫМИ ценами — их же редактируют в карточке товара.
+        // Акция видна во флагах (в т.ч. унаследованная от категории), но цену в списке не подменяет.
         return ResponseEntity.ok(productsPage.map(p ->
-                ProductMapper.mapToResponse(p, childrenByParent.getOrDefault(p.getId(), List.of()))));
+                ProductMapper.mapForAdmin(p, childrenByParent.getOrDefault(p.getId(), List.of()),
+                        productService.getSaleMarkupFor(p))));
     }
 
     /**
@@ -73,7 +92,8 @@ public class ProductController {
     public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id){
         Product product = productService.getProductById(id);
         List<Product> children = productService.getChildren(id);
-        return ResponseEntity.ok(ProductMapper.mapToResponse(product, children));
+        return ResponseEntity.ok(ProductMapper.mapToResponse(
+                product, children, productService.getSaleMarkupFor(product)));
     }
 
     /**
@@ -83,7 +103,8 @@ public class ProductController {
     public ResponseEntity<ProductResponse> getProductBySlug(@PathVariable String slug){
         Product product = productService.getProductBySlug(slug);
         List<Product> children = productService.getChildren(product.getId());
-        return ResponseEntity.ok(ProductMapper.mapToResponse(product, children));
+        return ResponseEntity.ok(ProductMapper.mapToResponse(
+                product, children, productService.getSaleMarkupFor(product)));
     }
 
     /**
@@ -129,7 +150,8 @@ public class ProductController {
         Page<Product> products = productService.getProductsByCategoryFiltered(categoryId, attrFilters, pageable);
         var parentIds = productService.findParentIdsWithActiveChildren(
                 products.getContent().stream().map(Product::getId).toList());
-        return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(products, parentIds));
+        return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(
+                products, parentIds, productService.getSaleMarkupsFor(products.getContent())));
     }
 
     /**
@@ -156,7 +178,9 @@ public class ProductController {
             @RequestParam String query,
             @PageableDefault(size = 20) Pageable pageable){
         Page<Product> products = productService.searchProducts(query, pageable);
-        return ResponseEntity.ok(products.map(ProductMapper::mapToResponse));
+        Map<Long, java.math.BigDecimal> markups = productService.getSaleMarkupsFor(products.getContent());
+        return ResponseEntity.ok(products.map(p -> ProductMapper.mapWithSale(
+                p, p.getCategory() != null ? markups.get(p.getCategory().getId()) : null)));
     }
 
     /**
@@ -268,6 +292,20 @@ public class ProductController {
             @RequestBody List<Long> productIds
     ) {
         productService.batchUpdateActive(productIds, isActive);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Массовая установка/снятие акции на товарах.
+     * Метка собственная — перебивает акцию категории. Цены в БД не меняются.
+     */
+    @PutMapping("/batch/sale")
+    public ResponseEntity<Void> batchUpdateSale(
+            @RequestParam Boolean isSale,
+            @RequestParam(required = false) BigDecimal saleMarkupPercent,
+            @RequestBody List<Long> productIds
+    ) {
+        productService.batchUpdateSale(productIds, isSale, saleMarkupPercent);
         return ResponseEntity.ok().build();
     }
 

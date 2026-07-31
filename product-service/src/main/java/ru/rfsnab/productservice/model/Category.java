@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +48,15 @@ public class Category {
 
     @Column(length = 50)
     private String externalId;
+
+    /** Акционная категория: наценка/скидка применяется ко всем товарам её поддерева. */
+    @Column(name = "is_sale", nullable = false)
+    @Builder.Default
+    private Boolean isSale = false;
+
+    /** Процент к цене: положительный — наценка, отрицательный — скидка. */
+    @Column(name = "sale_markup_percent", precision = 5, scale = 2)
+    private BigDecimal saleMarkupPercent;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
