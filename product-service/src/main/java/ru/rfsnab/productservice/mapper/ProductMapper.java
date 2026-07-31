@@ -58,6 +58,29 @@ public class ProductMapper {
         return mapToResponse(product, List.of(), categoryMarkup);
     }
 
+    /**
+     * Для админки: акция видна во флагах isSale/saleMarkupPercent, но цена остаётся БАЗОВОЙ.
+     * Подменять цену здесь нельзя — админ редактирует именно её, и акционная записалась бы как базовая.
+     */
+    public static ProductResponse mapForAdmin(Product product, List<Product> children, BigDecimal categoryMarkup) {
+        ProductResponse response = mapToResponse(product, List.of(), null);
+        // mapToResponse применяет собственную метку товара к цене даже без процента категории — возвращаем базовую
+        response.setPrice(product.getPrice());
+        response.setWholesalePrice(product.getWholesalePrice());
+        response.setOldPrice(null);
+        response.setOldWholesalePrice(null);
+
+        BigDecimal markup = SalePriceCalculator.resolveMarkup(product, categoryMarkup);
+        response.setIsSale(markup != null);
+        response.setSaleMarkupPercent(markup);
+
+        // Варианты лежат в той же категории — процент им достаётся тот же, цены тоже базовые
+        response.setChildren(children.stream()
+                .map(child -> mapForAdmin(child, List.of(), categoryMarkup))
+                .collect(Collectors.toList()));
+        return response;
+    }
+
     public static ProductResponse mapToResponse(Product product, List<Product> children, BigDecimal categoryMarkup) {
         // Варианты лежат в той же категории, что и родитель, — процент им достаётся тот же
         List<ProductResponse> childResponses = children.stream()

@@ -13,7 +13,7 @@ import {
     setCategoryParent,
     reorderCategories,
 } from '@/api/adminCategories';
-import { batchUpdateActive, changeProductCategory, bulkDeleteProducts, setParentProduct, searchProducts as searchProductsApi, reorderProducts } from '@/api/adminProducts';
+import { batchUpdateActive, batchUpdateSale, changeProductCategory, bulkDeleteProducts, setParentProduct, searchProducts as searchProductsApi, reorderProducts } from '@/api/adminProducts';
 import apiClient from '@/api/client';
 import type { CategoryRequest } from '@/api/adminCategories';
 import type { Product, CategoryTree } from '@/types/product';
@@ -137,6 +137,19 @@ const SortableCatItem = ({ cat, selectedId, onSelect }: SortableCatItemProps) =>
                     </svg>
                 )}
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</span>
+                {cat.saleMarkupPercent != null && (
+                    <span
+                        title={cat.inheritedSale ? 'Акция унаследована от родительской категории' : 'Акция включена на этой категории'}
+                        style={{
+                            fontSize: 10, padding: '1px 5px', borderRadius: 'var(--r-2)', flexShrink: 0,
+                            background: cat.inheritedSale ? 'var(--surface-3)' : 'var(--red-tint)',
+                            color: cat.inheritedSale ? 'var(--ink-3)' : 'var(--brand-red)',
+                            fontWeight: cat.inheritedSale ? 400 : 600,
+                        }}
+                    >
+                        Акция {cat.saleMarkupPercent > 0 ? '+' : '−'}{Math.abs(cat.saleMarkupPercent)}%
+                    </span>
+                )}
                 {!cat.isActive && (
                     <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 'var(--r-2)', background: 'var(--surface-3)', color: 'var(--ink-3)', flexShrink: 0 }}>скрыта</span>
                 )}
@@ -174,9 +187,11 @@ interface CatFormState {
     name: string;
     description: string;
     parentId: number | '';
+    isSale: boolean;
+    saleMarkupPercent: number | null;
 }
 
-const EMPTY_CAT_FORM: CatFormState = { name: '', description: '', parentId: '' };
+const EMPTY_CAT_FORM: CatFormState = { name: '', description: '', parentId: '', isSale: false, saleMarkupPercent: null };
 
 // ── Sortable строка товара ────────────────────────────────────────────────────
 
@@ -241,6 +256,11 @@ const AdminCatalogPage = () => {
     const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
     const batchMoveDialogRef = useRef<HTMLDialogElement>(null);
     const [batchTargetCategory, setBatchTargetCategory] = useState<number | ''>('');
+
+    // Batch sale
+    const batchSaleDialogRef = useRef<HTMLDialogElement>(null);
+    const [batchSaleEnabled, setBatchSaleEnabled] = useState(true);
+    const [batchSalePercent, setBatchSalePercent] = useState<number | ''>('');
 
     // Batch set parent
     const batchParentDialogRef = useRef<HTMLDialogElement>(null);
@@ -598,6 +618,20 @@ const AdminCatalogPage = () => {
         onError: () => messageApi.error('Ошибка при обновлении'),
     });
 
+    const batchSaleMutation = useMutation({
+        mutationFn: ({ isSale, percent }: { isSale: boolean; percent: number | null }) =>
+            batchUpdateSale(selectedRowKeys, isSale, percent),
+        onSuccess: (_, { isSale }) => {
+            messageApi.success(isSale
+                ? `Акция применена к ${selectedRowKeys.length} товарам`
+                : `Акция снята с ${selectedRowKeys.length} товаров`);
+            setSelectedRowKeys([]);
+            batchSaleDialogRef.current?.close();
+            invalidateAll();
+        },
+        onError: () => messageApi.error('Ошибка при установке акции'),
+    });
+
     const batchDeleteMutation = useMutation({
         mutationFn: () => bulkDeleteProducts(selectedRowKeys),
         onSuccess: () => {
@@ -701,6 +735,8 @@ const AdminCatalogPage = () => {
                     name: cat.name,
                     description: cat.description || '',
                     parentId: cat.parentId ?? '',
+                    isSale: cat.isSale,
+                    saleMarkupPercent: cat.saleMarkupPercent,
                 },
                 catId,
             );
@@ -719,6 +755,8 @@ const AdminCatalogPage = () => {
             name: catForm.name,
             description: catForm.description || undefined,
             parentId: catForm.parentId !== '' ? catForm.parentId : undefined,
+            isSale: catForm.isSale,
+            saleMarkupPercent: catForm.isSale ? catForm.saleMarkupPercent : null,
         };
         if (editingCatId) {
             updateCatMutation.mutate({ id: editingCatId, request });
@@ -765,24 +803,39 @@ const AdminCatalogPage = () => {
                 ? `Поиск: «${searchQuery}»`
                 : 'Все товары';
 
+    // Все строки страницы, включая варианты (в т.ч. свёрнутые)
+    const pageRowIds = groupedRows.map((r) => r.product.id);
+
     const allPageSelected =
-        displayProducts.length > 0 &&
-        displayProducts.every((p) => selectedRowKeys.includes(p.id));
+        pageRowIds.length > 0 &&
+        pageRowIds.every((id) => selectedRowKeys.includes(id));
 
     const toggleSelectAll = () => {
         if (allPageSelected) {
-            setSelectedRowKeys((prev) =>
-                prev.filter((k) => !displayProducts.some((p) => p.id === k)),
-            );
+            setSelectedRowKeys((prev) => prev.filter((k) => !pageRowIds.includes(k)));
         } else {
-            const ids = displayProducts.map((p) => p.id);
-            setSelectedRowKeys((prev) => Array.from(new Set([...prev, ...ids])));
+            setSelectedRowKeys((prev) => Array.from(new Set([...prev, ...pageRowIds])));
         }
     };
 
+    // Родитель не отмечен, но часть его вариантов — да
+    const isPartiallySelected = (id: number, isChild: boolean) => {
+        if (isChild || selectedRowKeys.includes(id)) return false;
+        return groupedRows.some((r) => r.isChild && r.product.parentProductId === id
+            && selectedRowKeys.includes(r.product.id));
+    };
+
+    // Выделение родителя захватывает его варианты (в т.ч. свёрнутые) — иначе массовое
+    // действие тихо пропустит невидимые строки семьи.
     const toggleRow = (id: number) => {
+        const childIds = groupedRows
+            .filter((r) => r.isChild && r.product.parentProductId === id)
+            .map((r) => r.product.id);
+        const ids = [id, ...childIds];
         setSelectedRowKeys((prev) =>
-            prev.includes(id) ? prev.filter((k) => k !== id) : [...prev, id],
+            prev.includes(id)
+                ? prev.filter((k) => !ids.includes(k))
+                : Array.from(new Set([...prev, ...ids])),
         );
     };
 
@@ -825,6 +878,50 @@ const AdminCatalogPage = () => {
 
     return (
         <div>
+            {/* Bulk action bar — sticky под топбаром, чтобы не перекрывать последнюю строку списка */}
+            {selectedRowKeys.length > 0 && (
+                <div className="rf-bulk-bar">
+                    <span className="rf-bulk-bar-count">Выбрано: {selectedRowKeys.length}</span>
+                    <div className="rf-bulk-bar-divider" />
+                    <button className="rf-bulk-btn" onClick={() => batchActivateMutation.mutate(true)}>
+                        Активировать
+                    </button>
+                    <button className="rf-bulk-btn" onClick={() => batchActivateMutation.mutate(false)}>
+                        Деактивировать
+                    </button>
+                    <button
+                        className="rf-bulk-btn"
+                        onClick={openBatchMoveDialog}
+                    >
+                        Переместить
+                    </button>
+                    <button
+                        className="rf-bulk-btn"
+                        onClick={() => { setBatchSaleEnabled(true); setBatchSalePercent(''); batchSaleDialogRef.current?.showModal(); }}
+                    >
+                        Акция
+                    </button>
+                    <button
+                        className="rf-bulk-btn"
+                        onClick={() => { setSelectedParentId(null); setSelectedParentName(''); setParentSearch(''); setParentSearchResults([]); batchParentDialogRef.current?.showModal(); }}
+                    >
+                        Назначить родителя
+                    </button>
+                    <div className="rf-bulk-bar-divider" />
+                    <button className="rf-bulk-btn danger" onClick={handleBatchDelete}>
+                        Удалить
+                    </button>
+                    <div className="rf-bulk-bar-divider" />
+                    <button
+                        className="rf-bulk-btn"
+                        style={{ opacity: 0.7 }}
+                        onClick={() => setSelectedRowKeys([])}
+                    >
+                        ✕ Снять
+                    </button>
+                </div>
+            )}
+
             {/* Page header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h2 style={{ margin: 0, fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, color: 'var(--ink-1)', letterSpacing: '-0.01em' }}>
@@ -1126,7 +1223,7 @@ const AdminCatalogPage = () => {
                                     items={groupedRows.filter((r) => !r.isChild).map((r) => r.product.id)}
                                     strategy={verticalListSortingStrategy}
                                 >
-                                <table className="rf-admin-table">
+                                <table className="rf-admin-table rf-catalog-table">
                                     <thead>
                                         <tr>
                                             <th style={{ width: 36, paddingLeft: 16 }}>
@@ -1141,12 +1238,12 @@ const AdminCatalogPage = () => {
                                             {dndEnabled && <th style={{ width: 24 }}></th>}
                                             <th style={{ width: 44 }}></th>
                                             <th>Название</th>
-                                            <th style={{ width: 160 }}>Категория</th>
+                                            <th style={{ width: 150 }}>Метки</th>
                                             <th style={{ width: 100 }}>Артикул</th>
                                             <th style={{ width: 130 }}>Цена</th>
                                             <th style={{ width: 55 }}>Ост.</th>
                                             <th style={{ width: 55 }}>Акт.</th>
-                                            <th style={{ width: 40 }}></th>
+                                            <th style={{ width: 72 }}></th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1167,6 +1264,10 @@ const AdminCatalogPage = () => {
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedRowKeys.includes(product.id)}
+                                                            ref={(el) => {
+                                                                // Родитель с частично отмеченными вариантами
+                                                                if (el) el.indeterminate = isPartiallySelected(product.id, isChild);
+                                                            }}
                                                             onChange={() => toggleRow(product.id)}
                                                             style={{ cursor: 'pointer' }}
                                                         />
@@ -1236,18 +1337,49 @@ const AdminCatalogPage = () => {
                                                         )}
                                                     </td>
 
-                                                    {/* Name */}
-                                                    <td>
+                                                    {/* Name + category */}
+                                                    <td style={{ maxWidth: 0 }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                                             {isChild && (
                                                                 <span style={{ width: 2, height: 18, background: 'var(--line-2)', borderRadius: 2, flexShrink: 0 }} />
                                                             )}
                                                             <Link
                                                                 to={`/admin/products/${product.id}/edit`}
-                                                                style={{ color: isChild ? 'var(--ink-2)' : 'var(--brand-navy)', textDecoration: 'none', fontSize: 'var(--text-base)' }}
+                                                                title={product.name}
+                                                                style={{
+                                                                    color: isChild ? 'var(--ink-2)' : 'var(--brand-navy)', textDecoration: 'none',
+                                                                    fontSize: 'var(--text-base)',
+                                                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                                }}
                                                             >
                                                                 {product.name}
                                                             </Link>
+                                                        </div>
+                                                        <div style={{
+                                                            fontSize: 11, color: 'var(--ink-3)', marginTop: 2,
+                                                            paddingLeft: isChild ? 8 : 0,
+                                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                        }}>
+                                                            {product.categoryName || 'Без категории'}
+                                                        </div>
+                                                    </td>
+
+                                                    {/* Badges */}
+                                                    <td>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                                                            {product.isSale && product.saleMarkupPercent != null && (
+                                                                <span
+                                                                    title={product.ownSale ? 'Акция задана на самом товаре' : 'Акция унаследована от категории'}
+                                                                    style={{
+                                                                        fontSize: 10, padding: '1px 6px', borderRadius: 'var(--r-2)', flexShrink: 0,
+                                                                        background: product.ownSale ? 'var(--red-tint)' : 'var(--surface-3)',
+                                                                        color: product.ownSale ? 'var(--brand-red)' : 'var(--ink-3)',
+                                                                        fontWeight: product.ownSale ? 600 : 400,
+                                                                    }}
+                                                                >
+                                                                    Акция {product.saleMarkupPercent > 0 ? '+' : '−'}{Math.abs(product.saleMarkupPercent)}%
+                                                                </span>
+                                                            )}
                                                             {childCount > 0 && (
                                                                 <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 'var(--r-2)', background: 'var(--brand-navy)', color: '#fff', fontWeight: 600, flexShrink: 0 }}>
                                                                     {childCount} вар.
@@ -1266,26 +1398,76 @@ const AdminCatalogPage = () => {
                                                         </div>
                                                     </td>
 
-                                                    {/* Category — inline move popover */}
+                                                    {/* SKU */}
+                                                    <td className="rf-mono" style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
+                                                        {product.sku || '—'}
+                                                    </td>
+
+                                                    {/* Price */}
+                                                    <td className="rf-tabular" style={{ fontWeight: 500 }}>
+                                                        {formatPrice(product.wholesalePrice ?? product.price)}
+                                                        {product.price != null && product.price !== product.wholesalePrice && (
+                                                            <div style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-secondary, #888)', marginTop: 1 }}>
+                                                                {formatPrice(product.price)} опт
+                                                            </div>
+                                                        )}
+                                                    </td>
+
+                                                    {/* Stock */}
+                                                    <td className="rf-tabular" style={{
+                                                        color: product.stockQuantity > 0 ? 'var(--brand-green)' : 'var(--brand-red)',
+                                                        fontWeight: 500,
+                                                    }}>
+                                                        {product.stockQuantity}
+                                                    </td>
+
+                                                    {/* Active toggle */}
+                                                    <td>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={product.isActive}
+                                                            onChange={() => toggleProductMutation.mutate({ id: product.id, isActive: product.isActive })}
+                                                            style={{ cursor: 'pointer', width: 16, height: 16 }}
+                                                            title={product.isActive ? 'Деактивировать' : 'Активировать'}
+                                                        />
+                                                    </td>
+
+                                                    {/* Actions: move to category + delete */}
                                                     <td style={{ position: 'relative' }}>
-                                                        <button
-                                                            className="rf-btn rf-btn-ghost"
-                                                            style={{ height: 24, padding: '0 6px', fontSize: 'var(--text-sm)', gap: 4, color: 'var(--ink-2)' }}
-                                                            onClick={() => {
-                                                                setMoveProductId(isMovingThis ? null : product.id);
-                                                                setMoveProductTarget('');
-                                                            }}
-                                                        >
-                                                            <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
-                                                                <path d="M2 4h5l2 2h5v8H2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
-                                                            </svg>
-                                                            {product.categoryName || 'Без категории'}
-                                                        </button>
+                                                        <div style={{ display: 'flex', gap: 2 }}>
+                                                            <button
+                                                                className="rf-btn rf-btn-ghost"
+                                                                style={{ height: 28, width: 28, padding: 0, color: 'var(--ink-2)' }}
+                                                                title="Переместить в другую категорию"
+                                                                onClick={() => {
+                                                                    setMoveProductId(isMovingThis ? null : product.id);
+                                                                    setMoveProductTarget('');
+                                                                }}
+                                                            >
+                                                                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                                                    <path d="M2 4h5l2 2h5v8H2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
+                                                                </svg>
+                                                            </button>
+                                                            <button
+                                                                className="rf-btn rf-btn-ghost"
+                                                                style={{ height: 28, width: 28, padding: 0, color: 'var(--brand-red)' }}
+                                                                title="Удалить товар"
+                                                                onClick={() => {
+                                                                    if (window.confirm('Удалить товар?')) {
+                                                                        deleteProductMutation.mutate(product.id);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                                                    <path d="M2 4h12M6 4V2h4v2M5 4l.5 9h5l.5-9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
                                                         {isMovingThis && (
                                                             <div style={{
                                                                 position: 'absolute',
                                                                 top: '100%',
-                                                                left: 0,
+                                                                right: 0,
                                                                 zIndex: 50,
                                                                 background: 'var(--surface)',
                                                                 border: '1px solid var(--line-1)',
@@ -1338,58 +1520,6 @@ const AdminCatalogPage = () => {
                                                             </div>
                                                         )}
                                                     </td>
-
-                                                    {/* SKU */}
-                                                    <td className="rf-mono" style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
-                                                        {product.sku || '—'}
-                                                    </td>
-
-                                                    {/* Price */}
-                                                    <td className="rf-tabular" style={{ fontWeight: 500 }}>
-                                                        {formatPrice(product.wholesalePrice ?? product.price)}
-                                                        {product.price != null && product.price !== product.wholesalePrice && (
-                                                            <div style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-secondary, #888)', marginTop: 1 }}>
-                                                                {formatPrice(product.price)} опт
-                                                            </div>
-                                                        )}
-                                                    </td>
-
-                                                    {/* Stock */}
-                                                    <td className="rf-tabular" style={{
-                                                        color: product.stockQuantity > 0 ? 'var(--brand-green)' : 'var(--brand-red)',
-                                                        fontWeight: 500,
-                                                    }}>
-                                                        {product.stockQuantity}
-                                                    </td>
-
-                                                    {/* Active toggle */}
-                                                    <td>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={product.isActive}
-                                                            onChange={() => toggleProductMutation.mutate({ id: product.id, isActive: product.isActive })}
-                                                            style={{ cursor: 'pointer', width: 16, height: 16 }}
-                                                            title={product.isActive ? 'Деактивировать' : 'Активировать'}
-                                                        />
-                                                    </td>
-
-                                                    {/* Delete */}
-                                                    <td>
-                                                        <button
-                                                            className="rf-btn rf-btn-ghost"
-                                                            style={{ height: 28, width: 28, padding: 0, color: 'var(--brand-red)' }}
-                                                            title="Удалить товар"
-                                                            onClick={() => {
-                                                                if (window.confirm('Удалить товар?')) {
-                                                                    deleteProductMutation.mutate(product.id);
-                                                                }
-                                                            }}
-                                                        >
-                                                            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                                                                <path d="M2 4h12M6 4V2h4v2M5 4l.5 9h5l.5-9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                                                            </svg>
-                                                        </button>
-                                                    </td>
                                                 </tr>
                                             )}
                                             </SortableRow>
@@ -1400,7 +1530,7 @@ const AdminCatalogPage = () => {
                                 </SortableContext>
                                 <DragOverlay>
                                     {draggingProduct && (
-                                        <table className="rf-admin-table" style={{ background: 'var(--surface)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', borderRadius: 4, opacity: 0.95 }}>
+                                        <table className="rf-admin-table rf-catalog-table" style={{ background: 'var(--surface)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', borderRadius: 4, opacity: 0.95 }}>
                                             <tbody>
                                                 <tr>
                                                     <td colSpan={10} style={{ padding: '6px 12px', fontSize: 13, fontWeight: 500, color: 'var(--ink-1)', whiteSpace: 'nowrap' }}>
@@ -1444,43 +1574,6 @@ const AdminCatalogPage = () => {
             </div>
 
             {/* Floating bulk bar */}
-            {selectedRowKeys.length > 0 && (
-                <div className="rf-bulk-bar">
-                    <span className="rf-bulk-bar-count">Выбрано: {selectedRowKeys.length}</span>
-                    <div className="rf-bulk-bar-divider" />
-                    <button className="rf-bulk-btn" onClick={() => batchActivateMutation.mutate(true)}>
-                        Активировать
-                    </button>
-                    <button className="rf-bulk-btn" onClick={() => batchActivateMutation.mutate(false)}>
-                        Деактивировать
-                    </button>
-                    <button
-                        className="rf-bulk-btn"
-                        onClick={openBatchMoveDialog}
-                    >
-                        Переместить
-                    </button>
-                    <button
-                        className="rf-bulk-btn"
-                        onClick={() => { setSelectedParentId(null); setSelectedParentName(''); setParentSearch(''); setParentSearchResults([]); batchParentDialogRef.current?.showModal(); }}
-                    >
-                        Назначить родителя
-                    </button>
-                    <div className="rf-bulk-bar-divider" />
-                    <button className="rf-bulk-btn danger" onClick={handleBatchDelete}>
-                        Удалить
-                    </button>
-                    <div className="rf-bulk-bar-divider" />
-                    <button
-                        className="rf-bulk-btn"
-                        style={{ opacity: 0.7 }}
-                        onClick={() => setSelectedRowKeys([])}
-                    >
-                        ✕ Снять
-                    </button>
-                </div>
-            )}
-
             {/* Batch move dialog */}
             <dialog
                 ref={batchMoveDialogRef}
@@ -1544,6 +1637,73 @@ const AdminCatalogPage = () => {
                         onClick={handleBatchMove}
                     >
                         {batchMoveMutation.isPending ? 'Перемещение…' : 'Переместить'}
+                    </button>
+                </div>
+            </dialog>
+
+            {/* Batch sale dialog */}
+            <dialog
+                ref={batchSaleDialogRef}
+                style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', color: 'var(--ink-1)', padding: 0, width: 420, maxWidth: '90vw', boxShadow: 'var(--shadow-pop)', margin: 'auto' }}
+                onKeyDown={(e) => { if (e.key === 'Escape') { batchSaleDialogRef.current?.close(); } }}
+            >
+                <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)' }}>
+                        Акция для {selectedRowKeys.length} товаров
+                    </span>
+                    <button
+                        className="rf-btn rf-btn-ghost"
+                        style={{ height: 28, width: 28, padding: 0, fontSize: 'var(--text-xl)', color: 'var(--ink-3)' }}
+                        onClick={() => batchSaleDialogRef.current?.close()}
+                    >✕</button>
+                </div>
+                <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-base)', cursor: 'pointer' }}>
+                        <input
+                            type="checkbox"
+                            checked={batchSaleEnabled}
+                            onChange={(e) => setBatchSaleEnabled(e.target.checked)}
+                        />
+                        <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>Товары участвуют в акции</span>
+                    </label>
+                    {batchSaleEnabled ? (
+                        <div>
+                            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                                Наценка / скидка, % <span style={{ color: 'var(--brand-red)' }}>*</span>
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min={-90}
+                                placeholder="например −15 для скидки 15%"
+                                value={batchSalePercent}
+                                onChange={(e) => setBatchSalePercent(e.target.value === '' ? '' : Number(e.target.value))}
+                                style={{ width: '100%', height: 34, padding: '0 10px', boxSizing: 'border-box', borderRadius: 'var(--r-2)', border: '1px solid var(--line-2)', fontSize: 13, background: 'var(--surface)', color: 'var(--ink-1)', outline: 'none' }}
+                            />
+                            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginTop: 4 }}>
+                                Метка на товаре перебивает акцию категории. Цены в БД не меняются.
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+                            Собственная метка акции будет снята. Если товар лежит в акционной категории, её процент продолжит действовать.
+                        </div>
+                    )}
+                </div>
+                <div style={{ padding: '14px 22px', borderTop: '1px solid var(--line-1)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button
+                        className="rf-btn rf-btn-sm rf-btn-quiet"
+                        onClick={() => batchSaleDialogRef.current?.close()}
+                    >Отмена</button>
+                    <button
+                        className="rf-btn rf-btn-sm rf-btn-primary"
+                        disabled={(batchSaleEnabled && batchSalePercent === '') || batchSaleMutation.isPending}
+                        onClick={() => batchSaleMutation.mutate({
+                            isSale: batchSaleEnabled,
+                            percent: batchSaleEnabled ? (batchSalePercent as number) : null,
+                        })}
+                    >
+                        {batchSaleMutation.isPending ? 'Применение…' : 'Применить'}
                     </button>
                 </div>
             </dialog>
@@ -1722,6 +1882,48 @@ const AdminCatalogPage = () => {
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                         </select>
+                    </div>
+
+                    {/* Sale */}
+                    <div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-base)', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={catForm.isSale}
+                                onChange={(e) => {
+                                    const checked = e.target.checked;
+                                    setCatForm((f) => ({ ...f, isSale: checked, saleMarkupPercent: checked ? f.saleMarkupPercent : null }));
+                                }}
+                            />
+                            <span style={{ fontWeight: 600, color: 'var(--ink-2)' }}>Акционная категория</span>
+                        </label>
+                        {catForm.isSale && (
+                            <div style={{ marginTop: 8 }}>
+                                <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                                    Наценка / скидка, %
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min={-90}
+                                    placeholder="например −15 для скидки 15%"
+                                    value={catForm.saleMarkupPercent ?? ''}
+                                    onChange={(e) => setCatForm((f) => ({
+                                        ...f,
+                                        saleMarkupPercent: e.target.value === '' ? null : Number(e.target.value),
+                                    }))}
+                                    style={{
+                                        width: '100%', height: 34, padding: '0 10px', fontSize: 'var(--text-base)',
+                                        border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
+                                        background: 'var(--surface)', color: 'var(--ink-1)',
+                                        outline: 'none', fontFamily: 'var(--font-body)', boxSizing: 'border-box',
+                                    }}
+                                />
+                                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginTop: 4 }}>
+                                    Применяется ко всем товарам категории и её подкатегорий. Цены в БД не меняются.
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

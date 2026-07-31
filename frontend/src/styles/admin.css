@@ -270,6 +270,12 @@
   vertical-align: middle;
 }
 
+/* Каталог товаров: фиксированная высота строки — она не скачет от длины названия и числа меток */
+.rf-catalog-table td {
+  padding: 10px 14px;
+  height: 56px;
+}
+
 .rf-admin-table tbody tr:hover td {
   background: var(--surface-2);
 }
@@ -485,23 +491,23 @@
   border-color: var(--brand-red);
 }
 
-/* ── Floating bulk action bar ── */
+/* ── Sticky bulk action bar ── */
+/* Прилипает под топбаром: всегда видна при скролле и не перекрывает последнюю строку списка.
+   top компенсирует падинг .rf-admin-content, иначе полоса «зависает» ниже края. */
 .rf-bulk-bar {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: sticky;
+  top: calc(-1 * var(--admin-content-pad));
+  margin: calc(-1 * var(--admin-content-pad)) calc(-1 * var(--admin-content-pad)) 16px;
   background: var(--brand-navy);
   color: #fff;
-  border-radius: var(--r-4);
   padding: 12px 20px;
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
   box-shadow: var(--shadow-pop);
   font-size: 13px;
   z-index: var(--z-bulk);
-  white-space: nowrap;
 }
 
 .rf-bulk-bar-count {

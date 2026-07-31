@@ -16,6 +16,7 @@ import ru.rfsnab.productservice.mapper.ProductMapper;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.service.ProductService;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -78,9 +79,10 @@ public class ProductController {
         List<Long> parentIds = productsPage.getContent().stream().map(Product::getId).toList();
         Map<Long, List<Product>> childrenByParent = productService.getChildrenForParents(parentIds);
         // Админка работает с БАЗОВЫМИ ценами — их же редактируют в карточке товара.
-        // Акция видна по флагу ownSale, но цену в списке не подменяет.
+        // Акция видна во флагах (в т.ч. унаследованная от категории), но цену в списке не подменяет.
         return ResponseEntity.ok(productsPage.map(p ->
-                ProductMapper.mapToResponse(p, childrenByParent.getOrDefault(p.getId(), List.of()))));
+                ProductMapper.mapForAdmin(p, childrenByParent.getOrDefault(p.getId(), List.of()),
+                        productService.getSaleMarkupFor(p))));
     }
 
     /**
@@ -290,6 +292,20 @@ public class ProductController {
             @RequestBody List<Long> productIds
     ) {
         productService.batchUpdateActive(productIds, isActive);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Массовая установка/снятие акции на товарах.
+     * Метка собственная — перебивает акцию категории. Цены в БД не меняются.
+     */
+    @PutMapping("/batch/sale")
+    public ResponseEntity<Void> batchUpdateSale(
+            @RequestParam Boolean isSale,
+            @RequestParam(required = false) BigDecimal saleMarkupPercent,
+            @RequestBody List<Long> productIds
+    ) {
+        productService.batchUpdateSale(productIds, isSale, saleMarkupPercent);
         return ResponseEntity.ok().build();
     }
 

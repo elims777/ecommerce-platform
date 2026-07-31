@@ -53,8 +53,9 @@ public class CategoryService {
      */
     public synchronized void refreshCategoryTree() {
         List<Category> allCategories = categoryRepository.findAll();
-        cachedCategoryTree = buildTree(allCategories);
-        cachedSaleMarkups = buildSaleMarkups(allCategories);
+        Map<Long, BigDecimal> saleMarkups = buildSaleMarkups(allCategories);
+        cachedCategoryTree = buildTree(allCategories, saleMarkups);
+        cachedSaleMarkups = saleMarkups;
     }
 
     /**
@@ -112,10 +113,13 @@ public class CategoryService {
     /**
      * Построение дерева из плоского списка категорий
      */
-    private List<CategoryTreeDTO> buildTree(List<Category> categories) {
+    private List<CategoryTreeDTO> buildTree(List<Category> categories, Map<Long, BigDecimal> saleMarkups) {
         Map<Long, CategoryTreeDTO> map = new HashMap<>();
 
         for (Category category : categories) {
+            BigDecimal effectiveMarkup = saleMarkups.get(category.getId());
+            boolean ownSale = Boolean.TRUE.equals(category.getIsSale()) && category.getSaleMarkupPercent() != null;
+
             CategoryTreeDTO dto = CategoryTreeDTO.builder()
                     .id(category.getId())
                     .name(category.getName())
@@ -124,6 +128,9 @@ public class CategoryService {
                     .parentId(category.getParent() != null ? category.getParent().getId() : null)
                     .isActive(category.getIsActive())
                     .displayOrder(category.getDisplayOrder())
+                    .isSale(ownSale)
+                    .saleMarkupPercent(effectiveMarkup)
+                    .inheritedSale(effectiveMarkup != null && !ownSale)
                     .build();
             map.put(category.getId(), dto);
         }

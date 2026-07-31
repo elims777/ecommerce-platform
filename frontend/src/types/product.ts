@@ -99,6 +99,12 @@ export interface CategoryTree {
     parentId: number | null;
     isActive: boolean;
     displayOrder: number;
+    /** Акция включена именно на этой категории */
+    isSale: boolean;
+    /** Действующий процент: собственный или унаследованный от предка */
+    saleMarkupPercent: number | null;
+    /** Акция действует, но включена у предка */
+    inheritedSale: boolean;
     children: CategoryTree[];
 }
 

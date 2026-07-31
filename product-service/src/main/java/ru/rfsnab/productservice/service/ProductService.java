@@ -638,4 +638,28 @@ public class ProductService {
         products.forEach(p -> p.setIsActive(isActive));
         productRepository.saveAll(products);
     }
+
+    /**
+     * Массовая установка/снятие собственной метки акции.
+     * Цены в БД не меняются — процент применяется на лету при выдаче.
+     */
+    @Transactional
+    public void batchUpdateSale(List<Long> productIds, Boolean isSale, BigDecimal saleMarkupPercent) {
+        log.info("Массовое обновление isSale={} ({}%) для {} товаров", isSale, saleMarkupPercent, productIds.size());
+        if (Boolean.TRUE.equals(isSale)) {
+            if (saleMarkupPercent == null) {
+                throw new BusinessException("Для акции нужно указать процент");
+            }
+            if (saleMarkupPercent.compareTo(new BigDecimal("-90.0")) < 0) {
+                throw new BusinessException("Скидка не может превышать 90%");
+            }
+        }
+        BigDecimal markup = Boolean.TRUE.equals(isSale) ? saleMarkupPercent : null;
+        List<Product> products = productRepository.findAllById(productIds);
+        products.forEach(p -> {
+            p.setIsSale(Boolean.TRUE.equals(isSale));
+            p.setSaleMarkupPercent(markup);
+        });
+        productRepository.saveAll(products);
+    }
 }

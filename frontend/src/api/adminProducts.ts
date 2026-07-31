@@ -146,6 +146,17 @@ export const batchUpdateActive = async (productIds: number[], isActive: boolean)
     });
 };
 
+/** Массовая установка/снятие акции на товарах (собственная метка, перебивает акцию категории) */
+export const batchUpdateSale = async (
+    productIds: number[],
+    isSale: boolean,
+    saleMarkupPercent: number | null,
+): Promise<void> => {
+    await apiClient.put('/v1/products/batch/sale', productIds, {
+        params: isSale ? { isSale, saleMarkupPercent } : { isSale },
+    });
+};
+
 /** Массовое удаление товаров */
 export const bulkDeleteProducts = async (ids: number[]): Promise<void> => {
     await apiClient.delete('/v1/products/batch', { data: ids });
