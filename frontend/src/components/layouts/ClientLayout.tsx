@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import type { CSSProperties, MouseEvent } from 'react';
 import { Dropdown, Drawer, Grid } from 'antd';
 import { company } from '@/config/company';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -31,6 +32,18 @@ const getPageIndex = (pathname: string): number => {
     if (pathname.startsWith('/checkout')) return 4.5;
     const idx = PAGE_ORDER.indexOf(pathname);
     return idx >= 0 ? idx : 5;
+};
+
+const FOOTER_INK = 'rgba(255,255,255,.6)';
+const FOOTER_INK_HOVER = 'rgba(255,255,255,.9)';
+
+const footerHeadingStyle: CSSProperties = { fontSize: 'var(--text-base)', fontWeight: 600, color: '#fff', marginBottom: 14 };
+const footerColumnStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8, fontSize: 'var(--text-base)', color: FOOTER_INK };
+const footerLinkStyle: CSSProperties = { cursor: 'pointer', color: 'inherit', textDecoration: 'none', transition: 'color 0.12s' };
+
+const footerLinkHover = {
+    onMouseEnter: (e: MouseEvent<HTMLElement>) => { e.currentTarget.style.color = FOOTER_INK_HOVER; },
+    onMouseLeave: (e: MouseEvent<HTMLElement>) => { e.currentTarget.style.color = FOOTER_INK; },
 };
 
 const SearchIcon = () => (
@@ -199,6 +212,11 @@ const ClientLayout = () => {
         staleTime: 5 * 60 * 1000,
         enabled: !isMobile,
     });
+
+    const footerCategories = categoryTree
+        .filter((c) => c.isActive)
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .slice(0, 4);
 
     const openMegaMenu = () => {
         if (megaMenuCloseTimer.current) clearTimeout(megaMenuCloseTimer.current);
@@ -564,7 +582,7 @@ const ClientLayout = () => {
 
             <footer style={{ background: 'var(--footer-bg)', color: '#fff', padding: 'var(--sp-14) var(--page-pad-x) 28px', marginTop: 'var(--sp-14)' }}>
                 <div style={{ maxWidth: 'var(--footer-max-w)', margin: '0 auto' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr', gap: 'var(--sp-14)', marginBottom: 32 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(160px, 1fr))' : '1.4fr 1fr 1fr 1fr 1fr', gap: 'var(--sp-14)', marginBottom: 32 }}>
                         <div>
                             <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <img src="/logo-light.png" alt="РФснаб" style={{ height: 'var(--logo-h-footer)', display: 'block' }} />
@@ -577,40 +595,53 @@ const ClientLayout = () => {
                                 Комплексное снабжение предприятий и организаций. Работаем с {company.founded} года.
                             </p>
                         </div>
-                        {[
-                            ['Каталог', ['Противопожарное оборудование', 'СИЗ и спецодежда', 'Инструмент', 'Электротехника', 'Все категории →']],
-                            ['Компания', ['О нас', 'Реквизиты', 'Сертификаты', 'Поставщикам', 'Вакансии']],
-                            ['Покупателям', ['Доставка', 'Оплата и договор', 'Возврат', 'Госзакупки 44-ФЗ', 'Тендеры']],
-                            ['Контакты', [company.phone.free, company.email.sales, company.workHours, company.address.city]],
-                        ].map(([heading, items]) => (
-                            <div key={heading as string}>
-                                <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: '#fff', marginBottom: 14 }}>{heading}</div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 'var(--text-base)', color: 'rgba(255,255,255,.6)' }}>
-                                    {(items as string[]).map((item) => (
-                                        <a key={item} style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none', transition: 'color 0.12s' }}
-                                            onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.9)'; }}
-                                            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.6)'; }}
-                                        >{item}</a>
+                        {footerCategories.length > 0 && (
+                            <div>
+                                <div style={footerHeadingStyle}>Каталог</div>
+                                <div style={footerColumnStyle}>
+                                    {footerCategories.map((cat) => (
+                                        <NavLink key={cat.id} to={`/catalog?category=${cat.id}`} style={footerLinkStyle} {...footerLinkHover}>
+                                            {cat.name}
+                                        </NavLink>
                                     ))}
+                                    <NavLink to="/catalog?sale=true" style={footerLinkStyle} {...footerLinkHover}>Акции</NavLink>
                                 </div>
                             </div>
-                        ))}
+                        )}
+
+                        <div>
+                            <div style={footerHeadingStyle}>Компания</div>
+                            <div style={footerColumnStyle}>
+                                <NavLink to="/about" style={footerLinkStyle} {...footerLinkHover}>О компании</NavLink>
+                                <span>{company.phone.free}</span>
+                                <a href={`mailto:${company.email.sales}`} style={footerLinkStyle} {...footerLinkHover}>{company.email.sales}</a>
+                                <span>{company.workHours}</span>
+                                <span>{company.address.city}</span>
+                                <NavLink to="/contacts" style={footerLinkStyle} {...footerLinkHover}>Все контакты →</NavLink>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style={footerHeadingStyle}>Покупателям</div>
+                            <div style={footerColumnStyle}>
+                                <a href="/instrukciya-po-registracii.pdf" target="_blank" rel="noopener noreferrer" style={footerLinkStyle} {...footerLinkHover}>Инструкция по регистрации</a>
+                                <NavLink to="/contacts#map" style={footerLinkStyle} {...footerLinkHover}>Как проехать</NavLink>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style={footerHeadingStyle}>Документы</div>
+                            <div style={footerColumnStyle}>
+                                <NavLink to="/privacy-policy" style={footerLinkStyle} {...footerLinkHover}>Политика конфиденциальности</NavLink>
+                                <NavLink to="/personal-data" style={footerLinkStyle} {...footerLinkHover}>Публичная оферта</NavLink>
+                            </div>
+                        </div>
                     </div>
                     <div style={{
                         paddingTop: 20, borderTop: '1px solid rgba(255,255,255,.1)',
-                        display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)', color: 'rgba(255,255,255,.45)',
+                        fontSize: 'var(--text-sm)', color: 'rgba(255,255,255,.45)',
                     }}>
                         <span>© {company.founded}–{new Date().getFullYear()} {company.legalName} · ИНН {company.inn}</span>
-                        <span style={{ display: 'flex', gap: 18 }}>
-                            <a href="/privacy-policy" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.12s' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.8)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.45)'; }}
-                            >Политика конфиденциальности</a>
-                            <a href="/personal-data" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.12s' }}
-                                onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.8)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,.45)'; }}
-                            >Публичная оферта</a>
-                        </span>
                     </div>
                 </div>
             </footer>
