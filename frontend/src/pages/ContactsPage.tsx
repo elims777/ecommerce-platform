@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Typography, Card, Row, Col, Space, Divider } from 'antd';
 import { company } from '@/config/company';
 import {
@@ -9,7 +11,17 @@ import {
 
 const { Title, Text, Link } = Typography;
 
+/** Виджет Яндекс.Карт («Поделиться» → «Код вставки» на yandex.ru/maps) */
+const MAP_WIDGET_SRC = 'https://yandex.ru/map-widget/v1/?ll=50.813441%2C61.635131&mode=whatshere&whatshere%5Bpoint%5D=50.813182%2C61.634812&whatshere%5Bzoom%5D=17&z=18';
+
 const ContactsPage = () => {
+    const { hash } = useLocation();
+
+    useEffect(() => {
+        if (hash !== '#map') return;
+        document.getElementById('map')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, [hash]);
+
     return (
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
             <Title level={2}>Контакты</Title>
@@ -112,6 +124,24 @@ const ContactsPage = () => {
                         <Text strong>{company.ogrn}</Text>
                     </Col>
                 </Row>
+            </Card>
+
+            <Divider />
+
+            <Card id="map" style={{ borderRadius: 12, scrollMarginTop: 100 }}>
+                <Title level={4}>Как нас найти</Title>
+                <Text type="secondary">{company.address.full}</Text>
+                <div style={{ marginTop: 16, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line-2)' }}>
+                    <iframe
+                        src={MAP_WIDGET_SRC}
+                        title="Карта проезда"
+                        loading="lazy"
+                        allowFullScreen
+                        sandbox="allow-scripts allow-same-origin allow-popups"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        style={{ width: '100%', height: 400, border: 0, display: 'block' }}
+                    />
+                </div>
             </Card>
         </div>
     );
