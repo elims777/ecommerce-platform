@@ -124,6 +124,8 @@ const Showcase = ({ onAddToCart }: { onAddToCart: (productId: number) => void })
     const [tab, setTab] = useState<ShowcaseTab>('hits');
     const screens = Grid.useBreakpoint();
     const isMobile = screens.md === false;
+    // Боковая колонка «Новости и акции» помещается рядом с каруселью только от lg (992).
+    const showSidebar = screens.lg === true;
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const { data: hitsPage, isLoading: hitsLoading } = useQuery({
@@ -209,7 +211,7 @@ const Showcase = ({ onAddToCart }: { onAddToCart: (productId: number) => void })
             {/* Карусель + правая колонка */}
             <div style={{ display: 'flex', gap: 16, flexDirection: isMobile ? 'column' : 'row' }}>
                 <div
-                    style={{ flex: isMobile ? '1 1 auto' : '0 0 68%', minWidth: 0, position: 'relative' }}
+                    style={{ flex: showSidebar ? '0 0 68%' : '1 1 auto', minWidth: 0, position: 'relative' }}
                     onMouseEnter={() => { pausedRef.current = true; }}
                     onMouseLeave={() => { pausedRef.current = false; }}
                 >
@@ -271,7 +273,7 @@ const Showcase = ({ onAddToCart }: { onAddToCart: (productId: number) => void })
                     ) : null}
                 </div>
 
-                {!isMobile && (
+                {showSidebar && (
                     <div style={{ width: '32%', background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', padding: 16 }}>
                         <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--ink-1)', marginBottom: 10 }}>
                             Новости и акции
@@ -288,7 +290,7 @@ const Showcase = ({ onAddToCart }: { onAddToCart: (productId: number) => void })
             {/* Полоса преимуществ */}
             <div style={{
                 marginTop: 20, width: '100%',
-                display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 10,
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10,
             }}>
                 {SHOWCASE_ADVANTAGES.map(({ icon, text }) => (
                     <div key={text} style={{
@@ -481,7 +483,7 @@ const HomePage = () => {
                 {categoriesLoading ? (
                     <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
                 ) : primaryCategories.length > 0 ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
                         {primaryCategories.map((cat, i) => (
                             <PrimaryGroupCard
                                 key={cat.id}
@@ -506,7 +508,7 @@ const HomePage = () => {
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
                         Сопутствующие категории
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
                         {secondaryCategories.map((cat) => (
                             <SecondaryCatTile
                                 key={cat.id}
@@ -520,7 +522,7 @@ const HomePage = () => {
 
             {/* SERVICE CARDS */}
             <div style={{ paddingTop: 36 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
                     <ServiceCard
                         icon={<DocIcon />}
                         title="Прайс-лист одним кликом в XLS"

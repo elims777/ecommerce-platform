@@ -277,9 +277,10 @@ const OrdersPage = () => {
                     rowKey="productId"
                     pagination={false}
                     size="small"
+                    scroll={{ x: 'max-content' }}
                     style={{ marginBottom: 16 }}
                 />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 24px', fontSize: 'var(--text-base)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '6px 24px', fontSize: 'var(--text-base)' }}>
                     <div style={{ display: 'flex', gap: 8 }}>
                         <span style={{ color: 'var(--ink-3)' }}>Оплата:</span>
                         <span style={{ fontWeight: 500 }}>{PaymentMethodLabels[paymentCode as keyof typeof PaymentMethodLabels] || extractEnumDisplayName(order.paymentMethod)}</span>
@@ -464,6 +465,7 @@ const OrdersPage = () => {
                     dataSource={ordersPage.content}
                     rowKey="id"
                     pagination={false}
+                    scroll={{ x: 'max-content' }}
                     expandable={{
                         expandedRowRender,
                         expandRowByClick: true,

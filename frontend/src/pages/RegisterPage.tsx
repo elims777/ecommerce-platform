@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Form, Input, Checkbox, App } from 'antd';
+import { Form, Input, Checkbox, App, Grid } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { NavLink } from '@/components/navigation';
 import type { RegisterRequest } from '@/types/auth';
@@ -40,6 +40,10 @@ const labelStyle: React.CSSProperties = {
 };
 
 const RegisterPage = () => {
+    const screens = Grid.useBreakpoint();
+    const showBrandPanel = screens.lg === true;
+    // Пары полей (имя/фамилия и т.п.) на телефоне становятся в одну колонку.
+    const twoColFields = screens.sm === true ? '1fr 1fr' : '1fr';
     const [loading, setLoading] = useState(false);
     const [accountType, setAccountType] = useState<AccountType>('personal');
     const navigate = useNavigate();
@@ -146,9 +150,9 @@ const RegisterPage = () => {
     );
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '100vh' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: showBrandPanel ? '1fr 1fr' : '1fr', minHeight: '100vh' }}>
             {/* Левая колонка */}
-            <div style={{
+            {showBrandPanel && <div style={{
                 background: 'var(--gradient-brand-panel)',
                 color: '#fff', padding: 48, position: 'relative', overflow: 'hidden',
                 display: 'flex', flexDirection: 'column',
@@ -169,10 +173,16 @@ const RegisterPage = () => {
                         Заявки, документы, согласования с менеджером, ЭДО, история закупок и аналитика — в одном защищённом аккаунте организации.
                     </p>
                 </div>
-            </div>
+            </div>}
 
             {/* Правая колонка */}
-            <div style={{ background: 'var(--surface)', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'var(--surface)', padding: showBrandPanel ? 48 : '24px 20px', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+                {/* Без брендовой панели логотип — единственный путь на главную. */}
+                {!showBrandPanel && (
+                    <NavLink to="/" style={{ display: 'inline-flex', alignSelf: 'flex-start', marginBottom: 20 }}>
+                        <img src="/logo-dark.png" alt="РФснаб" style={{ height: 'var(--logo-h-auth)', display: 'block' }} />
+                    </NavLink>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
                     <a
                         href="/instrukciya-po-registracii.pdf"
@@ -218,7 +228,7 @@ const RegisterPage = () => {
                     {/* Форма физлица */}
                     {accountType === 'personal' && (
                         <Form<PersonalFormValues> form={personalForm} layout="vertical" onFinish={handlePersonalSubmit} autoComplete="off">
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: twoColFields, gap: 12 }}>
                                 <div>
                                     <label style={labelStyle}>Имя</label>
                                     <Form.Item name="firstname" noStyle rules={[{ required: true, message: 'Введите имя' }, { min: 2, message: 'Минимум 2 символа' }]}>
@@ -269,7 +279,7 @@ const RegisterPage = () => {
                     {/* Форма юрлица */}
                     {accountType === 'legal' && (
                         <Form<LegalFormValues> form={legalForm} layout="vertical" onFinish={handleLegalSubmit} autoComplete="off">
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: twoColFields, gap: 12 }}>
                                 <div>
                                     <label style={labelStyle}>ИНН</label>
                                     <Form.Item name="inn" noStyle rules={[

@@ -31,8 +31,12 @@ const CategoryNode = ({ category, selectedId, onSelect, depth = 0 }: CategoryNod
         .filter((c) => c.isActive)
         .sort((a, b) => a.displayOrder - b.displayOrder);
 
+    // По промежуточной категории — только раскрытие ветки: выбирать можно лишь конечную.
     const handleClick = () => {
-        if (hasChildren) setExpanded((prev) => !prev);
+        if (hasChildren) {
+            setExpanded((prev) => !prev);
+            return;
+        }
         onSelect(category.id);
     };
 
@@ -45,7 +49,7 @@ const CategoryNode = ({ category, selectedId, onSelect, depth = 0 }: CategoryNod
                     alignItems: 'center',
                     gap: 8,
                     padding: `9px 14px 9px ${depth > 0 ? 40 : 11}px`,
-                    cursor: 'pointer',
+                    cursor: hasChildren ? 'default' : 'pointer',
                     borderLeft: isSelected ? '3px solid var(--brand-red)' : '3px solid transparent',
                     background: isSelected ? 'var(--red-tint)' : 'transparent',
                     transition: 'background 0.12s, border-color 0.12s',

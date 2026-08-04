@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { App } from 'antd';
+import { App, Grid } from 'antd';
 import { NavLink } from '@/components/navigation';
 import { useCartStore } from '@/store/cartStore';
 import type { CartItemDto } from '@/api/cart';
@@ -61,6 +61,9 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
     onUpdateQty: (id: number, qty: number) => void;
 }) => {
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const screens = Grid.useBreakpoint();
+    // На узких экранах строка-таблица не помещается: название сверху, ниже степпер, справа цена и сумма.
+    const isNarrow = screens.md === false;
 
     return (
         <>
@@ -73,11 +76,11 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
             )}
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 160px 130px 130px 36px',
-                gap: 16, alignItems: 'center',
+                gridTemplateColumns: isNarrow ? 'auto 1fr 36px' : '1fr 160px 130px 130px 36px',
+                gap: isNarrow ? '10px 12px' : 16, alignItems: 'center',
                 padding: '18px 20px', borderBottom: '1px solid var(--line-1)',
             }}>
-                <div>
+                <div style={isNarrow ? { gridColumn: '1 / 3', minWidth: 0 } : undefined}>
                     <NavLink
                         to={`/products/${item.parentProductId ?? item.productId}`}
                         style={{ fontSize: 'var(--text-md)', fontWeight: 500, lineHeight: 1.35, color: 'var(--ink-1)' }}
@@ -87,7 +90,7 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
                 </div>
 
                 {/* Qty stepper */}
-                <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', height: 'var(--btn-h-md)', alignItems: 'center' }}>
+                <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', height: 'var(--btn-h-md)', alignItems: 'center', ...(isNarrow ? { width: 120, gridColumn: '1', gridRow: '2 / 4', alignSelf: 'center' } : {}) }}>
                     <button
                         onClick={() => onUpdateQty(item.productId, Math.max(1, item.quantity - 1))}
                         style={{ width: 32, height: 34, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -110,13 +113,13 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
                 </div>
 
                 {/* Unit price */}
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: 'right', ...(isNarrow ? { gridColumn: '2 / 4', gridRow: '2' } : {}) }}>
                     <div style={{ fontSize: 'var(--text-base)', fontVariantNumeric: 'tabular-nums', color: 'var(--ink-2)' }}>{formatPrice(item.price)}</div>
                     <div style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-3)' }}>за шт.</div>
                 </div>
 
                 {/* Subtotal */}
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: 'right', ...(isNarrow ? { gridColumn: '2 / 4', gridRow: '3' } : {}) }}>
                     <div style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-xl)', fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: 'var(--ink-1)' }}>
                         {formatPrice(item.subtotal)}
                     </div>
@@ -125,7 +128,7 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
                 {/* Delete */}
                 <button
                     onClick={() => setConfirmOpen(true)}
-                    style={{ width: 32, height: 32, border: 0, background: 'transparent', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4, transition: 'color 0.12s' }}
+                    style={{ width: 32, height: 32, border: 0, background: 'transparent', color: 'var(--ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4, transition: 'color 0.12s', ...(isNarrow ? { gridColumn: '3', gridRow: '1' } : {}) }}
                     onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--brand-red)')}
                     onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--ink-3)')}
                 >
@@ -138,7 +141,7 @@ const CartItemRow = ({ item, onRemove, onUpdateQty }: {
 
 // ── Skeleton ──────────────────────────────────────────────────
 const CartSkeleton = () => (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, paddingTop: 20 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24, paddingTop: 20 }}>
         <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', overflow: 'hidden' }}>
             {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} style={{ display: 'flex', gap: 16, padding: '18px 20px', borderBottom: '1px solid var(--line-1)' }}>
@@ -157,6 +160,11 @@ const CartPage = () => {
     const { message: messageApi } = App.useApp();
     const { items, totalAmount, isLoading, fetchCart, updateQuantity, removeItem, clearCart } = useCartStore();
     const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+    const screens = Grid.useBreakpoint();
+    // Блок «Итого» уходит под список, когда не помещается рядом.
+    const sideBySide = screens.lg === true;
+    // Тот же порог, что у CartItemRow: ниже него строки — карточки, шапка таблицы не нужна.
+    const isNarrow = screens.md === false;
 
     useEffect(() => { fetchCart(); }, [fetchCart]);
 
@@ -247,24 +255,26 @@ const CartPage = () => {
                 <span style={{ fontSize: 'var(--text-md)', color: 'var(--ink-3)' }}>{items.length} {items.length === 1 ? 'товар' : 'товара'}</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: sideBySide ? '1fr 380px' : '1fr', gap: 24 }}>
                 {/* Items table */}
-                <div>
+                <div style={{ minWidth: 0 }}>
                     <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', overflow: 'hidden' }}>
                         {/* Header */}
-                        <div style={{
-                            display: 'grid', gridTemplateColumns: '1fr 160px 130px 130px 36px',
-                            gap: 16, padding: '10px 20px',
-                            background: 'var(--surface-2)', borderBottom: '1px solid var(--line-1)',
-                            fontSize: 11, fontWeight: 600, color: 'var(--ink-3)',
-                            textTransform: 'uppercase', letterSpacing: '0.05em',
-                        }}>
-                            <span>Товар</span>
-                            <span>Количество</span>
-                            <span style={{ textAlign: 'right' }}>Цена</span>
-                            <span style={{ textAlign: 'right' }}>Сумма</span>
-                            <span />
-                        </div>
+                        {!isNarrow && (
+                            <div style={{
+                                display: 'grid', gridTemplateColumns: '1fr 160px 130px 130px 36px',
+                                gap: 16, padding: '10px 20px',
+                                background: 'var(--surface-2)', borderBottom: '1px solid var(--line-1)',
+                                fontSize: 11, fontWeight: 600, color: 'var(--ink-3)',
+                                textTransform: 'uppercase', letterSpacing: '0.05em',
+                            }}>
+                                <span>Товар</span>
+                                <span>Количество</span>
+                                <span style={{ textAlign: 'right' }}>Цена</span>
+                                <span style={{ textAlign: 'right' }}>Сумма</span>
+                                <span />
+                            </div>
+                        )}
 
                         {[...items].sort((a, b) => b.productId - a.productId).map((item) => (
                             <CartItemRow

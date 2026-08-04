@@ -40,6 +40,7 @@ const FOOTER_INK_HOVER = 'rgba(255,255,255,.9)';
 const footerHeadingStyle: CSSProperties = { fontSize: 'var(--text-base)', fontWeight: 600, color: '#fff', marginBottom: 14 };
 const footerColumnStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 8, fontSize: 'var(--text-base)', color: FOOTER_INK };
 const footerLinkStyle: CSSProperties = { cursor: 'pointer', color: 'inherit', textDecoration: 'none', transition: 'color 0.12s' };
+const footerTextStyle: CSSProperties = { color: 'rgba(255,255,255,.6)' };
 
 const footerLinkHover = {
     onMouseEnter: (e: MouseEvent<HTMLElement>) => { e.currentTarget.style.color = FOOTER_INK_HOVER; },
@@ -199,6 +200,8 @@ const ClientLayout = () => {
     const prevIndexRef = useRef(getPageIndex(location.pathname));
     const screens = Grid.useBreakpoint();
     const isMobile = screens.md === false;
+    // На планшете (768–992) десктопный топбар не помещается: адрес и «Доставка по РФ» рвутся на строки.
+    const isNarrowDesktop = !isMobile && screens.lg === false;
 
     const { data: availableCount } = useQuery({
         queryKey: ['products', 'count-available'],
@@ -277,12 +280,12 @@ const ClientLayout = () => {
                     fontSize: 'var(--text-sm)', height: isMobile ? TOPBAR_H_MOBILE : TOPBAR_H,
                     display: 'flex', alignItems: 'center', padding: '0 var(--page-pad-x)', gap: 20,
                 }}>
-                    {!isMobile && (
+                    {!isMobile && !isNarrowDesktop && (
                         <>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
                                 <PinIcon /> {company.address.full}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
                                 <TruckIcon /> Доставка по РФ
                             </div>
                         </>
@@ -290,14 +293,14 @@ const ClientLayout = () => {
                     <div style={{ flex: 1 }} />
                     {!isMobile && (
                         <>
-                            <NavLink to="/about" style={{ opacity: 0.85, color: 'inherit' }}>О компании</NavLink>
-                            <NavLink to="/contacts" style={{ opacity: 0.85, color: 'inherit' }}>Контакты</NavLink>
+                            <NavLink to="/about" style={{ opacity: 0.85, color: 'inherit', whiteSpace: 'nowrap' }}>О компании</NavLink>
+                            <NavLink to="/contacts" style={{ opacity: 0.85, color: 'inherit', whiteSpace: 'nowrap' }}>Контакты</NavLink>
                             <span style={{ opacity: 0.35 }}>·</span>
-                            <span onClick={handlePriceListClick} style={{ opacity: 0.85, color: 'inherit', cursor: 'pointer' }}>Прайс-лист</span>
+                            <span onClick={handlePriceListClick} style={{ opacity: 0.85, color: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>Прайс-лист</span>
                             <span style={{ opacity: 0.35 }}>·</span>
                         </>
                     )}
-                    <a style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#fff', cursor: 'pointer', textDecoration: 'none' }}>
+                    <a style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#fff', cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
                         <PhoneIcon /> {company.phone.free}
                     </a>
                 </div>
@@ -306,7 +309,7 @@ const ClientLayout = () => {
                 <div style={{
                     background: 'var(--surface)', borderBottom: '1px solid var(--line-1)',
                     height: isMobile ? MAIN_H_MOBILE : MAIN_H, display: 'flex', alignItems: 'center',
-                    padding: isMobile ? '0 16px' : '0 var(--page-pad-x)', gap: isMobile ? 12 : 28,
+                    padding: isMobile ? '0 16px' : '0 var(--page-pad-x)', gap: isMobile ? 12 : (isNarrowDesktop ? 12 : 28),
                 }}>
                     {isMobile && (
                         <button
@@ -582,7 +585,7 @@ const ClientLayout = () => {
 
             <footer style={{ background: 'var(--footer-bg)', color: '#fff', padding: 'var(--sp-14) var(--page-pad-x) 28px', marginTop: 'var(--sp-14)' }}>
                 <div style={{ maxWidth: 'var(--footer-max-w)', margin: '0 auto' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(160px, 1fr))' : '1.4fr 1fr 1fr 1fr 1fr', gap: 'var(--sp-14)', marginBottom: 32 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 'var(--sp-14)', marginBottom: 32 }}>
                         <div>
                             <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <img src="/logo-light.png" alt="РФснаб" style={{ height: 'var(--logo-h-footer)', display: 'block' }} />
@@ -613,10 +616,10 @@ const ClientLayout = () => {
                             <div style={footerHeadingStyle}>Компания</div>
                             <div style={footerColumnStyle}>
                                 <NavLink to="/about" style={footerLinkStyle} {...footerLinkHover}>О компании</NavLink>
-                                <span>{company.phone.free}</span>
+                                <span style={footerTextStyle}>{company.phone.free}</span>
                                 <a href={`mailto:${company.email.sales}`} style={footerLinkStyle} {...footerLinkHover}>{company.email.sales}</a>
-                                <span>{company.workHours}</span>
-                                <span>{company.address.city}</span>
+                                <span style={footerTextStyle}>{company.workHours}</span>
+                                <span style={footerTextStyle}>{company.address.city}</span>
                                 <NavLink to="/contacts" style={footerLinkStyle} {...footerLinkHover}>Все контакты →</NavLink>
                             </div>
                         </div>

@@ -61,7 +61,7 @@ const NameWithPopover = ({ name }: { name: string }) => {
                     fontSize: 'var(--text-base)', fontWeight: 500, lineHeight: 1.4, color: 'var(--ink-1)',
                     display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical',
                     overflow: 'hidden', minHeight: 76, fontFamily: 'var(--font-body)',
-                    textAlign: 'justify', hyphens: 'auto',
+                    hyphens: 'auto',
                     cursor: isClamped ? 'help' : 'inherit',
                 }}
             >
