@@ -133,6 +133,12 @@ const LoginPage = () => {
             {showBrandPanel && <BrandPanel />}
 
             <div style={{ background: 'var(--surface)', padding: showBrandPanel ? 48 : '24px 20px', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+                {/* Без брендовой панели логотип — единственный путь на главную. */}
+                {!showBrandPanel && (
+                    <NavLink to="/" style={{ display: 'inline-flex', alignSelf: 'flex-start', marginBottom: 20 }}>
+                        <img src="/logo-dark.png" alt="РФснаб" style={{ height: 'var(--logo-h-auth)', display: 'block' }} />
+                    </NavLink>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
                     <a
                         href="/instrukciya-po-registracii.pdf"
