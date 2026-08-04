@@ -37,14 +37,15 @@ const labelStyle: React.CSSProperties = {
     fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-2)', marginBottom: 4, display: 'block',
 };
 const rowStyle: React.CSSProperties = {
-    display: 'flex', fontSize: 'var(--text-md)', padding: '10px 0', borderBottom: '1px solid var(--line-1)',
+    display: 'flex', flexWrap: 'wrap', columnGap: 12, fontSize: 'var(--text-md)',
+    padding: '10px 0', borderBottom: '1px solid var(--line-1)',
 };
 const rowLast: React.CSSProperties = { ...rowStyle, borderBottom: 'none' };
 
 const Row = ({ label, value, last }: { label: string; value: React.ReactNode; last?: boolean }) => (
     <div style={last ? rowLast : rowStyle}>
-        <span style={{ color: 'var(--ink-3)', width: 180, flexShrink: 0 }}>{label}</span>
-        <span style={{ fontWeight: 500 }}>{value || '—'}</span>
+        <span style={{ color: 'var(--ink-3)', flex: '0 0 180px' }}>{label}</span>
+        <span style={{ fontWeight: 500, flex: '1 1 auto', minWidth: 0 }}>{value || '—'}</span>
     </div>
 );
 

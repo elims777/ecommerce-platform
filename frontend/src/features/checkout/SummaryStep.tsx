@@ -52,6 +52,7 @@ const SummaryStep = ({ items, totalAmount, loading }: SummaryStepProps) => {
             rowKey="productId"
             pagination={false}
             size="small"
+            scroll={{ x: 'max-content' }}
             style={{ marginBottom: 16 }}
         />
 

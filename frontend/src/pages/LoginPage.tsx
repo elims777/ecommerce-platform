@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Form, Input, App } from 'antd';
+import { Form, Input, App, Grid } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/navigation';
 import { useAuthStore } from '@/store/authStore';
@@ -55,6 +55,9 @@ const BrandPanel = () => {
 };
 
 const LoginPage = () => {
+    const screens = Grid.useBreakpoint();
+    // Брендовая панель — только на широких экранах: на телефоне она съедала половину формы.
+    const showBrandPanel = screens.lg === true;
     const [loading, setLoading] = useState(false);
     const [accountType, setAccountType] = useState<'legal' | 'personal'>('personal');
     const navigate = useNavigate();
@@ -126,10 +129,10 @@ const LoginPage = () => {
     });
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '100vh' }}>
-            <BrandPanel />
+        <div style={{ display: 'grid', gridTemplateColumns: showBrandPanel ? '1fr 1fr' : '1fr', minHeight: '100vh' }}>
+            {showBrandPanel && <BrandPanel />}
 
-            <div style={{ background: 'var(--surface)', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'var(--surface)', padding: showBrandPanel ? 48 : '24px 20px', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
                     <a
                         href="/instrukciya-po-registracii.pdf"

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Form, Input, App } from 'antd';
+import { Form, Input, App, Grid } from 'antd';
 import { NavLink } from '@/components/navigation';
 import { forgotPassword } from '@/api/auth';
 
@@ -63,6 +63,8 @@ interface ForgotPasswordFormValues {
 }
 
 const ForgotPasswordPage = () => {
+    const screens = Grid.useBreakpoint();
+    const showBrandPanel = screens.lg === true;
     const [loading, setLoading] = useState(false);
     const [sent, setSent] = useState(false);
     const { message: messageApi } = App.useApp();
@@ -80,10 +82,10 @@ const ForgotPasswordPage = () => {
     };
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '100vh' }}>
-            <BrandPanel />
+        <div style={{ display: 'grid', gridTemplateColumns: showBrandPanel ? '1fr 1fr' : '1fr', minHeight: '100vh' }}>
+            {showBrandPanel && <BrandPanel />}
 
-            <div style={{ background: 'var(--surface)', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'var(--surface)', padding: showBrandPanel ? 48 : '24px 20px', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
                     <NavLink to="/login" style={{ color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}>
                         Вернуться ко входу

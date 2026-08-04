@@ -217,7 +217,7 @@ const ProductPage = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 360px', gap: 28 }}>
                 {/* Галерея */}
-                <div style={isMobile ? { order: 1 } : undefined}>
+                <div style={{ minWidth: 0, ...(isMobile ? { order: 1 } : {}) }}>
                     <Image.PreviewGroup items={sortedImages.map((img) => img.fileUrl)}>
                         <div style={{ borderRadius: 'var(--r-5)', overflow: 'hidden', border: '1px solid var(--line-1)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400 }}>
                             {sortedImages.length > 0 ? (
@@ -248,7 +248,7 @@ const ProductPage = () => {
                 </div>
 
                 {/* Описание */}
-                <div style={isMobile ? { order: 3 } : undefined}>
+                <div style={{ minWidth: 0, ...(isMobile ? { order: 3 } : {}) }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                         {product.categoryName && (
                             <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--brand-navy)' }}>{product.categoryName}</span>
@@ -323,7 +323,7 @@ const ProductPage = () => {
                 </div>
 
                 {/* Buy box */}
-                <div style={isMobile ? { order: 2 } : undefined}>
+                <div style={{ minWidth: 0, ...(isMobile ? { order: 2 } : {}) }}>
                     <div style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', padding: 20, position: isMobile ? 'static' : 'sticky', top: 20, background: 'var(--surface)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
                             <div>
@@ -362,8 +362,8 @@ const ProductPage = () => {
 
                         {/* Таблица вариантов */}
                         {hasVariants ? (
-                            <div style={{ marginBottom: 16, overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+                            <div style={{ marginBottom: 16, overflowX: 'auto', maxWidth: '100%' }}>
+                                <table style={{ width: '100%', minWidth: 420, borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--line-1)' }}>
                                             <th style={{ textAlign: 'left', padding: '4px 6px 6px 0', color: 'var(--ink-3)', fontWeight: 500 }}>Параметры</th>
@@ -379,7 +379,7 @@ const ProductPage = () => {
                                             const variantPrice = v.price ?? product.price;
                                             return (
                                                 <tr key={v.id} style={{ borderBottom: '1px solid var(--line-1)' }}>
-                                                    <td style={{ padding: '7px 6px 7px 0', color: 'var(--ink-1)', fontWeight: 500, lineHeight: 1.5 }}>
+                                                    <td style={{ padding: '7px 6px 7px 0', color: 'var(--ink-1)', fontWeight: 500, lineHeight: 1.5, whiteSpace: 'nowrap' }}>
                                                         <VariantAttrs variant={v} />
                                                     </td>
                                                     <td style={{ padding: '7px 6px', textAlign: 'right', color: 'var(--ink-2)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>

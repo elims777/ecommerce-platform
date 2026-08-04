@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Form, Input, App, Spin } from 'antd';
+import { Form, Input, App, Spin, Grid } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { NavLink } from '@/components/navigation';
 import { validateResetToken, resetPassword } from '@/api/auth';
@@ -67,6 +67,8 @@ interface ResetPasswordFormValues {
 type ValidationState = 'checking' | 'valid' | 'invalid';
 
 const ResetPasswordPage = () => {
+    const screens = Grid.useBreakpoint();
+    const showBrandPanel = screens.lg === true;
     const [params] = useSearchParams();
     const token = params.get('token');
     const [validation, setValidation] = useState<ValidationState>('checking');
@@ -100,10 +102,10 @@ const ResetPasswordPage = () => {
     };
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: '100vh' }}>
-            <BrandPanel />
+        <div style={{ display: 'grid', gridTemplateColumns: showBrandPanel ? '1fr 1fr' : '1fr', minHeight: '100vh' }}>
+            {showBrandPanel && <BrandPanel />}
 
-            <div style={{ background: 'var(--surface)', padding: 48, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'var(--surface)', padding: showBrandPanel ? 48 : '24px 20px', overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', fontSize: 'var(--text-base)', color: 'var(--ink-3)' }}>
                     <NavLink to="/login" style={{ color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}>
                         Вернуться ко входу
