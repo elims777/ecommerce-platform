@@ -9,8 +9,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.integrationservice.config.IntegrationProperties;
+import ru.rfsnab.integrationservice.config.KafkaTopicsProperties;
 import ru.rfsnab.integrationservice.dto.BatchImportRequest;
 import ru.rfsnab.integrationservice.dto.BatchImportResponse;
 import ru.rfsnab.integrationservice.dto.ProductImportItemDto;
@@ -29,6 +32,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -52,16 +56,22 @@ class FtkImportServiceTest {
     @Mock private FtkImageDownloader imageDownloader;
     @Mock private RestTemplate productServiceRestTemplate;
     @Mock private ImportLogRepository importLogRepository;
+    @Mock private KafkaTemplate<String, Object> kafkaTemplate;
 
     private IntegrationProperties properties;
+    private KafkaTopicsProperties kafkaTopics;
     private FtkImportService service;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void setUp() throws IOException {
         properties = new IntegrationProperties();
         properties.getFtk().setImportLimit(0);
         properties.getProductService().setUrl("http://product-service:8083");
         properties.getImportConfig().setChunkSize(100);
+
+        kafkaTopics = new KafkaTopicsProperties();
+        kafkaTopics.setImportEvents("import-events");
 
         // lenient: тест чекпоинта переопределяет save своим Answer
         org.mockito.Mockito.lenient()
@@ -71,9 +81,14 @@ class FtkImportServiceTest {
         org.mockito.Mockito.lenient()
                 .when(ftpClient.listPropertyClassifierFiles()).thenReturn(List.of());
 
+        // lenient: публикация в Kafka происходит в конце каждого импорта (saveFtkLog)
+        org.mockito.Mockito.lenient()
+                .when(kafkaTemplate.send(anyString(), anyString(), any()))
+                .thenReturn(CompletableFuture.completedFuture(mock(SendResult.class)));
+
         service = new FtkImportService(
                 xlsParser, xmlParser, ftpClient, categoryMapper, imageDownloader,
-                productServiceRestTemplate, properties, importLogRepository
+                productServiceRestTemplate, properties, importLogRepository, kafkaTemplate, kafkaTopics
         );
     }
 

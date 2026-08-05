@@ -34,6 +34,8 @@ public class BatchProductImportResponse {
         private boolean success;
         /** Сообщение об ошибке (null если success=true) */
         private String errorMessage;
+        /** true — ошибка вызвана abort транзакции соседним товаром в чанке, а не самим этим товаром */
+        private boolean cascade;
     }
 
     public enum ImportAction {

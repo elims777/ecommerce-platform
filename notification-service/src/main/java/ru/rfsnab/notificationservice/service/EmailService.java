@@ -11,10 +11,12 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import ru.rfsnab.notificationservice.models.ImportEvent;
 import ru.rfsnab.notificationservice.models.OrderEvent;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -267,6 +269,47 @@ public class EmailService {
 
         sendHtml(toEmail, "Статус заказа " + orderNumber + " обновлён — РФСнаб",
                 "order-status-changed", model);
+    }
+
+    /**
+     * Отчёт о ночном импорте каталога ФТК менеджеру — всегда, независимо от статуса.
+     */
+    public void sendImportReportEmail(ImportEvent event) {
+        Map<String, Object> model = new HashMap<>();
+        model.put("status", importStatusLabel(event.status()));
+        model.put("totalReceived", event.totalReceived());
+        model.put("created", event.created());
+        model.put("updated", event.updated());
+        model.put("unchanged", event.unchanged());
+        model.put("failed", event.failed());
+        model.put("imagesProcessed", event.imagesProcessed());
+        model.put("imagesFailed", event.imagesFailed());
+        model.put("durationMinutes", event.durationMs() / 60000.0);
+        model.put("startedAt", event.startedAt());
+        model.put("cascadeCount", event.cascadeCount());
+        model.put("rootErrors", event.errors() == null ? List.of() :
+                event.errors().stream().filter(err -> !err.cascade()).toList());
+
+        sendHtml(managerEmail, importSubject(event), "import-report", model);
+    }
+
+    private String importSubject(ImportEvent event) {
+        if (event.failed() > 0) {
+            return "Импорт каталога ФТК — " + event.failed() + " ошибок";
+        }
+        return "Импорт каталога ФТК — успешно";
+    }
+
+    private String importStatusLabel(String status) {
+        if (status == null) {
+            return "—";
+        }
+        return switch (status) {
+            case "SUCCESS" -> "Успешно";
+            case "PARTIAL" -> "Частично с ошибками";
+            case "FAILED" -> "Провален";
+            default -> status;
+        };
     }
 
     /**

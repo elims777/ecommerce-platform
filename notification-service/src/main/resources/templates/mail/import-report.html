@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+</head>
+<body style="margin:0; padding:0; background-color:#F2F2F2;">
+
+<div th:replace="~{mail/layout :: header}"></div>
+
+<table width="600" cellpadding="0" cellspacing="0" border="0"
+       style="width:600px; max-width:600px; margin:0 auto; background-color:#FFFFFF;">
+    <tr>
+        <td style="padding:32px 24px; font-family:Arial, system-ui, sans-serif;">
+            <h2 style="color:#1E3A5F; margin:0 0 16px; text-align:center;">Импорт каталога ФТК</h2>
+
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Статус:</strong> <span th:text="${status}"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Начат:</strong> <span th:text="${startedAt}"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 16px;">
+                <strong>Длительность:</strong> <span th:text="${#numbers.formatDecimal(durationMinutes, 1, 1)}"></span> мин
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+                <tr style="background-color:#1E3A5F;">
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Показатель</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Значение</td>
+                </tr>
+                <tr style="border-bottom:1px solid #EEEEEE;">
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;">Получено товаров</td>
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${totalReceived}"></td>
+                </tr>
+                <tr style="border-bottom:1px solid #EEEEEE;">
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;">Создано</td>
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${created}"></td>
+                </tr>
+                <tr style="border-bottom:1px solid #EEEEEE;">
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;">Обновлено</td>
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${updated}"></td>
+                </tr>
+                <tr style="border-bottom:1px solid #EEEEEE;">
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;">Без изменений</td>
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${unchanged}"></td>
+                </tr>
+                <tr style="border-bottom:1px solid #EEEEEE;">
+                    <td style="padding:8px 12px; color:#C0272D; font-size:13px; font-family:Arial, system-ui, sans-serif; font-weight:bold;">Ошибок</td>
+                    <td style="padding:8px 12px; color:#C0272D; font-size:13px; font-family:Arial, system-ui, sans-serif; font-weight:bold;" align="right" th:text="${failed}"></td>
+                </tr>
+                <tr style="border-bottom:1px solid #EEEEEE;">
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;">Фото обработано</td>
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${imagesProcessed}"></td>
+                </tr>
+                <tr style="border-bottom:1px solid #EEEEEE;">
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;">Фото с ошибками</td>
+                    <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${imagesFailed}"></td>
+                </tr>
+            </table>
+
+            <div th:if="${not #lists.isEmpty(rootErrors)}">
+                <h3 style="color:#1E3A5F; margin:0 0 8px; font-size:15px;">Причины ошибок</h3>
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+                    <tr style="background-color:#1E3A5F;">
+                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="30%">Код товара</td>
+                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="70%">Сообщение</td>
+                    </tr>
+                    <tr th:each="err : ${rootErrors}" style="border-bottom:1px solid #EEEEEE;">
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif; word-break:break-word;" th:text="${err.externalId}"></td>
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif; word-break:break-word;" th:text="${err.message}"></td>
+                    </tr>
+                </table>
+            </div>
+
+            <p style="color:#666666; font-size:13px; margin:0 0 16px;" th:if="${cascadeCount > 0}">
+                Каскадных следствий (та же транзакция чанка): <span th:text="${cascadeCount}"></span>
+            </p>
+
+            <p style="color:#1A1A1A; font-size:14px; margin:16px 0 0;">С уважением, команда РФСнаб</p>
+        </td>
+    </tr>
+</table>
+
+<div th:replace="~{mail/layout :: footer}"></div>
+
+</body>
+</html>

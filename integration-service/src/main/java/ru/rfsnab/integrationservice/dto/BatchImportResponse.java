@@ -25,4 +25,19 @@ public class BatchImportResponse {
     private int unchanged;
     private int failed;
     private List<String> errors = new ArrayList<>();
+    /** Постатейный результат импорта (см. product-service BatchProductImportResponse.ImportItemResult) */
+    private List<ImportItemResult> results = new ArrayList<>();
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ImportItemResult {
+        private String externalId;
+        private boolean success;
+        /** Сообщение об ошибке (null если success=true) */
+        private String errorMessage;
+        /** true — ошибка вызвана abort транзакции соседним товаром в чанке, а не самим этим товаром */
+        private boolean cascade;
+    }
 }
