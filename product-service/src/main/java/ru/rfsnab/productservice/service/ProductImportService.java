@@ -1,6 +1,7 @@
 package ru.rfsnab.productservice.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -40,9 +41,13 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductImportService {
 
     private static final String IMPORT_CATEGORY_SLUG = "import-1c";
+    private static final String PG_TRANSACTION_ABORTED_SQLSTATE = "25P02";
+    private static final int LOGGED_FIELD_LENGTH_THRESHOLD = 200;
+    private static final int LOGGED_VALUE_PREVIEW_LENGTH = 100;
 
     @Value("${product-service.import.chunk-size:25}")
     private int chunkSize;
@@ -176,12 +181,79 @@ public class ProductImportService {
                     .success(true)
                     .build();
         } catch (Exception e) {
+            boolean cascade = isCascadeFailure(e);
+            if (cascade) {
+                log.debug("Каскадная ошибка импорта товара externalId={} (транзакция чанка уже aborted): {}",
+                        item.getExternalId(), e.getMessage());
+            } else {
+                logImportFailureDetails(item, e);
+            }
             return ImportItemResult.builder()
                     .externalId(item.getExternalId())
                     .action(ImportAction.FAILED)
                     .success(false)
                     .errorMessage(e.getMessage())
+                    .cascade(cascade)
                     .build();
+        }
+    }
+
+    /**
+     * Определяет, является ли ошибка следствием уже aborted транзакции чанка (SQLState 25P02),
+     * а не первопричиной. Ищет по цепочке getCause() SQLState или характерную подстроку в message.
+     */
+    private boolean isCascadeFailure(Throwable e) {
+        Throwable current = e;
+        while (current != null) {
+            if (current instanceof java.sql.SQLException sqlException
+                    && PG_TRANSACTION_ABORTED_SQLSTATE.equals(sqlException.getSQLState())) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null && message.contains("current transaction is aborted")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    /**
+     * Логирует исходную (не каскадную) ошибку импорта с деталями полей-кандидатов
+     * на превышение varchar(255): имя товара, slug, длинные атрибуты.
+     */
+    private void logImportFailureDetails(ProductImportItem item, Exception e) {
+        String slug = trySlugPreview(item);
+        StringBuilder attrDetails = new StringBuilder();
+        List<ProductImportItem.ProductAttributeImportItem> attrs = resolveParentAttributes(item);
+        if (attrs != null) {
+            for (ProductImportItem.ProductAttributeImportItem attr : attrs) {
+                String name = attr.getName();
+                String value = attr.getValue();
+                if ((name != null && name.length() > LOGGED_FIELD_LENGTH_THRESHOLD)
+                        || (value != null && value.length() > LOGGED_FIELD_LENGTH_THRESHOLD)) {
+                    attrDetails.append(String.format("[attr='%s', valueLength=%d, valuePreview='%s'] ",
+                            name,
+                            value != null ? value.length() : 0,
+                            value != null ? value.substring(0, Math.min(LOGGED_VALUE_PREVIEW_LENGTH, value.length())) : ""));
+                }
+            }
+        }
+        log.error("Ошибка импорта товара externalId={}, exception={}, message={}, nameLength={}, slugLength={}, longAttrs={}",
+                item.getExternalId(),
+                e.getClass().getSimpleName(),
+                e.getMessage(),
+                item.getName() != null ? item.getName().length() : 0,
+                slug != null ? slug.length() : "n/a",
+                attrDetails.isEmpty() ? "none" : attrDetails.toString(),
+                e);
+    }
+
+    private String trySlugPreview(ProductImportItem item) {
+        try {
+            return slugService.generateUniqueSlug(item.getName(), ConcurrentHashMap.newKeySet());
+        } catch (Exception ignored) {
+            return null;
         }
     }
 
