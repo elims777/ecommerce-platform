@@ -54,6 +54,7 @@ app:
       order-events: order-events
       legal-entity-events: legal-entity-events
       payment-events: payment.processed
+      import-events: import-events
 
   user-service:
     url: ${USER_SERVICE_URL:http://localhost:8081}
