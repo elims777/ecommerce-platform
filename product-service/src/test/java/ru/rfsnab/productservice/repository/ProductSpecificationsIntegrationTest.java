@@ -85,7 +85,7 @@ class ProductSpecificationsIntegrationTest extends BaseIntegrationTest {
                     "Размер", List.of("48"));
 
             Page<Product> result = productRepository.findAll(
-                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters),
+                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters, null),
                     PageRequest.of(0, 10));
 
             assertThat(result.getContent()).extracting(Product::getId)
@@ -107,7 +107,7 @@ class ProductSpecificationsIntegrationTest extends BaseIntegrationTest {
             Map<String, List<String>> filters = Map.of("Цвет", List.of("Синий", "Красный"));
 
             Page<Product> result = productRepository.findAll(
-                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters),
+                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters, null),
                     PageRequest.of(0, 10));
 
             assertThat(result.getContent()).extracting(Product::getId)
@@ -127,7 +127,7 @@ class ProductSpecificationsIntegrationTest extends BaseIntegrationTest {
             Map<String, List<String>> filters = Map.of("Цвет", List.of("Жёлтый"));
 
             Page<Product> result = productRepository.findAll(
-                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters),
+                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters, null),
                     PageRequest.of(0, 10));
 
             assertThat(result.getContent()).isEmpty();
@@ -149,10 +149,10 @@ class ProductSpecificationsIntegrationTest extends BaseIntegrationTest {
             Map<String, List<String>> filters = Map.of("Цвет", List.of("Синий"));
 
             Page<Product> page0 = productRepository.findAll(
-                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters),
+                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters, null),
                     PageRequest.of(0, 3, Sort.by("id")));
             Page<Product> page1 = productRepository.findAll(
-                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters),
+                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters, null),
                     PageRequest.of(1, 3, Sort.by("id")));
 
             assertThat(page0.getContent()).extracting(Product::getId)
@@ -177,7 +177,7 @@ class ProductSpecificationsIntegrationTest extends BaseIntegrationTest {
             Map<String, List<String>> filters = Map.of("Цвет", List.of("Синий"));
 
             Page<Product> result = productRepository.findAll(
-                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters),
+                    ProductSpecifications.categoryWithAttributes(List.of(category.getId()), filters, null),
                     PageRequest.of(0, 10));
 
             assertThat(result.getContent()).extracting(Product::getId)

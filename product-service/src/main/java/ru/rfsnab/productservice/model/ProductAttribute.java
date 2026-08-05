@@ -25,7 +25,7 @@ public class ProductAttribute {
     @Column(nullable = false, length = 100)
     private String attributeName;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String attributeValue;
 
     @CreationTimestamp

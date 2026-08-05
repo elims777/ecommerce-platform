@@ -46,6 +46,8 @@ export interface Product {
     name: string;
     slug: string;
     description: string | null;
+    /** Описание из импорта (ФТК "Подробнее о товаре"), не зависит от ручного description */
+    importDescription: string | null;
     shortDescription: string | null;
     /** Акционная цена, если товар в акции; иначе базовая */
     price: number;

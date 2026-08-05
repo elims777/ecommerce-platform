@@ -52,6 +52,11 @@ const SearchIcon = () => (
         <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
     </svg>
 );
+const XIcon = () => (
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 6 6 18M6 6l12 12"/>
+    </svg>
+);
 const CartIcon = () => (
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 4h2.5l2 13.5h11l2-9h-14"/><circle cx="9" cy="20.5" r="1.4"/><circle cx="18" cy="20.5" r="1.4"/>
@@ -352,7 +357,7 @@ const ClientLayout = () => {
                             placeholder={isMobile ? 'Поиск товаров' : 'Артикул, бренд или название товара'}
                             style={{
                                 width: '100%', height: isMobile ? 'var(--input-h-md)' : 'var(--input-h-lg)',
-                                padding: isMobile ? '0 42px 0 38px' : '0 120px 0 42px',
+                                padding: isMobile ? '0 63px 0 38px' : '0 141px 0 42px',
                                 border: '1px solid var(--line-2)', borderRadius: 'var(--r-4)',
                                 fontSize: 'var(--text-md)', fontFamily: 'var(--font-body)', outline: 'none',
                                 background: 'var(--surface)', color: 'var(--ink-1)',
@@ -369,33 +374,50 @@ const ClientLayout = () => {
                         <span style={{ position: 'absolute', left: 14, top: isMobile ? 11 : 13, color: 'var(--ink-3)' }}>
                             <SearchIcon />
                         </span>
-                        {isMobile ? (
-                            <button
-                                onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
-                                aria-label="Найти"
-                                style={{
-                                    position: 'absolute', right: 4, top: 4, width: 32, height: 32,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                <SearchIcon />
-                            </button>
-                        ) : (
-                            <button
-                                onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
-                                style={{
-                                    position: 'absolute', right: 4, top: 4, height: 36, padding: '0 18px',
-                                    background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)',
-                                    fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
-                            >
-                                Найти
-                            </button>
-                        )}
+                        {/* Крестик и кнопка поиска в общем flex-контейнере: позиции
+                            считаются от фактической ширины кнопки, а не вручную */}
+                        <div style={{
+                            position: 'absolute', right: 4, top: 4,
+                            height: isMobile ? 32 : 36,
+                            display: 'flex', alignItems: 'center', gap: 8,
+                        }}>
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    aria-label="Очистить поиск"
+                                    style={{ background: 'transparent', border: 0, cursor: 'pointer', color: 'var(--ink-3)', display: 'flex', alignItems: 'center', padding: 0 }}
+                                >
+                                    <XIcon />
+                                </button>
+                            )}
+                            {isMobile ? (
+                                <button
+                                    onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
+                                    aria-label="Найти"
+                                    style={{
+                                        width: 32, height: 32,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    <SearchIcon />
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
+                                    style={{
+                                        height: 36, padding: '0 18px',
+                                        background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)',
+                                        fontSize: 'var(--text-md)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
+                                >
+                                    Найти
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* User actions */}
