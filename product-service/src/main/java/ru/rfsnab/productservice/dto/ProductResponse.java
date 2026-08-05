@@ -16,6 +16,8 @@ public class ProductResponse {
     private String name;
     private String slug;
     private String description;
+    /** Описание товара из импорта (ФТК "Подробнее о товаре"), не зависит от ручного description. */
+    private String importDescription;
     private String shortDescription;
     /** Акционная цена, если товар участвует в акции; иначе базовая. */
     private BigDecimal price;

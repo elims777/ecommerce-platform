@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 import ru.rfsnab.productservice.dto.BatchProductImportRequest;
 import ru.rfsnab.productservice.dto.BatchProductImportResponse;
 import ru.rfsnab.productservice.dto.BatchProductImportResponse.ImportAction;
@@ -51,6 +52,10 @@ class ProductImportServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Импорт выполняет каждый товар в своей транзакции через TransactionTemplate:
+        // без этого стаба мок отдаёт null вместо TransactionStatus и товары не обрабатываются.
+        when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+
         importService = new ProductImportService(productRepository, categoryRepository, transactionManager, slugService);
         ReflectionTestUtils.setField(importService, "chunkSize", 25);
 

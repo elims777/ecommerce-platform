@@ -308,22 +308,26 @@ public class ProductService {
     }
 
     /**
-     * Пагинация товаров по категории (поддерево) с опциональной фильтрацией по атрибутам.
-     * Без фильтров — тот же листинг, что и getProductsByCategoryPage.
+     * Пагинация товаров по категории (поддерево) с опциональной фильтрацией по атрибутам
+     * и опциональным поиском по названию (поиск внутри каталога — контекстный).
+     * Без фильтров и без запроса — тот же листинг, что и getProductsByCategoryPage.
      */
     public Page<Product> getProductsByCategoryFiltered(Long categoryId,
                                                          Map<String, List<String>> attrFilters,
+                                                         String query,
                                                          Pageable pageable) {
         if (!categoryRepository.existsById(categoryId)) {
             throw new CategoryNotFoundException(categoryId);
         }
         List<Long> categoryIds = categoryService.getSubtreeCategoryIds(categoryId);
-        if (attrFilters == null || attrFilters.isEmpty()) {
+        boolean hasQuery = query != null && !query.isBlank();
+        if ((attrFilters == null || attrFilters.isEmpty()) && !hasQuery) {
             return productRepository.findByCategoryIdInAndIsActiveTrueAndIsVariantChildFalse(
                     categoryIds, withIdTiebreaker(pageable));
         }
         return productRepository.findAll(
-                ProductSpecifications.categoryWithAttributes(categoryIds, attrFilters),
+                ProductSpecifications.categoryWithAttributes(
+                        categoryIds, attrFilters == null ? Map.of() : attrFilters, query),
                 withIdTiebreaker(pageable));
     }
 

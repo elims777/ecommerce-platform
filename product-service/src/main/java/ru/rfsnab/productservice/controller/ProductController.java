@@ -138,16 +138,18 @@ public class ProductController {
     }
 
     /**
-     * Получить товары по категории (опционально фильтруются по атрибутам через attr=Имя:Значение)
+     * Получить товары по категории (опционально фильтруются по атрибутам через attr=Имя:Значение
+     * и по названию через q — поиск внутри каталога)
      */
     @GetMapping("/category/{categoryId}")
     public ResponseEntity<Page<ProductResponse>> getProductsByCategory(
             @PathVariable Long categoryId,
             @RequestParam(name = "attr", required = false) List<String> attr,
+            @RequestParam(name = "q", required = false) String q,
             @PageableDefault(size = 20, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable pageable
             ){
         Map<String, List<String>> attrFilters = ProductService.parseAttrFilters(attr);
-        Page<Product> products = productService.getProductsByCategoryFiltered(categoryId, attrFilters, pageable);
+        Page<Product> products = productService.getProductsByCategoryFiltered(categoryId, attrFilters, q, pageable);
         var parentIds = productService.findParentIdsWithActiveChildren(
                 products.getContent().stream().map(Product::getId).toList());
         return ResponseEntity.ok(ProductMapper.mapPageWithHasVariants(

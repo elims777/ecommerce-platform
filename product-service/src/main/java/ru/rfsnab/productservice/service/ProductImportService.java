@@ -26,10 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -45,6 +42,7 @@ import java.util.stream.Collectors;
 public class ProductImportService {
 
     private static final String IMPORT_CATEGORY_SLUG = "import-1c";
+    private static final String DESCRIPTION_ATTRIBUTE_NAME = "Подробнее о товаре";
     private static final String PG_TRANSACTION_ABORTED_SQLSTATE = "25P02";
     private static final int LOGGED_FIELD_LENGTH_THRESHOLD = 200;
     private static final int LOGGED_VALUE_PREVIEW_LENGTH = 100;
@@ -71,40 +69,61 @@ public class ProductImportService {
 
         List<List<ProductImportItem>> chunks = partitionList(items, chunkSize);
 
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            List<CompletableFuture<List<ImportItemResult>>> futures = chunks.stream()
-                    .map(chunk -> CompletableFuture.supplyAsync(
-                            () -> processChunk(chunk, existingProducts, reservedSlugs, importCategory), executor))
-                    .toList();
-
-            List<ImportItemResult> allResults = futures.stream()
-                    .map(CompletableFuture::join)
-                    .flatMap(List::stream)
-                    .toList();
-
-            return buildResponse(items.size(), allResults);
+        List<ImportItemResult> allResults = new ArrayList<>(items.size());
+        for (List<ProductImportItem> chunk : chunks) {
+            allResults.addAll(processChunk(chunk, existingProducts, reservedSlugs, importCategory));
         }
+
+        return buildResponse(items.size(), allResults);
     }
 
+    /**
+     * Каждый товар импортируется в собственной транзакции: ошибка одного товара
+     * откатывает только его изменения и не помечает транзакцию aborted (PostgreSQL 25P02),
+     * из-за чего раньше одна ошибка каскадно валила весь чанк (см. isCascadeFailure).
+     */
     private List<ImportItemResult> processChunk(List<ProductImportItem> chunk,
                                                 Map<String, Product> existingProducts,
                                                 Set<String> reservedSlugs,
                                                 Category importCategory) {
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
-        return txTemplate.execute(status -> {
-            List<ImportItemResult> results = new ArrayList<>(chunk.size());
-            for (ProductImportItem item : chunk) {
-                results.add(processItem(item, existingProducts, reservedSlugs, importCategory));
-            }
-            return results;
-        });
+        List<ImportItemResult> results = new ArrayList<>(chunk.size());
+        for (ProductImportItem item : chunk) {
+            results.add(processItem(item, existingProducts, reservedSlugs, importCategory, txTemplate));
+        }
+        return results;
     }
 
     private ImportItemResult processItem(ProductImportItem item,
                                          Map<String, Product> existingProducts,
                                          Set<String> reservedSlugs,
-                                         Category importCategory) {
+                                         Category importCategory,
+                                         TransactionTemplate txTemplate) {
         try {
+            return txTemplate.execute(status ->
+                    upsertProduct(item, existingProducts, reservedSlugs, importCategory));
+        } catch (Exception e) {
+            boolean cascade = isCascadeFailure(e);
+            if (cascade) {
+                log.debug("Каскадная ошибка импорта товара externalId={}: {}",
+                        item.getExternalId(), e.getMessage());
+            } else {
+                logImportFailureDetails(item, e);
+            }
+            return ImportItemResult.builder()
+                    .externalId(item.getExternalId())
+                    .action(ImportAction.FAILED)
+                    .success(false)
+                    .errorMessage(e.getMessage())
+                    .cascade(cascade)
+                    .build();
+        }
+    }
+
+    private ImportItemResult upsertProduct(ProductImportItem item,
+                                           Map<String, Product> existingProducts,
+                                           Set<String> reservedSlugs,
+                                           Category importCategory) {
             Product product = existingProducts.get(item.getExternalId());
             boolean isNew = (product == null);
             ProductSnapshot beforeSnapshot = isNew ? null : ProductSnapshot.of(product);
@@ -156,6 +175,10 @@ public class ProductImportService {
             List<ProductImportItem.ProductAttributeImportItem> parentAttrs = resolveParentAttributes(item);
             boolean attributesChanged = !isNew && attributesChanged(product, parentAttrs);
             updateAttributes(product, parentAttrs);
+            String importDescription = extractImportDescription(parentAttrs);
+            if (importDescription != null) {
+                product.setImportDescription(importDescription);
+            }
 
             Product savedProduct = productRepository.save(product);
 
@@ -180,22 +203,6 @@ public class ProductImportService {
                     .action(action)
                     .success(true)
                     .build();
-        } catch (Exception e) {
-            boolean cascade = isCascadeFailure(e);
-            if (cascade) {
-                log.debug("Каскадная ошибка импорта товара externalId={} (транзакция чанка уже aborted): {}",
-                        item.getExternalId(), e.getMessage());
-            } else {
-                logImportFailureDetails(item, e);
-            }
-            return ImportItemResult.builder()
-                    .externalId(item.getExternalId())
-                    .action(ImportAction.FAILED)
-                    .success(false)
-                    .errorMessage(e.getMessage())
-                    .cascade(cascade)
-                    .build();
-        }
     }
 
     /**
@@ -381,6 +388,22 @@ public class ProductImportService {
         return null;
     }
 
+    /**
+     * Достаёт значение атрибута "Подробнее о товаре" (описание для покупателя от ФТК)
+     * для записи в Product.importDescription. Атрибут при этом всё равно сохраняется
+     * в product_attributes — отсев только на выдаче (ProductAttributeExclusions).
+     */
+    private String extractImportDescription(List<ProductImportItem.ProductAttributeImportItem> attrItems) {
+        if (attrItems == null) {
+            return null;
+        }
+        return attrItems.stream()
+                .filter(a -> DESCRIPTION_ATTRIBUTE_NAME.equals(a.getName()))
+                .map(ProductImportItem.ProductAttributeImportItem::getValue)
+                .findFirst()
+                .orElse(null);
+    }
+
     private void updateAttributes(Product product, List<ProductImportItem.ProductAttributeImportItem> attrItems) {
         if (attrItems == null || attrItems.isEmpty()) {
             return;
@@ -424,6 +447,7 @@ public class ProductImportService {
             String name,
             String shortDescription,
             String description,
+            String importDescription,
             String material,
             String externalCode,
             String sku,
@@ -442,6 +466,7 @@ public class ProductImportService {
                     p.getName(),
                     p.getShortDescription(),
                     p.getDescription(),
+                    p.getImportDescription(),
                     p.getMaterial(),
                     p.getExternalCode(),
                     p.getSku(),

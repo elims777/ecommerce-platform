@@ -32,6 +32,10 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    /** Описание товара из импорта (ФТК "Подробнее о товаре"). Независимо от description и им не перетирается. */
+    @Column(columnDefinition = "TEXT")
+    private String importDescription;
+
     @Column(length = 1000)
     private String shortDescription;
 

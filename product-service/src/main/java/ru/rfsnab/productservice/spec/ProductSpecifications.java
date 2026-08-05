@@ -18,14 +18,20 @@ public final class ProductSpecifications {
     /**
      * Активные родители категории (поддерева), у которых для КАЖДОГО выбранного свойства
      * есть атрибут с одним из выбранных значений (AND между свойствами, OR внутри свойства).
+     * Непустой nameQuery дополнительно ограничивает выборку по вхождению в название.
      */
     public static Specification<Product> categoryWithAttributes(
-            List<Long> categoryIds, Map<String, List<String>> attrFilters) {
+            List<Long> categoryIds, Map<String, List<String>> attrFilters, String nameQuery) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(root.get("category").get("id").in(categoryIds));
             predicates.add(cb.isTrue(root.get("isActive")));
             predicates.add(cb.isFalse(root.get("isVariantChild")));
+
+            if (nameQuery != null && !nameQuery.isBlank()) {
+                predicates.add(cb.like(cb.lower(root.get("name")),
+                        "%" + nameQuery.toLowerCase() + "%"));
+            }
 
             for (Map.Entry<String, List<String>> e : attrFilters.entrySet()) {
                 Subquery<Long> sub = query.subquery(Long.class);

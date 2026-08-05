@@ -96,6 +96,7 @@ public class ProductMapper {
                 .name(product.getName())
                 .slug(product.getSlug())
                 .description(product.getDescription())
+                .importDescription(product.getImportDescription())
                 .shortDescription(product.getShortDescription())
                 .material(product.getMaterial())
                 .barcode(product.getBarcode())

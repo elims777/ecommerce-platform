@@ -8,21 +8,24 @@ interface GetProductsParams {
     categoryId?: number;
     isActive?: boolean;
     attr?: string[];
+    q?: string;
 }
 
 /** Получить товары с пагинацией */
 export const getProducts = async (params: GetProductsParams = {}): Promise<Page<Product>> => {
     // sort не подставляем по умолчанию: без него бэкенд сортирует категорию
     // по displayOrder (порядок из админки), общий список — по createdAt desc
-    const { page = 0, size = 20, sort, categoryId, attr } = params;
+
+    const { page = 0, size = 20, sort, categoryId, attr, q } = params;
 
     const url = categoryId
         ? `/v1/products/category/${categoryId}`
         : '/v1/products';
 
     const query: Record<string, unknown> = sort ? { page, size, sort } : { page, size };
-    // attr-фильтры применимы только к категорийному листингу
+    // attr-фильтры и поиск по названию применимы только к категорийному листингу
     if (categoryId && attr && attr.length > 0) query.attr = attr;
+    if (categoryId && q) query.q = q;
 
     const { data } = await apiClient.get<Page<Product>>(url, {
         params: query,

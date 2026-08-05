@@ -114,13 +114,17 @@ const CatalogPage = () => {
     const { data: productsPage, isLoading: productsLoading, isError } = useQuery({
         queryKey: ['products', { page: currentPage, size: pageSize, categoryId, q: searchQuery, attr: attrParams, sort, sale: saleOnly }],
         queryFn: async () => {
-            if (searchQuery) {
+            // Поиск внутри категории — контекстный: ищем в её пределах с учётом фильтров.
+            // Поиск без выбранной категории (верхний, из шапки) — по всему каталогу.
+            if (searchQuery && !categoryId) {
                 return searchProducts(searchQuery, currentPage - 1, pageSize, sort);
             }
             if (saleOnly) {
                 return getSaleProducts({ page: currentPage - 1, size: pageSize });
             }
-            return getProducts({ page: currentPage - 1, size: pageSize, categoryId, attr: attrParams, sort });
+            return getProducts({
+                page: currentPage - 1, size: pageSize, categoryId, attr: attrParams, sort, q: searchQuery,
+            });
         },
     });
 
@@ -148,7 +152,9 @@ const CatalogPage = () => {
     const pageTitle = saleOnly
         ? 'Акции'
         : categoryId
-            ? (currentCategory?.name ?? 'Товары')
+            ? (searchQuery
+                ? `${currentCategory?.name ?? 'Товары'}: «${searchQuery}»`
+                : (currentCategory?.name ?? 'Товары'))
             : searchQuery
                 ? `Результаты: «${searchQuery}»`
                 : 'Все товары';
@@ -163,8 +169,12 @@ const CatalogPage = () => {
 
     const handleSearch = (value: string) => {
         const trimmed = value.trim();
-        const newParams = new URLSearchParams();
+        // Категория и фильтры сохраняются: поиск внутри каталога уточняет текущую выборку,
+        // а не сбрасывает её на глобальный поиск.
+        const newParams = new URLSearchParams(searchParams);
         if (trimmed) newParams.set('q', trimmed);
+        else newParams.delete('q');
+        newParams.delete('page');
         setSearchParams(newParams);
     };
 
@@ -413,7 +423,7 @@ const CatalogPage = () => {
                             onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(searchInput); }}
                             placeholder="Артикул, бренд или название товара..."
                             style={{
-                                width: '100%', height: 40, padding: '0 110px 0 38px',
+                                width: '100%', height: 40, padding: '0 122px 0 38px',
                                 border: '1px solid var(--line-2)', borderRadius: 6,
                                 fontSize: 14, fontFamily: 'var(--font-body)', outline: 'none',
                                 background: '#fff', color: 'var(--ink-1)',
@@ -422,26 +432,34 @@ const CatalogPage = () => {
                             onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--brand-navy)'; e.currentTarget.style.boxShadow = '0 0 0 3px oklch(0.92 0.04 250)'; }}
                             onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--line-2)'; e.currentTarget.style.boxShadow = 'none'; }}
                         />
-                        {searchInput && (
+                        {/* Крестик и «Найти» в общем flex-контейнере: позиции считаются от
+                            фактической ширины кнопки, а не от подобранных вручную отступов */}
+                        <div style={{
+                            position: 'absolute', right: 4, top: 4, height: 32,
+                            display: 'flex', alignItems: 'center', gap: 8,
+                        }}>
+                            {searchInput && (
+                                <button
+                                    onClick={() => { setSearchInput(''); handleSearch(''); }}
+                                    aria-label="Очистить поиск"
+                                    style={{ background: 'transparent', border: 0, cursor: 'pointer', color: 'var(--ink-3)', display: 'flex', alignItems: 'center', padding: 0 }}
+                                >
+                                    <XIcon />
+                                </button>
+                            )}
                             <button
-                                onClick={() => { setSearchInput(''); handleSearch(''); }}
-                                style={{ position: 'absolute', right: 72, top: 12, background: 'transparent', border: 0, cursor: 'pointer', color: 'var(--ink-3)', display: 'flex', alignItems: 'center' }}
+                                onClick={() => handleSearch(searchInput)}
+                                style={{
+                                    height: 32, padding: '0 16px',
+                                    background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 5,
+                                    fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
                             >
-                                <XIcon />
+                                Найти
                             </button>
-                        )}
-                        <button
-                            onClick={() => handleSearch(searchInput)}
-                            style={{
-                                position: 'absolute', right: 4, top: 4, height: 32, padding: '0 16px',
-                                background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 5,
-                                fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)',
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--brand-red-hover)'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--brand-red)'; }}
-                        >
-                            Найти
-                        </button>
+                        </div>
                     </div>
 
                     {/* Active filters */}

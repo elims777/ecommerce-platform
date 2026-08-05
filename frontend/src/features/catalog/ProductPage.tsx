@@ -138,7 +138,7 @@ const ProductPage = () => {
 
     if (isLoading) {
         return (
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.4fr 280px', gap: 32, padding: '24px 0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 440px', gap: 28, padding: '24px 0' }}>
                 <Skeleton.Image active style={{ width: '100%', height: 340, borderRadius: 8 }} />
                 <div>
                     <Skeleton active paragraph={{ rows: 6 }} title={{ width: '80%' }} />
@@ -215,7 +215,9 @@ const ProductPage = () => {
                 <ArrowLeftOutlined /> Назад
             </button>
 
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 360px', gap: 28 }}>
+            {/* Правая колонка 380px под таблицу вариантов: в прежних 360px она не влезала
+                (minWidth 420) и счётчик «Кол-во» уезжал за горизонтальный скролл */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 380px', gap: 28 }}>
                 {/* Галерея */}
                 <div style={{ minWidth: 0, ...(isMobile ? { order: 1 } : {}) }}>
                     <Image.PreviewGroup items={sortedImages.map((img) => img.fileUrl)}>
@@ -311,9 +313,16 @@ const ProductPage = () => {
                         </div>
                     )}
 
+                    {/* Описание из импорта */}
+                    {product.importDescription && (
+                        <div style={{ borderTop: product.description ? 'none' : '1px solid var(--line-1)', paddingTop: product.description ? 0 : 20, marginTop: product.description ? 16 : 0 }}>
+                            <p style={{ fontSize: 'var(--text-base)', color: 'var(--ink-2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{product.importDescription}</p>
+                        </div>
+                    )}
+
                     {/* Материал */}
                     {product.material && (
-                        <div style={{ borderTop: '1px solid var(--line-1)', paddingTop: 16, marginTop: product.description ? 16 : 0 }}>
+                        <div style={{ borderTop: '1px solid var(--line-1)', paddingTop: 16, marginTop: (product.description || product.importDescription) ? 16 : 0 }}>
                             <div style={{ display: 'flex', fontSize: 'var(--text-base)', padding: '5px 0' }}>
                                 <span style={{ color: 'var(--ink-3)', flex: '0 0 120px' }}>Материал</span>
                                 <span style={{ fontWeight: 500, color: 'var(--ink-1)' }}>{product.material}</span>
@@ -363,13 +372,15 @@ const ProductPage = () => {
                         {/* Таблица вариантов */}
                         {hasVariants ? (
                             <div style={{ marginBottom: 16, overflowX: 'auto', maxWidth: '100%' }}>
-                                <table style={{ width: '100%', minWidth: 420, borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+                                <table style={{ width: '100%', minWidth: 320, borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--line-1)' }}>
-                                            <th style={{ textAlign: 'left', padding: '4px 6px 6px 0', color: 'var(--ink-3)', fontWeight: 500 }}>Параметры</th>
-                                            <th style={{ textAlign: 'right', padding: '4px 6px 6px', color: 'var(--ink-3)', fontWeight: 500 }}>Цена</th>
-                                            <th style={{ textAlign: 'right', padding: '4px 6px 6px', color: 'var(--ink-3)', fontWeight: 500 }}>Остаток</th>
-                                            <th style={{ textAlign: 'center', padding: '4px 0 6px 6px', color: 'var(--ink-3)', fontWeight: 500 }}>Кол-во</th>
+                                            {/* width:100% на первой колонке — излишек ширины уходит в неё,
+                                                а не в зазоры между Параметрами и Ценой */}
+                                            <th style={{ textAlign: 'left', padding: '4px 6px 6px 0', color: 'var(--ink-3)', fontWeight: 500, width: '100%' }}>Параметры</th>
+                                            <th style={{ textAlign: 'right', padding: '4px 4px 6px', color: 'var(--ink-3)', fontWeight: 500, whiteSpace: 'nowrap' }}>Цена</th>
+                                            <th style={{ textAlign: 'right', padding: '4px 4px 6px', color: 'var(--ink-3)', fontWeight: 500, whiteSpace: 'nowrap' }}>Остаток</th>
+                                            <th style={{ textAlign: 'center', padding: '4px 0 6px 4px', color: 'var(--ink-3)', fontWeight: 500, whiteSpace: 'nowrap' }}>Кол-во</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -388,11 +399,11 @@ const ProductPage = () => {
                                                     <td style={{ padding: '7px 6px', textAlign: 'right', whiteSpace: 'nowrap', color: inStockV ? 'var(--brand-green)' : 'var(--brand-red)', fontVariantNumeric: 'tabular-nums' }}>
                                                         {inStockV ? `${v.stockQuantity} ${unitPlural(v.stockQuantity, product.unitOfMeasure)}` : 'под заказ'}
                                                     </td>
-                                                    <td style={{ padding: '7px 0 7px 6px' }}>
-                                                        <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', height: 28, alignItems: 'center', minWidth: 80 }}>
+                                                    <td style={{ padding: '7px 0 7px 4px' }}>
+                                                        <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', height: 28, alignItems: 'center', width: 68 }}>
                                                             <button
                                                                 onClick={() => setVariantQty(v.id, Math.max(0, qty - 1))}
-                                                                style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                                                style={{ width: 22, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                                                             >−</button>
                                                             <input
                                                                 type="number"
@@ -407,7 +418,7 @@ const ProductPage = () => {
                                                             />
                                                             <button
                                                                 onClick={() => setVariantQty(v.id, qty + 1)}
-                                                                style={{ width: 26, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                                                style={{ width: 22, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                                                             >+</button>
                                                         </div>
                                                     </td>
