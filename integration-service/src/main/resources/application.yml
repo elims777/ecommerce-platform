@@ -99,6 +99,7 @@ app:
     topics:
       order-events: order-events
       order-1c-export: order-1c-export
+      import-events: import-events
 # ===== Swagger =====
 springdoc:
   api-docs:

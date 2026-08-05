@@ -3,12 +3,16 @@ package ru.rfsnab.integrationservice.service.ftk;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.integrationservice.config.IntegrationProperties;
+import ru.rfsnab.integrationservice.config.KafkaTopicsProperties;
 import ru.rfsnab.integrationservice.dto.BatchImportRequest;
 import ru.rfsnab.integrationservice.dto.BatchImportResponse;
+import ru.rfsnab.integrationservice.dto.BatchImportResponse.ImportItemResult;
+import ru.rfsnab.integrationservice.dto.FtkImportCompletedEvent;
 import ru.rfsnab.integrationservice.dto.ProductImportItemDto;
 import ru.rfsnab.integrationservice.dto.ProductImportItemDto.VariantImportItemDto;
 import ru.rfsnab.integrationservice.model.ImportLog;
@@ -51,6 +55,11 @@ public class FtkImportService {
     private static final String SOURCE           = "FTK";
     private static final String BATCH_IMPORT_URI = "/api/v1/products/import/batch";
 
+    /** Сколько ИСХОДНЫХ (не каскадных) ошибок хранить в error_message (TEXT, но не нужно полотно на 500 строк) */
+    private static final int MAX_ERRORS_IN_LOG = 50;
+    /** Сколько ИСХОДНЫХ ошибок отправлять в Kafka-событие */
+    private static final int MAX_ERRORS_IN_EVENT = 50;
+
     private final FtkXlsParser xlsParser;
     private final FtkXmlParser xmlParser;
     private final FtkFtpClient ftpClient;
@@ -59,6 +68,8 @@ public class FtkImportService {
     private final RestTemplate productServiceRestTemplate;
     private final IntegrationProperties properties;
     private final ImportLogRepository importLogRepository;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTopicsProperties kafkaTopics;
 
     private final AtomicBoolean importInProgress = new AtomicBoolean(false);
 
@@ -225,12 +236,12 @@ public class FtkImportService {
 
             FtkImportResult result = new FtkImportResult(limited.size(), batchResult.created(),
                     batchResult.updated(), batchResult.unchanged(), batchResult.failed(), imagesOk, imagesFailed, imagesSkipped);
-            saveFtkLog(logEntry, startedAt, resumeAttempts, result, null);
+            saveFtkLog(logEntry, startedAt, resumeAttempts, result, null, batchResult.errors());
             return result;
 
         } catch (Exception e) {
             log.error("ФТК XML импорт завершился с ошибкой: {}", e.getMessage(), e);
-            saveFtkLog(logEntry, startedAt, resumeAttempts, null, e);
+            saveFtkLog(logEntry, startedAt, resumeAttempts, null, e, List.of());
             throw e;
         }
     }
@@ -302,12 +313,12 @@ public class FtkImportService {
 
             FtkImportResult result = new FtkImportResult(products.size(), batchResult.created(),
                     batchResult.updated(), batchResult.unchanged(), batchResult.failed(), imagesOk, imagesFailed, 0);
-            saveFtkLog(null, startedAt, 0, result, null);
+            saveFtkLog(null, startedAt, 0, result, null, batchResult.errors());
             return result;
 
         } catch (IOException e) {
             log.error("ФТК XLS импорт завершился с ошибкой: {}", e.getMessage(), e);
-            saveFtkLog(null, startedAt, 0, null, e);
+            saveFtkLog(null, startedAt, 0, null, e, List.of());
             throw e;
         }
     }
@@ -385,10 +396,11 @@ public class FtkImportService {
     // ══════════════════════════════════════════════════════════════
 
     private BatchImportResult sendBatch(List<ProductImportItemDto> items) {
-        if (items.isEmpty()) return new BatchImportResult(0, 0, 0, 0);
+        if (items.isEmpty()) return new BatchImportResult(0, 0, 0, 0, List.of());
 
         int chunkSize = properties.getImportConfig().getChunkSize();
         int created = 0, updated = 0, unchanged = 0, failed = 0;
+        List<ImportItemResult> errors = new ArrayList<>();
 
         for (int i = 0; i < items.size(); i += chunkSize) {
             List<ProductImportItemDto> chunk = items.subList(i, Math.min(i + chunkSize, items.size()));
@@ -402,14 +414,27 @@ public class FtkImportService {
                     updated += body.getUpdated();
                     unchanged += body.getUnchanged();
                     failed  += body.getFailed();
+                    if (body.getResults() != null) {
+                        body.getResults().stream()
+                                .filter(r -> !r.isSuccess())
+                                .forEach(errors::add);
+                    }
                 }
             } catch (Exception e) {
-                log.error("Ошибка отправки chunk [{}-{}]: {}", i, i + chunk.size(), e.getMessage());
+                // Чанк упал целиком (напр. HTTP 500) — тела с постатейными результатами нет,
+                // фиксируем факт падения диапазона как одну не-каскадную ошибку.
+                log.error("Ошибка отправки chunk [{}-{}]: {}", i, i + chunk.size(), e.getMessage(), e);
                 failed += chunk.size();
+                ImportItemResult chunkError = new ImportItemResult();
+                chunkError.setExternalId("chunk[" + i + "-" + (i + chunk.size()) + "]");
+                chunkError.setSuccess(false);
+                chunkError.setErrorMessage("Чанк не отправлен: " + e.getMessage());
+                chunkError.setCascade(false);
+                errors.add(chunkError);
             }
         }
 
-        return new BatchImportResult(created, updated, unchanged, failed);
+        return new BatchImportResult(created, updated, unchanged, failed, errors);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -440,22 +465,24 @@ public class FtkImportService {
      * чтобы не сбросить счётчик автовозобновлений).
      */
     private void saveFtkLog(ImportLog logEntry, LocalDateTime startedAt, int resumeAttempts,
-                            FtkImportResult result, Exception error) {
+                            FtkImportResult result, Exception error, List<ImportItemResult> errors) {
+        LocalDateTime completedAt = LocalDateTime.now();
+        long durationMs = Duration.between(startedAt, completedAt).toMillis();
+
+        ImportStatus status;
+        if (error != null) {
+            status = ImportStatus.FAILED;
+        } else if (result == null) {
+            status = ImportStatus.FAILED;
+        } else if (result.failed() > 0 || result.imagesFailed() > 0) {
+            status = ImportStatus.PARTIAL;
+        } else {
+            status = ImportStatus.SUCCESS;
+        }
+
+        String errorSummary = error != null ? error.getMessage() : buildErrorSummary(errors);
+
         try {
-            LocalDateTime completedAt = LocalDateTime.now();
-            long durationMs = Duration.between(startedAt, completedAt).toMillis();
-
-            ImportStatus status;
-            if (error != null) {
-                status = ImportStatus.FAILED;
-            } else if (result == null) {
-                status = ImportStatus.FAILED;
-            } else if (result.failed() > 0 || result.imagesFailed() > 0) {
-                status = ImportStatus.PARTIAL;
-            } else {
-                status = ImportStatus.SUCCESS;
-            }
-
             if (logEntry == null) {
                 logEntry = ImportLog.builder()
                         .exchangeType(EXCHANGE_TYPE_FTK)
@@ -472,11 +499,82 @@ public class FtkImportService {
             logEntry.setImagesProcessed(result != null ? result.imagesOk() + result.imagesFailed() : 0);
             logEntry.setImagesFailed(result != null ? result.imagesFailed() : 0);
             logEntry.setDurationMs(durationMs);
-            logEntry.setErrorMessage(error != null ? error.getMessage() : null);
+            logEntry.setErrorMessage(errorSummary);
             logEntry.setCompletedAt(completedAt);
             importLogRepository.save(logEntry);
         } catch (Exception ex) {
             log.error("Не удалось сохранить FTK import_log: {}", ex.getMessage());
+        }
+
+        publishImportEvent(status, result, error, errors, durationMs, startedAt);
+    }
+
+    /**
+     * Сводка для import_log.error_message: сколько исходных ошибок, сколько каскадных,
+     * и список первых MAX_ERRORS_IN_LOG исходных ошибок вида "externalId: message".
+     */
+    private String buildErrorSummary(List<ImportItemResult> errors) {
+        if (errors == null || errors.isEmpty()) return null;
+
+        List<ImportItemResult> origin = errors.stream().filter(e -> !e.isCascade()).toList();
+        long cascadeCount = errors.size() - origin.size();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("Исходных ошибок: ").append(origin.size())
+                .append(", каскадных: ").append(cascadeCount).append(".\n");
+        origin.stream()
+                .limit(MAX_ERRORS_IN_LOG)
+                .forEach(e -> sb.append(e.getExternalId()).append(": ").append(e.getErrorMessage()).append('\n'));
+        if (origin.size() > MAX_ERRORS_IN_LOG) {
+            sb.append("... и ещё ").append(origin.size() - MAX_ERRORS_IN_LOG).append(" исходных ошибок\n");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Публикует событие в топик import-events по завершении импорта — всегда,
+     * и при успехе, и при ошибках (для отчёта на почту через notification-service).
+     */
+    private void publishImportEvent(ImportStatus status, FtkImportResult result, Exception error,
+                                     List<ImportItemResult> errors, long durationMs, LocalDateTime startedAt) {
+        List<ImportItemResult> origin = errors == null ? List.of()
+                : errors.stream().filter(e -> !e.isCascade()).toList();
+        int cascadeCount = errors == null ? 0 : errors.size() - origin.size();
+
+        List<FtkImportCompletedEvent.ErrorItem> eventErrors = origin.stream()
+                .limit(MAX_ERRORS_IN_EVENT)
+                .map(e -> new FtkImportCompletedEvent.ErrorItem(e.getExternalId(), e.getErrorMessage(), false))
+                .toList();
+
+        if (error != null && eventErrors.isEmpty()) {
+            eventErrors = List.of(new FtkImportCompletedEvent.ErrorItem(null, error.getMessage(), false));
+        }
+
+        FtkImportCompletedEvent event = FtkImportCompletedEvent.builder()
+                .eventType(FtkImportCompletedEvent.EVENT_TYPE)
+                .status(status.name())
+                .totalReceived(result != null ? result.totalProducts() : 0)
+                .created(result != null ? result.created() : 0)
+                .updated(result != null ? result.updated() : 0)
+                .unchanged(result != null ? result.unchanged() : 0)
+                .failed(result != null ? result.failed() : 0)
+                .imagesProcessed(result != null ? result.imagesOk() + result.imagesFailed() : 0)
+                .imagesFailed(result != null ? result.imagesFailed() : 0)
+                .durationMs(durationMs)
+                .startedAt(startedAt)
+                .errors(eventErrors)
+                .cascadeCount(cascadeCount)
+                .build();
+
+        try {
+            kafkaTemplate.send(kafkaTopics.getImportEvents(), FtkImportCompletedEvent.EVENT_TYPE, event)
+                    .whenComplete((r, ex) -> {
+                        if (ex != null) {
+                            log.error("Не удалось отправить событие ФТК импорта в Kafka: {}", ex.getMessage());
+                        }
+                    });
+        } catch (Exception ex) {
+            log.error("Ошибка публикации события ФТК импорта в Kafka: {}", ex.getMessage());
         }
     }
 
@@ -484,7 +582,8 @@ public class FtkImportService {
     // Result types
     // ══════════════════════════════════════════════════════════════
 
-    private record BatchImportResult(int created, int updated, int unchanged, int failed) {}
+    private record BatchImportResult(int created, int updated, int unchanged, int failed,
+                                      List<ImportItemResult> errors) {}
 
     public record FtkImportResult(
             int totalProducts,
