@@ -129,8 +129,8 @@ public class ProductMapper {
                         .map(AttributeMapper::mapToResponse).toList())
                 .documents(product.getDocuments().stream().map(ProductMapper::mapDocumentToDto).toList());
 
-        // Старую цену отдаём только если акция её реально изменила — фронт по ней рисует зачёркивание
-        if (markup != null) {
+        // Старую цену отдаём только у скидок: при наценке зачёркнутая цена оказалась бы НИЖЕ текущей
+        if (markup != null && markup.signum() < 0) {
             if (salePrice != null && salePrice.compareTo(product.getPrice()) != 0) {
                 builder.oldPrice(product.getPrice());
             }

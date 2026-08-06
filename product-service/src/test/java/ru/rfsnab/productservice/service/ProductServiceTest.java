@@ -334,7 +334,7 @@ class ProductServiceTest {
             // Given
             Pageable pageable = PageRequest.of(0, 20);
             Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 1);
-            when(productRepository.searchByName("огне", pageable)).thenReturn(page);
+            when(productRepository.searchByNameOrArticle("огне", pageable)).thenReturn(page);
 
             // When
             Page<Product> results = productService.searchProducts("огне", pageable);
@@ -351,7 +351,7 @@ class ProductServiceTest {
             // Given
             Pageable pageable = PageRequest.of(0, 20);
             Page<Product> emptyPage = new PageImpl<>(List.of(), pageable, 0);
-            when(productRepository.searchByName("несуществующий", pageable)).thenReturn(emptyPage);
+            when(productRepository.searchByNameOrArticle("несуществующий", pageable)).thenReturn(emptyPage);
 
             // When
             Page<Product> results = productService.searchProducts("несуществующий", pageable);
@@ -368,7 +368,7 @@ class ProductServiceTest {
             // Given
             Pageable pageable = PageRequest.of(1, 1);
             Page<Product> page = new PageImpl<>(List.of(testProduct), pageable, 2);
-            when(productRepository.searchByName("огне", pageable)).thenReturn(page);
+            when(productRepository.searchByNameOrArticle("огне", pageable)).thenReturn(page);
 
             // When
             Page<Product> results = productService.searchProducts("огне", pageable);

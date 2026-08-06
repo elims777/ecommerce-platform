@@ -24,16 +24,29 @@ class ProductMapperSaleTest {
     }
 
     @Test
-    @DisplayName("акция категории: отдаются акционные цены, базовые уходят в oldPrice")
-    void categorySale_ReturnsSalePricesWithOldOnes() {
+    @DisplayName("наценка категории: цены выше базовых, но зачёркивать нечего")
+    void categoryMarkup_ReturnsRaisedPricesWithoutOldOnes() {
         ProductResponse response = ProductMapper.mapWithSale(product(), new BigDecimal("10"));
 
         assertThat(response.getPrice()).isEqualByComparingTo("110.00");
         assertThat(response.getWholesalePrice()).isEqualByComparingTo("132.00");
+        // Старая цена была бы НИЖЕ текущей — зачёркивание выглядело бы абсурдом
+        assertThat(response.getOldPrice()).isNull();
+        assertThat(response.getOldWholesalePrice()).isNull();
+        assertThat(response.getIsSale()).isTrue();
+        assertThat(response.getSaleMarkupPercent()).isEqualByComparingTo("10");
+    }
+
+    @Test
+    @DisplayName("скидка категории: базовые цены уходят в oldPrice")
+    void categoryDiscount_ReturnsSalePricesWithOldOnes() {
+        ProductResponse response = ProductMapper.mapWithSale(product(), new BigDecimal("-20"));
+
+        assertThat(response.getPrice()).isEqualByComparingTo("80.00");
+        assertThat(response.getWholesalePrice()).isEqualByComparingTo("96.00");
         assertThat(response.getOldPrice()).isEqualByComparingTo("100.00");
         assertThat(response.getOldWholesalePrice()).isEqualByComparingTo("120.00");
         assertThat(response.getIsSale()).isTrue();
-        assertThat(response.getSaleMarkupPercent()).isEqualByComparingTo("10");
     }
 
     @Test
