@@ -19,9 +19,13 @@ public class VideoEmbedResolver {
             "(?i)(?:youtube\\.com/(?:watch\\?(?:.*&)?v=|embed/|shorts/)|youtu\\.be/)([\\w-]{11})"
     );
 
-    /** vk.com/video-12345_67890 либо vk.com/video_ext.php?oid=-12345&id=67890 */
+    /**
+     * vk.com/video-12345_67890 либо vk.com/video_ext.php?oid=-12345&id=67890.
+     * Домен vkvideo.ru — куда VK перевёл видео, кнопка «Поделиться» отдаёт именно его.
+     * Клипы (clip-12345_67890) играются тем же плеером video_ext.php.
+     */
     private static final Pattern VK = Pattern.compile(
-            "(?i)vk\\.com/(?:video_ext\\.php\\?oid=(-?\\d+)&(?:amp;)?id=(\\d+)|video(-?\\d+)_(\\d+))"
+            "(?i)(?:vk\\.com|vkvideo\\.ru)/(?:video_ext\\.php\\?oid=(-?\\d+)&(?:amp;)?id=(\\d+)|(?:video|clip)(-?\\d+)_(\\d+))"
     );
 
     private static final Pattern RUTUBE = Pattern.compile(

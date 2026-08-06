@@ -20,7 +20,7 @@ const AdminNewsPage = () => {
     const [page, setPage] = useState(1);
 
     const { data, isLoading } = useQuery({
-        queryKey: ['adminNews', page],
+        queryKey: ['adminNews', 'list', page],
         queryFn: () => getAdminNews(page - 1, PAGE_SIZE),
     });
 
@@ -29,6 +29,7 @@ const AdminNewsPage = () => {
         onSuccess: () => {
             messageApi.success('Новость удалена');
             queryClient.invalidateQueries({ queryKey: ['adminNews'] });
+            queryClient.invalidateQueries({ queryKey: ['news'] });
         },
         onError: () => messageApi.error('Не удалось удалить новость'),
     });

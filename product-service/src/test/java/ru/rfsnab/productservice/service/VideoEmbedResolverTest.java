@@ -36,6 +36,20 @@ class VideoEmbedResolverTest {
     }
 
     @Test
+    @DisplayName("VK: домен vkvideo.ru")
+    void resolvesVkVideoDomain() {
+        assertThat(resolver.resolveEmbedUrl("https://vkvideo.ru/video-22822305_456241864"))
+                .isEqualTo("https://vk.com/video_ext.php?oid=-22822305&id=456241864");
+    }
+
+    @Test
+    @DisplayName("VK: клип на vkvideo.ru играется тем же плеером")
+    void resolvesVkClip() {
+        assertThat(resolver.resolveEmbedUrl("https://vkvideo.ru/clip-231565734_456241450"))
+                .isEqualTo("https://vk.com/video_ext.php?oid=-231565734&id=456241450");
+    }
+
+    @Test
     @DisplayName("VK: уже готовая embed-ссылка")
     void resolvesVkEmbedLink() {
         assertThat(resolver.resolveEmbedUrl("https://vk.com/video_ext.php?oid=-123&id=456"))

@@ -7,7 +7,7 @@ import {
     BoldOutlined, ItalicOutlined, UnorderedListOutlined, OrderedListOutlined,
     LinkOutlined, PictureOutlined, UndoOutlined, RedoOutlined,
 } from '@ant-design/icons';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { uploadNewsImage } from '@/api/news';
 
 interface Props {
@@ -34,6 +34,14 @@ const RichTextEditor = ({ value, onChange }: Props) => {
         content: value,
         onUpdate: ({ editor }) => onChange(editor.getHTML()),
     });
+
+    // content у useEditor читается только при создании редактора. При редактировании
+    // новость приходит с сервера уже после монтирования — без этого текст остаётся пустым.
+    useEffect(() => {
+        if (editor && value !== editor.getHTML()) {
+            editor.commands.setContent(value, { emitUpdate: false });
+        }
+    }, [editor, value]);
 
     if (!editor) return null;
 

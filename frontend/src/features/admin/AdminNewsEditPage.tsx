@@ -24,7 +24,7 @@ const AdminNewsEditPage = () => {
     const [uploadingCover, setUploadingCover] = useState(false);
 
     const { data: news, isLoading } = useQuery({
-        queryKey: ['adminNews', newsId],
+        queryKey: ['adminNews', 'detail', newsId],
         queryFn: () => getAdminNewsById(newsId!),
         enabled: newsId !== null,
     });
@@ -47,6 +47,8 @@ const AdminNewsEditPage = () => {
         onSuccess: () => {
             messageApi.success(isNew ? 'Новость создана' : 'Новость сохранена');
             queryClient.invalidateQueries({ queryKey: ['adminNews'] });
+            // Публичная часть: /news, /news/:slug и блок на главной — иначе там висит старая версия
+            queryClient.invalidateQueries({ queryKey: ['news'] });
             navigate('/admin/news');
         },
         onError: () => messageApi.error('Не удалось сохранить новость'),
