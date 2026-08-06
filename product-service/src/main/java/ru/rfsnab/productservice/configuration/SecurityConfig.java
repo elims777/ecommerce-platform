@@ -35,7 +35,12 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Управление новостями — только ADMIN и MANAGER.
+                        // Идёт ДО публичного GET /api/v1/news/**, иначе permitAll перехватил бы админские чтения
+                        .requestMatchers("/api/v1/admin/news/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
+
                         // Публичные endpoints (только чтение)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/news/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/import/batch").hasRole("INTERNAL")

@@ -534,3 +534,40 @@
 
 .rf-bulk-btn:hover { background: rgba(255,255,255,0.22); }
 .rf-bulk-btn.danger { color: #ffa39e; border-color: rgba(255,100,100,0.3); }
+
+/* === Редактор новостей (TipTap) === */
+.rf-editor-content .ProseMirror {
+  min-height: 320px;
+  padding: 14px 16px;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--ink-1);
+}
+
+.rf-editor-content .ProseMirror > * + * { margin-top: 0.75em; }
+.rf-editor-content .ProseMirror h2 { font-size: 1.35em; font-weight: 600; }
+.rf-editor-content .ProseMirror h3 { font-size: 1.15em; font-weight: 600; }
+.rf-editor-content .ProseMirror ul,
+.rf-editor-content .ProseMirror ol { padding-left: 1.4em; }
+.rf-editor-content .ProseMirror a { color: var(--brand-navy); text-decoration: underline; }
+.rf-editor-content .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--r-3);
+}
+.rf-editor-content .ProseMirror blockquote {
+  border-left: 3px solid var(--line-2);
+  padding-left: 12px;
+  color: var(--ink-2);
+}
+
+/* Плейсхолдер пустого редактора */
+.rf-editor-content .ProseMirror p.is-editor-empty:first-child::before {
+  content: 'Текст новости…';
+  color: var(--ink-3);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

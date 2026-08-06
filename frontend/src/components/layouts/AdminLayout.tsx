@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { key: '/admin/products',    label: 'Каталог',        icon: MenuIcon },
   { key: '/admin/users',       label: 'Клиенты',        icon: PersonIcon },
   { key: '/admin/logistics',   label: 'Логистика',      icon: TruckIcon },
+  { key: '/admin/news',        label: 'Новости',        icon: NewsIcon },
   { key: '/admin/integration', label: 'Интеграция 1С',  icon: SyncIcon },
   { key: '/admin/settings',    label: 'Настройки',      icon: SettingsIcon },
 ];
@@ -19,6 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/users':           'Клиенты',
   '/admin/legal-entities':  'Юридическое лицо',
   '/admin/logistics':   'Логистика',
+  '/admin/news':        'Новости',
   '/admin/integration': 'Интеграция 1С',
   '/admin/settings':    'Настройки',
 };
@@ -45,6 +47,15 @@ function MenuIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M2 4h12M2 8h12M2 12h12"/>
+    </svg>
+  );
+}
+
+function NewsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M2 3h9a1 1 0 011 1v9a1 1 0 001 1H3a1 1 0 01-1-1V3z"/>
+      <path d="M12 6h2v7a1 1 0 01-1 1M4 6h5M4 9h5M4 12h3"/>
     </svg>
   );
 }

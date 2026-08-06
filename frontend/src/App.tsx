@@ -38,6 +38,10 @@ const AdminUserDetailPage = lazy(() => import('@/features/admin/AdminUserDetailP
 const AdminLegalEntityDetailPage = lazy(() => import('@/features/admin/AdminLegalEntityDetailPage'));
 const AdminSettingsPage = lazy(() => import('@/features/admin/AdminSettingsPage'));
 const LogisticsPage = lazy(() => import('@/features/admin/LogisticsPage'));
+const AdminNewsPage = lazy(() => import('@/features/admin/AdminNewsPage'));
+const AdminNewsEditPage = lazy(() => import('@/features/admin/AdminNewsEditPage'));
+const NewsListPage = lazy(() => import('@/features/news/NewsListPage'));
+const NewsDetailPage = lazy(() => import('@/features/news/NewsDetailPage'));
 const FavouritesPage = lazy(() => import('@/features/favourites/FavouritesPage'));
 const PriceListsPage = lazy(() => import('@/features/priceLists/PriceListsPage'));
 const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage'));
@@ -132,6 +136,8 @@ const AppRoutes = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/products/:id" element={<ProductPage />} />
+            <Route path="/news" element={<NewsListPage />} />
+            <Route path="/news/:slug" element={<NewsDetailPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contacts" element={<ContactsPage />} />
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
@@ -163,6 +169,8 @@ const AppRoutes = () => {
               <Route path="/admin/integration" element={<IntegrationPage />} />
               <Route path="/admin/products" element={<AdminCatalogPage />} />
               <Route path="/admin/products/:id/edit" element={<AdminProductEditPage />} />
+              <Route path="/admin/news" element={<AdminNewsPage />} />
+              <Route path="/admin/news/:id/edit" element={<AdminNewsEditPage />} />
               <Route path="/admin/settings" element={<AdminSettingsPage />} />
             </Route>
           </Route>

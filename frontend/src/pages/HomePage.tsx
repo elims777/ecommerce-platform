@@ -1,16 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { ClickableCard } from '@/components/navigation';
 import { Spin, Grid } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { getProducts, getFeaturedProducts, getSaleProducts } from '@/api/products';
+import { getLatestNews } from '@/api/news';
 import { getCategoryTree } from '@/api/categories';
 import ProductCard from '@/features/catalog/ProductCard';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { App } from 'antd';
 import type { CategoryTree } from '@/types/product';
-import { useDisplayPrice, formatPriceOrPlaceholder } from '@/utils/priceUtils';
+import type { News as NewsItem } from '@/types/news';
 import { handleProfileIncomplete } from '@/utils/profileGate';
 import PriceListModal from '@/components/PriceListModal';
 
@@ -62,46 +63,49 @@ const PRIMARY_COLORS = [
 // Служебная категория «Импорт из 1С» — не показываем на главной.
 const HIDDEN_CATEGORY_IDS = new Set([1]);
 
-interface ShowcaseRowProps {
-    product: import('@/types/product').Product;
-}
+const formatNewsDate = (iso: string | null): string =>
+    iso ? new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) : '';
 
-const ShowcaseRow = ({ product }: ShowcaseRowProps) => {
-    const price = useDisplayPrice(product);
-    const imageUrl = product.images?.find((img) => img.isPrimary)?.fileUrl ?? product.images?.[0]?.fileUrl;
-    return (
-        <ClickableCard
-            to={`/products/${product.id}`}
-            style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '8px 6px', borderRadius: 'var(--r-3)',
-                transition: 'background .12s',
-            }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--surface-2)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
-        >
+const NewsRow = ({ news }: { news: NewsItem }) => (
+    <ClickableCard
+        to={`/news/${news.slug}`}
+        style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '8px 6px', borderRadius: 'var(--r-3)',
+            transition: 'background .12s',
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--surface-2)'; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
+    >
+        <div style={{
+            width: 40, height: 40, borderRadius: 'var(--r-2)', flexShrink: 0,
+            background: 'var(--surface-2)', overflow: 'hidden',
+        }}>
+            {news.coverImageUrl && (
+                <img
+                    src={news.coverImageUrl}
+                    alt=""
+                    width={40}
+                    height={40}
+                    loading="lazy"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+            )}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-                width: 40, height: 40, borderRadius: 'var(--r-2)', flexShrink: 0,
-                background: 'var(--surface-2)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-1)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
-                {imageUrl && <img src={imageUrl} alt={product.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />}
+                {news.title}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                    fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-1)',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                    {product.name}
-                </div>
-                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-1)', fontVariantNumeric: 'tabular-nums' }}>
-                    {formatPriceOrPlaceholder(price)}
-                </div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
+                {formatNewsDate(news.publishedAt)}
             </div>
-            <ArrRight width={12} height={12} />
-        </ClickableCard>
-    );
-};
+        </div>
+        <ArrRight width={12} height={12} />
+    </ClickableCard>
+);
 
 type ShowcaseTab = 'hits' | 'sales' | 'new';
 
@@ -134,10 +138,10 @@ const Showcase = ({ onAddToCart }: { onAddToCart: (productId: number) => void })
         enabled: tab === 'hits',
         staleTime: 60_000,
     });
-    // sales-запрос без enabled: нужен и для таба «Акции», и постоянно для правой колонки (та же выборка)
     const { data: salesPage, isLoading: salesLoading } = useQuery({
         queryKey: ['showcase', 'sales'],
         queryFn: () => getSaleProducts({ size: 10 }),
+        enabled: tab === 'sales',
         staleTime: 60_000,
     });
     const { data: newPage, isLoading: newLoading } = useQuery({
@@ -150,8 +154,14 @@ const Showcase = ({ onAddToCart }: { onAddToCart: (productId: number) => void })
     const activeData = tab === 'hits' ? hitsPage : tab === 'sales' ? salesPage : newPage;
     const activeLoading = tab === 'hits' ? hitsLoading : tab === 'sales' ? salesLoading : newLoading;
     const products = activeData?.content ?? [];
-    // временно: до появления живых новостей правая колонка = акционные товары (тот же sales-запрос)
-    const sidebarProducts = (salesPage?.content ?? []).slice(0, 5);
+
+    // Правая колонка: последние новости. Запрашиваем только когда колонка видна (от lg).
+    const { data: latestNews = [] } = useQuery({
+        queryKey: ['news', 'latest'],
+        queryFn: () => getLatestNews(5),
+        enabled: showSidebar,
+        staleTime: 5 * 60 * 1000,
+    });
 
     const scrollByAmount = (dir: 1 | -1) => {
         scrollRef.current?.scrollBy({ left: dir * SHOWCASE_SCROLL_STEP, behavior: 'smooth' });
@@ -275,13 +285,27 @@ const Showcase = ({ onAddToCart }: { onAddToCart: (productId: number) => void })
 
                 {showSidebar && (
                     <div style={{ width: '32%', background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', padding: 16 }}>
-                        <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--ink-1)', marginBottom: 10 }}>
-                            Новости и акции
+                        <div style={{
+                            display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+                            marginBottom: 10, gap: 8,
+                        }}>
+                            <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--ink-1)' }}>
+                                Новости
+                            </div>
+                            {latestNews.length > 0 && (
+                                <Link to="/news" style={{ fontSize: 'var(--text-sm)', color: 'var(--brand-navy)' }}>
+                                    Все новости
+                                </Link>
+                            )}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            {sidebarProducts.map((product) => (
-                                <ShowcaseRow key={product.id} product={product} />
-                            ))}
+                            {latestNews.length === 0 ? (
+                                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', padding: '8px 6px' }}>
+                                    Новостей пока нет
+                                </div>
+                            ) : (
+                                latestNews.map((item) => <NewsRow key={item.id} news={item} />)
+                            )}
                         </div>
                     </div>
                 )}
