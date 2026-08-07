@@ -258,6 +258,10 @@ const ClientLayout = () => {
 
     useEffect(() => {
         setMobileNavOpen(false);
+        // Запрос остаётся только на выдаче, куда сам поиск и привёл; при уходе поле пустеет.
+        // Зависимость только от pathname: смена фильтров каталога не должна стирать ввод.
+        const q = new URLSearchParams(window.location.search).get('q');
+        setSearchQuery(location.pathname === '/catalog' && q ? q : '');
     }, [location.pathname]);
 
     const userMenuItems: MenuProps['items'] = [

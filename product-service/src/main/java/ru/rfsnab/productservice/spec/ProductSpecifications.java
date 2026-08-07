@@ -18,7 +18,8 @@ public final class ProductSpecifications {
     /**
      * Активные родители категории (поддерева), у которых для КАЖДОГО выбранного свойства
      * есть атрибут с одним из выбранных значений (AND между свойствами, OR внутри свойства).
-     * Непустой nameQuery дополнительно ограничивает выборку по вхождению в название.
+     * Непустой nameQuery дополнительно ограничивает выборку по вхождению в название,
+     * артикул или внешние коды (1С/ФТК).
      */
     public static Specification<Product> categoryWithAttributes(
             List<Long> categoryIds, Map<String, List<String>> attrFilters, String nameQuery) {
@@ -29,8 +30,13 @@ public final class ProductSpecifications {
             predicates.add(cb.isFalse(root.get("isVariantChild")));
 
             if (nameQuery != null && !nameQuery.isBlank()) {
-                predicates.add(cb.like(cb.lower(root.get("name")),
-                        "%" + nameQuery.toLowerCase() + "%"));
+                String pattern = "%" + nameQuery.toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("name")), pattern),
+                        cb.like(cb.lower(root.get("sku")), pattern),
+                        cb.like(cb.lower(root.get("externalCode")), pattern),
+                        cb.like(cb.lower(root.get("externalId")), pattern)
+                ));
             }
 
             for (Map.Entry<String, List<String>> e : attrFilters.entrySet()) {

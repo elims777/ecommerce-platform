@@ -175,7 +175,7 @@ public class ProductService {
      */
     public Page<Product> searchProducts(String query, Pageable pageable) {
         log.debug("Searching products with query: {}", query);
-        return productRepository.searchByName(query, pageable);
+        return productRepository.searchByNameOrArticle(query, pageable);
     }
 
     /**

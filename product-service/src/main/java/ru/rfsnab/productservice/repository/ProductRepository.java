@@ -25,8 +25,15 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("SELECT p FROM Product p WHERE p.isActive = true ORDER BY p.createdAt DESC")
     List<Product> findAllActive();
 
-    @Query("SELECT p FROM Product p WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%')) AND p.isActive = true AND p.isVariantChild = false")
-    Page<Product> searchByName(@Param("query") String query, Pageable pageable);
+    @Query("""
+            SELECT p FROM Product p
+            WHERE (LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :query, '%'))
+                OR LOWER(p.externalCode) LIKE LOWER(CONCAT('%', :query, '%'))
+                OR LOWER(p.externalId) LIKE LOWER(CONCAT('%', :query, '%')))
+              AND p.isActive = true AND p.isVariantChild = false
+            """)
+    Page<Product> searchByNameOrArticle(@Param("query") String query, Pageable pageable);
 
     @Query("SELECT p FROM Product p WHERE p.isFeatured = true AND p.isActive = true")
     List<Product> findFeatured();
