@@ -29,7 +29,7 @@
 - [Тестирование](#тестирование)
 - [CI/CD и деплой](#cicd-и-деплой)
 - [Инженерные решения](#инженерные-решения)
-- [Документация](#документация)
+- [Скриншоты](#скриншоты)
 
 ---
 
@@ -45,13 +45,13 @@
 
 | Метрика | Значение |
 |---|---|
-| Java-классов (production) | 423 |
-| Java-классов (тесты) | 100 |
-| Тестовых методов `@Test` | ~800 |
-| REST-контроллеров | 37 |
-| HTTP-эндпоинтов | 178 |
-| Flyway-миграций | 96 |
-| TypeScript/TSX-модулей | 88 |
+| Java-классов (production) | 453 |
+| Java-классов (тесты) | 109 |
+| Тестовых методов `@Test` | ~880 |
+| REST-контроллеров | 39 |
+| HTTP-эндпоинтов | 195 |
+| Flyway-миграций | 53 |
+| TypeScript/TSX-модулей | 99 |
 | Микросервисов | 8 + frontend |
 
 ---
@@ -252,7 +252,7 @@ ecommerce-platform/
 │       ├── store/          # Zustand: authStore, cartStore
 │       └── components/     # переиспользуемый UI
 ├── infra/                  # docker-compose (prod и dev), nginx.conf
-├── docs/                   # DEPLOY.md, структура фронтенда, снапшот проекта
+├── docs/screenshots/       # скриншоты интерфейса для README
 ├── .github/workflows/      # CI/CD pipeline
 ├── ARCHITECTURE.md         # модель данных и детали архитектуры
 └── pom.xml                 # родительский Maven-модуль
@@ -313,7 +313,7 @@ cd infra && docker compose -f docker-compose.dev.yml up -d --build product-servi
 Покрытие собирается JaCoCo, отчёты выгружаются артефактом каждого CI-прогона.
 
 ```bash
-mvn clean verify        # ~800 тестов
+mvn clean verify        # ~880 тестов
 ```
 
 ---
@@ -356,7 +356,7 @@ flowchart LR
 
 **Ветвление:** `develop` — интеграционная ветка, образы с тегом `develop`; `master` — продакшен, автодеплой. Feature-ветки мержатся в `develop` через `--no-ff`.
 
-Прод: VPS под Ubuntu, Nginx как reverse proxy с SSL, весь стек в Docker Compose. Подробная инструкция по развёртыванию с нуля — [`docs/DEPLOY.md`](.claude/DEPLOY.md).
+Прод: VPS под Ubuntu, Nginx как reverse proxy с SSL, весь стек в Docker Compose.
 
 ---
 
