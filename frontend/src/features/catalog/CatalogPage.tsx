@@ -290,7 +290,7 @@ const CatalogPage = () => {
                     )}
                 </div>
                 {/* Page size + sort */}
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                     <div style={{ display: 'inline-flex', border: '1px solid var(--line-1)', borderRadius: 6, padding: 2, background: '#fff' }}>
                         {[20, 50, 100].map((size) => (
                             <button
