@@ -147,11 +147,13 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             return true;
         }
 
-        // Каталог и точки самовывоза — только GET
+        // Каталог, точки самовывоза и новости — только GET
+        // /api/v1/admin/news/** сюда НЕ попадает (другой префикс) и остаётся под авторизацией
         if ("GET".equals(method) &&
                 (path.startsWith("/api/v1/products")
                         || path.startsWith("/api/v1/categories")
-                        || path.startsWith("/api/v1/warehouse-points"))) {
+                        || path.startsWith("/api/v1/warehouse-points")
+                        || path.startsWith("/api/v1/news"))) {
             return true;
         }
 
