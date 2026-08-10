@@ -108,6 +108,20 @@ class ProductImageServiceTest {
             assertThat(result.getIsPrimary()).isFalse();
             assertThat(result.getDisplayOrder()).isEqualTo(2);
         }
+
+        @Test
+        @DisplayName("повторная загрузка того же файла возвращает существующую запись и не создаёт дубль")
+        void addImage_SameFileAgain_ReturnsExistingWithoutDuplicate() {
+            String expectedFileKey = "products/1/image.webp";
+            when(imageRepository.findByProductAndFileKey(1L, expectedFileKey))
+                    .thenReturn(Optional.of(testImage));
+
+            ProductImage result = imageService.addImage(1L, emptyFile);
+
+            assertThat(result).isSameAs(testImage);
+            verify(storageService, never()).uploadFile(any(), anyString());
+            verify(imageRepository, never()).save(any(ProductImage.class));
+        }
     }
 
     @Nested
@@ -135,6 +149,20 @@ class ProductImageServiceTest {
             assertThat(result.getFileKey()).isEqualTo(explicitFileKey);
             assertThat(result.getId()).isEqualTo(200L);
             verify(storageService).uploadFile(emptyFile, explicitFileKey);
+        }
+
+        @Test
+        @DisplayName("повторный импорт того же fileKey возвращает существующую запись и не создаёт дубль")
+        void addImageWithFileKey_SameKeyAgain_ReturnsExistingWithoutDuplicate() {
+            String explicitFileKey = "products/ftk/FTK-12345/image.webp";
+            when(imageRepository.findByProductAndFileKey(1L, explicitFileKey))
+                    .thenReturn(Optional.of(testImage));
+
+            ProductImage result = imageService.addImageWithFileKey(1L, emptyFile, explicitFileKey);
+
+            assertThat(result).isSameAs(testImage);
+            verify(storageService, never()).uploadFile(any(), anyString());
+            verify(imageRepository, never()).save(any(ProductImage.class));
         }
     }
 
