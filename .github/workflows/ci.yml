@@ -236,10 +236,14 @@ jobs:
       - name: Deploy to VPS
         id: deploy_step
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
           script: |
             set -e
 
@@ -248,6 +252,9 @@ jobs:
             cd /opt/rfsnab
             git pull origin master
             cd infra
+
+            # Анонимный pull режется Docker Hub по IP (100/6ч) — деплой падал с 429.
+            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
             docker compose pull
             docker compose up -d --wait --wait-timeout 180
