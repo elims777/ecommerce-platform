@@ -54,6 +54,15 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
     List<String> findFileKeysByProduct(@Param("productId") Long id);
 
     /**
+     * Найти изображение товара по fileKey — для идемпотентности повторной загрузки из 1С/ФТК.
+     * @param id товара
+     * @param fileKey ключ файла в S3
+     * @return Optional<ProductImage>
+     */
+    @Query("SELECT pi FROM ProductImage pi WHERE pi.product.id = :productId AND pi.fileKey = :fileKey")
+    Optional<ProductImage> findByProductAndFileKey(@Param("productId") Long id, @Param("fileKey") String fileKey);
+
+    /**
      * Получить пары (externalId товара, fileKey изображения) для набора товаров одним запросом.
      * Используется для batch-сверки картинок ФТК-импорта.
      * @param externalIds список externalId товаров

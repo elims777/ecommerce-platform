@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,13 +28,22 @@ public class ProductImageService {
 
     /**
      * Добавить изображение к товару
-     * Загружает файл в YOS и сохраняет метаданные в БД
+     * Загружает файл в YOS и сохраняет метаданные в БД.
+     * fileKey детерминирован (productId + имя файла), поэтому повторная загрузка того же файла
+     * возвращает уже существующую запись, а не создаёт дубль в product_images.
      * @param productId товара
      * @param file изображение
      * @return ProductImage
      */
     @Transactional
     public ProductImage addImage(Long productId, MultipartFile file) {
+        // Повторная загрузка того же файла к тому же товару: запись уже есть — не плодим дубль
+        String fileKey = "products/" + productId + "/" + file.getOriginalFilename();
+        Optional<ProductImage> existing = imageRepository.findByProductAndFileKey(productId, fileKey);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
         Product product = productService.getProductById(productId);
 
         // Валидация файла
@@ -43,7 +53,6 @@ public class ProductImageService {
         ImageDimensions dimensions = getImageDimensions(file);
 
         // Загрузка в Yandex Object Storage
-        String fileKey = "products/" + productId + "/" + file.getOriginalFilename();
         String fileUrl = storageService.uploadFile(file, fileKey);
 
         // Определяем displayOrder (последний + 1)
@@ -67,10 +76,11 @@ public class ProductImageService {
     }
 
     /**
-     * Добавить изображение к товару с явным fileKey (для внешней ФТК-загрузки).
+     * Добавить изображение к товару с явным fileKey (для внешней загрузки из 1С/ФТК).
      * В отличие от addImage(), fileKey формируется вызывающей стороной (детерминированно из externalId),
-     * а не генерируется из внутреннего productId — это позволяет избежать повторной заливки в S3
-     * при повторных запусках импорта.
+     * а не генерируется из внутреннего productId. Благодаря этому повторный импорт того же файла
+     * перезаписывает объект в S3 по тому же ключу и возвращает уже существующую запись,
+     * а не создаёт дубль в product_images.
      * @param productId товара
      * @param file изображение
      * @param fileKey готовый ключ для сохранения в S3
@@ -78,6 +88,12 @@ public class ProductImageService {
      */
     @Transactional
     public ProductImage addImageWithFileKey(Long productId, MultipartFile file, String fileKey) {
+        // Повторная выгрузка того же файла: запись уже есть — не плодим дубль
+        Optional<ProductImage> existing = imageRepository.findByProductAndFileKey(productId, fileKey);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
         Product product = productService.getProductById(productId);
 
         // Валидация файла
