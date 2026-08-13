@@ -24,7 +24,11 @@ public record FtkImportCompletedEvent(
         LocalDateTime startedAt,
         List<ErrorItem> errors,
         /** Количество каскадных ошибок (следствие abort транзакции), не включённых в errors */
-        int cascadeCount
+        int cascadeCount,
+        /** Полный стектрейс исключения — только для вложения в письмо, в теле письма не показывается */
+        String errorStacktrace,
+        /** Корневая причина: сообщение и место падения последнего cause в цепочке. Null, если причина совпадает с самой ошибкой */
+        String rootCause
 ) {
     public static final String EVENT_TYPE = "FTK_IMPORT_COMPLETED";
 

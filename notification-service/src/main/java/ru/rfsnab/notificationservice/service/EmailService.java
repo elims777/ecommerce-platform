@@ -5,6 +5,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -15,6 +16,9 @@ import ru.rfsnab.notificationservice.models.ImportEvent;
 import ru.rfsnab.notificationservice.models.OrderEvent;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +27,9 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class EmailService {
+    private static final DateTimeFormatter IMPORT_REPORT_FILE_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyyMMdd-HHmm");
+
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
     @Value("${app.email.from}")
@@ -289,13 +296,89 @@ public class EmailService {
         model.put("cascadeCount", event.cascadeCount());
         model.put("rootErrors", event.errors() == null ? List.of() :
                 event.errors().stream().filter(err -> !err.cascade()).toList());
+        model.put("rootCause", event.rootCause());
 
-        sendHtml(managerEmail, importSubject(event), "import-report", model);
+        String subject = importSubject(event);
+        if ("FAILED".equals(event.status()) || "PARTIAL".equals(event.status())) {
+            LocalDateTime startedAt = event.startedAt() != null ? event.startedAt() : LocalDateTime.now();
+            String attachmentName = "ftk-import-" + startedAt.format(IMPORT_REPORT_FILE_DATE_FORMAT) + ".txt";
+            byte[] attachmentContent = buildImportReportFile(event).getBytes(StandardCharsets.UTF_8);
+            sendHtml(managerEmail, subject, "import-report", model, attachmentName, attachmentContent);
+        } else {
+            sendHtml(managerEmail, subject, "import-report", model);
+        }
     }
 
-    private String importSubject(ImportEvent event) {
+    /**
+     * Текстовый файл с деталями импорта — вложение к письму при FAILED/PARTIAL,
+     * чтобы причина сбоя и стектрейс не терялись, если тело письма урезано.
+     */
+    String buildImportReportFile(ImportEvent event) {
+        List<ImportEvent.ImportError> rootErrors = event.errors() == null ? List.of() :
+                event.errors().stream().filter(err -> !err.cascade()).toList();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("Импорт каталога ФТК\n");
+        sb.append("Статус: ").append(event.status()).append('\n');
+        sb.append("Начат: ").append(event.startedAt()).append('\n');
+        sb.append("Длительность: ").append(String.format("%.1f", event.durationMs() / 60000.0)).append(" мин\n");
+        sb.append('\n');
+        sb.append("Получено: ").append(event.totalReceived())
+                .append(" | Создано: ").append(event.created())
+                .append(" | Обновлено: ").append(event.updated())
+                .append(" | Без изменений: ").append(event.unchanged())
+                .append(" | Ошибок: ").append(event.failed()).append('\n');
+        sb.append("Фото: обработано ").append(event.imagesProcessed())
+                .append(", с ошибками ").append(event.imagesFailed()).append('\n');
+        sb.append("Каскадных ошибок: ").append(event.cascadeCount()).append('\n');
+        sb.append('\n');
+        sb.append("=== ПРИЧИНА СБОЯ ===\n");
+        String reason = rootErrors.isEmpty() ? null : rootErrors.get(0).message();
+        if (reason == null || reason.isBlank()) {
+            reason = event.errorStacktrace() != null && !event.errorStacktrace().isBlank()
+                    ? "сообщение отсутствует, см. стектрейс ниже"
+                    : "не указана";
+        }
+        sb.append(reason).append('\n');
+        if (event.rootCause() != null && !event.rootCause().isBlank()) {
+            sb.append("Первопричина: ").append(event.rootCause()).append('\n');
+        }
+
+        if (event.errorStacktrace() != null && !event.errorStacktrace().isBlank()) {
+            sb.append('\n');
+            sb.append("=== СТЕКТРЕЙС ===\n");
+            sb.append(event.errorStacktrace()).append('\n');
+        }
+
+        if (!rootErrors.isEmpty()) {
+            sb.append('\n');
+            sb.append("=== ОШИБКИ ТОВАРОВ (первые 50) ===\n");
+            rootErrors.forEach(err -> {
+                // message может быть null (исключение без сообщения) — "null" в отчёте недопустим
+                String message = err.message() != null && !err.message().isBlank()
+                        ? err.message()
+                        : "сообщение отсутствует, см. стектрейс выше";
+                if (err.externalId() != null) {
+                    sb.append(err.externalId()).append(": ").append(message).append('\n');
+                } else {
+                    sb.append(message).append('\n');
+                }
+            });
+        }
+
+        return sb.toString();
+    }
+
+    String importSubject(ImportEvent event) {
+        if ("FAILED".equals(event.status())) {
+            return "Импорт каталога ФТК — ОШИБКА";
+        }
         if (event.failed() > 0) {
             return "Импорт каталога ФТК — " + event.failed() + " ошибок";
+        }
+        // PARTIAL бывает и при failed=0 — когда упали только картинки (см. saveFtkLog)
+        if ("PARTIAL".equals(event.status())) {
+            return "Импорт каталога ФТК — частично, ошибок фото: " + event.imagesFailed();
         }
         return "Импорт каталога ФТК — успешно";
     }
@@ -382,6 +465,14 @@ public class EmailService {
      * Отправка HTML-письма по Thymeleaf-шаблону с inline-логотипом (CID).
      */
     private void sendHtml(String to, String subject, String template, Map<String, Object> model) {
+        sendHtml(to, subject, template, model, null, null);
+    }
+
+    /**
+     * Отправка HTML-письма с опциональным текстовым вложением (например, отчёт об ошибке импорта).
+     */
+    private void sendHtml(String to, String subject, String template, Map<String, Object> model,
+                           String attachmentName, byte[] attachmentContent) {
         MimeMessage message = mailSender.createMimeMessage();
         try {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -394,6 +485,10 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(html, true);
             helper.addInline("logo", new ClassPathResource("static/mail/logo-light.png"), "image/png");
+
+            if (attachmentName != null && attachmentContent != null) {
+                helper.addAttachment(attachmentName, new ByteArrayResource(attachmentContent), "text/plain; charset=UTF-8");
+            }
 
             mailSender.send(message);
             log.info("HTML email '{}' sent successfully to: {}", template, to);

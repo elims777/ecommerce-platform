@@ -16,7 +16,9 @@ public record ImportEvent(
         long durationMs,
         LocalDateTime startedAt,
         int cascadeCount,
-        List<ImportError> errors
+        List<ImportError> errors,
+        String errorStacktrace,
+        String rootCause
 ) {
     public record ImportError(String externalId, String message, boolean cascade) {}
 }
