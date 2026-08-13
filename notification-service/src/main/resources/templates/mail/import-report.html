@@ -72,6 +72,11 @@
                 </table>
             </div>
 
+            <p style="color:#C0272D; font-size:13px; margin:0 0 16px; word-break:break-word;"
+               th:if="${rootCause != null and !#strings.isEmpty(rootCause)}">
+                <strong>Первопричина:</strong> <span th:text="${rootCause}"></span>
+            </p>
+
             <p style="color:#666666; font-size:13px; margin:0 0 16px;" th:if="${cascadeCount > 0}">
                 Каскадных следствий (та же транзакция чанка): <span th:text="${cascadeCount}"></span>
             </p>

@@ -28,6 +28,8 @@ import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.RestData;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -59,6 +61,8 @@ public class FtkImportService {
     private static final int MAX_ERRORS_IN_LOG = 50;
     /** Сколько ИСХОДНЫХ ошибок отправлять в Kafka-событие */
     private static final int MAX_ERRORS_IN_EVENT = 50;
+    /** Ограничение на длину стектрейса в Kafka-событии, чтобы письмо не распухло */
+    private static final int MAX_STACKTRACE_CHARS = 20_000;
 
     private final FtkXlsParser xlsParser;
     private final FtkXmlParser xmlParser;
@@ -547,7 +551,17 @@ public class FtkImportService {
                 .toList();
 
         if (error != null && eventErrors.isEmpty()) {
-            eventErrors = List.of(new FtkImportCompletedEvent.ErrorItem(null, error.getMessage(), false));
+            eventErrors = List.of(new FtkImportCompletedEvent.ErrorItem(null, describeError(error), false));
+        }
+
+        String errorStacktrace = null;
+        if (error != null) {
+            StringWriter sw = new StringWriter();
+            error.printStackTrace(new PrintWriter(sw));
+            errorStacktrace = sw.toString();
+            if (errorStacktrace.length() > MAX_STACKTRACE_CHARS) {
+                errorStacktrace = errorStacktrace.substring(0, MAX_STACKTRACE_CHARS) + "\n... стектрейс обрезан";
+            }
         }
 
         FtkImportCompletedEvent event = FtkImportCompletedEvent.builder()
@@ -564,6 +578,8 @@ public class FtkImportService {
                 .startedAt(startedAt)
                 .errors(eventErrors)
                 .cascadeCount(cascadeCount)
+                .errorStacktrace(errorStacktrace)
+                .rootCause(error != null ? describeRootCause(error) : null)
                 .build();
 
         try {
@@ -576,6 +592,41 @@ public class FtkImportService {
         } catch (Exception ex) {
             log.error("Ошибка публикации события ФТК импорта в Kafka: {}", ex.getMessage());
         }
+    }
+
+    /**
+     * Единое описание ошибки для отчёта: сообщение + место падения.
+     * getMessage() бывает null (NPE и т.п.) — тогда осмысленная часть только в месте падения,
+     * поэтому кадр стектрейса добавляется всегда, а не только при пустом сообщении.
+     */
+    private String describeError(Throwable e) {
+        String message = e.getMessage() != null && !e.getMessage().isBlank()
+                ? e.getMessage()
+                : e.getClass().getSimpleName() + " (без сообщения)";
+        String location = firstStackFrame(e);
+        return location == null ? message : message + " | " + location;
+    }
+
+    /**
+     * Первопричина: последний cause в цепочке. Именно там обычно лежит настоящая ошибка
+     * (PSQLException под обёрткой Spring и т.п.). Null, если исключение не обёрнуто.
+     */
+    private String describeRootCause(Throwable e) {
+        Throwable root = e;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        return root == e ? null : describeError(root);
+    }
+
+    /** Первый кадр стектрейса в формате "Класс.метод (Файл.java:120)" — где именно упало. */
+    private String firstStackFrame(Throwable e) {
+        StackTraceElement[] trace = e.getStackTrace();
+        if (trace == null || trace.length == 0) return null;
+        StackTraceElement frame = trace[0];
+        String simpleClass = frame.getClassName().substring(frame.getClassName().lastIndexOf('.') + 1);
+        return simpleClass + "." + frame.getMethodName()
+                + " (" + frame.getFileName() + ":" + frame.getLineNumber() + ")";
     }
 
     // ══════════════════════════════════════════════════════════════

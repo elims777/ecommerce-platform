@@ -16,6 +16,7 @@ import ru.rfsnab.integrationservice.config.IntegrationProperties;
 import ru.rfsnab.integrationservice.config.KafkaTopicsProperties;
 import ru.rfsnab.integrationservice.dto.BatchImportRequest;
 import ru.rfsnab.integrationservice.dto.BatchImportResponse;
+import ru.rfsnab.integrationservice.dto.FtkImportCompletedEvent;
 import ru.rfsnab.integrationservice.dto.ProductImportItemDto;
 import ru.rfsnab.integrationservice.model.ImportLog;
 import ru.rfsnab.integrationservice.model.ftk.FtkProduct;
@@ -558,6 +559,106 @@ class FtkImportServiceTest {
             verify(xmlParser, never()).assemble(any(), any(), any(), any(), eq(classifier), eq(2));
             verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(1));
             verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(3));
+        }
+    }
+
+    @Nested
+    @DisplayName("Отчёт об ошибке в Kafka-событии")
+    class ErrorReportEventTests {
+
+        /** Ловит событие, опубликованное в топик import-events при падении импорта. */
+        private FtkImportCompletedEvent captureEventAfterFailure() throws IOException {
+            when(ftpClient.getRootDir()).thenReturn("/webdata/000000003/");
+            when(ftpClient.findFileByPrefix(anyString(), eq("import___")))
+                    .thenThrow(new IOException("Корневой import___.xml не найден на FTP"));
+
+            try {
+                service.doImportFromFtp();
+            } catch (Exception expected) {
+                // импорт обязан пробросить исключение — нас интересует опубликованное событие
+            }
+
+            ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+            verify(kafkaTemplate).send(eq("import-events"), anyString(), captor.capture());
+            return (FtkImportCompletedEvent) captor.getValue();
+        }
+
+        @Test
+        @DisplayName("сообщение ошибки дополняется местом падения (файл:строка)")
+        void errorMessage_IncludesFailureLocation() throws IOException {
+            FtkImportCompletedEvent event = captureEventAfterFailure();
+
+            assertThat(event.status()).isEqualTo("FAILED");
+            assertThat(event.errors()).hasSize(1);
+            String message = event.errors().get(0).message();
+            assertThat(message).contains("Корневой import___.xml не найден на FTP");
+            // место падения — первый кадр стектрейса, т.е. там, где исключение реально возникло
+            // (в тесте его бросает мок FtkFtpClient, в бою — та же точка внутри FTP-клиента)
+            assertThat(message).contains("FtkFtpClient.findFileByPrefix");
+            assertThat(message).contains(".java:");
+        }
+
+        @Test
+        @DisplayName("стектрейс попадает в событие целиком")
+        void stacktrace_IsPublished() throws IOException {
+            FtkImportCompletedEvent event = captureEventAfterFailure();
+
+            assertThat(event.errorStacktrace()).contains("java.io.IOException");
+            assertThat(event.errorStacktrace()).contains("FtkImportService.doImportFromFtp");
+        }
+
+        @Test
+        @DisplayName("необёрнутое исключение -> rootCause = null (первопричина совпадает с ошибкой)")
+        void plainException_NoRootCause() throws IOException {
+            FtkImportCompletedEvent event = captureEventAfterFailure();
+
+            assertThat(event.rootCause()).isNull();
+        }
+
+        @Test
+        @DisplayName("обёрнутое исключение -> rootCause содержит сообщение и место падения ПЕРВОПРИЧИНЫ")
+        void wrappedException_RootCausePointsToOriginalError() throws IOException {
+            IllegalStateException root = new IllegalStateException("value too long for character varying(255)");
+            when(ftpClient.getRootDir()).thenReturn("/webdata/000000003/");
+            when(ftpClient.findFileByPrefix(anyString(), eq("import___")))
+                    .thenThrow(new IOException("Ошибка обмена с ФТК", root));
+
+            try {
+                service.doImportFromFtp();
+            } catch (Exception expected) {
+                // ожидаемо
+            }
+
+            ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+            verify(kafkaTemplate).send(eq("import-events"), anyString(), captor.capture());
+            FtkImportCompletedEvent event = (FtkImportCompletedEvent) captor.getValue();
+
+            assertThat(event.errors().get(0).message()).contains("Ошибка обмена с ФТК");
+            assertThat(event.rootCause()).contains("value too long for character varying(255)");
+            assertThat(event.rootCause()).contains(".java:");
+        }
+
+        @Test
+        @DisplayName("исключение без сообщения -> в тексте класс исключения и место падения, без 'null'")
+        void exceptionWithoutMessage_DescribesClassAndLocation() throws IOException {
+            when(ftpClient.getRootDir()).thenReturn("/webdata/000000003/");
+            when(ftpClient.findFileByPrefix(anyString(), eq("import___")))
+                    .thenThrow(new NullPointerException());
+
+            try {
+                service.doImportFromFtp();
+            } catch (Exception expected) {
+                // ожидаемо
+            }
+
+            ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+            verify(kafkaTemplate).send(eq("import-events"), anyString(), captor.capture());
+            FtkImportCompletedEvent event = (FtkImportCompletedEvent) captor.getValue();
+
+            String message = event.errors().get(0).message();
+            assertThat(message).doesNotContain("null");
+            assertThat(message).contains("NullPointerException (без сообщения)");
+            assertThat(message).contains(".java:");
         }
     }
 }
