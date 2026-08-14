@@ -39,9 +39,10 @@ public class SecurityConfig {
                         // Идёт ДО публичного GET /api/v1/news/**, иначе permitAll перехватил бы админские чтения
                         .requestMatchers("/api/v1/admin/news/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
 
-                        // Сводка по каталогу — только для админки.
-                        // Идёт ДО публичного GET /api/v1/products/**, иначе permitAll перехватил бы её
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/stats")
+                        // Админские чтения каталога: список товаров (базовые цены, неактивные,
+                        // варианты) и сводка. Идут ДО публичного GET /api/v1/products/**,
+                        // иначе permitAll перехватил бы их
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/admin", "/api/v1/products/stats")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
 
                         // Публичные endpoints (только чтение)
