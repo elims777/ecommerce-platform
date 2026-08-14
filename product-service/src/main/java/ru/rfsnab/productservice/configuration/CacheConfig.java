@@ -19,6 +19,9 @@ public class CacheConfig implements CachingConfigurer {
     /** Имя кэша списка фасетов по категории. */
     public static final String FACETS_CACHE = "facets";
 
+    /** Имя кэша сводки по каталогу для админки. Сбрасывается импортом товаров. */
+    public static final String PRODUCT_STATS_CACHE = "productStats";
+
     @Override
     public CacheErrorHandler errorHandler() {
         return new CacheErrorHandler() {

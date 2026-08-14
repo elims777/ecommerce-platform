@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -55,7 +56,10 @@ public class ProductImportService {
     private final PlatformTransactionManager transactionManager;
     private final SlugGeneratorService slugService;
 
-    @CacheEvict(value = CacheConfig.FACETS_CACHE, allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.FACETS_CACHE, allEntries = true),
+            @CacheEvict(value = CacheConfig.PRODUCT_STATS_CACHE, allEntries = true)
+    })
     public BatchProductImportResponse importBatch(BatchProductImportRequest request) {
         List<ProductImportItem> items = request.getItems();
 

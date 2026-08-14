@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import ru.rfsnab.productservice.model.Product;
+import ru.rfsnab.productservice.repository.projection.ProductStatsProjection;
 
 import java.util.List;
 import java.util.Optional;
@@ -73,11 +74,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     Page<Product> findByIsVariantChildFalse(Pageable pageable);
 
-    Page<Product> findByIsActiveAndIsVariantChildFalse(Boolean isActive, Pageable pageable);
-
     Page<Product> findByCategoryIdAndIsVariantChildFalse(Long categoryId, Pageable pageable);
-
-    Page<Product> findByCategoryIdAndIsActiveAndIsVariantChildFalse(Long categoryId, Boolean isActive, Pageable pageable);
 
     @Query("""
             SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.attributes
@@ -94,4 +91,43 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
                  WHERE c.parentProductId = p.id AND c.isActive = true), 0)) > 0
             """)
     long countAvailableProducts();
+
+    /**
+     * Админский фильтр по активности: семья попадает в выдачу, если условию отвечает
+     * сам родитель ИЛИ любой его вариант. Иначе неактивный вариант под активным
+     * родителем не виден ни под одним фильтром.
+     */
+    @Query("""
+            SELECT p FROM Product p
+            WHERE p.isVariantChild = false
+              AND (p.isActive = :isActive
+                   OR EXISTS (SELECT 1 FROM Product c
+                              WHERE c.parentProductId = p.id AND c.isActive = :isActive))
+            """)
+    Page<Product> findFamiliesByActive(@Param("isActive") Boolean isActive, Pageable pageable);
+
+    @Query("""
+            SELECT p FROM Product p
+            WHERE p.isVariantChild = false
+              AND p.category.id = :categoryId
+              AND (p.isActive = :isActive
+                   OR EXISTS (SELECT 1 FROM Product c
+                              WHERE c.parentProductId = p.id AND c.isActive = :isActive))
+            """)
+    Page<Product> findFamiliesByCategoryAndActive(@Param("categoryId") Long categoryId,
+                                                  @Param("isActive") Boolean isActive,
+                                                  Pageable pageable);
+
+    /**
+     * Агрегаты каталога для сводки админки — один проход по таблице.
+     * Товары 1С и неактивные выводятся вычитанием в сервисном слое.
+     */
+    @Query("""
+            SELECT COUNT(p) AS total,
+                   COALESCE(SUM(CASE WHEN p.isVariantChild = false THEN 1 ELSE 0 END), 0) AS uniqueProducts,
+                   COALESCE(SUM(CASE WHEN p.source = 'FTK' THEN 1 ELSE 0 END), 0) AS ftk,
+                   COALESCE(SUM(CASE WHEN p.isActive = true THEN 1 ELSE 0 END), 0) AS active
+            FROM Product p
+            """)
+    ProductStatsProjection fetchProductStats();
 }

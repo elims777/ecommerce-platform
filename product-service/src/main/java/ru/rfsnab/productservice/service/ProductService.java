@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.productservice.configuration.CacheConfig;
 import ru.rfsnab.productservice.dto.FacetDto;
+import ru.rfsnab.productservice.dto.ProductStatsResponse;
 import ru.rfsnab.productservice.exception.BusinessException;
 import ru.rfsnab.productservice.exception.CategoryNotFoundException;
 import ru.rfsnab.productservice.exception.ProductNotFoundException;
@@ -19,6 +20,7 @@ import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductAttributeRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
+import ru.rfsnab.productservice.repository.projection.ProductStatsProjection;
 import ru.rfsnab.productservice.spec.ProductSpecifications;
 
 import java.math.BigDecimal;
@@ -57,6 +59,24 @@ public class ProductService {
     @Transactional(readOnly = true)
     public long countAvailableProducts() {
         return productRepository.countAvailableProducts();
+    }
+
+    /**
+     * Сводка по каталогу для админки. Значение живёт в кэше до ближайшего импорта:
+     * ProductImportService.importBatch сбрасывает его при любом импорте (ФТК и 1С),
+     * независимо от результата.
+     */
+    @Cacheable(value = CacheConfig.PRODUCT_STATS_CACHE)
+    @Transactional(readOnly = true)
+    public ProductStatsResponse getProductStats() {
+        ProductStatsProjection stats = productRepository.fetchProductStats();
+        return new ProductStatsResponse(
+                stats.getUniqueProducts(),
+                stats.getTotal(),
+                stats.getTotal() - stats.getFtk(),
+                stats.getFtk(),
+                stats.getActive(),
+                stats.getTotal() - stats.getActive());
     }
 
     /**
@@ -246,6 +266,12 @@ public class ProductService {
         return productRepository.findByIsFeaturedTrueAndIsActiveTrueAndIsVariantChildFalse(pageable);
     }
 
+    /**
+     * Список товаров для админки. Фильтр по активности работает по семье:
+     * родитель показывается, если условию отвечает он сам ИЛИ любой его вариант —
+     * иначе неактивный вариант под активным родителем не виден ни под одним фильтром.
+     * Следствие: семья со смешанной активностью попадает в обе выдачи.
+     */
     public Page<Product> getAllProductsAdminPage(Long categoryId, Boolean isActive, Pageable pageable) {
         pageable = withIdTiebreaker(pageable);
         if (categoryId != null) {
@@ -254,11 +280,11 @@ public class ProductService {
             }
             return isActive == null
                     ? productRepository.findByCategoryIdAndIsVariantChildFalse(categoryId, pageable)
-                    : productRepository.findByCategoryIdAndIsActiveAndIsVariantChildFalse(categoryId, isActive, pageable);
+                    : productRepository.findFamiliesByCategoryAndActive(categoryId, isActive, pageable);
         }
         return isActive == null
                 ? productRepository.findByIsVariantChildFalse(pageable)
-                : productRepository.findByIsActiveAndIsVariantChildFalse(isActive, pageable);
+                : productRepository.findFamiliesByActive(isActive, pageable);
     }
 
     /**
