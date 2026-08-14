@@ -12,6 +12,7 @@ import ru.rfsnab.productservice.dto.AvailableCountResponse;
 import ru.rfsnab.productservice.dto.FacetDto;
 import ru.rfsnab.productservice.dto.ProductRequest;
 import ru.rfsnab.productservice.dto.ProductResponse;
+import ru.rfsnab.productservice.dto.ProductStatsResponse;
 import ru.rfsnab.productservice.mapper.ProductMapper;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.service.ProductService;
@@ -170,6 +171,14 @@ public class ProductController {
     @GetMapping("/count-available")
     public ResponseEntity<AvailableCountResponse> countAvailableProducts() {
         return ResponseEntity.ok(new AvailableCountResponse(productService.countAvailableProducts()));
+    }
+
+    /**
+     * Сводка по каталогу для админки (кэшируется, сбрасывается импортом)
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<ProductStatsResponse> getProductStats() {
+        return ResponseEntity.ok(productService.getProductStats());
     }
 
     /**

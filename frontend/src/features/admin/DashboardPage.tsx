@@ -1,6 +1,8 @@
+import { Fragment } from 'react';
 import { RowLink, NavLink } from '@/components/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { getAdminOrders } from '@/api/adminOrders';
+import { getProductStats } from '@/api/adminProducts';
 import { OrderStatusLabels } from '@/types/order';
 import { extractEnumCode } from '@/utils/enumUtils';
 import type { OrderSummaryDto, OrderStatus } from '@/types/order';
@@ -28,11 +30,56 @@ const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
 };
 
 const KPI_CARDS = [
-  { label: 'Выручка',          value: '—', unit: '',   accent: '',       sub: 'Метрики будут настроены' },
   { label: 'Новых заявок',     value: '—', unit: '',   accent: 'navy',   sub: 'За текущий период' },
   { label: 'Товаров в наличии',value: '—', unit: 'SKU',accent: 'warn',   sub: 'В каталоге' },
   { label: 'К отгрузке',       value: '—', unit: '',   accent: 'green',  sub: 'Сегодня' },
 ];
+
+const formatCount = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
+
+/** Сводка по каталогу. Обновляется на бэкенде по завершении любого импорта — ФТК или 1С. */
+const ProductStatsCard = () => {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['adminProductStats'],
+    queryFn: getProductStats,
+  });
+
+  const rows: Array<[string, number | undefined]> = [
+    ['Уникальных', data?.uniqueProducts],
+    ['1С', data?.fromOneC],
+    ['Факел', data?.fromFtk],
+    ['Активных', data?.active],
+    ['Неактивных', data?.inactive],
+  ];
+
+  return (
+    <div className="rf-kpi-card">
+      <div className="rf-kpi-label">Товары</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <span className="rf-kpi-value">
+          {isLoading ? '…' : isError ? '—' : formatCount(data!.total)}
+        </span>
+        <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>всего с вариантами</span>
+      </div>
+      <div className="rf-kpi-sub">
+        {isError ? (
+          'Не удалось загрузить'
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: '2px 10px' }}>
+            {rows.map(([label, value]) => (
+              <Fragment key={label}>
+                <span>{label}</span>
+                <span className="rf-tabular" style={{ textAlign: 'right', color: 'var(--ink-1)', fontWeight: 500 }}>
+                  {isLoading || value === undefined ? '…' : formatCount(value)}
+                </span>
+              </Fragment>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const DashboardPage = () => {
   const { data: recentPage, isLoading } = useQuery({
@@ -46,6 +93,7 @@ const DashboardPage = () => {
     <div>
       {/* KPI cards */}
       <div className="rf-kpi-grid">
+        <ProductStatsCard />
         {KPI_CARDS.map((kpi) => (
           <div key={kpi.label} className={`rf-kpi-card${kpi.accent ? ' ' + kpi.accent : ''}`}>
             <div className="rf-kpi-label">{kpi.label}</div>

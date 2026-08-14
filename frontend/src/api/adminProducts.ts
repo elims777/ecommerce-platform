@@ -172,3 +172,21 @@ export const updateDisplayOrder = async (id: number, displayOrder: number): Prom
 export const reorderProducts = async (orders: Record<number, number>): Promise<void> => {
     await apiClient.patch('/v1/products/reorder', orders);
 };
+
+/** Сводка по каталогу для админки */
+export interface ProductStats {
+    /** Товары без учёта дочерних вариантов */
+    uniqueProducts: number;
+    /** Все записи каталога, включая варианты */
+    total: number;
+    fromOneC: number;
+    fromFtk: number;
+    active: number;
+    inactive: number;
+}
+
+/** Получить сводку по каталогу (кэшируется на бэкенде, сбрасывается импортом) */
+export const getProductStats = async (): Promise<ProductStats> => {
+    const { data } = await apiClient.get<ProductStats>('/v1/products/stats');
+    return data;
+};
