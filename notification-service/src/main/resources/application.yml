@@ -6,7 +6,7 @@ spring:
     name: notification-service
 
   datasource:
-      url: jdbc:postgresql://localhost:${NOTIFICATION_DB_PORT:5434}/${NOTIFICATION_DB_NAME:notification_db}
+      url: jdbc:postgresql://localhost:${NOTIFICATION_DB_PORT:5433}/${NOTIFICATION_DB_NAME:notification_db}
       username: ${NOTIFICATION_DB_USER}
       password: ${NOTIFICATION_DB_PASSWORD}
       driver-class-name: org.postgresql.Driver
