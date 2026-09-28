@@ -26,3 +26,17 @@ export const getAdminOrder = async (orderId: string): Promise<import('@/types/or
 export const changeOrderStatus = async (orderId: string, status: string): Promise<void> => {
   await apiClient.patch(`/v1/admin/orders/${orderId}/status`, { status });
 };
+
+/** Сводка по заказам для админки */
+export interface OrderStats {
+  total: number;
+  inProgress: number;
+  completed: number;
+  cancelled: number;
+  newLast30Days: number;
+}
+
+export const getOrderStats = async (): Promise<OrderStats> => {
+  const { data } = await apiClient.get<OrderStats>('/v1/admin/orders/stats');
+  return data;
+};

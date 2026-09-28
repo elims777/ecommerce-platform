@@ -21,6 +21,7 @@ import ru.rfsnab.orderservice.mapper.OrderDocumentMapper;
 import ru.rfsnab.orderservice.mapper.OrderMapper;
 import ru.rfsnab.orderservice.models.dto.order.OrderDocumentDto;
 import ru.rfsnab.orderservice.models.dto.order.OrderDto;
+import ru.rfsnab.orderservice.models.dto.order.OrderStatsResponse;
 import ru.rfsnab.orderservice.models.dto.order.OrderSummaryDto;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.OrderDocument;
@@ -64,6 +65,15 @@ public class AdminOrderController {
     public ResponseEntity<OrderDto> getAdminOrder(@PathVariable UUID orderId) {
         Order order = orderService.getOrder(orderId);
         return ResponseEntity.ok(enrichAndMap(order));
+    }
+
+    /**
+     * Сводка по заказам для админки (total/inProgress/completed/cancelled/newLast30Days).
+     * Статический путь "/stats" имеет приоритет над "/{orderId}" — конфликта нет.
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<OrderStatsResponse> getOrderStats() {
+        return ResponseEntity.ok(orderService.getOrderStats());
     }
 
     @GetMapping("/active-count")

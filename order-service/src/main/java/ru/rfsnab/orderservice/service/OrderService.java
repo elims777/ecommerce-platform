@@ -14,6 +14,7 @@ import ru.rfsnab.orderservice.mapper.OrderMapper;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.HasDeliveryInfo;
 import ru.rfsnab.orderservice.models.dto.order.OrderItemDto;
+import ru.rfsnab.orderservice.models.dto.order.OrderStatsResponse;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentMethodSettingsDto;
@@ -25,6 +26,7 @@ import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
 import ru.rfsnab.orderservice.repository.OrderRepository;
+import ru.rfsnab.orderservice.repository.projection.OrderStatsProjection;
 import ru.rfsnab.orderservice.service.client.PaymentServiceClient;
 import ru.rfsnab.orderservice.service.client.ProductServiceClient;
 import ru.rfsnab.orderservice.service.client.UserServiceClient;
@@ -102,6 +104,21 @@ public class OrderService {
             OrderStatus.PAYMENT_FAILED,
             OrderStatus.DELIVERED
     );
+
+    /** Статусы, засчитываемые в сводке как "завершённые" */
+    private static final List<OrderStatus> COMPLETED_STATUSES = List.of(
+            OrderStatus.DELIVERED,
+            OrderStatus.COMPLETED
+    );
+
+    /** Статусы, засчитываемые в сводке как "отменённые" */
+    private static final List<OrderStatus> CANCELLED_STATUSES = List.of(
+            OrderStatus.CANCELLED,
+            OrderStatus.REFUNDED
+    );
+
+    /** Окно для подсчёта "новых" заказов в сводке админки */
+    private static final int NEW_ORDERS_WINDOW_DAYS = 30;
 
     /**
      * Создание заказа из корзины.
@@ -366,6 +383,22 @@ public class OrderService {
             return orderRepository.findByUserId(userId, pageable);
         }
         return orderRepository.findAllByOrderByCreatedAtDesc(pageable);
+    }
+
+    /**
+     * Сводка по заказам для админки — один проход по таблице.
+     */
+    @Transactional(readOnly = true)
+    public OrderStatsResponse getOrderStats() {
+        LocalDateTime since = LocalDateTime.now().minusDays(NEW_ORDERS_WINDOW_DAYS);
+        OrderStatsProjection stats = orderRepository.fetchOrderStats(
+                OrderStatus.finalStatuses(), COMPLETED_STATUSES, CANCELLED_STATUSES, since);
+        return new OrderStatsResponse(
+                stats.getTotal(),
+                stats.getInProgress(),
+                stats.getCompleted(),
+                stats.getCancelled(),
+                stats.getNewLast30Days());
     }
 
     /**

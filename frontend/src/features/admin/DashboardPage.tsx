@@ -1,8 +1,9 @@
 import { Fragment } from 'react';
 import { RowLink, NavLink } from '@/components/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { getAdminOrders } from '@/api/adminOrders';
+import { getAdminOrders, getOrderStats } from '@/api/adminOrders';
 import { getProductStats } from '@/api/adminProducts';
+import { getUserStats } from '@/api/adminUsers';
 import { OrderStatusLabels } from '@/types/order';
 import { extractEnumCode } from '@/utils/enumUtils';
 import type { OrderSummaryDto, OrderStatus } from '@/types/order';
@@ -30,12 +31,48 @@ const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
 };
 
 const KPI_CARDS = [
-  { label: 'Новых заявок',     value: '—', unit: '',   accent: 'navy',   sub: 'За текущий период' },
-  { label: 'Товаров в наличии',value: '—', unit: 'SKU',accent: 'warn',   sub: 'В каталоге' },
-  { label: 'К отгрузке',       value: '—', unit: '',   accent: 'green',  sub: 'Сегодня' },
+  { label: 'К отгрузке', value: '—', unit: '', accent: 'green', sub: 'Сегодня' },
 ];
 
 const formatCount = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
+
+interface StatsCardProps {
+  label: string;
+  total: number | undefined;
+  caption: string;
+  rows: Array<[string, number | undefined]>;
+  isLoading: boolean;
+  isError: boolean;
+}
+
+/** Карточка сводки: крупное число + подпись + таблица показателей. */
+const StatsCard = ({ label, total, caption, rows, isLoading, isError }: StatsCardProps) => (
+  <div className="rf-kpi-card">
+    <div className="rf-kpi-label">{label}</div>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+      <span className="rf-kpi-value">
+        {isLoading ? '…' : isError || total === undefined ? '—' : formatCount(total)}
+      </span>
+      <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{caption}</span>
+    </div>
+    <div className="rf-kpi-sub">
+      {isError ? (
+        'Не удалось загрузить'
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: '2px 10px' }}>
+          {rows.map(([rowLabel, value]) => (
+            <Fragment key={rowLabel}>
+              <span>{rowLabel}</span>
+              <span className="rf-tabular" style={{ textAlign: 'right', color: 'var(--ink-1)', fontWeight: 500 }}>
+                {isLoading || value === undefined ? '…' : formatCount(value)}
+              </span>
+            </Fragment>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+);
 
 /** Сводка по каталогу. Обновляется на бэкенде по завершении любого импорта — ФТК или 1С. */
 const ProductStatsCard = () => {
@@ -53,31 +90,67 @@ const ProductStatsCard = () => {
   ];
 
   return (
-    <div className="rf-kpi-card">
-      <div className="rf-kpi-label">Товары</div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span className="rf-kpi-value">
-          {isLoading ? '…' : isError ? '—' : formatCount(data!.total)}
-        </span>
-        <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>всего с вариантами</span>
-      </div>
-      <div className="rf-kpi-sub">
-        {isError ? (
-          'Не удалось загрузить'
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: '2px 10px' }}>
-            {rows.map(([label, value]) => (
-              <Fragment key={label}>
-                <span>{label}</span>
-                <span className="rf-tabular" style={{ textAlign: 'right', color: 'var(--ink-1)', fontWeight: 500 }}>
-                  {isLoading || value === undefined ? '…' : formatCount(value)}
-                </span>
-              </Fragment>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+    <StatsCard
+      label="Товары"
+      total={data?.total}
+      caption="всего с вариантами"
+      rows={rows}
+      isLoading={isLoading}
+      isError={isError}
+    />
+  );
+};
+
+/** Сводка по пользователям. */
+const UserStatsCard = () => {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['adminUserStats'],
+    queryFn: getUserStats,
+  });
+
+  const rows: Array<[string, number | undefined]> = [
+    ['Подтвердили email', data?.emailVerified],
+    ['С юрлицом', data?.withLegalEntity],
+    ['Активных', data?.active],
+    ['Заблокированных', data?.blocked],
+    ['Новых за 30 дней', data?.newLast30Days],
+  ];
+
+  return (
+    <StatsCard
+      label="Клиенты"
+      total={data?.total}
+      caption="всего"
+      rows={rows}
+      isLoading={isLoading}
+      isError={isError}
+    />
+  );
+};
+
+/** Сводка по заказам. */
+const OrderStatsCard = () => {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['adminOrderStats'],
+    queryFn: getOrderStats,
+  });
+
+  const rows: Array<[string, number | undefined]> = [
+    ['В работе', data?.inProgress],
+    ['Завершено', data?.completed],
+    ['Отменено / возврат', data?.cancelled],
+    ['За 30 дней', data?.newLast30Days],
+  ];
+
+  return (
+    <StatsCard
+      label="Заказы"
+      total={data?.total}
+      caption="всего"
+      rows={rows}
+      isLoading={isLoading}
+      isError={isError}
+    />
   );
 };
 
@@ -94,6 +167,8 @@ const DashboardPage = () => {
       {/* KPI cards */}
       <div className="rf-kpi-grid">
         <ProductStatsCard />
+        <UserStatsCard />
+        <OrderStatsCard />
         {KPI_CARDS.map((kpi) => (
           <div key={kpi.label} className={`rf-kpi-card${kpi.accent ? ' ' + kpi.accent : ''}`}>
             <div className="rf-kpi-label">{kpi.label}</div>
