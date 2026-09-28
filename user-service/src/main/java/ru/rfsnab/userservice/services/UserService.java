@@ -11,8 +11,10 @@ import ru.rfsnab.userservice.exceptions.UserAlreadyExistsException;
 import ru.rfsnab.userservice.exceptions.UserNotFoundException;
 import ru.rfsnab.userservice.models.RoleEntity;
 import ru.rfsnab.userservice.models.UserEntity;
+import ru.rfsnab.userservice.models.dto.UserStatsResponse;
 import ru.rfsnab.userservice.models.kafka.UserEvent;
 import ru.rfsnab.userservice.repository.UserRepository;
+import ru.rfsnab.userservice.repository.projection.UserStatsProjection;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -23,10 +25,28 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+    private static final int NEW_USER_WINDOW_DAYS = 30;
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleService roleService;
     private final KafkaProducerService kafkaProducerService;
+
+    /**
+     * Сводка по пользователям для админки. Администраторы исключены из всех счётчиков.
+     */
+    @Transactional(readOnly = true)
+    public UserStatsResponse getUserStats() {
+        UserStatsProjection stats = userRepository.fetchUserStats(
+                LocalDateTime.now().minusDays(NEW_USER_WINDOW_DAYS));
+        return new UserStatsResponse(
+                stats.getTotal(),
+                stats.getEmailVerified(),
+                stats.getWithLegalEntity(),
+                stats.getActive(),
+                stats.getTotal() - stats.getActive(),
+                stats.getNewLast30Days());
+    }
 
     public List<UserEntity> findAllUsers(){
         return userRepository.findAll();

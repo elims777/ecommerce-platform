@@ -15,6 +15,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
+import ru.rfsnab.orderservice.models.dto.order.OrderStatsResponse;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.OrderItem;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
@@ -234,6 +235,46 @@ class AdminOrderControllerTest extends BaseIntegrationTest {
         void shouldReturn403ForRegularUser() throws Exception {
             mockMvc.perform(get("/api/v1/admin/orders/active-count")
                             .param("userId", "42")
+                            .with(jwtUser()).with(csrf()))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    // ==================== GET /api/v1/admin/orders/stats ====================
+
+    @Nested
+    @DisplayName("GET /api/v1/admin/orders/stats — сводка по заказам")
+    class GetOrderStatsTests {
+
+        @Test
+        @DisplayName("200 OK — возвращает сводку для ADMIN")
+        void shouldReturnStatsForAdmin() throws Exception {
+            OrderStatsResponse stats = new OrderStatsResponse(10, 4, 3, 3, 2);
+            when(orderService.getOrderStats()).thenReturn(stats);
+
+            mockMvc.perform(get("/api/v1/admin/orders/stats")
+                            .with(jwtAdmin()).with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.total").value(10))
+                    .andExpect(jsonPath("$.inProgress").value(4))
+                    .andExpect(jsonPath("$.completed").value(3))
+                    .andExpect(jsonPath("$.cancelled").value(3))
+                    .andExpect(jsonPath("$.newLast30Days").value(2));
+
+            verify(orderService).getOrderStats();
+        }
+
+        @Test
+        @DisplayName("401 Unauthorized — без токена")
+        void shouldReturn401WithoutToken() throws Exception {
+            mockMvc.perform(get("/api/v1/admin/orders/stats"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("403 Forbidden — пользователь без роли ADMIN")
+        void shouldReturn403ForRegularUser() throws Exception {
+            mockMvc.perform(get("/api/v1/admin/orders/stats")
                             .with(jwtUser()).with(csrf()))
                     .andExpect(status().isForbidden());
         }

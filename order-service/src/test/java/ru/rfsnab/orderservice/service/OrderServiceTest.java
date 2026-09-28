@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
 import ru.rfsnab.orderservice.exception.CartEmptyException;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
@@ -20,6 +21,7 @@ import ru.rfsnab.orderservice.models.dto.event.OrderEvent;
 import ru.rfsnab.orderservice.models.dto.order.AddressDto;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.OrderItemDto;
+import ru.rfsnab.orderservice.models.dto.order.OrderStatsResponse;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.dto.user.ProfileCompletenessDto;
@@ -65,6 +67,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
     @Autowired
     private WarehousePointRepository warehousePointRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private PaymentMethodSettingsRepository paymentMethodSettingsRepository;
@@ -769,6 +774,34 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         }
     }
 
+    // ==================== getOrderStats ====================
+
+    @Nested
+    @DisplayName("getOrderStats")
+    class GetOrderStatsTests {
+
+        @Test
+        @DisplayName("считает total/inProgress/completed/cancelled/newLast30Days по всем статусам")
+        void shouldReturnStats() {
+            seedOrderWithStatus(OrderStatus.CREATED);
+            seedOrderWithStatus(OrderStatus.PROCESSING);
+            seedOrderWithStatus(OrderStatus.DELIVERED);
+            seedOrderWithStatus(OrderStatus.COMPLETED);
+            seedOrderWithStatus(OrderStatus.CANCELLED);
+            seedOrderWithStatus(OrderStatus.REFUNDED);
+            Order oldOrder = seedOrderWithStatus(OrderStatus.CREATED);
+            backdateCreatedAt(oldOrder.getId(), 40);
+
+            OrderStatsResponse stats = orderService.getOrderStats();
+
+            assertThat(stats.total()).isEqualTo(7);
+            assertThat(stats.inProgress()).isEqualTo(3); // CREATED, PROCESSING, CREATED (старый)
+            assertThat(stats.completed()).isEqualTo(2);  // DELIVERED, COMPLETED
+            assertThat(stats.cancelled()).isEqualTo(2);  // CANCELLED, REFUNDED
+            assertThat(stats.newLast30Days()).isEqualTo(6); // все, кроме созданного 40 дней назад
+        }
+    }
+
     // ==================== Kafka events ====================
 
     @Nested
@@ -870,6 +903,32 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                 buildAddressDto(), null, null, null, "Тест", null, null, null, null);
 
         return orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
+    }
+
+    /**
+     * Создаёт минимальный заказ напрямую в БД (без корзины) для тестов сводки статусов.
+     */
+    private Order seedOrderWithStatus(OrderStatus status) {
+        Order order = Order.builder()
+                .userId(USER_ID)
+                .orderNumber("STATS-" + UUID.randomUUID())
+                .status(status)
+                .paymentMethod(PaymentMethod.CARD)
+                .deliveryMethod(DeliveryMethod.SUPPLIER_DELIVERY)
+                .totalAmount(new BigDecimal("1000.00"))
+                .customerEmail(USER_EMAIL)
+                .customerType(ru.rfsnab.orderservice.models.entity.enums.CustomerType.B2C)
+                .build();
+        return orderRepository.save(order);
+    }
+
+    /**
+     * created_at проставляется Hibernate (@CreationTimestamp, updatable=false) —
+     * для теста "заказ создан N дней назад" сдвигаем его напрямую в БД.
+     */
+    private void backdateCreatedAt(UUID orderId, int daysAgo) {
+        jdbcTemplate.update("UPDATE orders SET created_at = ? WHERE id = ?",
+                java.sql.Timestamp.valueOf(java.time.LocalDateTime.now().minusDays(daysAgo)), orderId);
     }
 
     private PaymentMethodSettings getOrCreateSettings() {

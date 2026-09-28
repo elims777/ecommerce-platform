@@ -124,3 +124,18 @@ export const resendUserVerification = async (id: number): Promise<void> => {
 export const resendLegalVerification = async (id: number): Promise<void> => {
   await apiClient.post(`/v1/admin/legal-entities/${id}/resend-verification`);
 };
+
+/** Сводка по пользователям для админки */
+export interface UserStats {
+  total: number;
+  emailVerified: number;
+  withLegalEntity: number;
+  active: number;
+  blocked: number;
+  newLast30Days: number;
+}
+
+export const getUserStats = async (): Promise<UserStats> => {
+  const { data } = await apiClient.get<UserStats>('/v1/admin/users/stats');
+  return data;
+};

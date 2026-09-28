@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.rfsnab.userservice.exceptions.UserDeletionNotAllowedException;
 import ru.rfsnab.userservice.models.UserEntity;
+import ru.rfsnab.userservice.models.dto.UserStatsResponse;
 import ru.rfsnab.userservice.services.UserService;
 import ru.rfsnab.userservice.services.client.OrderServiceClient;
 
@@ -62,5 +64,13 @@ public class AdminUserController {
     public ResponseEntity<Void> resendVerification(@PathVariable Long id) {
         userService.resendVerification(id);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Сводка по пользователям для админки (администраторы исключены из счётчиков).
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<UserStatsResponse> getUserStats() {
+        return ResponseEntity.ok(userService.getUserStats());
     }
 }

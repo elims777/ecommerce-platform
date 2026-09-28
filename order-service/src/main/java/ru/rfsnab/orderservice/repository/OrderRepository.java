@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
+import ru.rfsnab.orderservice.repository.projection.OrderStatsProjection;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -47,5 +48,24 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,
             Pageable pageable
+    );
+
+    /**
+     * Агрегаты заказов для сводки админки — один проход по таблице.
+     * Наборы статусов передаются параметрами, чтобы не хардкодить строки в JPQL.
+     */
+    @Query("""
+            SELECT COUNT(o) AS total,
+                   COALESCE(SUM(CASE WHEN o.status NOT IN :finalStatuses THEN 1 ELSE 0 END), 0) AS inProgress,
+                   COALESCE(SUM(CASE WHEN o.status IN :completedStatuses THEN 1 ELSE 0 END), 0) AS completed,
+                   COALESCE(SUM(CASE WHEN o.status IN :cancelledStatuses THEN 1 ELSE 0 END), 0) AS cancelled,
+                   COALESCE(SUM(CASE WHEN o.createdAt >= :since THEN 1 ELSE 0 END), 0) AS newLast30Days
+            FROM Order o
+            """)
+    OrderStatsProjection fetchOrderStats(
+            @Param("finalStatuses") List<OrderStatus> finalStatuses,
+            @Param("completedStatuses") List<OrderStatus> completedStatuses,
+            @Param("cancelledStatuses") List<OrderStatus> cancelledStatuses,
+            @Param("since") LocalDateTime since
     );
 }
