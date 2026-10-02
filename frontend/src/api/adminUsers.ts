@@ -45,14 +45,14 @@ export interface LegalEntityDto {
 
 export const getAllUsers = async (): Promise<AdminUserDto[]> => {
   const { data } = await apiClient.get<AdminUserDto[]>('/v1/users/all');
-  return data;
+  return [...data].sort((a, b) => b.id - a.id);
 };
 
 export const getAllLegalEntities = async (status?: string): Promise<LegalEntityDto[]> => {
   const { data } = await apiClient.get<LegalEntityDto[]>('/v1/admin/legal-entities', {
     params: status ? { status } : {},
   });
-  return data;
+  return [...data].sort((a, b) => b.id - a.id);
 };
 
 export const getUserById = async (id: number): Promise<AdminUserDto> => {
