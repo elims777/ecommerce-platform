@@ -101,6 +101,10 @@ public class ProductFeedService {
                 if (!Boolean.TRUE.equals(category.getIsActive())) {
                     continue;
                 }
+                // Директ отклоняет дерево, где parentId указывает на категорию, которой нет в списке
+                if (category.getParentId() != null && !categoryIds.contains(category.getParentId())) {
+                    continue;
+                }
                 categoryIds.add(category.getId());
                 w.writeStartElement("category");
                 w.writeAttribute("id", String.valueOf(category.getId()));
