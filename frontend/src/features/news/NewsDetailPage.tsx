@@ -29,6 +29,11 @@ const NewsDetailPage = () => {
 
     return (
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
+            <title>{`${news.title} — РФснаб`}</title>
+            <meta
+                name="description"
+                content={news.contentHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160)}
+            />
             <Breadcrumb
                 style={{ marginBottom: 16 }}
                 items={[

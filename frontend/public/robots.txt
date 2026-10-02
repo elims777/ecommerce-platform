@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /cart
+Disallow: /checkout
+Disallow: /orders
+Disallow: /profile
+Disallow: /favourites
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /oauth2
+Disallow: /payment
+Disallow: /price-lists
+Disallow: /api/
+Allow: /api/v1/products/feed/yandex.yml
+
+Sitemap: https://rfsnab.ru/sitemap.xml
