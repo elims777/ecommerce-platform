@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { createOrder, confirmOrder } from '@/api/orders';
+import { pushEcommerce } from '@/lib/metrika';
 import { getWarehousePoints } from '@/api/warehouse';
 import {
     getRecipients,
@@ -55,6 +56,9 @@ interface CheckoutFormValues {
     newApartment?: string;
     newPostalCode?: string;
 }
+
+/** Заказы, для которых purchase уже отправлен — защита от повторной отправки. */
+const trackedOrders = new Set<string>();
 
 const CheckoutPage = () => {
     const [form] = Form.useForm<CheckoutFormValues>();
@@ -210,6 +214,20 @@ const createRecipientMutation = useMutation({
 
             const order = await createOrder(request);
             await confirmOrder(order.id);
+            if (!trackedOrders.has(order.id)) {
+                trackedOrders.add(order.id);
+                pushEcommerce({
+                    purchase: {
+                        actionField: { id: order.orderNumber },
+                        products: order.items.map((i) => ({
+                            id: String(i.parentProductId ?? i.productId),
+                            name: i.productName,
+                            price: i.price,
+                            quantity: i.quantity,
+                        })),
+                    },
+                });
+            }
             await clearCart();
             messageApi.success('Заказ успешно оформлен!');
 

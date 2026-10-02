@@ -47,6 +47,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     List<Product> findByExternalIdIn(List<String> externalIds);
 
+    /** Товары для YML-фида и sitemap: активные родительские карточки. Lazy-связи не трогаем. */
+    @Query("SELECT p FROM Product p WHERE p.isActive = true AND p.isVariantChild = false ORDER BY p.id")
+    List<Product> findAllForFeed();
+
     @Query("SELECT p.slug FROM Product p")
     List<String> findAllSlugs();
 

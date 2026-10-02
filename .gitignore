@@ -52,6 +52,7 @@ frontend/.vite/
 frontend/.impeccable/
 LLM-wiki.md
 *.txt
+!frontend/public/robots.txt
 CLAUDE.md
 ARCHITECTURE.md
 

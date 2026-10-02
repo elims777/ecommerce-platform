@@ -31,6 +31,8 @@ const NewsListPage = () => {
 
     return (
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
+            <title>Новости — РФснаб</title>
+            <meta name="description" content="Новости компании РФснаб." />
             <Title level={2}>Новости</Title>
 
             {news.length === 0 ? (

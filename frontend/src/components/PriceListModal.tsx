@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { getCategoryTree } from '@/api/categories';
 import { createPriceList } from '@/api/priceLists';
+import { reachGoal } from '@/lib/metrika';
 import type { CategoryTree } from '@/types/product';
 
 const mapToTreeData = (categories: CategoryTree[]): TreeDataNode[] =>
@@ -57,6 +58,7 @@ const PriceListModal = ({ open, onClose }: PriceListModalProps) => {
     const mutation = useMutation({
         mutationFn: (categoryIds: number[]) => createPriceList(categoryIds),
         onSuccess: () => {
+            reachGoal('price_list_request');
             queryClient.invalidateQueries({ queryKey: ['priceLists'] });
             setCheckedKeys([]);
             onClose();
