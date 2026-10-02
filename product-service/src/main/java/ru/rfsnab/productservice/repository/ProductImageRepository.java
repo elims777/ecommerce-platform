@@ -70,4 +70,15 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
      */
     @Query("SELECT pi.product.externalId, pi.fileKey FROM ProductImage pi WHERE pi.product.externalId IN :externalIds")
     List<Object[]> findFileKeysByProductExternalIdIn(@Param("externalIds") List<String> externalIds);
+
+    /**
+     * Картинки активных родительских товаров для YML-фида: строки [0]=productId (Long), [1]=fileUrl (String),
+     * главная первой, затем по displayOrder. Один запрос на весь каталог.
+     */
+    @Query("""
+            SELECT pi.product.id, pi.fileUrl FROM ProductImage pi
+            WHERE pi.product.isActive = true AND pi.product.isVariantChild = false
+            ORDER BY pi.product.id ASC, pi.isPrimary DESC, pi.displayOrder ASC
+            """)
+    List<Object[]> findFeedImageUrls();
 }

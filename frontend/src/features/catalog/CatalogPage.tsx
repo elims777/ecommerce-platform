@@ -13,6 +13,7 @@ import CategoryTreeMenu from './CategoryTreeMenu';
 import ProductCard from './ProductCard';
 import FacetFilters from './FacetFilters';
 import { handleProfileIncomplete } from '@/utils/profileGate';
+import { reachGoal } from '@/lib/metrika';
 
 // ── Icons ────────────────────────────────────────────────────
 const SearchIcon = () => (
@@ -131,6 +132,7 @@ const CatalogPage = () => {
     const priceListMutation = useMutation({
         mutationFn: () => createPriceList([categoryId!]),
         onSuccess: () => {
+            reachGoal('price_list_request');
             messageApi.success('Прайс формируется. Готовый файл появится в личном кабинете → «Прайс-листы».');
         },
         onError: (err) => {
@@ -253,6 +255,8 @@ const CatalogPage = () => {
 
     return (
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
+            <title>{`${pageTitle} — РФснаб`}</title>
+            <meta name="description" content={`${pageTitle} — каталог РФснаб: комплексное снабжение предприятий.`} />
             {/* Breadcrumbs */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 12, flexWrap: 'wrap' }}>
                 <span onClick={handleClearFilters} style={{ cursor: 'pointer' }}>Главная</span>

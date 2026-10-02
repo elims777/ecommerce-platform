@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Image, App, Skeleton, Modal, Grid } from 'antd';
 import { ShoppingCartOutlined, ShoppingOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +12,7 @@ import { useDisplayPrice, useOldDisplayPrice, formatPriceOrPlaceholder, isPriceA
 import { savePendingAddToCart, clearPendingAddToCart } from '@/utils/pendingCart';
 import { unitShort, unitPlural } from '@/utils/unitOfMeasure';
 import { handleProfileIncomplete } from '@/utils/profileGate';
+import { pushEcommerce } from '@/lib/metrika';
 
 const sortImages = (images: ProductImage[]): ProductImage[] =>
     [...images].sort((a, b) => {
@@ -93,6 +94,22 @@ const ProductPage = () => {
     const displayPrice = useDisplayPrice({ price: product?.price ?? 0, wholesalePrice: product?.wholesalePrice ?? null });
     const oldDisplayPrice = useOldDisplayPrice({ oldPrice: product?.oldPrice ?? null, oldWholesalePrice: product?.oldWholesalePrice ?? null });
 
+    const detailSentFor = useRef<number | null>(null);
+    useEffect(() => {
+        if (!product || detailSentFor.current === product.id) return;
+        detailSentFor.current = product.id;
+        pushEcommerce({
+            detail: {
+                products: [{
+                    id: String(product.parentProductId ?? product.id),
+                    name: product.name,
+                    price: displayPrice,
+                    category: product.categoryName ?? undefined,
+                }],
+            },
+        });
+    }, [product, displayPrice]);
+
     const setVariantQty = (variantId: number, qty: number) =>
         setVariantQtys(prev => ({ ...prev, [variantId]: qty }));
 
@@ -166,9 +183,13 @@ const ProductPage = () => {
 
     const sortedImages = sortImages(product.images || []);
     const inStock = activeStock > 0;
+    const metaDescription = (product.shortDescription || product.description || '')
+        .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
 
     return (
         <>
+        <title>{`${product.name} — РФснаб`}</title>
+        {metaDescription && <meta name="description" content={metaDescription} />}
         <Modal
             open={authModalOpen}
             onCancel={() => { clearPendingAddToCart(); setAuthModalOpen(false); }}

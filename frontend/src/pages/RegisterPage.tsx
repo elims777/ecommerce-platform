@@ -6,6 +6,7 @@ import type { RegisterRequest } from '@/types/auth';
 import type { AxiosError } from 'axios';
 import { register, registerLegal } from '@/api/auth';
 import type { RegisterLegalRequest } from '@/api/auth';
+import { reachGoal } from '@/lib/metrika';
 
 type AccountType = 'personal' | 'legal';
 
@@ -58,6 +59,7 @@ const RegisterPage = () => {
             const { confirmPassword: _, privacyPolicy: __, personalData: ___, newsletterConsent: ____, ...rest } = values;
             const request = { ...rest, newsletterConsent: values.newsletterConsent ?? false };
             await register(request);
+            reachGoal('register_success');
             messageApi.success('Регистрация прошла успешно! Проверьте почту для подтверждения аккаунта.');
             navigate('/login', { replace: true });
         } catch (error) {
@@ -77,6 +79,7 @@ const RegisterPage = () => {
         try {
             const { confirmPassword: _, privacyPolicy: __, personalData: ___, newsletterConsent: ____, ...request } = values;
             await registerLegal(request);
+            reachGoal('register_success');
             messageApi.success('Заявка на регистрацию отправлена! Проверьте почту — ссылка для подтверждения.');
             navigate('/login', { replace: true });
         } catch (error) {

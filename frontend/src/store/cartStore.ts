@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as cartApi from '@/api/cart';
 import type { CartItemDto } from '@/api/cart';
+import { pushEcommerce } from '@/lib/metrika';
 
 interface CartState {
     items: CartItemDto[];
@@ -20,6 +21,19 @@ const calcTotals = (items: CartItemDto[]) => ({
     totalItems: items.reduce((s, i) => s + i.quantity, 0),
     totalAmount: items.reduce((s, i) => s + i.price * i.quantity, 0),
 });
+
+/** id в ecommerce — id родительского товара, как offer id в товарном фиде Директа. */
+const trackCart = (kind: 'add' | 'remove', item: CartItemDto, quantity: number) =>
+    pushEcommerce({
+        [kind]: {
+            products: [{
+                id: String(item.parentProductId ?? item.productId),
+                name: item.productName,
+                price: item.price,
+                quantity,
+            }],
+        },
+    });
 
 export const useCartStore = create<CartState>((set, get) => ({
     items: [],
@@ -49,6 +63,8 @@ export const useCartStore = create<CartState>((set, get) => ({
         try {
             await cartApi.addToCart({ productId, quantity });
             await get().fetchCart();
+            const added = get().items.find(i => i.productId === productId);
+            if (added) trackCart('add', added, quantity);
         } catch (err) {
             set({ items: prev.items, ...calcTotals(prev.items) });
             throw err;
@@ -62,6 +78,10 @@ export const useCartStore = create<CartState>((set, get) => ({
         set({ items: updatedItems, ...calcTotals(updatedItems) });
         try {
             await cartApi.updateCartItem(productId, quantity);
+            const current = prev.items.find(i => i.productId === productId);
+            if (current && quantity !== current.quantity) {
+                trackCart(quantity > current.quantity ? 'add' : 'remove', current, Math.abs(quantity - current.quantity));
+            }
         } catch {
             set({ items: prev.items, ...calcTotals(prev.items) });
             throw new Error('Не удалось обновить количество');
@@ -74,6 +94,8 @@ export const useCartStore = create<CartState>((set, get) => ({
         set({ items: updatedItems, ...calcTotals(updatedItems) });
         try {
             await cartApi.removeCartItem(productId);
+            const removed = prev.items.find(i => i.productId === productId);
+            if (removed) trackCart('remove', removed, removed.quantity);
         } catch {
             set({ items: prev.items, ...calcTotals(prev.items) });
             throw new Error('Не удалось удалить товар');
