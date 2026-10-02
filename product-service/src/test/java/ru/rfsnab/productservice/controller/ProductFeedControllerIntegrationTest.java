@@ -168,6 +168,31 @@ class ProductFeedControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("фид: активная категория под неактивным родителем не попадает в categories")
+    void feed_skipsCategoryWithInactiveParent() throws Exception {
+        Category inactiveParent = categoryRepository.save(Category.builder()
+                .name("Скрытый родитель").slug("hidden-parent-" + System.nanoTime()).isActive(false).build());
+        Category orphan = categoryRepository.save(Category.builder()
+                .name("Дочерняя").slug("orphan-" + System.nanoTime()).parent(inactiveParent).build());
+        categoryService.refreshCategoryTree();
+        Product p = save("Товар дочерней", true, false, "100.00", true);
+        p.setCategory(orphan);
+        productRepository.save(p);
+
+        Document doc = fetchXml(FEED_URL);
+
+        NodeList categories = doc.getElementsByTagName("category");
+        for (int i = 0; i < categories.getLength(); i++) {
+            Element c = (Element) categories.item(i);
+            assertThat(c.getAttribute("id")).isNotEqualTo(String.valueOf(orphan.getId()));
+            assertThat(c.getAttribute("parentId")).isNotEqualTo(String.valueOf(inactiveParent.getId()));
+        }
+        Element offer = offer(doc, p);
+        assertThat(offer).isNotNull();
+        assertThat(offer.getElementsByTagName("categoryId").getLength()).isZero();
+    }
+
+    @Test
     @DisplayName("фид: HTML-теги в описании вырезаются")
     void feed_stripsHtmlFromDescription() throws Exception {
         Product p = save("С описанием", true, false, "100.00", true);
