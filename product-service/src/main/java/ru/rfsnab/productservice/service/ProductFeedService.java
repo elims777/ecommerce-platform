@@ -47,6 +47,9 @@ public class ProductFeedService {
     private static final int MAX_DESCRIPTION_LENGTH = 3000;
     /** Лимит Яндекса на название страницы каталога — 56 символов. */
     private static final int MAX_COLLECTION_NAME_LENGTH = 56;
+    /** Лимит Яндекса на описание страницы каталога — 81 символ. */
+    private static final int MAX_COLLECTION_DESCRIPTION_LENGTH = 81;
+    private static final String COLLECTION_DESCRIPTION_SUFFIX = " в интернет-магазине РФснаб";
     private static final DateTimeFormatter FEED_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final ZoneId FEED_ZONE = ZoneId.of("Europe/Moscow");
     /** Символы, недопустимые в XML 1.0: управляющие (кроме \t \n \r), одиночные суррогаты, ￾, ￿. */
@@ -136,33 +139,41 @@ public class ProductFeedService {
                     collectionPictures.putIfAbsent(id, offer.pictureUrl());
                 }
             }
-            w.writeStartElement("collections");
-            for (CategoryTreeDTO category : feedCategories) {
-                String picture = collectionPictures.get(category.getId());
-                if (picture == null) {
-                    continue;
-                }
-                w.writeStartElement("collection");
-                w.writeAttribute("id", String.valueOf(category.getId()));
-                text(w, "url", siteUrl + "/catalog?category=" + category.getId());
-                text(w, "picture", picture);
-                String name = clean(category.getName());
-                text(w, "name", name.length() > MAX_COLLECTION_NAME_LENGTH
-                        ? name.substring(0, MAX_COLLECTION_NAME_LENGTH)
-                        : name);
-                w.writeEndElement();
-            }
-            w.writeEndElement();
 
             // Витрина не скрывает товары неактивных категорий, поэтому офферы остаются,
             // а categoryId выводится только для категорий из списка выше
             w.writeStartElement("offers");
             for (Offer offer : offers) {
-                if (!writeOffer(w, offer, categoryIds)) {
+                if (!writeOffer(w, offer, categoryIds, parentIds)) {
                     withoutCategory++;
                 }
             }
             w.writeEndElement();
+
+            // По спеке Директа collections идут после offers
+            if (!collectionPictures.isEmpty()) {
+                w.writeStartElement("collections");
+                for (CategoryTreeDTO category : feedCategories) {
+                    String picture = collectionPictures.get(category.getId());
+                    if (picture == null) {
+                        continue;
+                    }
+                    w.writeStartElement("collection");
+                    w.writeAttribute("id", String.valueOf(category.getId()));
+                    text(w, "url", siteUrl + "/catalog?category=" + category.getId());
+                    text(w, "picture", picture);
+                    String name = clean(category.getName());
+                    text(w, "name", name.length() > MAX_COLLECTION_NAME_LENGTH
+                            ? name.substring(0, MAX_COLLECTION_NAME_LENGTH)
+                            : name);
+                    String description = name + COLLECTION_DESCRIPTION_SUFFIX;
+                    text(w, "description", description.length() > MAX_COLLECTION_DESCRIPTION_LENGTH
+                            ? description.substring(0, MAX_COLLECTION_DESCRIPTION_LENGTH)
+                            : description);
+                    w.writeEndElement();
+                }
+                w.writeEndElement();
+            }
 
             w.writeEndElement();
             w.writeEndElement();
@@ -212,7 +223,8 @@ public class ProductFeedService {
     }
 
     /** @return true, если у оффера выведен categoryId */
-    private boolean writeOffer(XMLStreamWriter w, Offer offer, Set<Long> categoryIds) throws XMLStreamException {
+    private boolean writeOffer(XMLStreamWriter w, Offer offer, Set<Long> categoryIds,
+                               Map<Long, Long> parentIds) throws XMLStreamException {
         Product p = offer.product();
         w.writeStartElement("offer");
         w.writeAttribute("id", String.valueOf(p.getId()));
@@ -230,6 +242,12 @@ public class ProductFeedService {
         String description = pickDescription(p);
         if (description != null) {
             text(w, "description", description);
+        }
+        // Своя категория и все предки: у каждой из них есть коллекция (офферы в поддереве)
+        if (hasCategory) {
+            for (Long id = p.getCategory().getId(); id != null; id = parentIds.get(id)) {
+                text(w, "collectionId", String.valueOf(id));
+            }
         }
         w.writeEndElement();
         return hasCategory;

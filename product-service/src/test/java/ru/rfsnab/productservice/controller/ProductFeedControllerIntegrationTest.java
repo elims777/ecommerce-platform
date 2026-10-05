@@ -24,6 +24,10 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -190,6 +194,7 @@ class ProductFeedControllerIntegrationTest extends BaseIntegrationTest {
         Element offer = offer(doc, p);
         assertThat(offer).isNotNull();
         assertThat(offer.getElementsByTagName("categoryId").getLength()).isZero();
+        assertThat(collectionIds(offer)).isEmpty();
     }
 
     private Element collection(Document doc, Category c) {
@@ -214,7 +219,127 @@ class ProductFeedControllerIntegrationTest extends BaseIntegrationTest {
         assertThat(child(collection, "url")).isEqualTo("https://rfsnab.ru/catalog?category=" + category.getId());
         assertThat(child(collection, "picture")).endsWith("k" + p.getId() + ".jpg");
         assertThat(child(collection, "name")).isEqualTo("Сантехника");
-        assertThat(collection.getElementsByTagName("description").getLength()).isZero();
+        assertThat(child(collection, "description")).isEqualTo("Сантехника в интернет-магазине РФснаб");
+    }
+
+    private List<String> childTags(Element parent) {
+        List<String> tags = new ArrayList<>();
+        NodeList nodes = parent.getChildNodes();
+        for (int i = 0; i < nodes.getLength(); i++) {
+            if (nodes.item(i) instanceof Element e) {
+                tags.add(e.getTagName());
+            }
+        }
+        return tags;
+    }
+
+    private List<String> collectionIds(Element offer) {
+        NodeList ids = offer.getElementsByTagName("collectionId");
+        List<String> result = new ArrayList<>();
+        for (int i = 0; i < ids.getLength(); i++) {
+            result.add(ids.item(i).getTextContent());
+        }
+        return result;
+    }
+
+    @Test
+    @DisplayName("фид: порядок блоков в shop — categories, offers, collections")
+    void feed_collectionsGoAfterOffers() throws Exception {
+        save("Кран", true, false, "100.00", true);
+
+        Element shop = (Element) fetchXml(FEED_URL).getElementsByTagName("shop").item(0);
+
+        List<String> tags = childTags(shop);
+        assertThat(tags.indexOf("categories")).isLessThan(tags.indexOf("offers"));
+        assertThat(tags.indexOf("offers")).isLessThan(tags.indexOf("collections"));
+    }
+
+    @Test
+    @DisplayName("фид: оффер подкатегории ссылается на коллекции своей категории и родителя, после description")
+    void feed_offerHasCollectionIdsOfCategoryAndAncestors() throws Exception {
+        Category parent = categoryRepository.save(Category.builder()
+                .name("Родитель").slug("parent-" + System.nanoTime()).build());
+        Category child = categoryRepository.save(Category.builder()
+                .name("Потомок").slug("child-" + System.nanoTime()).parent(parent).build());
+        categoryService.refreshCategoryTree();
+        Product p = save("Товар потомка", true, false, "100.00", true);
+        p.setCategory(child);
+        p.setDescription("Описание");
+        productRepository.save(p);
+
+        Element offer = offer(fetchXml(FEED_URL), p);
+
+        assertThat(collectionIds(offer)).containsExactlyInAnyOrder(
+                String.valueOf(child.getId()), String.valueOf(parent.getId()));
+        List<String> tags = childTags(offer);
+        assertThat(tags.indexOf("collectionId")).isGreaterThan(tags.indexOf("description"));
+    }
+
+    @Test
+    @DisplayName("фид: оффер в категории без коллекции не получает collectionId")
+    void feed_offerWithoutCollectionHasNoCollectionId() throws Exception {
+        Category inactive = categoryRepository.save(Category.builder()
+                .name("Скрытая").slug("hidden-" + System.nanoTime()).isActive(false).build());
+        categoryService.refreshCategoryTree();
+        Product p = save("Товар скрытой", true, false, "100.00", true);
+        p.setCategory(inactive);
+        productRepository.save(p);
+
+        Element offer = offer(fetchXml(FEED_URL), p);
+
+        assertThat(offer.getElementsByTagName("collectionId").getLength()).isZero();
+    }
+
+    @Test
+    @DisplayName("фид: каждый collectionId оффера существует среди id коллекций блока collections")
+    void feed_everyOfferCollectionIdExistsInCollections() throws Exception {
+        Category parent = categoryRepository.save(Category.builder()
+                .name("Родитель").slug("parent-" + System.nanoTime()).build());
+        Category child = categoryRepository.save(Category.builder()
+                .name("Потомок").slug("child-" + System.nanoTime()).parent(parent).build());
+        categoryService.refreshCategoryTree();
+        save("Кран", true, false, "100.00", true);
+        Product p = save("Товар потомка", true, false, "100.00", true);
+        p.setCategory(child);
+        productRepository.save(p);
+
+        Document doc = fetchXml(FEED_URL);
+
+        Set<String> offerCollectionIds = new HashSet<>();
+        NodeList offers = doc.getElementsByTagName("offer");
+        for (int i = 0; i < offers.getLength(); i++) {
+            offerCollectionIds.addAll(collectionIds((Element) offers.item(i)));
+        }
+        Set<String> collectionIds = new HashSet<>();
+        NodeList collections = doc.getElementsByTagName("collection");
+        for (int i = 0; i < collections.getLength(); i++) {
+            collectionIds.add(((Element) collections.item(i)).getAttribute("id"));
+        }
+        assertThat(offerCollectionIds).isNotEmpty().isSubsetOf(collectionIds);
+    }
+
+    @Test
+    @DisplayName("фид: порядок полей collection— url, picture, name, description; description до 81 символа")
+    void feed_collectionChildOrderAndDescriptionLimit() throws Exception {
+        Category longName = categoryRepository.save(Category.builder()
+                .name("А".repeat(80)).slug("long-" + System.nanoTime()).build());
+        categoryService.refreshCategoryTree();
+        Product p = save("Товар длинной", true, false, "100.00", true);
+        p.setCategory(longName);
+        productRepository.save(p);
+
+        Element collection = collection(fetchXml(FEED_URL), longName);
+
+        assertThat(childTags(collection)).containsExactly("url", "picture", "name", "description");
+        assertThat(child(collection, "description")).hasSize(81);
+    }
+
+    @Test
+    @DisplayName("фид: без коллекций блока collections нет")
+    void feed_noCollectionsBlockWhenEmpty() throws Exception {
+        Document doc = fetchXml(FEED_URL);
+
+        assertThat(doc.getElementsByTagName("collections").getLength()).isZero();
     }
 
     @Test
