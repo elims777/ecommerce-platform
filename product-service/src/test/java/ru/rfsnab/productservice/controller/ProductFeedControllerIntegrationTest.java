@@ -192,6 +192,80 @@ class ProductFeedControllerIntegrationTest extends BaseIntegrationTest {
         assertThat(offer.getElementsByTagName("categoryId").getLength()).isZero();
     }
 
+    private Element collection(Document doc, Category c) {
+        NodeList collections = doc.getElementsByTagName("collection");
+        for (int i = 0; i < collections.getLength(); i++) {
+            Element e = (Element) collections.item(i);
+            if (e.getAttribute("id").equals(String.valueOf(c.getId()))) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    @Test
+    @DisplayName("фид: коллекция для категории с товаром содержит url, picture и name")
+    void feed_collectionForCategoryWithProduct() throws Exception {
+        Product p = save("Кран", true, false, "100.00", true);
+
+        Element collection = collection(fetchXml(FEED_URL), category);
+
+        assertThat(collection).isNotNull();
+        assertThat(child(collection, "url")).isEqualTo("https://rfsnab.ru/catalog?category=" + category.getId());
+        assertThat(child(collection, "picture")).endsWith("k" + p.getId() + ".jpg");
+        assertThat(child(collection, "name")).isEqualTo("Сантехника");
+        assertThat(collection.getElementsByTagName("description").getLength()).isZero();
+    }
+
+    @Test
+    @DisplayName("фид: категория без офферов в себе и потомках не попадает в collections")
+    void feed_collectionSkipsEmptyCategory() throws Exception {
+        Category empty = categoryRepository.save(Category.builder()
+                .name("Пустая").slug("empty-" + System.nanoTime()).build());
+        categoryService.refreshCategoryTree();
+        save("Кран", true, false, "100.00", true);
+
+        Document doc = fetchXml(FEED_URL);
+
+        assertThat(collection(doc, empty)).isNull();
+        assertThat(collection(doc, category)).isNotNull();
+    }
+
+    @Test
+    @DisplayName("фид: родитель без своих товаров попадает в collections, picture от товара подкатегории")
+    void feed_collectionForParentUsesChildProductPicture() throws Exception {
+        Category parent = categoryRepository.save(Category.builder()
+                .name("Родитель").slug("parent-" + System.nanoTime()).build());
+        Category child = categoryRepository.save(Category.builder()
+                .name("Потомок").slug("child-" + System.nanoTime()).parent(parent).build());
+        categoryService.refreshCategoryTree();
+        Product p = save("Товар потомка", true, false, "100.00", true);
+        p.setCategory(child);
+        productRepository.save(p);
+
+        Document doc = fetchXml(FEED_URL);
+
+        Element parentCollection = collection(doc, parent);
+        assertThat(parentCollection).isNotNull();
+        assertThat(child(parentCollection, "picture")).endsWith("k" + p.getId() + ".jpg");
+        assertThat(collection(doc, child)).isNotNull();
+    }
+
+    @Test
+    @DisplayName("фид: имя коллекции длиннее 56 символов обрезается")
+    void feed_collectionNameTruncatedTo56() throws Exception {
+        Category longName = categoryRepository.save(Category.builder()
+                .name("А".repeat(80)).slug("long-" + System.nanoTime()).build());
+        categoryService.refreshCategoryTree();
+        Product p = save("Товар длинной", true, false, "100.00", true);
+        p.setCategory(longName);
+        productRepository.save(p);
+
+        Element collection = collection(fetchXml(FEED_URL), longName);
+
+        assertThat(child(collection, "name")).isEqualTo("А".repeat(56));
+    }
+
     @Test
     @DisplayName("фид: HTML-теги в описании вырезаются")
     void feed_stripsHtmlFromDescription() throws Exception {
