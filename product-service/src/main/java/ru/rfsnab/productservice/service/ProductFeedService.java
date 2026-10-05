@@ -21,6 +21,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,6 +45,8 @@ public class ProductFeedService {
     private static final String SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9";
     /** Лимит Яндекса на описание оффера — 3000 символов. */
     private static final int MAX_DESCRIPTION_LENGTH = 3000;
+    /** Лимит Яндекса на название страницы каталога — 56 символов. */
+    private static final int MAX_COLLECTION_NAME_LENGTH = 56;
     private static final DateTimeFormatter FEED_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final ZoneId FEED_ZONE = ZoneId.of("Europe/Moscow");
     /** Символы, недопустимые в XML 1.0: управляющие (кроме \t \n \r), одиночные суррогаты, ￾, ￿. */
@@ -97,6 +100,7 @@ public class ProductFeedService {
 
             w.writeStartElement("categories");
             Set<Long> categoryIds = new HashSet<>();
+            List<CategoryTreeDTO> feedCategories = new ArrayList<>();
             for (CategoryTreeDTO category : flattenCategories()) {
                 if (!Boolean.TRUE.equals(category.getIsActive())) {
                     continue;
@@ -106,12 +110,46 @@ public class ProductFeedService {
                     continue;
                 }
                 categoryIds.add(category.getId());
+                feedCategories.add(category);
                 w.writeStartElement("category");
                 w.writeAttribute("id", String.valueOf(category.getId()));
                 if (category.getParentId() != null) {
                     w.writeAttribute("parentId", String.valueOf(category.getParentId()));
                 }
                 w.writeCharacters(clean(category.getName()));
+                w.writeEndElement();
+            }
+            w.writeEndElement();
+
+            // Страницы каталога: только категории с офферами в поддереве, картинка — первого оффера поддерева
+            Map<Long, Long> parentIds = new HashMap<>();
+            for (CategoryTreeDTO category : feedCategories) {
+                parentIds.put(category.getId(), category.getParentId());
+            }
+            Map<Long, String> collectionPictures = new HashMap<>();
+            for (Offer offer : offers) {
+                Long id = offer.product().getCategory() != null ? offer.product().getCategory().getId() : null;
+                if (id != null && !categoryIds.contains(id)) {
+                    continue;
+                }
+                for (; id != null; id = parentIds.get(id)) {
+                    collectionPictures.putIfAbsent(id, offer.pictureUrl());
+                }
+            }
+            w.writeStartElement("collections");
+            for (CategoryTreeDTO category : feedCategories) {
+                String picture = collectionPictures.get(category.getId());
+                if (picture == null) {
+                    continue;
+                }
+                w.writeStartElement("collection");
+                w.writeAttribute("id", String.valueOf(category.getId()));
+                text(w, "url", siteUrl + "/catalog?category=" + category.getId());
+                text(w, "picture", picture);
+                String name = clean(category.getName());
+                text(w, "name", name.length() > MAX_COLLECTION_NAME_LENGTH
+                        ? name.substring(0, MAX_COLLECTION_NAME_LENGTH)
+                        : name);
                 w.writeEndElement();
             }
             w.writeEndElement();
