@@ -1,6 +1,7 @@
 package ru.rfsnab.orderservice.models.dto.product;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * DTO для получения данных о товаре из product-service, не для ответа на фронт.
@@ -16,6 +17,8 @@ public record ProductDto(
         String sku,
         String unitOfMeasure,
         String categoryExternalId,
-        Long parentProductId
+        Long parentProductId,
+        List<Attribute> attributes
 ) {
+    public record Attribute(String attributeName, String attributeValue) {}
 }

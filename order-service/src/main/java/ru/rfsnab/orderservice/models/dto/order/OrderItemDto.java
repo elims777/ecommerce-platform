@@ -17,6 +17,7 @@ public record OrderItemDto(
         String externalId,
         Long variantId,
         String variantAttributes,
-        Long parentProductId
+        Long parentProductId,
+        String sku
 ) {
 }

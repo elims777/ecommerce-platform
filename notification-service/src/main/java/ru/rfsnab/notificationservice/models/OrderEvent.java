@@ -33,7 +33,7 @@ public record OrderEvent(
         String documentType,
         String documentFileName
 ) {
-    public record OrderItemLine(String productName, Integer quantity, BigDecimal price, String variantAttributes) {}
+    public record OrderItemLine(String productName, Integer quantity, BigDecimal price, String variantAttributes, String sku) {}
 
     public record DeliveryAddressDto(String city, String street, String building, String apartment,
                                      String postalCode, String phone, String recipientName) {}

@@ -66,7 +66,7 @@ class EmailServiceTest {
                 "Иванов Иван",
                 "+79001234567",
                 LocalDateTime.now(),
-                List.of(new OrderEvent.OrderItemLine("Товар 1", 2, new BigDecimal("7500.00"), null)),
+                List.of(new OrderEvent.OrderItemLine("Товар 1", 2, new BigDecimal("7500.00"), null, null)),
                 "PICKUP",
                 "CARD",
                 null,

@@ -120,6 +120,9 @@ public class OrderService {
     /** Окно для подсчёта "новых" заказов в сводке админки */
     private static final int NEW_ORDERS_WINDOW_DAYS = 30;
 
+    /** Атрибуты варианта, попадающие в позицию заказа (в порядке вывода) */
+    private static final List<String> VARIANT_ATTR_NAMES = List.of("Размер", "Рост");
+
     /**
      * Создание заказа из корзины.
      * Flow:
@@ -311,6 +314,7 @@ public class OrderService {
                     .unitOfMeasure(product.unitOfMeasure())
                     .categoryExternalId(product.categoryExternalId())
                     .parentProductId(product.parentProductId())
+                    .variantAttributes(formatVariantAttributes(product))
                     .build();
 
             newOrder.getItems().add(newItem);
@@ -630,6 +634,22 @@ public class OrderService {
     }
 
     /**
+     * Строка "Размер: X, Рост: Y" для варианта товара; null, если не вариант или атрибутов нет.
+     */
+    private String formatVariantAttributes(ProductDto product) {
+        if (product.parentProductId() == null || product.attributes() == null) {
+            return null;
+        }
+        String result = VARIANT_ATTR_NAMES.stream()
+                .flatMap(name -> product.attributes().stream()
+                        .filter(a -> name.equals(a.attributeName()) && a.attributeValue() != null)
+                        .findFirst().stream())
+                .map(a -> a.attributeName() + ": " + a.attributeValue())
+                .collect(Collectors.joining(", "));
+        return result.isEmpty() ? null : result;
+    }
+
+    /**
      * Добавление items из корзины в заказ с обогащением данными из product-service.
      * Фиксирует snapshot цен на момент создания.
      *
@@ -657,6 +677,7 @@ public class OrderService {
                     .unitOfMeasure(product.unitOfMeasure())
                     .categoryExternalId(product.categoryExternalId())
                     .parentProductId(product.parentProductId())
+                    .variantAttributes(formatVariantAttributes(product))
                     .build();
 
             order.getItems().add(orderItem);
@@ -692,6 +713,7 @@ public class OrderService {
                     .unitOfMeasure(product.unitOfMeasure())
                     .categoryExternalId(product.categoryExternalId())
                     .parentProductId(product.parentProductId())
+                    .variantAttributes(formatVariantAttributes(product))
                     .build();
 
             order.getItems().add(orderItem);
