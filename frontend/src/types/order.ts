@@ -91,6 +91,8 @@ export interface OrderItemDto {
     price: number;
     subtotal: number;
     parentProductId?: number | null;
+    sku?: string | null;
+    variantAttributes?: string | null;
 }
 
 /** Позиция заказа в запросе на редактирование */

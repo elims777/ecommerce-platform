@@ -26,7 +26,8 @@ public class OrderItemMapper {
                 item.getExternalId(),
                 item.getVariantId(),
                 item.getVariantAttributes(),
-                item.getParentProductId()
+                item.getParentProductId(),
+                item.getSku()
         );
     }
 

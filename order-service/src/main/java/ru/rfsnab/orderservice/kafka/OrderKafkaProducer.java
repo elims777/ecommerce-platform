@@ -37,7 +37,7 @@ public class OrderKafkaProducer {
                 .customerPhone(order.getCustomerPhone())
                 .timestamp(LocalDateTime.now())
                 .items(order.getItems().stream()
-                        .map(i -> new OrderEvent.OrderItemLine(i.getProductName(), i.getQuantity(), i.getPrice(), i.getVariantAttributes()))
+                        .map(i -> new OrderEvent.OrderItemLine(i.getProductName(), i.getQuantity(), i.getPrice(), i.getVariantAttributes(), i.getSku()))
                         .toList())
                 .deliveryMethod(order.getDeliveryMethod() != null ? order.getDeliveryMethod().name() : null)
                 .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)

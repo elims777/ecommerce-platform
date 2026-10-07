@@ -26,6 +26,7 @@
                     <td width="64%" style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif; word-break:break-word;">
                         <span th:text="${item.productName}"></span>
                         <span th:if="${item.variantAttributes}" th:text="' (' + ${item.variantAttributes} + ')'" style="color:#666666;"></span>
+                        <th:block th:if="${item.sku}"><br/><span th:text="'Арт. ' + ${item.sku}" style="color:#666666; font-size:12px;"></span></th:block>
                     </td>
                     <td width="14%" style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif; white-space:nowrap;" align="center" th:text="${item.quantity}"></td>
                     <td width="22%" style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif; white-space:nowrap;" align="right" th:text="${item.price} + ' ₽'"></td>
