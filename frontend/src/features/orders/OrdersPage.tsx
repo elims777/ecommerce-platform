@@ -289,6 +289,12 @@ const OrdersPage = () => {
                         <span style={{ color: 'var(--ink-3)' }}>Доставка:</span>
                         <span style={{ fontWeight: 500 }}>{DeliveryMethodLabels[deliveryCode as keyof typeof DeliveryMethodLabels] || extractEnumDisplayName(order.deliveryMethod)}</span>
                     </div>
+                    {order.carrierName && (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <span style={{ color: 'var(--ink-3)' }}>ТК:</span>
+                            <span style={{ fontWeight: 500 }}>{order.carrierName}</span>
+                        </div>
+                    )}
                     {order.deliveryAddress && (
                         <>
                             <div style={{ display: 'flex', gap: 8 }}>

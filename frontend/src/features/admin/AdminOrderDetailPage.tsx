@@ -201,6 +201,13 @@ const AdminOrderDetailPage = () => {
               ?? extractEnumDisplayName(order.deliveryMethod, deliveryCode)}
           </div>
 
+          {order.carrierName && (
+            <>
+              <div className="rf-detail-label">Транспортная компания</div>
+              <div className="rf-detail-value">{order.carrierName}</div>
+            </>
+          )}
+
           {order.trackingNumber && (
             <>
               <div className="rf-detail-label">Трек-номер</div>

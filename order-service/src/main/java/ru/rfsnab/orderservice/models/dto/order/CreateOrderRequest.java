@@ -1,6 +1,7 @@
 package ru.rfsnab.orderservice.models.dto.order;
 
 import jakarta.validation.constraints.NotNull;
+import ru.rfsnab.orderservice.delivery.CarrierCode;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
 
@@ -8,7 +9,7 @@ import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
  * DTO для создания заказа из корзины.
  * Товары берутся из корзины пользователя.
  * Для PICKUP: warehousePointId + pickupRecipientName + pickupRecipientPhone обязательны.
- * Для DELIVERY: deliveryAddress обязателен.
+ * Для CARRIER_ADDRESS: deliveryAddress + carrierCode обязательны. SUPPLIER_DELIVERY клиенту недоступен.
  */
 public record CreateOrderRequest(
         @NotNull(message = "Способ оплаты обязателен")
@@ -33,6 +34,9 @@ public record CreateOrderRequest(
 
         // Customer snapshot — имя и телефон заказчика (B2C и B2B)
         String customerName,
-        String customerPhone
+        String customerPhone,
+
+        // ТК — обязательна для CARRIER_ADDRESS, проверяется в сервисе
+        CarrierCode carrierCode
 ) implements HasDeliveryInfo {
 }

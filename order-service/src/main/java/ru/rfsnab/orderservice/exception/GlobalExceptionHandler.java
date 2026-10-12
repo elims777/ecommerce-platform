@@ -4,10 +4,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -56,6 +58,27 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Нечитаемое тело запроса — битый JSON, лишнее или неверного типа поле.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleNotReadable(
+            HttpMessageNotReadableException ex, HttpServletRequest request) {
+        log.warn("Некорректное тело запроса на {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "Malformed Request", "Некорректное тело запроса", request);
+    }
+
+    /**
+     * Параметр пути/запроса не приводится к нужному типу (неизвестный код ТК, нечисловой id).
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        log.warn("Некорректный параметр на {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid Parameter",
+                "Некорректное значение параметра " + ex.getName(), request);
+    }
+
+    /**
      * Невалидный файл документа заказа (тип, размер, пустой файл).
      */
     @ExceptionHandler(InvalidDocumentException.class)
@@ -91,6 +114,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleWarehousePointNotFound(
             WarehousePointNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, "Warehouse Point Not Found", ex.getMessage(), request);
+    }
+
+    /**
+     * Точка самовывоза с таким названием уже есть.
+     */
+    @ExceptionHandler(DuplicateWarehousePointException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateWarehousePoint(
+            DuplicateWarehousePointException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, "Warehouse Point Name Taken", ex.getMessage(), request);
     }
 
     /**

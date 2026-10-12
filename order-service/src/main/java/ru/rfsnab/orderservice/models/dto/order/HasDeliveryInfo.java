@@ -1,5 +1,6 @@
 package ru.rfsnab.orderservice.models.dto.order;
 
+import ru.rfsnab.orderservice.delivery.CarrierCode;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 
 /**
@@ -13,4 +14,7 @@ public sealed interface HasDeliveryInfo permits CreateOrderRequest, UpdateOrderR
     AddressDto deliveryAddress();
 
     Long warehousePointId();
+
+    /** ТК для CARRIER_ADDRESS; для остальных способов игнорируется. */
+    CarrierCode carrierCode();
 }

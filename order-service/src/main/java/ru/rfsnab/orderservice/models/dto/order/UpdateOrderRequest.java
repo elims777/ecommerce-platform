@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
+import ru.rfsnab.orderservice.delivery.CarrierCode;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
 
@@ -25,6 +26,8 @@ public record UpdateOrderRequest(
         AddressDto deliveryAddress,
 
         Long warehousePointId,
+
+        CarrierCode carrierCode,
 
         @NotEmpty(message = "Список товаров обязателен")
         @Valid

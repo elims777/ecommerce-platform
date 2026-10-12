@@ -31,7 +31,8 @@ public record OrderEvent(
         String inn,
         PickupPointDto pickupPoint,
         String documentType,
-        String documentFileName
+        String documentFileName,
+        String carrierName
 ) {
     public record OrderItemLine(String productName, Integer quantity, BigDecimal price, String variantAttributes, String sku) {}
 

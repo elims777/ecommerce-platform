@@ -124,7 +124,7 @@ class OrderControllerTest extends BaseIntegrationTest {
             WarehousePoint point = buildWarehousePoint();
             when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class)))
                     .thenReturn(order);
-            when(warehousePointService.getActivePoint(1L)).thenReturn(point);
+            when(warehousePointService.getPoint(1L)).thenReturn(point);
 
             String json = """
                     {
@@ -410,7 +410,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                             .header("X-Internal-Token", "test-secret")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isBadRequest());
         }
     }
 

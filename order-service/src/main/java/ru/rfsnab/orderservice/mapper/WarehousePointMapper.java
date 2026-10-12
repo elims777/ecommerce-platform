@@ -14,6 +14,8 @@ public class WarehousePointMapper {
                 .postalCode(entity.getPostalCode())
                 .phone(entity.getPhoneNumber())
                 .description(entity.getDescription())
+                .latitude(entity.getLatitude())
+                .longitude(entity.getLongitude())
                 .workingHours(entity.getWorkingHours())
                 .active(entity.isActive())
                 .build();

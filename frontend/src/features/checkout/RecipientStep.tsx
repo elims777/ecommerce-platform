@@ -34,7 +34,7 @@ const RecipientStep = ({
     onSwitchToManual,
     onSwitchToSaved,
 }: RecipientStepProps) => {
-    if (deliveryMethod !== DeliveryMethod.SUPPLIER_DELIVERY) return null;
+    if (deliveryMethod !== DeliveryMethod.CARRIER_ADDRESS) return null;
 
     return (
         <>

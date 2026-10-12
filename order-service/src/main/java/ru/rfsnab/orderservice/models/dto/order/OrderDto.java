@@ -1,6 +1,7 @@
 package ru.rfsnab.orderservice.models.dto.order;
 
 import lombok.Builder;
+import ru.rfsnab.orderservice.delivery.CarrierCode;
 import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
@@ -24,6 +25,8 @@ public record OrderDto(
         List<OrderItemDto> items,
         AddressDto deliveryAddress,
         WarehousePointDto warehousePoint,
+        CarrierCode carrierCode,
+        String carrierName,
         String trackingNumber,
         String customerEmail,
         String customerName,

@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.rfsnab.orderservice.delivery.Carrier;
+import ru.rfsnab.orderservice.delivery.CarrierService;
 import ru.rfsnab.orderservice.exception.*;
 import ru.rfsnab.orderservice.kafka.Order1CKafkaProducer;
 import ru.rfsnab.orderservice.kafka.OrderKafkaProducer;
@@ -55,6 +57,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CartService cartService;
     private final WarehousePointService warehousePointService;
+    private final CarrierService carrierService;
     private final ProductServiceClient productServiceClient;
     private final PaymentServiceClient paymentServiceClient;
     private final UserServiceClient userServiceClient;
@@ -145,10 +148,12 @@ public class OrderService {
 
         // 2. Получаем данные о товарах и валидируем
         Map<Long, ProductDto> products = fetchAndValidateProducts(cart.getItems());
-        validateDeliveryInfo(request);
+        rejectSupplierDelivery(request.deliveryMethod(), null);
+        String carrierName = validateDeliveryInfo(request);
 
         // 3. Создаём заказ — базовые поля через маппер
         Order order = OrderMapper.toEntity(userId, customerEmail, clientType, request);
+        order.setCarrierName(carrierName);
         order.setOrderNumber(generateOrderNumber(userId));
 
         // Снапшот имени и телефона заказчика
@@ -227,7 +232,8 @@ public class OrderService {
         }
 
         // Валидация доставки — единый метод через HasDeliveryInfo
-        validateDeliveryInfo(request);
+        rejectSupplierDelivery(request.deliveryMethod(), order.getDeliveryMethod());
+        String carrierName = validateDeliveryInfo(request);
 
         // Валидация и обогащение items
         Set<Long> productIds = request.items().stream()
@@ -241,7 +247,7 @@ public class OrderService {
         order.setDeliveryMethod(request.deliveryMethod());
         order.setComment(request.comment());
 
-        // Обновляем адрес / точку самовывоза
+        // Обновляем адрес / точку самовывоза / ТК
         if (request.deliveryMethod() == DeliveryMethod.PICKUP) {
             order.setWarehousePointId(request.warehousePointId());
             order.setDeliveryAddress(null);
@@ -249,6 +255,9 @@ public class OrderService {
             order.setDeliveryAddress(AddressMapper.mapToDeliveryAddress(request.deliveryAddress()));
             order.setWarehousePointId(null);
         }
+        order.setCarrierCode(request.deliveryMethod() == DeliveryMethod.CARRIER_ADDRESS
+                ? request.carrierCode() : null);
+        order.setCarrierName(carrierName);
 
         // Обновляем items — orphanRemoval удалит старые
         order.getItems().clear();
@@ -286,6 +295,8 @@ public class OrderService {
                 .status(OrderStatus.CREATED)
                 .paymentMethod(sourceOrder.getPaymentMethod())
                 .deliveryMethod(sourceOrder.getDeliveryMethod())
+                .carrierCode(sourceOrder.getCarrierCode())
+                .carrierName(sourceOrder.getCarrierName())
                 .warehousePointId(sourceOrder.getWarehousePointId())
                 .deliveryAddress(copyDeliveryAddress(sourceOrder.getDeliveryAddress()))
                 .customerEmail(customerEmail)
@@ -616,20 +627,52 @@ public class OrderService {
      * Единая валидация данных доставки.
      * Работает с любым DTO через sealed interface HasDeliveryInfo.
      * PICKUP → warehousePointId обязателен и точка должна быть активна.
+     * CARRIER_ADDRESS → carrierCode (ТК включена для доставки до адреса) + deliveryAddress.
      * SUPPLIER_DELIVERY → deliveryAddress обязателен.
+     *
+     * @return название ТК для снимка в заказе; null, если способ без ТК
      */
-    private void validateDeliveryInfo(HasDeliveryInfo request) {
-        if (request.deliveryMethod() == DeliveryMethod.PICKUP) {
-            if (request.warehousePointId() == null) {
-                throw new InvalidOrderStateException(
-                        "Для самовывоза необходимо указать точку получения");
+    private String validateDeliveryInfo(HasDeliveryInfo request) {
+        return switch (request.deliveryMethod()) {
+            case PICKUP -> {
+                if (request.warehousePointId() == null) {
+                    throw new InvalidOrderStateException(
+                            "Для самовывоза необходимо указать точку получения");
+                }
+                warehousePointService.getActivePoint(request.warehousePointId());
+                yield null;
             }
-            warehousePointService.getActivePoint(request.warehousePointId());
-        } else {
-            if (request.deliveryAddress() == null) {
-                throw new InvalidOrderStateException(
-                        "Для доставки необходимо указать адрес");
+            case CARRIER_ADDRESS -> {
+                if (request.carrierCode() == null) {
+                    throw new InvalidOrderStateException("Выберите транспортную компанию");
+                }
+                Carrier carrier = carrierService.requireAddressDelivery(request.carrierCode());
+                requireDeliveryAddress(request);
+                yield carrier.getName();
             }
+            case SUPPLIER_DELIVERY -> {
+                requireDeliveryAddress(request);
+                yield null;
+            }
+        };
+    }
+
+    private void requireDeliveryAddress(HasDeliveryInfo request) {
+        if (request.deliveryAddress() == null) {
+            throw new InvalidOrderStateException("Для доставки необходимо указать адрес");
+        }
+    }
+
+    /**
+     * «Доставка поставщиком» назначает только менеджер. Клиент может лишь оставить её,
+     * если заказ уже в этом способе.
+     *
+     * @param current текущий способ заказа; null — заказ создаётся
+     */
+    private void rejectSupplierDelivery(DeliveryMethod requested, DeliveryMethod current) {
+        if (requested == DeliveryMethod.SUPPLIER_DELIVERY && current != DeliveryMethod.SUPPLIER_DELIVERY) {
+            throw new InvalidOrderStateException(
+                    "Способ «Доставка поставщиком» назначает менеджер — выберите другой способ");
         }
     }
 

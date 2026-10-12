@@ -58,6 +58,7 @@ public class OrderKafkaProducer {
                 .pickupPoint(buildPickupPoint(order))
                 .documentType(documentType)
                 .documentFileName(documentFileName)
+                .carrierName(order.getCarrierName())
                 .build();
 
         kafkaTemplate.send(topics.getOrderEvents(), order.getId().toString(), event);

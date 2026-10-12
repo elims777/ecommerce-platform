@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import ru.rfsnab.orderservice.delivery.CarrierCode;
 import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
@@ -48,6 +49,14 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DeliveryMethod deliveryMethod;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "carrier_code", length = 20)
+    private CarrierCode carrierCode;
+
+    // Снимок carriers.name на момент заказа
+    @Column(name = "carrier_name", length = 100)
+    private String carrierName;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;

@@ -2,6 +2,8 @@ package ru.rfsnab.orderservice.models.dto.order;
 
 import lombok.Builder;
 
+import java.math.BigDecimal;
+
 /**
  * DTO для отображения точки склада / самовывоза покупателю.
  */
@@ -16,5 +18,7 @@ public record WarehousePointDto(
         String phone,
         String workingHours,
         String description,
+        BigDecimal latitude,
+        BigDecimal longitude,
         boolean active
 ) {}

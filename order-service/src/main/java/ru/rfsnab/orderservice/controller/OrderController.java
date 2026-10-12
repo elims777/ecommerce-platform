@@ -220,7 +220,7 @@ public class OrderController {
     private OrderDto enrichAndMap(Order order) {
         WarehousePoint warehousePoint = null;
         if (order.getWarehousePointId() != null) {
-            warehousePoint = warehousePointService.getActivePoint(order.getWarehousePointId());
+            warehousePoint = warehousePointService.getPoint(order.getWarehousePointId());
         }
         return OrderMapper.toDto(order, warehousePoint);
     }

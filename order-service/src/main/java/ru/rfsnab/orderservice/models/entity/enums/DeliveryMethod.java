@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public enum DeliveryMethod {
     PICKUP("Самовывоз"),
+    CARRIER_ADDRESS("Доставка до адреса"),
     SUPPLIER_DELIVERY("Доставка поставщиком");
 
     private final String displayName;

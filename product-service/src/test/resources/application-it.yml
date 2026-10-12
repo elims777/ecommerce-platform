@@ -14,6 +14,10 @@ spring:
   flyway:
     enabled: true
 
+  # In-memory кэш: IT-тесты не должны требовать запущенный Redis
+  cache:
+    type: simple
+
 # === JWT (тестовые значения) ===
 jwt:
   secret: dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtYXV0aGVudGljYXRpb24tdGVzdGluZy1wcm9kdWN0LXNlcnZpY2U=

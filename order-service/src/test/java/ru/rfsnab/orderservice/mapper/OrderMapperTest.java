@@ -3,6 +3,7 @@ package ru.rfsnab.orderservice.mapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import ru.rfsnab.orderservice.delivery.CarrierCode;
 import ru.rfsnab.orderservice.models.dto.order.AddressDto;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.OrderDto;
@@ -44,13 +45,15 @@ class OrderMapperTest {
             assertThat(dto.orderNumber()).isEqualTo("ABC-00001");
             assertThat(dto.status()).isEqualTo(OrderStatus.CREATED);
             assertThat(dto.paymentMethod()).isEqualTo(PaymentMethod.CARD);
-            assertThat(dto.deliveryMethod()).isEqualTo(DeliveryMethod.SUPPLIER_DELIVERY);
+            assertThat(dto.deliveryMethod()).isEqualTo(DeliveryMethod.CARRIER_ADDRESS);
             assertThat(dto.totalAmount()).isEqualByComparingTo("15000.00");
             assertThat(dto.items()).hasSize(1);
             assertThat(dto.deliveryAddress()).isNotNull();
             assertThat(dto.deliveryAddress().city()).isEqualTo("Сыктывкар");
             assertThat(dto.warehousePoint()).isNull();
             assertThat(dto.trackingNumber()).isEqualTo("TRACK-123");
+            assertThat(dto.carrierCode()).isEqualTo(CarrierCode.DELLIN);
+            assertThat(dto.carrierName()).isEqualTo("Деловые Линии");
         }
 
         @Test
@@ -112,6 +115,22 @@ class OrderMapperTest {
     class ToEntityTests {
 
         @Test
+        @DisplayName("CARRIER_ADDRESS — переносит carrierCode")
+        void shouldMapCarrierCode() {
+            AddressDto address = AddressDto.builder()
+                    .city("Новосибирск").street("Ленина").building("1")
+                    .phone("+79001234567").recipientName("Иванов Иван").build();
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    address, null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
+
+            Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
+
+            assertThat(order.getCarrierCode()).isEqualTo(CarrierCode.DELLIN);
+            assertThat(order.getDeliveryAddress().getCity()).isEqualTo("Новосибирск");
+        }
+
+        @Test
         @DisplayName("маппит CreateOrderRequest для DELIVERY в Order")
         void shouldMapDeliveryRequestToEntity() {
             AddressDto address = AddressDto.builder()
@@ -121,7 +140,7 @@ class OrderMapperTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    address, null, null, null, "Комментарий", null, null, null, null);
+                    address, null, null, null, "Комментарий", null, null, null, null, null);
 
             Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
@@ -140,7 +159,7 @@ class OrderMapperTest {
         void shouldMapPickupRequestToEntity() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CASH_ON_DELIVERY, DeliveryMethod.PICKUP,
-                    null, 1L, "Петров Петр", "+79001112233", null, null, null, null, null);
+                    null, 1L, "Петров Петр", "+79001112233", null, null, null, null, null, null);
 
             Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
@@ -156,7 +175,7 @@ class OrderMapperTest {
         void shouldNotPopulateItemsAndTotal() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.SBP, DeliveryMethod.PICKUP,
-                    null, 1L, null, null, null, null, null, null, null);
+                    null, 1L, null, null, null, null, null, null, null, null);
 
             Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
@@ -175,7 +194,8 @@ class OrderMapperTest {
                 .orderNumber("ABC-00001")
                 .status(OrderStatus.CREATED)
                 .paymentMethod(PaymentMethod.CARD)
-                .deliveryMethod(DeliveryMethod.SUPPLIER_DELIVERY)
+                .deliveryMethod(DeliveryMethod.CARRIER_ADDRESS)
+                .carrierCode(CarrierCode.DELLIN).carrierName("Деловые Линии")
                 .totalAmount(new BigDecimal("15000.00"))
                 .deliveryAddress(DeliveryAddress.builder()
                         .city("Сыктывкар").street("Октябрьский проспект")

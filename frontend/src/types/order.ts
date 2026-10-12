@@ -1,3 +1,5 @@
+import type { CarrierCode } from './delivery';
+
 /** Способы оплаты */
 export enum PaymentMethod {
     CARD = 'CARD',
@@ -16,13 +18,21 @@ export const PaymentMethodLabels: Record<PaymentMethod, string> = {
 /** Способы доставки */
 export enum DeliveryMethod {
     PICKUP = 'PICKUP',
+    CARRIER_ADDRESS = 'CARRIER_ADDRESS',
     SUPPLIER_DELIVERY = 'SUPPLIER_DELIVERY',
 }
 
 export const DeliveryMethodLabels: Record<DeliveryMethod, string> = {
     [DeliveryMethod.PICKUP]: 'Самовывоз',
+    [DeliveryMethod.CARRIER_ADDRESS]: 'Доставка до адреса (ТК)',
     [DeliveryMethod.SUPPLIER_DELIVERY]: 'Доставка поставщиком',
 };
+
+/** Способы, которые клиент выбирает сам. SUPPLIER_DELIVERY назначает только менеджер. */
+export const CLIENT_DELIVERY_METHODS: DeliveryMethod[] = [
+    DeliveryMethod.PICKUP,
+    DeliveryMethod.CARRIER_ADDRESS,
+];
 
 /** Адрес доставки */
 export interface AddressDto {
@@ -76,6 +86,7 @@ export interface CreateOrderRequest {
     deliveryMethod: DeliveryMethod;
     deliveryAddress?: AddressDto;
     warehousePointId?: number;
+    carrierCode?: CarrierCode;
     comment?: string;
     companyName?: string;
     inn?: string;
@@ -107,6 +118,7 @@ export interface UpdateOrderRequest {
     deliveryMethod: DeliveryMethod;
     deliveryAddress?: AddressDto;
     warehousePointId?: number;
+    carrierCode?: CarrierCode;
     items: UpdateOrderItemRequest[];
     comment?: string;
 }
@@ -123,6 +135,8 @@ export interface WarehousePointDto {
     workingHours: string;
     description: string;
     active: boolean;
+    latitude?: number | null;
+    longitude?: number | null;
 }
 
 /** Полный заказ — id это UUID (string) */
@@ -137,6 +151,8 @@ export interface OrderDto {
     items: OrderItemDto[];
     deliveryAddress?: AddressDto;
     warehousePoint?: WarehousePointDto;
+    carrierCode?: CarrierCode | null;
+    carrierName?: string | null;
     trackingNumber?: string;
     customerEmail: string;
     customerName?: string | null;

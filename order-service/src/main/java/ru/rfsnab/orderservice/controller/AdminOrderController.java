@@ -165,7 +165,7 @@ public class AdminOrderController {
 
     private OrderDto enrichAndMap(Order order) {
         var warehousePoint = order.getWarehousePointId() != null
-                ? warehousePointService.getActivePoint(order.getWarehousePointId())
+                ? warehousePointService.getPoint(order.getWarehousePointId())
                 : null;
         return OrderMapper.toDto(order, warehousePoint);
     }

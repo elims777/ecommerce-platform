@@ -34,6 +34,8 @@ public class OrderMapper {
                 warehousePoint != null
                         ? WarehousePointMapper.mapToWarehousePointDto(warehousePoint)
                         : null,
+                order.getCarrierCode(),
+                order.getCarrierName(),
                 order.getTrackingNumber(),
                 order.getCustomerEmail(),
                 order.getCustomerName(),
@@ -101,6 +103,9 @@ public class OrderMapper {
         } else {
             order.setDeliveryAddress(
                     AddressMapper.mapToDeliveryAddress(request.deliveryAddress()));
+            if (request.deliveryMethod() == DeliveryMethod.CARRIER_ADDRESS) {
+                order.setCarrierCode(request.carrierCode());
+            }
         }
 
         return order;

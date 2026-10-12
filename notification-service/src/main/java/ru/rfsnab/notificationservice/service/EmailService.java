@@ -81,6 +81,7 @@ public class EmailService {
         model.put("pickupPoint", event.pickupPoint());
         model.put("pickupLine", formatPickupAddress(event.pickupPoint()));
         model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
+        model.put("carrierName", event.carrierName());
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
         model.put("trackUrl", frontendUrl + "/orders");
@@ -108,6 +109,7 @@ public class EmailService {
         model.put("pickupPoint", event.pickupPoint());
         model.put("pickupLine", formatPickupAddress(event.pickupPoint()));
         model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
+        model.put("carrierName", event.carrierName());
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
         model.put("adminUrl", frontendUrl + "/admin/orders");
@@ -444,6 +446,7 @@ public class EmailService {
         return switch (deliveryMethod) {
             case "PICKUP" -> "Самовывоз";
             case "SUPPLIER_DELIVERY" -> "Доставка поставщиком";
+            case "CARRIER_ADDRESS" -> "Доставка до адреса (ТК)";
             default -> deliveryMethod;
         };
     }

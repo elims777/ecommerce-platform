@@ -1,5 +1,6 @@
 import { Form, Radio, Select, Typography, Divider, Spin } from 'antd';
-import { DeliveryMethod, DeliveryMethodLabels } from '@/types/order';
+import { CLIENT_DELIVERY_METHODS, DeliveryMethod, DeliveryMethodLabels } from '@/types/order';
+import CarrierPicker from './CarrierPicker';
 import type { WarehousePointDto } from '@/types/order';
 
 const { Text } = Typography;
@@ -26,14 +27,17 @@ const DeliveryStep = ({
         >
             <Radio.Group
                 onChange={() => onDeliveryMethodChange(recipientsCount)}
+                style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
             >
-                {Object.entries(DeliveryMethodLabels).map(([key, label]) => (
-                    <Radio.Button key={key} value={key}>
-                        {label}
+                {CLIENT_DELIVERY_METHODS.map((method) => (
+                    <Radio.Button key={method} value={method}>
+                        {DeliveryMethodLabels[method]}
                     </Radio.Button>
                 ))}
             </Radio.Group>
         </Form.Item>
+
+        {deliveryMethod === DeliveryMethod.CARRIER_ADDRESS && <CarrierPicker />}
 
         {deliveryMethod === DeliveryMethod.PICKUP && (
             <>

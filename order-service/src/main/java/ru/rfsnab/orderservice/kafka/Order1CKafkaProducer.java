@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import ru.rfsnab.orderservice.models.dto.event.Order1CExportEvent;
 import ru.rfsnab.orderservice.models.entity.DeliveryAddress;
 import ru.rfsnab.orderservice.models.entity.Order;
@@ -74,18 +75,18 @@ public class Order1CKafkaProducer {
     }
 
     /**
-     * Собирает комментарий заказа для 1С: способ доставки + адрес (доставки или склада)
-     * + получатель. Дублирует данные, которые 1С не показывает в карточке контрагента,
-     * чтобы менеджер видел всё в одном месте.
+     * Собирает комментарий заказа для 1С: способ доставки (+ ТК) + адрес (доставки или склада)
+     * + получатель; затем, если есть, «---» и комментарий клиента. Блок доставки — первым,
+     * чтобы менеджер видел его сразу.
      */
     private String buildComment(Order order, DeliveryAddress address, boolean isPickup) {
         List<String> lines = new ArrayList<>();
 
-        if (order.getComment() != null && !order.getComment().isBlank()) {
-            lines.add(order.getComment());
+        String method = order.getDeliveryMethod().getDisplayName();
+        if (order.getCarrierName() != null) {
+            method += " — " + order.getCarrierName();
         }
-
-        lines.add("Способ доставки: " + order.getDeliveryMethod().getDisplayName());
+        lines.add("Способ доставки: " + method);
 
         if (isPickup) {
             if (order.getWarehousePointId() != null) {
@@ -106,17 +107,22 @@ public class Order1CKafkaProducer {
             }
         }
 
+        if (order.getComment() != null && !order.getComment().isBlank()) {
+            lines.add("---");
+            lines.add(order.getComment());
+        }
+
         return String.join("\n", lines);
     }
 
     /** Склеивает непустые части адреса через запятую; квартиру — с префиксом «кв.». */
     private String joinAddress(String postalCode, String city, String street, String building, String apartment) {
         List<String> parts = new ArrayList<>();
-        if (postalCode != null) parts.add(postalCode);
-        if (city != null) parts.add(city);
-        if (street != null) parts.add(street);
-        if (building != null) parts.add("д. " + building);
-        if (apartment != null) parts.add("кв. " + apartment);
+        if (StringUtils.hasText(postalCode)) parts.add(postalCode);
+        if (StringUtils.hasText(city)) parts.add(city);
+        if (StringUtils.hasText(street)) parts.add(street);
+        if (StringUtils.hasText(building)) parts.add("д. " + building);
+        if (StringUtils.hasText(apartment)) parts.add("кв. " + apartment);
         return String.join(", ", parts);
     }
 

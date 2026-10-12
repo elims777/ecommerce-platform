@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -36,7 +37,7 @@ public class WarehousePoint {
     @Column(nullable = false, length = 20)
     private String building;
 
-    @Column(nullable = false, length = 10)
+    @Column(length = 10)
     private String postalCode;
 
     @Column(nullable = false, length = 20)
@@ -47,6 +48,12 @@ public class WarehousePoint {
 
     @Column(length = 500)
     private String description;
+
+    @Column(precision = 9, scale = 6)
+    private BigDecimal latitude;
+
+    @Column(precision = 9, scale = 6)
+    private BigDecimal longitude;
 
     @Column(nullable = false)
     @Builder.Default

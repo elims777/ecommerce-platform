@@ -4,9 +4,11 @@ import { DeleteOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { updateOrder } from '@/api/orders';
 import { getWarehousePoints } from '@/api/warehouse';
-import { DeliveryMethod, DeliveryMethodLabels, PaymentMethod, PaymentMethodLabels } from '@/types/order';
+import { CLIENT_DELIVERY_METHODS, DeliveryMethod, DeliveryMethodLabels, PaymentMethod, PaymentMethodLabels } from '@/types/order';
+import CarrierPicker from '@/features/checkout/CarrierPicker';
 import { extractEnumCode } from '@/utils/enumUtils';
 import type { OrderDto, UpdateOrderItemRequest } from '@/types/order';
+import type { CarrierCode } from '@/types/delivery';
 import type { AxiosError } from 'axios';
 
 const { Text } = Typography;
@@ -22,6 +24,7 @@ interface EditOrderFormValues {
     paymentMethod: PaymentMethod;
     deliveryMethod: DeliveryMethod;
     warehousePointId?: number;
+    carrierCode?: CarrierCode;
     recipientName?: string;
     phone?: string;
     city?: string;
@@ -52,6 +55,7 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
             paymentMethod: extractEnumCode(order.paymentMethod) as PaymentMethod,
             deliveryMethod: extractEnumCode(order.deliveryMethod) as DeliveryMethod,
             warehousePointId: order.warehousePoint?.id,
+            carrierCode: order.carrierCode ?? undefined,
             recipientName: order.deliveryAddress?.recipientName,
             phone: order.deliveryAddress?.phone,
             city: order.deliveryAddress?.city,
@@ -68,7 +72,9 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
             paymentMethod: values.paymentMethod,
             deliveryMethod: values.deliveryMethod,
             warehousePointId: values.deliveryMethod === DeliveryMethod.PICKUP ? values.warehousePointId : undefined,
-            deliveryAddress: values.deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY ? {
+            carrierCode: values.deliveryMethod === DeliveryMethod.CARRIER_ADDRESS ? values.carrierCode : undefined,
+            deliveryAddress: (values.deliveryMethod === DeliveryMethod.CARRIER_ADDRESS
+                || values.deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY) ? {
                 recipientName: values.recipientName!,
                 phone: values.phone!,
                 city: values.city!,
@@ -108,6 +114,14 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
         mutation.mutate(values);
     };
 
+    // SUPPLIER_DELIVERY назначает менеджер: клиент видит его, только если заказ уже в этом способе
+    const orderMethod = extractEnumCode(order.deliveryMethod) as DeliveryMethod;
+    const methods = orderMethod === DeliveryMethod.SUPPLIER_DELIVERY
+        ? [...CLIENT_DELIVERY_METHODS, DeliveryMethod.SUPPLIER_DELIVERY]
+        : CLIENT_DELIVERY_METHODS;
+    const needsAddress = deliveryMethod === DeliveryMethod.CARRIER_ADDRESS
+        || deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY;
+
     return (
         <Modal
             open={open}
@@ -126,9 +140,9 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
                 </Form.Item>
 
                 <Form.Item name="deliveryMethod" label="Способ доставки" rules={[{ required: true }]}>
-                    <Radio.Group>
-                        {Object.entries(DeliveryMethodLabels).map(([key, label]) => (
-                            <Radio.Button key={key} value={key}>{label}</Radio.Button>
+                    <Radio.Group style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {methods.map((method) => (
+                            <Radio.Button key={method} value={method}>{DeliveryMethodLabels[method]}</Radio.Button>
                         ))}
                     </Radio.Group>
                 </Form.Item>
@@ -145,7 +159,9 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
                     </Form.Item>
                 )}
 
-                {deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY && (
+                {deliveryMethod === DeliveryMethod.CARRIER_ADDRESS && <CarrierPicker />}
+
+                {needsAddress && (
                     <>
                         <Form.Item name="recipientName" label="Получатель" rules={[{ required: true, message: 'Укажите получателя' }]}>
                             <Input />
