@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
 import ru.rfsnab.orderservice.kafka.OrderKafkaProducer;
 import ru.rfsnab.orderservice.models.entity.Order;
@@ -17,11 +18,13 @@ import ru.rfsnab.orderservice.repository.OrderRepository;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 
 /**
  * Сквозной сценарий с настоящими ShipmentService, OrderStatusAdvancer и OrderService на реальной БД:
@@ -40,6 +43,9 @@ class ShipmentStatusFlowIntegrationTest extends BaseIntegrationTest {
 
     @MockitoBean
     private OrderKafkaProducer kafkaProducer;
+    /** Ручная накладная проверяется в ТК до сохранения: реальный ПЭК не вызываем. */
+    @MockitoSpyBean
+    private PecClient pecClient;
 
     @AfterEach
     void cleanUp() {
@@ -55,6 +61,8 @@ class ShipmentStatusFlowIntegrationTest extends BaseIntegrationTest {
         Order order = orderRepository.save(Order.builder().userId(1L).orderNumber("FLOW-1").status(OrderStatus.PAID)
                 .paymentMethod(PaymentMethod.INVOICE).deliveryMethod(DeliveryMethod.CARRIER_ADDRESS)
                 .totalAmount(BigDecimal.TEN).customerEmail("a@b.ru").customerType(CustomerType.B2B).build());
+
+        doReturn(Map.of("FLOW-100", new CarrierShipmentStatus(null, null, null, null))).when(pecClient).fetchStatuses(any());
 
         ShipmentDto added = shipmentService.add(order.getId(), new AddShipmentRequest(CarrierCode.PEC, "FLOW-100", ShipmentMode.SINGLE), 7L);
 

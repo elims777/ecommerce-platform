@@ -15,6 +15,8 @@ import java.util.Locale;
  * Фильтры журнала отправлений. Пустые (null/false) условия не применяются.
  *
  * @param city         подстрока города отправления или назначения без учёта регистра
+ * @param counterparty подстрока в отправителе или получателе без учёта регистра
+ * @param search       подстрока в номере накладной или номере заказа сайта без учёта регистра
  * @param from         начало периода (включительно); период считается по дате отгрузки, а без неё по дате внесения
  * @param to           конец периода (исключительно)
  * @param problem      только со статусом PROBLEM
@@ -27,6 +29,8 @@ public record ShipmentFilter(
         ShipmentDirection direction,
         ShipmentStatusCode statusCode,
         String city,
+        String counterparty,
+        String search,
         Instant from,
         Instant to,
         boolean problem,
@@ -63,7 +67,23 @@ public record ShipmentFilter(
                         cb.like(cb.lower(root.get("routeFrom")), pattern, LIKE_ESCAPE),
                         cb.like(cb.lower(root.get("routeTo")), pattern, LIKE_ESCAPE)));
             }
+            if (counterparty != null && !counterparty.isBlank()) {
+                String pattern = "%" + escapeLike(counterparty.trim().toLowerCase(Locale.ROOT)) + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("sender")), pattern, LIKE_ESCAPE),
+                        cb.like(cb.lower(root.get("receiver")), pattern, LIKE_ESCAPE)));
+            }
+            if (search != null && !search.isBlank()) {
+                String pattern = "%" + escapeLike(search.trim().toLowerCase(Locale.ROOT)) + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("waybillNumber")), pattern, LIKE_ESCAPE),
+                        cb.like(cb.lower(order.get("orderNumber")), pattern, LIKE_ESCAPE)));
+            }
             var date = cb.<Instant>coalesce(root.get("shippedAt"), root.get("createdAt"));
+            if (!countQuery) {
+                // явный sort из Pageable Spring Data ставит поверх; без него — свежие отгрузки сверху
+                query.orderBy(cb.desc(date), cb.desc(root.get("id")));
+            }
             if (from != null) {
                 predicates.add(cb.greaterThanOrEqualTo(date, from));
             }

@@ -6,6 +6,7 @@ import org.springframework.web.client.ResourceAccessException;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,6 +14,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +52,16 @@ class ShipmentJournalImporterTest {
     }
 
     @Test
+    @DisplayName("несколько компаний через запятую: любая из них даёт направление")
+    void severalCompanyInns() {
+        ShipmentJournalImporter importer = importer(INN + ", 1101164021");
+
+        assertThat(importer.directionOf(item("1", "1101164021", "5400"))).isEqualTo(ShipmentDirection.OUTGOING);
+        assertThat(importer.directionOf(item("2", "5400", "1101164021"))).isEqualTo(ShipmentDirection.INCOMING);
+        assertThat(importer.directionOf(item("3", INN, "1101164021"))).isEqualTo(ShipmentDirection.OUTGOING);
+    }
+
+    @Test
     @DisplayName("ИНН компании не задан — направление всегда UNKNOWN")
     void blankInnMeansUnknown() {
         assertThat(importer("").directionOf(item("1", INN, null))).isEqualTo(ShipmentDirection.UNKNOWN);
@@ -68,6 +80,23 @@ class ShipmentJournalImporterTest {
         verify(service).upsertFromJournal(CarrierCode.DELLIN, outgoing, ShipmentDirection.OUTGOING);
         verify(service).upsertFromJournal(CarrierCode.DELLIN, incoming, ShipmentDirection.INCOMING);
         verify(pec, never()).fetchJournal(any());
+    }
+
+    @Test
+    @DisplayName("повторный запуск при идущем импорте пропускается; после завершения запуск снова возможен")
+    void concurrentRunSkipped() {
+        ShipmentJournalImporter importer = importer(INN);
+        AtomicReference<Boolean> nested = new AtomicReference<>();
+        when(dellin.fetchJournal(any(Instant.class))).thenAnswer(inv -> {
+            nested.set(importer.importAll());
+            return List.of();
+        });
+
+        assertThat(importer.importAll()).isTrue();
+
+        assertThat(nested.get()).isFalse();
+        verify(dellin, times(1)).fetchJournal(any(Instant.class));
+        assertThat(importer.importAll()).isTrue();
     }
 
     @Test

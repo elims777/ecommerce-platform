@@ -127,10 +127,10 @@ public class AdminOrderController {
                 .body(shipmentService.add(orderId, request, getCurrentUserId(authentication)));
     }
 
-    /** Удалить ошибочно внесённую накладную. */
-    @DeleteMapping("/{orderId}/shipments/{shipmentId}")
-    public ResponseEntity<Void> deleteShipment(@PathVariable UUID orderId, @PathVariable Long shipmentId) {
-        shipmentService.delete(orderId, shipmentId);
+    /** Отвязать накладную от заказа; сама накладная остаётся в журнале отправлений. */
+    @PostMapping("/{orderId}/shipments/{shipmentId}/unlink")
+    public ResponseEntity<Void> unlinkShipment(@PathVariable UUID orderId, @PathVariable Long shipmentId) {
+        shipmentService.unlink(orderId, shipmentId);
         return ResponseEntity.noContent().build();
     }
 

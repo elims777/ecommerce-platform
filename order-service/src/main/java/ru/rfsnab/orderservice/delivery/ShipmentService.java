@@ -51,42 +51,44 @@ public class ShipmentService {
     private final TransactionTemplate transactionTemplate;
 
     /**
-     * Вносит накладную к заказу и сразу проверяет её в ТК (если ТК поддерживает статусы).
+     * Вносит накладную к заказу, предварительно проверив её в ТК: ненайденная накладная не сохраняется.
      * Первая накладная заказа требует режим; вторая при SINGLE — переключения на MULTIPLE.
-     * Недоступность ТК при проверке не мешает внесению: накладную подхватит опрос.
+     * Статус, полученный при проверке, применяется сразу, повторного запроса к ТК нет.
      *
+     * @throws WaybillNotFoundInCarrierException  ТК не знает такую накладную
+     * @throws CarrierApiException                ТК недоступна, ответила непонятно или не поддерживает опрос статусов
      * @throws InvalidOrderStateException          первая накладная без режима
      * @throws ShipmentModeSwitchRequiredException вторая накладная при режиме SINGLE без shipmentMode=MULTIPLE
      * @throws ShipmentAlreadyExistsException      такая накладная этой ТК уже есть
      * @throws OrderNotFoundException              заказа нет
      */
     public ShipmentDto add(UUID orderId, AddShipmentRequest request, Long userId) {
-        Long id = transactionTemplate.execute(status -> create(orderId, request, userId));
-        CarrierClient client = clientFor(request.carrierCode());
-        if (client.supportsStatusTracking()) {
-            try {
-                return refreshChecked(id, client);
-            } catch (CarrierApiException e) {
-                log.warn("Проверка накладной {} в {} не удалась, подхватит опрос: {}",
-                        request.waybillNumber(), request.carrierCode(), e.getMessage());
-            }
+        String waybill = request.waybillNumber().trim();
+        CarrierShipmentStatus status = fetchStatuses(clientFor(request.carrierCode()), waybill).get(waybill);
+        if (status == null) {
+            String carrierName = carrierRepository.findById(request.carrierCode())
+                    .map(Carrier::getName).orElse(request.carrierCode().name());
+            throw new WaybillNotFoundInCarrierException("Накладная " + waybill + " не найдена в " + carrierName);
         }
-        return toDto(shipmentRepository.findWithOrderById(id).orElseThrow());
+        Long id = transactionTemplate.execute(tx -> create(orderId, request, userId));
+        return applyPolled(id, Optional.of(status), true);
     }
 
     /**
-     * Удаляет ошибочно внесённую накладную заказа. Если накладных не осталось — сбрасывает режим и признак
-     * «все внесены»; при режиме MULTIPLE признак сбрасывается всегда. Статус заказа не откатывается.
+     * Отвязывает накладную от заказа: запись остаётся в журнале. Если накладных у заказа не осталось —
+     * сбрасывает режим и признак «все внесены»; при режиме MULTIPLE признак сбрасывается всегда.
+     * Статус заказа не откатывается.
      *
      * @throws ShipmentNotFoundException если у этого заказа такой накладной нет
      */
-    public void delete(UUID orderId, Long shipmentId) {
+    public void unlink(UUID orderId, Long shipmentId) {
         transactionTemplate.executeWithoutResult(status -> {
             Shipment shipment = shipmentRepository.findWithOrderById(shipmentId)
                     .filter(s -> s.getOrder() != null && s.getOrder().getId().equals(orderId))
                     .orElseThrow(() -> new ShipmentNotFoundException("Отправление не найдено: " + shipmentId));
             Order order = shipment.getOrder();
-            shipmentRepository.delete(shipment);
+            shipment.setOrder(null);
+            shipmentRepository.save(shipment);
             // статус заказа назад не откатываем; сбрасываем только признаки внесения
             if (shipmentRepository.countByOrderId(orderId) == 0) {
                 order.setShipmentMode(null);
@@ -172,7 +174,7 @@ public class ShipmentService {
                     .orElseThrow(() -> new OrderNotFoundException("Заказ не найден по номеру: " + orderNumber.trim()));
             if (shipment.getOrder() != null && !shipment.getOrder().getId().equals(order.getId())) {
                 throw new ShipmentAlreadyExistsException("Накладная уже привязана к заказу "
-                        + shipment.getOrder().getOrderNumber() + " — сначала удалите её там");
+                        + shipment.getOrder().getOrderNumber() + " — сначала отвяжите её там");
             }
             shipment.setOrder(order);
             shipmentRepository.save(shipment);
@@ -214,7 +216,8 @@ public class ShipmentService {
     /**
      * Добавляет или обновляет отправление из журнала ТК (upsert по ТК и номеру накладной) в отдельной транзакции.
      * Ручную накладную журнал не перетирает: обновляются только данные маршрута, стороны и статус.
-     * Заказ привязывается автоматически, если номер заказа клиента в журнале совпал с номером заказа на сайте.
+     * Заказ привязывается автоматически только у исходящих: номер заказа клиента в журнале совпал с номером заказа на сайте
+     * (у входящих там номер заказа поставщика).
      */
     public void upsertFromJournal(CarrierCode carrier, JournalItem item, ShipmentDirection direction) {
         transactionTemplate.executeWithoutResult(tx -> {
@@ -235,7 +238,8 @@ public class ShipmentService {
             setIfPresent(item.shippedAt(), shipment::setShippedAt);
             setIfPresent(item.estimatedDeliveryAt(), shipment::setEstimatedDeliveryAt);
             boolean linked = false;
-            if (shipment.getOrder() == null && item.siteOrderNumber() != null) {
+            if (shipment.getOrder() == null && shipment.getDirection() == ShipmentDirection.OUTGOING
+                    && item.siteOrderNumber() != null) {
                 Optional<Order> order = orderRepository.findByOrderNumber(item.siteOrderNumber().trim());
                 order.ifPresent(shipment::setOrder);
                 linked = order.isPresent();
@@ -290,13 +294,16 @@ public class ShipmentService {
     private ShipmentDto refreshChecked(Long shipmentId, CarrierClient client) {
         Shipment shipment = shipmentRepository.findWithOrderById(shipmentId).orElseThrow();
         String waybill = shipment.getWaybillNumber();
-        Map<String, CarrierShipmentStatus> statuses;
+        return applyPolled(shipmentId, Optional.ofNullable(fetchStatuses(client, waybill).get(waybill)), true);
+    }
+
+    /** Запрос статуса одной накладной; сетевая ошибка превращается в CarrierApiException (502). */
+    private Map<String, CarrierShipmentStatus> fetchStatuses(CarrierClient client, String waybill) {
         try {
-            statuses = client.fetchStatuses(List.of(waybill));
+            return client.fetchStatuses(List.of(waybill));
         } catch (RestClientException e) {
             throw new CarrierApiException("Транспортная компания недоступна или вернула ошибку");
         }
-        return applyPolled(shipmentId, Optional.ofNullable(statuses.get(waybill)), true);
     }
 
     /** @return изменился ли статус отправления */

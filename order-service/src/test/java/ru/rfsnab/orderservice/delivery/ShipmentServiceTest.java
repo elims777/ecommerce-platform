@@ -6,11 +6,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.client.ResourceAccessException;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
 import ru.rfsnab.orderservice.exception.OrderNotFoundException;
@@ -29,10 +31,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -47,6 +52,10 @@ import static org.mockito.Mockito.when;
 class ShipmentServiceTest extends BaseIntegrationTest {
 
     private static final AtomicInteger COUNTER = new AtomicInteger();
+
+    /** По умолчанию ТК знает любую накладную, но без статуса: проверка при внесении проходит, заказ не двигается. */
+    private static final Answer<Map<String, CarrierShipmentStatus>> FOUND = inv -> inv.<List<String>>getArgument(0).stream()
+            .collect(Collectors.toMap(Function.identity(), w -> new CarrierShipmentStatus(null, null, null, null)));
 
     @Autowired
     private ShipmentRepository shipmentRepository;
@@ -68,9 +77,11 @@ class ShipmentServiceTest extends BaseIntegrationTest {
         dellin = mock(CarrierClient.class);
         when(dellin.code()).thenReturn(CarrierCode.DELLIN);
         when(dellin.supportsStatusTracking()).thenReturn(true);
+        when(dellin.fetchStatuses(any())).thenAnswer(FOUND);
         CarrierClient pec = mock(CarrierClient.class);
         when(pec.code()).thenReturn(CarrierCode.PEC);
         when(pec.supportsStatusTracking()).thenReturn(false);
+        when(pec.fetchStatuses(any())).thenAnswer(FOUND);
         service = new ShipmentService(shipmentRepository, carrierRepository, orderRepository,
                 List.of(dellin, pec), advancer, kafka, transactionTemplate);
     }
@@ -118,7 +129,7 @@ class ShipmentServiceTest extends BaseIntegrationTest {
         }
 
         @Test
-        @DisplayName("первая накладная: MANUAL, created_by, режим заказа, продвижение статуса; ТК без трекинга не опрашивается")
+        @DisplayName("первая накладная: MANUAL, created_by, режим заказа, продвижение статуса; проверка в ТК проходит")
         void firstWaybillStored() {
             Order order = order(OrderStatus.PAID);
 
@@ -149,28 +160,34 @@ class ShipmentServiceTest extends BaseIntegrationTest {
         }
 
         @Test
-        @DisplayName("ТК не знает номер: NOT_FOUND и not_found_since")
-        void unknownWaybillMarkedNotFound() {
+        @DisplayName("ТК не знает номер: WaybillNotFoundInCarrierException с названием ТК, ничего не сохранено, заказ не тронут")
+        void unknownWaybillRejected() {
             Order order = order(OrderStatus.PAID);
             when(dellin.fetchStatuses(List.of("404"))).thenReturn(Map.of());
 
-            ShipmentDto dto = service.add(order.getId(), add(CarrierCode.DELLIN, "404", ShipmentMode.SINGLE), 7L);
+            assertThatThrownBy(() -> service.add(order.getId(), add(CarrierCode.DELLIN, "404", ShipmentMode.SINGLE), 7L))
+                    .isInstanceOf(WaybillNotFoundInCarrierException.class)
+                    .hasMessage("Накладная 404 не найдена в Деловые Линии");
 
-            assertThat(dto.notFound()).isTrue();
-            assertThat(dto.carrierStatusCode()).isEqualTo(ShipmentStatusCode.NOT_FOUND);
-            assertThat(shipmentRepository.findById(dto.id()).orElseThrow().getNotFoundSince()).isNotNull();
+            assertThat(shipmentRepository.count()).isZero();
+            assertThat(orderRepository.findById(order.getId()).orElseThrow().getShipmentMode()).isNull();
+            verify(advancer, never()).advance(any(Order.class));
         }
 
         @Test
-        @DisplayName("ТК недоступна при проверке: накладная всё равно внесена")
-        void carrierFailureDoesNotBlockAdding() {
+        @DisplayName("ТК недоступна или не поддерживает проверку: CarrierApiException (502), ничего не сохранено")
+        void carrierFailureRejected() {
             Order order = order(OrderStatus.PAID);
-            when(dellin.fetchStatuses(any())).thenThrow(new CarrierApiException("ТК недоступна"));
+            doThrow(new CarrierApiException("ТК недоступна")).when(dellin).fetchStatuses(any());
 
-            ShipmentDto dto = service.add(order.getId(), add(CarrierCode.DELLIN, "300", ShipmentMode.SINGLE), 7L);
+            assertThatThrownBy(() -> service.add(order.getId(), add(CarrierCode.DELLIN, "300", ShipmentMode.SINGLE), 7L))
+                    .isInstanceOf(CarrierApiException.class);
 
-            assertThat(dto.id()).isNotNull();
-            assertThat(dto.carrierStatusCode()).isNull();
+            doThrow(new ResourceAccessException("timeout")).when(dellin).fetchStatuses(any());
+
+            assertThatThrownBy(() -> service.add(order.getId(), add(CarrierCode.DELLIN, "300", ShipmentMode.SINGLE), 7L))
+                    .isInstanceOf(CarrierApiException.class);
+            assertThat(shipmentRepository.count()).isZero();
         }
 
         @Test
@@ -222,22 +239,24 @@ class ShipmentServiceTest extends BaseIntegrationTest {
     }
 
     @Nested
-    @DisplayName("Удаление, complete, привязка")
+    @DisplayName("Отвязка, complete, привязка")
     class Management {
 
         @Test
-        @DisplayName("удаление накладной заказа; чужая накладная — ShipmentNotFoundException")
-        void deleteChecksOwnership() {
+        @DisplayName("отвязка накладной от заказа: запись остаётся в журнале; чужая накладная — ShipmentNotFoundException")
+        void unlinkChecksOwnership() {
             Order order = order(OrderStatus.SHIPPED);
             Order other = order(OrderStatus.SHIPPED);
             Shipment s = shipment(order, CarrierCode.PEC, "1", null);
 
-            assertThatThrownBy(() -> service.delete(other.getId(), s.getId())).isInstanceOf(ShipmentNotFoundException.class);
-            assertThat(shipmentRepository.existsById(s.getId())).isTrue();
+            assertThatThrownBy(() -> service.unlink(other.getId(), s.getId())).isInstanceOf(ShipmentNotFoundException.class);
+            assertThat(shipmentRepository.findWithOrderById(s.getId()).orElseThrow().getOrder()).isNotNull();
 
-            service.delete(order.getId(), s.getId());
+            service.unlink(order.getId(), s.getId());
 
-            assertThat(shipmentRepository.existsById(s.getId())).isFalse();
+            Shipment reloaded = shipmentRepository.findWithOrderById(s.getId()).orElseThrow();
+            assertThat(reloaded.getOrder()).isNull();
+            assertThat(reloaded.getWaybillNumber()).isEqualTo("1");
         }
 
         @Test
@@ -255,15 +274,15 @@ class ShipmentServiceTest extends BaseIntegrationTest {
         }
 
         @Test
-        @DisplayName("удаление последней накладной сбрасывает режим и «все внесены», статус заказа не откатывается")
-        void deleteLastResetsModeAndComplete() {
+        @DisplayName("отвязка последней накладной сбрасывает режим и «все внесены», статус заказа не откатывается")
+        void unlinkLastResetsModeAndComplete() {
             Order order = order(OrderStatus.SHIPPED);
             order.setShipmentMode(ShipmentMode.SINGLE);
             order.setShipmentsComplete(true);
             orderRepository.save(order);
             Shipment s = shipment(order, CarrierCode.PEC, "1", null);
 
-            service.delete(order.getId(), s.getId());
+            service.unlink(order.getId(), s.getId());
 
             Order reloaded = orderRepository.findById(order.getId()).orElseThrow();
             assertThat(reloaded.getShipmentMode()).isNull();
@@ -272,8 +291,8 @@ class ShipmentServiceTest extends BaseIntegrationTest {
         }
 
         @Test
-        @DisplayName("удаление одной из накладных MULTIPLE снимает «все внесены», режим остаётся")
-        void deleteOneOfMultipleResetsComplete() {
+        @DisplayName("отвязка одной из накладных MULTIPLE снимает «все внесены», режим остаётся")
+        void unlinkOneOfMultipleResetsComplete() {
             Order order = order(OrderStatus.SHIPPED);
             order.setShipmentMode(ShipmentMode.MULTIPLE);
             order.setShipmentsComplete(true);
@@ -281,7 +300,7 @@ class ShipmentServiceTest extends BaseIntegrationTest {
             Shipment first = shipment(order, CarrierCode.PEC, "1", null);
             shipment(order, CarrierCode.PEC, "2", null);
 
-            service.delete(order.getId(), first.getId());
+            service.unlink(order.getId(), first.getId());
 
             Order reloaded = orderRepository.findById(order.getId()).orElseThrow();
             assertThat(reloaded.getShipmentMode()).isEqualTo(ShipmentMode.MULTIPLE);
@@ -337,7 +356,54 @@ class ShipmentServiceTest extends BaseIntegrationTest {
         }
 
         private ShipmentFilter filter() {
-            return new ShipmentFilter(null, null, null, null, null, null, false, false, false, false);
+            return new ShipmentFilter(null, null, null, null, null, null, null, null, false, false, false, false);
+        }
+
+        @Test
+        @DisplayName("counterparty — подстрока отправителя или получателя, search — накладной или номера заказа; спецсимволы LIKE экранируются")
+        void counterpartyAndSearch() {
+            Order order = order(OrderStatus.SHIPPED);
+            Shipment a = journalItem(order, CarrierCode.DELLIN, "WB-100", ShipmentDirection.OUTGOING, null, null, null);
+            a.setSender("ООО Ромашка");
+            shipmentRepository.save(a);
+            Shipment b = journalItem(null, CarrierCode.PEC, "XY200", ShipmentDirection.INCOMING, null, null, null);
+            b.setReceiver("ИП Иванов 100%");
+            shipmentRepository.save(b);
+
+            assertThat(waybills(byCounterparty(" ромаш "))).containsExactly("WB-100");
+            assertThat(waybills(byCounterparty("иванов"))).containsExactly("XY200");
+            assertThat(waybills(byCounterparty("100%"))).containsExactly("XY200");
+            assertThat(waybills(byCounterparty("%"))).containsExactly("XY200");
+            assertThat(waybills(bySearch("wb-1"))).containsExactly("WB-100");
+            assertThat(waybills(bySearch(order.getOrderNumber()))).containsExactly("WB-100");
+        }
+
+        @Test
+        @DisplayName("без явного sort журнал идёт по дате отгрузки (или внесения) от свежих к старым; явный sort главнее")
+        void defaultSortByShipmentDate() {
+            Instant now = Instant.now();
+            Shipment old = journalItem(null, CarrierCode.PEC, "OLD", ShipmentDirection.OUTGOING, null, null, null);
+            old.setShippedAt(now.minus(Duration.ofDays(10)));
+            shipmentRepository.save(old);
+            Shipment fresh = journalItem(null, CarrierCode.PEC, "FRESH", ShipmentDirection.OUTGOING, null, null, null);
+            fresh.setShippedAt(now.minus(Duration.ofDays(1)));
+            shipmentRepository.save(fresh);
+            journalItem(null, CarrierCode.PEC, "NOSHIP", ShipmentDirection.OUTGOING, null, null, null); // createdAt = now
+
+            List<String> sorted = service.getJournal(filter(), PageRequest.of(0, 20)).getContent().stream()
+                    .map(ShipmentDto::waybillNumber).toList();
+
+            assertThat(sorted).containsExactly("NOSHIP", "FRESH", "OLD");
+            assertThat(service.getJournal(filter(), PageRequest.of(0, 20, Sort.by("id"))).getContent().get(0).waybillNumber())
+                    .isEqualTo("OLD");
+        }
+
+        private ShipmentFilter byCounterparty(String value) {
+            return new ShipmentFilter(null, null, null, null, value, null, null, null, false, false, false, false);
+        }
+
+        private ShipmentFilter bySearch(String value) {
+            return new ShipmentFilter(null, null, null, null, null, value, null, null, false, false, false, false);
         }
 
         @Test
@@ -356,9 +422,9 @@ class ShipmentServiceTest extends BaseIntegrationTest {
             assertThat(waybills(filter(null, ShipmentDirection.INCOMING, null, null))).containsExactly("B");
             assertThat(waybills(filter(null, null, ShipmentStatusCode.IN_TRANSIT, null))).containsExactly("A", "D");
             assertThat(waybills(filter(null, null, null, "МОСКВ"))).containsExactly("A");
-            assertThat(waybills(new ShipmentFilter(null, null, null, null, null, null, true, false, false, false))).containsExactly("B");
-            assertThat(waybills(new ShipmentFilter(null, null, null, null, null, null, false, true, false, false))).containsExactly("C");
-            assertThat(waybills(new ShipmentFilter(null, null, null, null, null, null, false, false, true, false))).containsExactly("D");
+            assertThat(waybills(new ShipmentFilter(null, null, null, null, null, null, null, null, true, false, false, false))).containsExactly("B");
+            assertThat(waybills(new ShipmentFilter(null, null, null, null, null, null, null, null, false, true, false, false))).containsExactly("C");
+            assertThat(waybills(new ShipmentFilter(null, null, null, null, null, null, null, null, false, false, true, false))).containsExactly("D");
         }
 
         @Test
@@ -379,7 +445,7 @@ class ShipmentServiceTest extends BaseIntegrationTest {
             shipment(single, CarrierCode.PEC, "S", null);
             shipment(null, CarrierCode.PEC, "N", null);
 
-            assertThat(waybills(new ShipmentFilter(null, null, null, null, null, null, false, false, false, true)))
+            assertThat(waybills(new ShipmentFilter(null, null, null, null, null, null, null, null, false, false, false, true)))
                     .containsExactly("W");
         }
 
@@ -392,9 +458,9 @@ class ShipmentServiceTest extends BaseIntegrationTest {
             shipmentRepository.save(old);
             shipment(null, CarrierCode.PEC, "NEW", null);
 
-            assertThat(waybills(new ShipmentFilter(null, null, null, null, now.minus(Duration.ofDays(1)), null,
+            assertThat(waybills(new ShipmentFilter(null, null, null, null, null, null, now.minus(Duration.ofDays(1)), null,
                     false, false, false, false))).containsExactly("NEW");
-            assertThat(waybills(new ShipmentFilter(null, null, null, null, null, now.minus(Duration.ofDays(1)),
+            assertThat(waybills(new ShipmentFilter(null, null, null, null, null, null, null, now.minus(Duration.ofDays(1)),
                     false, false, false, false))).containsExactly("OLD");
         }
 
@@ -432,7 +498,7 @@ class ShipmentServiceTest extends BaseIntegrationTest {
         }
 
         private ShipmentFilter filter(CarrierCode carrier, ShipmentDirection direction, ShipmentStatusCode code, String city) {
-            return new ShipmentFilter(carrier, direction, code, city, null, null, false, false, false, false);
+            return new ShipmentFilter(carrier, direction, code, city, null, null, null, null, false, false, false, false);
         }
 
         private List<String> waybills(ShipmentFilter filter) {
@@ -509,7 +575,7 @@ class ShipmentServiceTest extends BaseIntegrationTest {
         void refreshErrors() {
             Shipment pec = shipment(null, CarrierCode.PEC, "1", null);
             Shipment dl = shipment(null, CarrierCode.DELLIN, "2", null);
-            when(dellin.fetchStatuses(any())).thenThrow(new org.springframework.web.client.ResourceAccessException("timeout"));
+            doThrow(new org.springframework.web.client.ResourceAccessException("timeout")).when(dellin).fetchStatuses(any());
 
             assertThatThrownBy(() -> service.refresh(pec.getId())).isInstanceOf(InvalidOrderStateException.class);
             assertThatThrownBy(() -> service.refresh(dl.getId())).isInstanceOf(CarrierApiException.class);
@@ -661,6 +727,18 @@ class ShipmentServiceTest extends BaseIntegrationTest {
             assertThat(s.getRouteFrom()).isEqualTo("Москва");
             assertThat(s.getRouteTo()).isEqualTo("Омск");
             assertThat(s.getShippedAt()).isEqualTo(Instant.parse("2026-10-01T00:00:00Z"));
+        }
+
+        @Test
+        @DisplayName("входящее отправление не привязывается к заказу сайта даже при совпадении номера")
+        void incomingIsNotAutoLinked() {
+            Order order = order(OrderStatus.PAID);
+
+            service.upsertFromJournal(CarrierCode.DELLIN, item("J5", order.getOrderNumber(), null), ShipmentDirection.INCOMING);
+
+            Shipment s = shipmentRepository.findByCarrierAndWaybill(CarrierCode.DELLIN, "J5").orElseThrow();
+            assertThat(s.getOrder()).isNull();
+            verify(advancer, never()).advance(any(Order.class));
         }
 
         @Test

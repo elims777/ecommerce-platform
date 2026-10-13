@@ -10,6 +10,7 @@ import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.repository.OrderRepository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,7 +35,10 @@ class ShipmentServiceRaceTest {
         when(shipments.existsByCarrierCodeAndWaybillNumber(CarrierCode.PEC, "1")).thenReturn(false);
         when(shipments.countByOrderId(orderId)).thenReturn(0L);
         when(shipments.saveAndFlush(any(Shipment.class))).thenThrow(new DataIntegrityViolationException("uq_shipments_carrier_waybill"));
-        ShipmentService service = new ShipmentService(shipments, mock(CarrierRepository.class), orders, List.of(),
+        CarrierClient pec = mock(CarrierClient.class);
+        when(pec.code()).thenReturn(CarrierCode.PEC);
+        when(pec.fetchStatuses(List.of("1"))).thenReturn(Map.of("1", new CarrierShipmentStatus(null, null, null, null)));
+        ShipmentService service = new ShipmentService(shipments, mock(CarrierRepository.class), orders, List.of(pec),
                 mock(OrderStatusAdvancer.class), mock(OrderKafkaProducer.class), tx);
 
         assertThatThrownBy(() -> service.add(orderId, new AddShipmentRequest(CarrierCode.PEC, "1", ShipmentMode.SINGLE), 7L))

@@ -3,7 +3,7 @@ import { App, Button, Checkbox, DatePicker, Form, Input, Modal, Select, Space, T
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { NavLink } from '@/components/navigation';
-import { getAdminCarriers, getAdminShipments, linkShipment, refreshShipment } from '@/api/adminLogistics';
+import { getAdminCarriers, getAdminShipments, importShipments, linkShipment, refreshShipment } from '@/api/adminLogistics';
 import type { ShipmentDirection, ShipmentDto, ShipmentFilters, ShipmentStatusCode } from '@/types/delivery';
 import { ShipmentStatus } from './ShipmentStatus';
 
@@ -27,7 +27,10 @@ const STATUS_OPTIONS: { value: ShipmentStatusCode; label: string }[] = [
     { value: 'NOT_FOUND', label: 'Не найдена' },
 ];
 
-const formatDateTime = (iso: string) => new Date(iso).toLocaleString('ru-RU');
+/** Через сколько после запуска импорта обновить журнал */
+const IMPORT_REFETCH_DELAY_MS = 5000;
+
+const formatDateTime =(iso: string) => new Date(iso).toLocaleString('ru-RU');
 
 /** Журнал отправлений: фильтры, серверная пагинация, обновление статуса и привязка к заказу. */
 const ShipmentsTab = () => {
@@ -64,7 +67,19 @@ const ShipmentsTab = () => {
             (isAxiosError(error) && error.response?.data?.message) || 'Не удалось привязать к заказу'),
     });
 
-    const setFilter = (patch: Partial<ShipmentFilters>) => {
+    const importMutation = useMutation({
+        mutationFn: importShipments,
+        onSuccess: () => {
+            messageApi.success('Импорт запущен');
+            setTimeout(() => queryClient.invalidateQueries({ queryKey: ['adminShipments'] }), IMPORT_REFETCH_DELAY_MS);
+        },
+        onError: (error) => messageApi.error(
+            isAxiosError(error) && error.response?.status === 409
+                ? 'Импорт уже идёт'
+                : (isAxiosError(error) && error.response?.data?.message) || 'Не удалось запустить импорт'),
+    });
+
+    const setFilter =(patch: Partial<ShipmentFilters>) => {
         setFilters((prev) => ({ ...prev, ...patch }));
         setPage(1);
     };
@@ -82,6 +97,10 @@ const ShipmentsTab = () => {
                         onChange={(statusCode) => setFilter({ statusCode })} />
                 <Input.Search allowClear placeholder="Город" style={{ width: 160 }}
                               onSearch={(city) => setFilter({ city: city.trim() || undefined })} />
+                <Input.Search allowClear placeholder="Контрагент" style={{ width: 180 }}
+                              onSearch={(counterparty) => setFilter({ counterparty: counterparty.trim() || undefined })} />
+                <Input.Search allowClear placeholder="Накладная / заказ" style={{ width: 200 }}
+                              onSearch={(search) => setFilter({ search: search.trim() || undefined })} />
                 <RangePicker onChange={(dates) => setFilter({
                     from: dates?.[0]?.startOf('day').toISOString(),
                     to: dates?.[1]?.endOf('day').toISOString(),
@@ -90,6 +109,7 @@ const ShipmentsTab = () => {
                 <Checkbox onChange={(e) => setFilter({ notFound: e.target.checked || undefined })}>Не найдена</Checkbox>
                 <Checkbox onChange={(e) => setFilter({ stale: e.target.checked || undefined })}>Нет движения</Checkbox>
                 <Checkbox onChange={(e) => setFilter({ awaitingMore: e.target.checked || undefined })}>Ожидаются ещё отправления</Checkbox>
+                <Button loading={importMutation.isPending} onClick={() => importMutation.mutate()}>Импортировать сейчас</Button>
             </Space>
 
             <Table<ShipmentDto>

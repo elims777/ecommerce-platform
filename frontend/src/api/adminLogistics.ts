@@ -62,8 +62,14 @@ export const addOrderShipment = async (orderId: string, request: AddShipmentRequ
     return data;
 };
 
-export const deleteOrderShipment = async (orderId: string, shipmentId: number): Promise<void> => {
-    await apiClient.delete(`/v1/admin/orders/${orderId}/shipments/${shipmentId}`);
+/** Отвязать накладную от заказа — она остаётся в журнале отправлений */
+export const unlinkOrderShipment = async (orderId: string, shipmentId: number): Promise<void> => {
+    await apiClient.post(`/v1/admin/orders/${orderId}/shipments/${shipmentId}/unlink`);
+};
+
+/** Запустить импорт журнала ТК — 202 запущен, 409 уже идёт */
+export const importShipments = async (): Promise<void> => {
+    await apiClient.post('/v1/admin/shipments/import');
 };
 
 /** «Все отправления внесены» */

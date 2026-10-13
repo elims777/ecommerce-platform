@@ -62,6 +62,8 @@ export interface ShipmentFilters {
     direction?: ShipmentDirection;
     statusCode?: ShipmentStatusCode;
     city?: string;
+    counterparty?: string;
+    search?: string;
     from?: string;
     to?: string;
     problem?: boolean;

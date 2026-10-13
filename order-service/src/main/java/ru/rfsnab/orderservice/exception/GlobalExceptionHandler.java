@@ -16,6 +16,7 @@ import ru.rfsnab.orderservice.delivery.CarrierApiException;
 import ru.rfsnab.orderservice.delivery.ShipmentAlreadyExistsException;
 import ru.rfsnab.orderservice.delivery.ShipmentModeSwitchRequiredException;
 import ru.rfsnab.orderservice.delivery.ShipmentNotFoundException;
+import ru.rfsnab.orderservice.delivery.WaybillNotFoundInCarrierException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -101,6 +102,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleInvalidDocument(
             InvalidDocumentException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, "Invalid Document", ex.getMessage(), request);
+    }
+
+    /**
+     * Вносимой вручную накладной нет в ТК.
+     */
+    @ExceptionHandler(WaybillNotFoundInCarrierException.class)
+    public ResponseEntity<ErrorResponse> handleWaybillNotFoundInCarrier(
+            WaybillNotFoundInCarrierException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Waybill Not Found In Carrier", ex.getMessage(), request);
     }
 
     // ==================== 404 Not Found ====================

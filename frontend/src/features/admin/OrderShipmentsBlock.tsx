@@ -5,9 +5,9 @@ import { isAxiosError } from 'axios';
 import {
   addOrderShipment,
   completeOrderShipments,
-  deleteOrderShipment,
   getAdminCarriers,
   refreshShipment,
+  unlinkOrderShipment,
 } from '@/api/adminLogistics';
 import type { CarrierCode, ShipmentMode } from '@/types/delivery';
 import type { OrderDto } from '@/types/order';
@@ -65,10 +65,15 @@ const OrderShipmentsBlock = ({ order }: { order: OrderDto }) => {
     onError: () => messageApi.error('Не удалось обновить статус'),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => deleteOrderShipment(order.id, id),
-    onSuccess: () => { messageApi.success('Накладная удалена'); onChanged(); },
-    onError: () => messageApi.error('Не удалось удалить накладную'),
+  const unlinkMutation = useMutation({
+    mutationFn: (id: number) => unlinkOrderShipment(order.id, id),
+    onSuccess: () => {
+      messageApi.success('Накладная отвязана');
+      onChanged();
+      queryClient.invalidateQueries({ queryKey: ['adminShipments'] });
+    },
+    onError: (error) => messageApi.error(
+      (isAxiosError(error) && error.response?.data?.message) || 'Не удалось отвязать накладную'),
   });
 
   const completeMutation = useMutation({
@@ -110,8 +115,8 @@ const OrderShipmentsBlock = ({ order }: { order: OrderDto }) => {
                 Обновить статус
               </Button>
             )}
-            <Popconfirm title="Удалить накладную?" okText="Удалить" cancelText="Отмена" onConfirm={() => deleteMutation.mutate(s.id)}>
-              <Button size="small" danger loading={deleteMutation.isPending && deleteMutation.variables === s.id}>Удалить</Button>
+            <Popconfirm title="Отвязать накладную от заказа? Она останется в журнале отправлений" okText="Отвязать" cancelText="Отмена" onConfirm={() => unlinkMutation.mutate(s.id)}>
+              <Button size="small" loading={unlinkMutation.isPending && unlinkMutation.variables === s.id}>Отвязать</Button>
             </Popconfirm>
           </div>
         </div>

@@ -182,8 +182,9 @@ public class DellinClient implements CarrierClient {
                 text(order, "senderName", "sender"), firstOf(text(order, "senderInn", "derivalInn"), text(order.get("sender"), "inn")),
                 text(order, "receiverName", "receiver"), firstOf(text(order, "receiverInn", "arrivalInn"), text(order.get("receiver"), "inn")),
                 cityOf(order, "derival"), cityOf(order, "arrival"),
-                instant(order, "derivalDate", "orderDate"), instant(order, "arrivalDate", "estimatedArrivalDate"),
-                text(order, "clientOrderNumber", "orderNumberClient", "customerNumber"),
+                firstOf(instant(order.get("orderDates"), "derivalFromOspSender"), instant(order, "orderedAt")),
+                firstOf(instant(order.get("orderDates"), "arrivalToOspReceiver"), instant(order.get("orderDates"), "giveoutFromOspReceiver")),
+                text(order, "orderNumber"),
                 state == null ? null : toStatus(order));
     }
 
@@ -191,7 +192,7 @@ public class DellinClient implements CarrierClient {
         return firstOf(text(order, side + "City"), text(order.get(side), "city"));
     }
 
-    private static String firstOf(String first, String second) {
+    private static <T> T firstOf(T first, T second) {
         return first != null ? first : second;
     }
 

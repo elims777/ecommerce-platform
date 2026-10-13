@@ -7,8 +7,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +28,7 @@ import java.time.Instant;
 public class AdminShipmentController {
 
     private final ShipmentService shipmentService;
+    private final ShipmentJournalImporter journalImporter;
 
     /** Журнал с фильтрами и пагинацией; from/to — ISO-моменты, to исключительно. */
     @GetMapping
@@ -37,16 +38,27 @@ public class AdminShipmentController {
             @RequestParam(required = false) ShipmentDirection direction,
             @RequestParam(required = false) ShipmentStatusCode statusCode,
             @RequestParam(required = false) String city,
+            @RequestParam(required = false) String counterparty,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) Instant from,
             @RequestParam(required = false) Instant to,
             @RequestParam(defaultValue = "false") boolean problem,
             @RequestParam(defaultValue = "false") boolean notFound,
             @RequestParam(defaultValue = "false") boolean stale,
             @RequestParam(defaultValue = "false") boolean awaitingMore,
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        ShipmentFilter filter = new ShipmentFilter(carrier, direction, statusCode, city, from, to,
+            @PageableDefault(size = 20) Pageable pageable) {
+        ShipmentFilter filter = new ShipmentFilter(carrier, direction, statusCode, city, counterparty, search, from, to,
                 problem, notFound, stale, awaitingMore);
         return ResponseEntity.ok(shipmentService.getJournal(filter, pageable));
+    }
+
+    /** Запустить импорт журналов ТК сейчас: 202, если запущен; 409, если импорт уже идёт. */
+    @PostMapping("/import")
+    @Operation(summary = "Импортировать журналы ТК сейчас")
+    public ResponseEntity<Void> importJournals() {
+        return journalImporter.importAsync()
+                ? ResponseEntity.accepted().build()
+                : ResponseEntity.status(HttpStatus.CONFLICT).build();
     }
 
     /** Опросить ТК по отправлению сейчас. */
