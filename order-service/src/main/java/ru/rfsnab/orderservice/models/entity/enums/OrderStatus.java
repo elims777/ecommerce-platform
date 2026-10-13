@@ -19,6 +19,7 @@ public enum OrderStatus {
     PAYMENT_FAILED("Ошибка оплаты"),
     SHIPPED("Отгружен"),
     IN_TRANSIT("В пути"),
+    ARRIVED_AT_TERMINAL("Прибыл на терминал"),
     DELIVERED("Доставлен"),
     CANCELLED("Отменён"),
     REFUNDED("Возврат средств"),

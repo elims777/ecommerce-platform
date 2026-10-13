@@ -9,6 +9,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import ru.rfsnab.orderservice.delivery.CarrierCode;
 import ru.rfsnab.orderservice.models.dto.event.Order1CExportEvent;
 import ru.rfsnab.orderservice.models.entity.DeliveryAddress;
@@ -27,6 +29,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -61,10 +65,14 @@ class Order1CKafkaProducerTest {
                 .build();
     }
 
-    private String sentComment(Order order) {
+    private Order1CExportEvent sentEvent(Order order) {
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
         verify(kafkaTemplate).send(eq("order-1c-export"), eq(order.getId().toString()), captor.capture());
-        return ((Order1CExportEvent) captor.getValue()).comment();
+        return (Order1CExportEvent) captor.getValue();
+    }
+
+    private String sentComment(Order order) {
+        return sentEvent(order).comment();
     }
 
     @Test
@@ -119,5 +127,52 @@ class Order1CKafkaProducerTest {
         producer.sendOrderFor1C(order);
 
         assertThat(sentComment(order)).contains("Пункт самовывоза: Склад, Новосибирск, Ленина, д. 1");
+    }
+
+    @Test
+    @DisplayName("терминал ТК без адреса: строка терминала из снимка, получатель — pickupRecipientName/pickupRecipientPhone, а не заказчик")
+    void terminalLineWithoutAddress() {
+        Order order = carrierOrder("Позвонить заранее");
+        order.setDeliveryAddress(null);
+        order.setCustomerName("Петров Пётр");
+        order.setCustomerPhone("+79991112233");
+        order.setPickupRecipientName("Сидоров Сидор");
+        order.setPickupRecipientPhone("+79995554433");
+        order.setDeliveryMethod(DeliveryMethod.CARRIER_TERMINAL);
+        order.setTerminalName("Терминал Толмачёво");
+        order.setTerminalAddress("Новосибирск, ул. Ленина, 1");
+
+        producer.sendOrderFor1C(order);
+
+        assertThat(sentComment(order)).isEqualTo("""
+                Способ доставки: До терминала ТК — Деловые Линии
+                Терминал: Терминал Толмачёво, Новосибирск, ул. Ленина, 1
+                Получатель: Сидоров Сидор, +79995554433
+                ---
+                Позвонить заранее""");
+        Order1CExportEvent event = sentEvent(order);
+        assertThat(event.recipientName()).isEqualTo("Сидоров Сидор");
+        assertThat(event.recipientPhone()).isEqualTo("+79995554433");
+        assertThat(event.city()).isNull();
+    }
+
+    @Test
+    @DisplayName("в транзакции событие уходит только в afterCommit; без транзакции — сразу")
+    void sendsOnlyAfterCommit() {
+        Order inTx = carrierOrder(null);
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            producer.sendOrderFor1C(inTx);
+            verify(kafkaTemplate, never()).send(anyString(), anyString(), any());
+
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+            verify(kafkaTemplate, times(1)).send(anyString(), anyString(), any());
+        } finally {
+            TransactionSynchronizationManager.clear();
+        }
+
+        Order noTx = carrierOrder(null);
+        producer.sendOrderFor1C(noTx);
+        verify(kafkaTemplate, times(2)).send(anyString(), anyString(), any());
     }
 }

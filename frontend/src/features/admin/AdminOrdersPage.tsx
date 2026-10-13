@@ -24,6 +24,7 @@ const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
   INVOICE_SENT:          { cls: 'rf-badge-navy',                 label: 'Счёт выставлен' },
   SHIPPED:               { cls: 'rf-badge-navy rf-badge-dot',    label: 'В доставке' },
   IN_TRANSIT:            { cls: 'rf-badge-navy rf-badge-dot',    label: 'В пути' },
+  ARRIVED_AT_TERMINAL:   { cls: 'rf-badge-navy rf-badge-dot',    label: 'Прибыл на терминал' },
   DELIVERED:             { cls: 'rf-badge-neutral',              label: 'Доставлено' },
   COMPLETED:             { cls: 'rf-badge-neutral',              label: 'Завершено' },
   PAYMENT_FAILED:        { cls: 'rf-badge-red',                  label: 'Ошибка оплаты' },
@@ -44,6 +45,7 @@ const TRANSITION_ORDER: OrderStatus[] = [
   OrderStatus.PAID,
   OrderStatus.SHIPPED,
   OrderStatus.IN_TRANSIT,
+  OrderStatus.ARRIVED_AT_TERMINAL,
   OrderStatus.DELIVERED,
   OrderStatus.CANCELLED,
   OrderStatus.REFUNDED,
@@ -93,6 +95,7 @@ const STATUS_TABS = [
   { label: 'Ждёт согласования', value: 'CREATED' as OrderStatus },
   { label: 'Оплачено',          value: 'PAID' as OrderStatus },
   { label: 'В доставке',        value: 'SHIPPED' as OrderStatus },
+  { label: 'Прибыл на терминал', value: 'ARRIVED_AT_TERMINAL' as OrderStatus },
   { label: 'Завершено',         value: 'COMPLETED' as OrderStatus },
   { label: 'Отменено',          value: 'CANCELLED' as OrderStatus },
 ];

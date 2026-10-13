@@ -6,6 +6,7 @@ import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import ru.rfsnab.orderservice.delivery.CarrierCode;
+import ru.rfsnab.orderservice.delivery.ShipmentMode;
 import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
@@ -57,6 +58,25 @@ public class Order {
     // Снимок carriers.name на момент заказа
     @Column(name = "carrier_name", length = 100)
     private String carrierName;
+
+    /** Режим отправлений; null до первой накладной. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "shipment_mode", length = 10)
+    private ShipmentMode shipmentMode;
+
+    /** Менеджер нажал «Все отправления внесены». */
+    @Column(name = "shipments_complete", nullable = false)
+    private boolean shipmentsComplete;
+
+    @Column(name = "carrier_terminal_id")
+    private Long carrierTerminalId;
+
+    // Снимок терминала на момент заказа — берётся из БД по carrierTerminalId, не из запроса
+    @Column(name = "terminal_name")
+    private String terminalName;
+
+    @Column(name = "terminal_address")
+    private String terminalAddress;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;

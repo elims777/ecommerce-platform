@@ -70,6 +70,9 @@ public class OrderHandlerTest {
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
         );
     }
@@ -90,6 +93,18 @@ public class OrderHandlerTest {
             assertThat(handler.supports("order-events", "ORDER_CREATED")).isTrue();
             assertThat(handler.supports("order-events", "ORDER_PAID")).isTrue();
             assertThat(handler.supports("order-events", "ANYTHING")).isTrue();
+        }
+
+        @Test
+        @DisplayName("CARRIER_SYNC_COMPLETED → false (его обрабатывает CarrierSyncHandler)")
+        void supports_CarrierSync_ReturnsFalse() {
+            assertThat(handler.supports("order-events", "CARRIER_SYNC_COMPLETED")).isFalse();
+        }
+
+        @Test
+        @DisplayName("SHIPMENT_NOT_FOUND → false (его обрабатывает ShipmentNotFoundHandler)")
+        void supports_ShipmentNotFound_ReturnsFalse() {
+            assertThat(handler.supports("order-events", "SHIPMENT_NOT_FOUND")).isFalse();
         }
 
         @Test
@@ -179,7 +194,19 @@ public class OrderHandlerTest {
             handler.handle(toJson(event));
 
             // Then
-            verify(emailService).sendOrderStatusChangedEmail(EMAIL, ORDER_NUMBER, "Передан в доставку");
+            verify(emailService).sendOrderStatusChangedEmail(argThat(e ->
+                    ORDER_NUMBER.equals(e.orderNumber()) && "Передан в доставку".equals(e.status())));
+            verifyNoMoreInteractions(emailService);
+        }
+
+        @Test
+        @DisplayName("статус «Прибыл на терминал» → общее письмо о смене статуса с событием целиком")
+        void handle_ArrivedAtTerminal_SendsStatusEmail() throws Exception {
+            OrderEvent event = createOrderEvent("ORDER_STATUS_CHANGED", "Прибыл на терминал");
+
+            handler.handle(toJson(event));
+
+            verify(emailService).sendOrderStatusChangedEmail(argThat(e -> "Прибыл на терминал".equals(e.status())));
             verifyNoMoreInteractions(emailService);
         }
 

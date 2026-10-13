@@ -17,6 +17,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
+import ru.rfsnab.orderservice.delivery.CarrierCode;
+import ru.rfsnab.orderservice.delivery.ShipmentDirection;
+import ru.rfsnab.orderservice.delivery.ShipmentDto;
+import ru.rfsnab.orderservice.delivery.ShipmentService;
+import ru.rfsnab.orderservice.delivery.ShipmentSource;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
@@ -72,6 +77,9 @@ class OrderControllerTest extends BaseIntegrationTest {
 
     @MockitoBean
     private WarehousePointService warehousePointService;
+
+    @MockitoBean
+    private ShipmentService shipmentService;
 
     private static final Long USER_ID = 100L;
     private static final UUID ORDER_ID = UUID.randomUUID();
@@ -215,6 +223,26 @@ class OrderControllerTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.orderNumber").value("ABC-00001"))
                     .andExpect(jsonPath("$.items", hasSize(1)))
                     .andExpect(jsonPath("$.items[0].productName").value("Доска обрезная"));
+        }
+
+        @Test
+        @DisplayName("200 OK — отправления клиенту без sender, receiver и direction")
+        void shouldHideShipmentCounterparties() throws Exception {
+            Order order = buildDeliveryOrder();
+            when(orderService.getOrderByIdAndUser(order.getId(), USER_ID)).thenReturn(order);
+            when(shipmentService.getByOrderId(order.getId())).thenReturn(List.of(new ShipmentDto(1L, order.getId(),
+                    "ABC-00001", CarrierCode.DELLIN, "Деловые Линии", "123", ShipmentDirection.OUTGOING, "ООО Отправитель",
+                    "ООО Получатель", "Москва", "Сыктывкар", null, null, "В пути", null, null, null, false, false,
+                    ShipmentSource.MANUAL, null, null)));
+
+            mockMvc.perform(get("/api/v1/orders/{id}", order.getId()).with(jwtUser()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.shipments", hasSize(1)))
+                    .andExpect(jsonPath("$.shipments[0].waybillNumber").value("123"))
+                    .andExpect(jsonPath("$.shipments[0].routeFrom").value("Москва"))
+                    .andExpect(jsonPath("$.shipments[0].sender").doesNotExist())
+                    .andExpect(jsonPath("$.shipments[0].receiver").doesNotExist())
+                    .andExpect(jsonPath("$.shipments[0].direction").doesNotExist());
         }
     }
 

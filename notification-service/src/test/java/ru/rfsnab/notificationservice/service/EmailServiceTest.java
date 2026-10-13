@@ -79,6 +79,9 @@ class EmailServiceTest {
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null
         );
     }
@@ -119,7 +122,7 @@ class EmailServiceTest {
                     base.totalAmount(), base.customerEmail(), base.customerName(), base.customerPhone(),
                     base.timestamp(), base.items(), "CARRIER_ADDRESS", base.paymentMethod(), base.comment(),
                     base.deliveryAddress(), base.customerType(), base.companyName(), base.inn(),
-                    null, null, null, "Деловые Линии");
+                    null, null, null, "Деловые Линии", "Терминал Север", "ул. Складская, 5", null);
             ArgumentCaptor<Context> captor = ArgumentCaptor.forClass(Context.class);
 
             emailService.sendOrderCreatedEmail(event);
@@ -127,6 +130,8 @@ class EmailServiceTest {
             verify(templateEngine).process(eq("mail/order-created"), captor.capture());
             assertThat(captor.getValue().getVariable("carrierName")).isEqualTo("Деловые Линии");
             assertThat(captor.getValue().getVariable("deliveryMethod")).isEqualTo("Доставка до адреса (ТК)");
+            assertThat(captor.getValue().getVariable("terminalName")).isEqualTo("Терминал Север");
+            assertThat(captor.getValue().getVariable("terminalAddress")).isEqualTo("ул. Складская, 5");
         }
     }
 
@@ -152,7 +157,7 @@ class EmailServiceTest {
                     base.totalAmount(), base.customerEmail(), base.customerName(), base.customerPhone(),
                     base.timestamp(), base.items(), "CARRIER_ADDRESS", base.paymentMethod(), base.comment(),
                     base.deliveryAddress(), base.customerType(), base.companyName(), base.inn(),
-                    null, null, null, "Деловые Линии");
+                    null, null, null, "Деловые Линии", "Терминал Север", "ул. Складская, 5", null);
             ArgumentCaptor<Context> captor = ArgumentCaptor.forClass(Context.class);
 
             emailService.sendManagerOrderNotification(event);
@@ -197,7 +202,7 @@ class EmailServiceTest {
         @Test
         @DisplayName("отправляет письмо по шаблону order-status-changed")
         void sendOrderStatusChangedEmail_SendsHtmlEmail() {
-            emailService.sendOrderStatusChangedEmail("customer@example.com", "ORD-001", "Передан в доставку");
+            emailService.sendOrderStatusChangedEmail(createOrderEvent());
 
             verify(mailSender).send(any(MimeMessage.class));
             verify(templateEngine).process(eq("mail/order-status-changed"), any(Context.class));

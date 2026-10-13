@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Form, Radio, Select, Input, InputNumber, Button, Typography, Divider, message } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -6,6 +6,10 @@ import { updateOrder } from '@/api/orders';
 import { getWarehousePoints } from '@/api/warehouse';
 import { CLIENT_DELIVERY_METHODS, DeliveryMethod, DeliveryMethodLabels, PaymentMethod, PaymentMethodLabels } from '@/types/order';
 import CarrierPicker from '@/features/checkout/CarrierPicker';
+import PointsPicker from '@/features/checkout/PointsPicker';
+import { warehouseToPickerPoint } from '@/features/checkout/warehouseToPickerPoint';
+import TerminalPicker from '@/features/checkout/TerminalPicker';
+import AddressSuggest from '@/features/checkout/AddressSuggest';
 import { extractEnumCode } from '@/utils/enumUtils';
 import type { OrderDto, UpdateOrderItemRequest } from '@/types/order';
 import type { CarrierCode } from '@/types/delivery';
@@ -25,6 +29,9 @@ interface EditOrderFormValues {
     deliveryMethod: DeliveryMethod;
     warehousePointId?: number;
     carrierCode?: CarrierCode;
+    carrierTerminalId?: number;
+    pickupRecipientName?: string;
+    pickupRecipientPhone?: string;
     recipientName?: string;
     phone?: string;
     city?: string;
@@ -42,11 +49,13 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
 
     const deliveryMethod = Form.useWatch('deliveryMethod', form);
 
-    const { data: warehousePoints = [], isLoading: warehouseLoading } = useQuery({
+    const { data: warehousePoints = [] } = useQuery({
         queryKey: ['warehousePoints'],
         queryFn: getWarehousePoints,
         staleTime: 5 * 60 * 1000,
     });
+
+    const warehousePickerPoints = useMemo(() => warehousePoints.map(warehouseToPickerPoint), [warehousePoints]);
 
     useEffect(() => {
         if (!open) return;
@@ -56,6 +65,9 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
             deliveryMethod: extractEnumCode(order.deliveryMethod) as DeliveryMethod,
             warehousePointId: order.warehousePoint?.id,
             carrierCode: order.carrierCode ?? undefined,
+            carrierTerminalId: order.carrierTerminalId ?? undefined,
+            pickupRecipientName: order.pickupRecipientName ?? undefined,
+            pickupRecipientPhone: order.pickupRecipientPhone ?? undefined,
             recipientName: order.deliveryAddress?.recipientName,
             phone: order.deliveryAddress?.phone,
             city: order.deliveryAddress?.city,
@@ -72,7 +84,11 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
             paymentMethod: values.paymentMethod,
             deliveryMethod: values.deliveryMethod,
             warehousePointId: values.deliveryMethod === DeliveryMethod.PICKUP ? values.warehousePointId : undefined,
-            carrierCode: values.deliveryMethod === DeliveryMethod.CARRIER_ADDRESS ? values.carrierCode : undefined,
+            carrierCode: (values.deliveryMethod === DeliveryMethod.CARRIER_ADDRESS
+                || values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL) ? values.carrierCode : undefined,
+            carrierTerminalId: values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL ? values.carrierTerminalId : undefined,
+            pickupRecipientName: values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL ? values.pickupRecipientName : undefined,
+            pickupRecipientPhone: values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL ? values.pickupRecipientPhone : undefined,
             deliveryAddress: (values.deliveryMethod === DeliveryMethod.CARRIER_ADDRESS
                 || values.deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY) ? {
                 recipientName: values.recipientName!,
@@ -140,7 +156,10 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
                 </Form.Item>
 
                 <Form.Item name="deliveryMethod" label="Способ доставки" rules={[{ required: true }]}>
-                    <Radio.Group style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <Radio.Group
+                        style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
+                        onChange={() => form.setFieldsValue({ carrierCode: undefined, carrierTerminalId: undefined })}
+                    >
                         {methods.map((method) => (
                             <Radio.Button key={method} value={method}>{DeliveryMethodLabels[method]}</Radio.Button>
                         ))}
@@ -149,17 +168,22 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
 
                 {deliveryMethod === DeliveryMethod.PICKUP && (
                     <Form.Item name="warehousePointId" label="Точка самовывоза" rules={[{ required: true, message: 'Выберите точку самовывоза' }]}>
-                        <Select loading={warehouseLoading} placeholder="Выберите точку самовывоза">
-                            {warehousePoints.map((point) => (
-                                <Select.Option key={point.id} value={point.id}>
-                                    {point.name} — {point.city}, {point.street}, д. {point.building}
-                                </Select.Option>
-                            ))}
-                        </Select>
+                        <PointsPicker points={warehousePickerPoints} />
                     </Form.Item>
                 )}
 
-                {deliveryMethod === DeliveryMethod.CARRIER_ADDRESS && <CarrierPicker />}
+                {deliveryMethod === DeliveryMethod.CARRIER_ADDRESS && <CarrierPicker mode="address" />}
+
+                {deliveryMethod === DeliveryMethod.CARRIER_TERMINAL && (
+                    <>
+                        <CarrierPicker mode="terminal" />
+                        <TerminalPicker current={order.carrierTerminalId ? {
+                            id: order.carrierTerminalId,
+                            name: order.terminalName ?? '',
+                            address: order.terminalCurrentAddress ?? order.terminalAddress ?? '',
+                        } : undefined} />
+                    </>
+                )}
 
                 {needsAddress && (
                     <>
@@ -169,6 +193,7 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
                         <Form.Item name="phone" label="Телефон" rules={[{ required: true, message: 'Укажите телефон' }]}>
                             <Input />
                         </Form.Item>
+                        <AddressSuggest fields={{ city: 'city', street: 'street', building: 'building', postalCode: 'postalCode' }} />
                         <Form.Item name="city" label="Город" rules={[{ required: true, message: 'Укажите город' }]}>
                             <Input />
                         </Form.Item>

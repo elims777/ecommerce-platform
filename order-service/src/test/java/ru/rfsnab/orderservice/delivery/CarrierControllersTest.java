@@ -13,15 +13,18 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,8 +38,19 @@ class CarrierControllersTest extends BaseIntegrationTest {
     @MockitoBean
     private CarrierService carrierService;
 
-    private static final Carrier DELLIN = Carrier.builder()
-            .code(CarrierCode.DELLIN).name("Деловые Линии").enabled(true).addressDeliveryEnabled(true).sortOrder(2).build();
+    @MockitoBean
+    private DeliveryService deliveryService;
+
+    @MockitoBean
+    private CarrierSyncService carrierSyncService;
+
+    private static CarrierDto dellin(boolean enabled, int sortOrder) {
+        return new CarrierDto(CarrierCode.DELLIN, "Деловые Линии", enabled, true, true, sortOrder,
+                true, Instant.parse("2026-10-12T20:00:00Z"), 120, null, null, false);
+    }
+
+    private static final CarrierTerminalDto TERMINAL = new CarrierTerminalDto(7L, CarrierCode.DELLIN,
+            PointType.TERMINAL, "Новосибирск", "Терминал Толмачёво", "ул. Ленина, 1", 55.03, 82.92, "Пн-Пт 9-18", null);
 
     private static RequestPostProcessor auth(String role) {
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
@@ -46,16 +60,20 @@ class CarrierControllersTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /delivery/carriers — включённые ТК с названием")
+    @DisplayName("GET /delivery/carriers — включённые ТК с названием и флагами")
     void clientGetsEnabledCarriers() throws Exception {
-        when(carrierService.getEnabled()).thenReturn(List.of(DELLIN));
+        when(carrierService.getEnabled()).thenReturn(List.of(dellin(true, 2)));
 
         mockMvc.perform(get("/api/v1/delivery/carriers").with(auth("ROLE_USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].code").value("DELLIN"))
                 .andExpect(jsonPath("$[0].name").value("Деловые Линии"))
-                .andExpect(jsonPath("$[0].addressDeliveryEnabled").value(true));
+                .andExpect(jsonPath("$[0].addressDeliveryEnabled").value(true))
+                .andExpect(jsonPath("$[0].terminalDeliveryEnabled").value(true))
+                .andExpect(jsonPath("$[0].apiKeyConfigured").value(true))
+                .andExpect(jsonPath("$[0].activeTerminalsCount").value(120))
+                .andExpect(jsonPath("$[0].terminalsSyncedAt").value("2026-10-12T20:00:00Z"));
     }
 
     @Test
@@ -66,9 +84,73 @@ class CarrierControllersTest extends BaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("GET /delivery/cities — 200 для USER, строка массивом")
+    void clientGetsCities() throws Exception {
+        when(deliveryService.findCities(CarrierCode.DELLIN, PointType.TERMINAL, "новос"))
+                .thenReturn(List.of("Новосибирск"));
+
+        mockMvc.perform(get("/api/v1/delivery/cities").with(auth("ROLE_USER"))
+                        .param("carrier", "DELLIN").param("type", "TERMINAL").param("q", "новос"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("Новосибирск"));
+    }
+
+    @Test
+    @DisplayName("GET /delivery/cities — 401 без авторизации")
+    void citiesUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/delivery/cities")
+                        .param("carrier", "DELLIN").param("type", "TERMINAL").param("q", "новос"))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(deliveryService);
+    }
+
+    @Test
+    @DisplayName("GET /delivery/cities — 400, а не 500, без обязательного параметра")
+    void citiesMissingParameter() throws Exception {
+        mockMvc.perform(get("/api/v1/delivery/cities").with(auth("ROLE_USER"))
+                        .param("carrier", "DELLIN").param("type", "TERMINAL"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Missing Parameter"));
+    }
+
+    @Test
+    @DisplayName("GET /delivery/terminals — 200 для USER, поля точки по контракту")
+    void clientGetsTerminals() throws Exception {
+        when(deliveryService.getTerminals(CarrierCode.DELLIN, "Новосибирск", PointType.TERMINAL))
+                .thenReturn(List.of(TERMINAL));
+
+        mockMvc.perform(get("/api/v1/delivery/terminals").with(auth("ROLE_USER"))
+                        .param("carrier", "DELLIN").param("city", "Новосибирск").param("type", "TERMINAL"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(7))
+                .andExpect(jsonPath("$[0].carrierCode").value("DELLIN"))
+                .andExpect(jsonPath("$[0].pointType").value("TERMINAL"))
+                .andExpect(jsonPath("$[0].latitude").value(55.03))
+                .andExpect(jsonPath("$[0].workingHours").value("Пн-Пт 9-18"))
+                .andExpect(jsonPath("$[0].phone").isEmpty());
+    }
+
+    @Test
+    @DisplayName("GET /delivery/terminals — 400 на неизвестный тип точки")
+    void terminalsUnknownType() throws Exception {
+        mockMvc.perform(get("/api/v1/delivery/terminals").with(auth("ROLE_USER"))
+                        .param("carrier", "DELLIN").param("city", "Новосибирск").param("type", "KIOSK"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid Parameter"));
+    }
+
+    @Test
+    @DisplayName("GET /delivery/terminals — 401 без авторизации")
+    void terminalsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/delivery/terminals")
+                        .param("carrier", "DELLIN").param("city", "Новосибирск").param("type", "TERMINAL"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("GET /admin/carriers — ADMIN видит все")
     void adminGetsAll() throws Exception {
-        when(carrierService.getAll()).thenReturn(List.of(DELLIN));
+        when(carrierService.getAll()).thenReturn(List.of(dellin(true, 2)));
 
         mockMvc.perform(get("/api/v1/admin/carriers").with(auth("ROLE_ADMIN")))
                 .andExpect(status().isOk())
@@ -90,11 +172,9 @@ class CarrierControllersTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("PATCH /admin/carriers/{code} — обновляет флаги")
+    @DisplayName("PATCH /admin/carriers/{code} — обновляет флаги без terminalDeliveryEnabled")
     void adminUpdates() throws Exception {
-        Carrier updated = Carrier.builder()
-                .code(CarrierCode.DELLIN).name("Деловые Линии").enabled(false).addressDeliveryEnabled(true).sortOrder(7).build();
-        when(carrierService.update(eq(CarrierCode.DELLIN), any())).thenReturn(updated);
+        when(carrierService.update(eq(CarrierCode.DELLIN), any())).thenReturn(dellin(false, 7));
 
         mockMvc.perform(patch("/api/v1/admin/carriers/DELLIN").with(auth("ROLE_ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -102,6 +182,35 @@ class CarrierControllersTest extends BaseIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.enabled").value(false))
                 .andExpect(jsonPath("$.sortOrder").value(7));
+    }
+
+    @Test
+    @DisplayName("PATCH /admin/carriers/{code} — принимает terminalDeliveryEnabled")
+    void adminUpdatesTerminalFlag() throws Exception {
+        when(carrierService.update(eq(CarrierCode.DELLIN), any())).thenReturn(dellin(true, 2));
+
+        mockMvc.perform(patch("/api/v1/admin/carriers/DELLIN").with(auth("ROLE_ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":true,\"addressDeliveryEnabled\":true,\"sortOrder\":2,\"terminalDeliveryEnabled\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.terminalDeliveryEnabled").value(true));
+    }
+
+    @Test
+    @DisplayName("PATCH /admin/carriers/{code} — шаблон ссылки: без http(s) или без {number} — 400, пустой и верный — 200")
+    void adminUpdateTrackingTemplateValidation() throws Exception {
+        when(carrierService.update(eq(CarrierCode.DELLIN), any())).thenReturn(dellin(true, 2));
+        String head = "{\"enabled\":true,\"addressDeliveryEnabled\":true,\"sortOrder\":2,\"trackingUrlTemplate\":\"";
+        for (String bad : new String[]{"ftp://x/{number}", "javascript:alert({number})", "https://x/track"}) {
+            mockMvc.perform(patch("/api/v1/admin/carriers/DELLIN").with(auth("ROLE_ADMIN"))
+                            .contentType(MediaType.APPLICATION_JSON).content(head + bad + "\"}"))
+                    .andExpect(status().isBadRequest());
+        }
+        for (String ok : new String[]{"", "https://x/track/{number}/"}) {
+            mockMvc.perform(patch("/api/v1/admin/carriers/DELLIN").with(auth("ROLE_ADMIN"))
+                            .contentType(MediaType.APPLICATION_JSON).content(head + ok + "\"}"))
+                    .andExpect(status().isOk());
+        }
     }
 
     @Test
@@ -140,5 +249,39 @@ class CarrierControllersTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"enabled\":false,\"addressDeliveryEnabled\":true,\"sortOrder\":7}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("POST /admin/carriers/{code}/sync-terminals — ADMIN получает отчёт")
+    void adminSyncs() throws Exception {
+        CarrierSyncReport report = new CarrierSyncReport(CarrierCode.DELLIN, "Деловые Линии", SyncStatus.WARNING,
+                10, 2, 1, 0, 1, List.of(new CarrierSyncReport.SkippedItem("X1", "Нет города")), 0,
+                null, 1500, Instant.parse("2026-10-12T20:00:05Z"));
+        when(carrierSyncService.syncManually(CarrierCode.DELLIN)).thenReturn(report);
+
+        mockMvc.perform(post("/api/v1/admin/carriers/DELLIN/sync-terminals").with(auth("ROLE_ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.carrierCode").value("DELLIN"))
+                .andExpect(jsonPath("$.status").value("WARNING"))
+                .andExpect(jsonPath("$.received").value(10))
+                .andExpect(jsonPath("$.skippedItems[0].externalId").value("X1"))
+                .andExpect(jsonPath("$.skippedItems[0].reason").value("Нет города"))
+                .andExpect(jsonPath("$.moreSkipped").value(0))
+                .andExpect(jsonPath("$.finishedAt").value("2026-10-12T20:00:05Z"));
+    }
+
+    @Test
+    @DisplayName("POST /admin/carriers/{code}/sync-terminals — 403 для USER")
+    void userCannotSync() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/carriers/DELLIN/sync-terminals").with(auth("ROLE_USER")))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(carrierSyncService);
+    }
+
+    @Test
+    @DisplayName("POST /admin/carriers/{code}/sync-terminals — 401 без авторизации")
+    void syncUnauthorized() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/carriers/DELLIN/sync-terminals"))
+                .andExpect(status().isUnauthorized());
     }
 }

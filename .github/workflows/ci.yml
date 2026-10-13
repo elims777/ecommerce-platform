@@ -223,6 +223,10 @@ jobs:
         with:
           context: ./frontend
           push: true
+          build-args: |
+            VITE_YANDEX_MAPS_KEY=${{ secrets.VITE_YANDEX_MAPS_KEY }}
+            VITE_YANDEX_SUGGEST_KEY=${{ secrets.VITE_YANDEX_SUGGEST_KEY }}
+            VITE_YANDEX_GEOCODER_KEY=${{ secrets.VITE_YANDEX_GEOCODER_KEY }}
           tags: |
             ${{ env.IMAGE_PREFIX }}/frontend:${{ steps.tag.outputs.TAG }}
             ${{ env.IMAGE_PREFIX }}/frontend:sha-${{ github.sha }}

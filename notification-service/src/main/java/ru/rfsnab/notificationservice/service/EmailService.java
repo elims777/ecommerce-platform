@@ -12,23 +12,44 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import ru.rfsnab.notificationservice.models.CarrierSyncEvent;
 import ru.rfsnab.notificationservice.models.ImportEvent;
 import ru.rfsnab.notificationservice.models.OrderEvent;
+import ru.rfsnab.notificationservice.models.ShipmentNotFoundEvent;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EmailService {
+    private static final ZoneId MOSCOW = ZoneId.of("Europe/Moscow");
+    private static final DateTimeFormatter MOSCOW_DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
     private static final DateTimeFormatter IMPORT_REPORT_FILE_DATE_FORMAT =
             DateTimeFormatter.ofPattern("yyyyMMdd-HHmm");
+
+    private static final Map<String, String> CARRIER_SYNC_STATUS_LABELS = Map.of(
+            "OK", "OK",
+            "WARNING", "Предупреждение",
+            "ERROR", "Ошибка",
+            "NOT_CONFIGURED", "Не настроена");
+    private static final Map<String, String> CARRIER_SYNC_TRIGGER_LABELS = Map.of(
+            "SCHEDULED", "ночная",
+            "STARTUP", "при запуске",
+            "MANUAL", "ручная");
+
+    /** Статусы (displayName из order-service), в письмах о которых показывается блок «Доставка / Отправления». */
+    private static final Set<String> SHIPMENT_STATUSES = Set.of("Отгружен", "В пути", "Прибыл на терминал", "Доставлен");
 
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
@@ -82,6 +103,8 @@ public class EmailService {
         model.put("pickupLine", formatPickupAddress(event.pickupPoint()));
         model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
         model.put("carrierName", event.carrierName());
+        model.put("terminalName", event.terminalName());
+        model.put("terminalAddress", event.terminalAddress());
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
         model.put("trackUrl", frontendUrl + "/orders");
@@ -110,6 +133,8 @@ public class EmailService {
         model.put("pickupLine", formatPickupAddress(event.pickupPoint()));
         model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
         model.put("carrierName", event.carrierName());
+        model.put("terminalName", event.terminalName());
+        model.put("terminalAddress", event.terminalAddress());
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
         model.put("adminUrl", frontendUrl + "/admin/orders");
@@ -271,13 +296,49 @@ public class EmailService {
     /**
      * Уведомление о смене статуса заказа
      */
-    public void sendOrderStatusChangedEmail(String toEmail, String orderNumber, String newStatus) {
-        Map<String, Object> model = new HashMap<>();
-        model.put("orderNumber", orderNumber);
-        model.put("statusLabel", newStatus);
+    public void sendOrderStatusChangedEmail(OrderEvent event) {
+        List<OrderEvent.ShipmentLine> shipments = event.shipments() == null ? List.of() : event.shipments();
+        boolean showDelivery = SHIPMENT_STATUSES.contains(event.status())
+                && (event.carrierName() != null || event.terminalName() != null || !shipments.isEmpty());
 
-        sendHtml(toEmail, "Статус заказа " + orderNumber + " обновлён — РФСнаб",
+        Map<String, Object> model = new HashMap<>();
+        model.put("orderNumber", event.orderNumber());
+        model.put("statusLabel", event.status());
+        model.put("showDelivery", showDelivery);
+        model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
+        model.put("carrierName", event.carrierName());
+        model.put("terminalName", event.terminalName());
+        model.put("terminalAddress", event.terminalAddress());
+        model.put("shipments", shipments);
+
+        sendHtml(event.customerEmail(), "Статус заказа " + event.orderNumber() + " обновлён — РФСнаб",
                 "order-status-changed", model);
+    }
+
+    /**
+     * Уведомление менеджеру: накладная ТК не найдена в системе перевозчика.
+     */
+    public void sendShipmentNotFoundEmail(ShipmentNotFoundEvent event) {
+        Map<String, Object> model = new HashMap<>();
+        model.put("orderNumber", event.orderNumber());
+        model.put("carrierName", event.carrierName());
+        model.put("waybillNumber", event.waybillNumber());
+        model.put("notFoundSince", formatMoscow(event.notFoundSince()));
+
+        sendHtml(managerEmail, "Накладная " + event.waybillNumber() + " (" + event.carrierName()
+                + ") по заказу " + event.orderNumber() + " не найдена", "shipment-not-found", model);
+    }
+
+    /** ISO-момент -> «dd.MM.yyyy HH:mm» по Москве; null и нераспознанная строка возвращаются как есть. */
+    private static String formatMoscow(String isoInstant) {
+        if (isoInstant == null) {
+            return null;
+        }
+        try {
+            return MOSCOW_DATE_TIME.format(Instant.parse(isoInstant).atZone(MOSCOW));
+        } catch (DateTimeParseException e) {
+            return isoInstant;
+        }
     }
 
     /**
@@ -385,6 +446,33 @@ public class EmailService {
         return "Импорт каталога ФТК — успешно";
     }
 
+    /**
+     * Отчёт о синхронизации терминалов ТК менеджеру — после каждого запуска.
+     */
+    public void sendCarrierSyncReportEmail(CarrierSyncEvent event) {
+        Map<String, Object> model = new HashMap<>();
+        model.put("triggerLabel", CARRIER_SYNC_TRIGGER_LABELS.getOrDefault(event.trigger(), String.valueOf(event.trigger())));
+        model.put("reports", event.reports() == null ? List.of() : event.reports());
+        model.put("statusLabels", CARRIER_SYNC_STATUS_LABELS);
+        sendHtml(managerEmail, carrierSyncSubject(event), "carrier-sync-report", model);
+    }
+
+    /**
+     * Тема письма по худшему статусу среди отчётов: ERROR, затем WARNING/NOT_CONFIGURED, иначе OK.
+     */
+    String carrierSyncSubject(CarrierSyncEvent event) {
+        List<CarrierSyncEvent.CarrierSyncReport> reports = event.reports() == null ? List.of() : event.reports();
+        String result;
+        if (reports.stream().anyMatch(r -> "ERROR".equals(r.status()))) {
+            result = "ошибки";
+        } else if (reports.stream().anyMatch(r -> "WARNING".equals(r.status()) || "NOT_CONFIGURED".equals(r.status()))) {
+            result = "есть предупреждения";
+        } else {
+            result = "OK";
+        }
+        return "Синхронизация терминалов ТК: " + result;
+    }
+
     private String importStatusLabel(String status) {
         if (status == null) {
             return "—";
@@ -447,6 +535,7 @@ public class EmailService {
             case "PICKUP" -> "Самовывоз";
             case "SUPPLIER_DELIVERY" -> "Доставка поставщиком";
             case "CARRIER_ADDRESS" -> "Доставка до адреса (ТК)";
+            case "CARRIER_TERMINAL" -> "Доставка до терминала (ТК)";
             default -> deliveryMethod;
         };
     }

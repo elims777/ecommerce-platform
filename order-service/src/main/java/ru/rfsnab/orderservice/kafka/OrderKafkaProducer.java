@@ -3,12 +3,25 @@ package ru.rfsnab.orderservice.kafka;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import ru.rfsnab.orderservice.delivery.Carrier;
+import ru.rfsnab.orderservice.delivery.CarrierCode;
+import ru.rfsnab.orderservice.delivery.CarrierRepository;
+import ru.rfsnab.orderservice.delivery.CarrierSyncEvent;
+import ru.rfsnab.orderservice.delivery.Shipment;
+import ru.rfsnab.orderservice.delivery.ShipmentNotFoundEvent;
+import ru.rfsnab.orderservice.delivery.ShipmentRepository;
 import ru.rfsnab.orderservice.models.dto.event.OrderEvent;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.repository.WarehousePointRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Отправка Kafka events для заказов.
@@ -16,9 +29,14 @@ import java.time.LocalDateTime;
 @Component
 @RequiredArgsConstructor
 public class OrderKafkaProducer {
+    private static final String CARRIER_SYNC_KEY = "carrier-sync";
+    private static final String SHIPMENT_NOT_FOUND_KEY = "shipment-not-found:";
+
     private final KafkaTopicsProperties topics;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final WarehousePointRepository warehousePointRepository;
+    private final ShipmentRepository shipmentRepository;
+    private final CarrierRepository carrierRepository;
 
     private void send(String eventType, Order order){
         send(eventType, order, null, null);
@@ -59,9 +77,26 @@ public class OrderKafkaProducer {
                 .documentType(documentType)
                 .documentFileName(documentFileName)
                 .carrierName(order.getCarrierName())
+                .terminalName(order.getTerminalName())
+                .terminalAddress(order.getTerminalAddress())
+                .shipments("ORDER_STATUS_CHANGED".equals(eventType) ? buildShipments(order) : null)
                 .build();
 
-        kafkaTemplate.send(topics.getOrderEvents(), order.getId().toString(), event);
+        sendAfterCommit(order.getId().toString(), event);
+    }
+
+    /** Событие уходит только после коммита транзакции (при rollback не отправляется); вне транзакции — сразу. */
+    private void sendAfterCommit(String key, Object payload) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            kafkaTemplate.send(topics.getOrderEvents(), key, payload);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                kafkaTemplate.send(topics.getOrderEvents(), key, payload);
+            }
+        });
     }
 
     private OrderEvent.PickupPointDto buildPickupPoint(Order order) {
@@ -74,6 +109,36 @@ public class OrderKafkaProducer {
         }
         return new OrderEvent.PickupPointDto(point.getName(), point.getCity(), point.getStreet(),
                 point.getBuilding(), point.getPostalCode(), point.getPhoneNumber(), point.getWorkingHours());
+    }
+
+    /** Отправления заказа для письма о смене статуса: ТК, номер, ссылка «Отследить», статус ТК. */
+    private List<OrderEvent.ShipmentLine> buildShipments(Order order) {
+        List<Shipment> shipments = shipmentRepository.findAllByOrderIds(List.of(order.getId()));
+        if (shipments.isEmpty()) {
+            return List.of();
+        }
+        Map<CarrierCode, Carrier> carriers = carrierRepository.findAll().stream()
+                .collect(Collectors.toMap(Carrier::getCode, Function.identity()));
+        return shipments.stream().map(s -> {
+            Carrier carrier = carriers.get(s.getCarrierCode());
+            return new OrderEvent.ShipmentLine(carrier == null ? s.getCarrierCode().name() : carrier.getName(),
+                    s.getWaybillNumber(), carrier == null ? null : carrier.trackingUrl(s.getWaybillNumber()),
+                    s.getCarrierStatus());
+        }).toList();
+    }
+
+    /**
+     * Накладная не найдена в ТК 24 часа → письмо менеджеру (топик order-events, событие SHIPMENT_NOT_FOUND).
+     */
+    public void sendShipmentNotFound(ShipmentNotFoundEvent event) {
+        sendAfterCommit(SHIPMENT_NOT_FOUND_KEY + event.waybillNumber(), event);
+    }
+
+    /**
+     * Отчёт синхронизации терминалов ТК → письмо менеджеру (топик order-events, событие CARRIER_SYNC_COMPLETED).
+     */
+    public void sendCarrierSyncCompleted(CarrierSyncEvent event) {
+        sendAfterCommit(CARRIER_SYNC_KEY, event);
     }
 
     public void sendOrderCreated(Order order) {

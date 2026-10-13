@@ -24,6 +24,8 @@ public final class OrderStatusRuMapper {
             Map.entry("ошибка оплаты",           "PAYMENT_FAILED"),
             Map.entry("отгружен",                "SHIPPED"),
             Map.entry("в пути",                  "IN_TRANSIT"),
+            // в УНФ нет статуса «Прибыл на терминал» — для 1С это «В пути»
+            Map.entry("прибыл на терминал",      "IN_TRANSIT"),
             Map.entry("доставлен",               "DELIVERED"),
             Map.entry("отменен",                 "CANCELLED"),
             Map.entry("возврат средств",         "REFUNDED"),

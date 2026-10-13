@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import ru.rfsnab.orderservice.delivery.CarrierCode;
+import ru.rfsnab.orderservice.delivery.CarrierTerminal;
 import ru.rfsnab.orderservice.models.dto.order.AddressDto;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.OrderDto;
@@ -88,6 +89,58 @@ class OrderMapperTest {
             OrderDto dto = OrderMapper.toDto(order);
 
             assertThat(dto.items()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("терминал активен, адрес прежний — снимок без предупреждений")
+        void shouldMapTerminalSnapshotWithoutWarnings() {
+            Order order = buildTerminalOrder();
+            order.setPickupRecipientName("Петров Петр");
+            order.setPickupRecipientPhone("+79001112233");
+            CarrierTerminal terminal = buildTerminal(true, "ул. Ленина, 1");
+
+            OrderDto dto = OrderMapper.toDto(order, null, terminal);
+
+            assertThat(dto.carrierTerminalId()).isEqualTo(7L);
+            assertThat(dto.terminalName()).isEqualTo("Терминал Толмачёво");
+            assertThat(dto.terminalAddress()).isEqualTo("ул. Ленина, 1");
+            assertThat(dto.terminalClosed()).isFalse();
+            assertThat(dto.terminalCurrentAddress()).isNull();
+            assertThat(dto.pickupRecipientName()).isEqualTo("Петров Петр");
+            assertThat(dto.pickupRecipientPhone()).isEqualTo("+79001112233");
+        }
+
+        @Test
+        @DisplayName("терминал закрыт ТК — terminalClosed = true, снимок остаётся")
+        void shouldFlagClosedTerminal() {
+            Order order = buildTerminalOrder();
+
+            OrderDto dto = OrderMapper.toDto(order, null, buildTerminal(false, "ул. Ленина, 1"));
+
+            assertThat(dto.terminalClosed()).isTrue();
+            assertThat(dto.terminalAddress()).isEqualTo("ул. Ленина, 1");
+        }
+
+        @Test
+        @DisplayName("адрес терминала изменился — отдаётся текущий адрес")
+        void shouldReturnCurrentAddressWhenChanged() {
+            Order order = buildTerminalOrder();
+
+            OrderDto dto = OrderMapper.toDto(order, null, buildTerminal(true, "ул. Мира, 5"));
+
+            assertThat(dto.terminalAddress()).isEqualTo("ул. Ленина, 1");
+            assertThat(dto.terminalCurrentAddress()).isEqualTo("ул. Мира, 5");
+            assertThat(dto.terminalClosed()).isFalse();
+        }
+
+        @Test
+        @DisplayName("без терминала — terminalClosed = false, текущего адреса нет")
+        void shouldHaveNoTerminalFlagsWithoutTerminal() {
+            OrderDto dto = OrderMapper.toDto(buildDeliveryOrder());
+
+            assertThat(dto.carrierTerminalId()).isNull();
+            assertThat(dto.terminalClosed()).isFalse();
+            assertThat(dto.terminalCurrentAddress()).isNull();
         }
     }
 
@@ -186,6 +239,21 @@ class OrderMapperTest {
     }
 
     // ==================== Test data builders ====================
+
+
+    private Order buildTerminalOrder() {
+        Order order = buildDeliveryOrder();
+        order.setDeliveryMethod(DeliveryMethod.CARRIER_TERMINAL);
+        order.setCarrierTerminalId(7L);
+        order.setTerminalName("Терминал Толмачёво");
+        order.setTerminalAddress("ул. Ленина, 1");
+        return order;
+    }
+
+    private CarrierTerminal buildTerminal(boolean active, String address) {
+        return CarrierTerminal.builder().id(7L).carrierCode(CarrierCode.DELLIN).externalId("T7")
+                .name("Терминал Толмачёво").address(address).active(active).build();
+    }
 
     private Order buildDeliveryOrder() {
         Order order = Order.builder()

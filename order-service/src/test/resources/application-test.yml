@@ -52,3 +52,23 @@ yandex:
     bucket-name: test-bucket
     endpoint: https://storage.yandexcloud.net
     region: ru-central1
+
+
+carriers:
+  cdek:
+    client-id: ""
+    client-secret: ""
+  dellin:
+    appkey: ""
+    login: ""
+    password: ""
+  pec:
+    login: ""
+    api-key: ""
+  baikal:
+    api-key: ""
+  vozovoz:
+    token: ""
+
+company:
+  inn: ""

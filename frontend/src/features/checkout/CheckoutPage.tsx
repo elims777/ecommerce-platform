@@ -48,6 +48,9 @@ interface CheckoutFormValues {
     deliveryMethod: DeliveryMethod;
     warehousePointId?: number;
     carrierCode?: CarrierCode;
+    carrierTerminalId?: number;
+    pickupRecipientName?: string;
+    pickupRecipientPhone?: string;
     comment?: string;
     newRecipientName?: string;
     newRecipientPhone?: string;
@@ -209,6 +212,13 @@ const createRecipientMutation = useMutation({
                         recipientName: selectedRecipient.name,
                     };
                 }
+            }
+
+            if (values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL) {
+                request.carrierCode = values.carrierCode;
+                request.carrierTerminalId = values.carrierTerminalId;
+                request.pickupRecipientName = values.pickupRecipientName;
+                request.pickupRecipientPhone = values.pickupRecipientPhone;
             }
 
             if (values.deliveryMethod === DeliveryMethod.PICKUP && values.warehousePointId) {

@@ -17,6 +17,9 @@ import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
 import ru.rfsnab.orderservice.delivery.Carrier;
 import ru.rfsnab.orderservice.delivery.CarrierCode;
 import ru.rfsnab.orderservice.delivery.CarrierRepository;
+import ru.rfsnab.orderservice.delivery.CarrierTerminal;
+import ru.rfsnab.orderservice.delivery.CarrierTerminalRepository;
+import ru.rfsnab.orderservice.delivery.PointType;
 import ru.rfsnab.orderservice.exception.CartEmptyException;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
 import ru.rfsnab.orderservice.exception.ProfileIncompleteException;
@@ -42,6 +45,7 @@ import ru.rfsnab.orderservice.repository.PaymentMethodSettingsRepository;
 import ru.rfsnab.orderservice.repository.WarehousePointRepository;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.Duration;
 import java.util.*;
 
@@ -76,6 +80,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
     @Autowired
     private CarrierRepository carrierRepository;
+
+    @Autowired
+    private CarrierTerminalRepository terminalRepository;
 
     @Autowired
     private PaymentMethodSettingsRepository paymentMethodSettingsRepository;
@@ -1039,6 +1046,230 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .filter(i -> i.getProductId().equals(PRODUCT_ID_2))
                     .findFirst().orElseThrow();
             assertThat(item2.getExternalId()).isEqualTo("ext-002");
+        }
+    }
+
+    @Nested
+    @DisplayName("CARRIER_TERMINAL")
+    class CarrierTerminalTests {
+
+        private CarrierTerminal dellinTerminal;
+        private CarrierTerminal cdekTerminal;
+        private CarrierTerminal closedDellinTerminal;
+
+        @BeforeEach
+        void setUpTerminals() {
+            terminalRepository.deleteAll();
+            setDellinTerminalDelivery(true);
+            dellinTerminal = saveTerminal(CarrierCode.DELLIN, "D1", "Терминал Толмачёво", "ул. Ленина, 1", true);
+            cdekTerminal = saveTerminal(CarrierCode.CDEK, "C1", "ПВЗ СДЭК", "ул. Мира, 2", true);
+            closedDellinTerminal = saveTerminal(CarrierCode.DELLIN, "D2", "Закрытый терминал", "ул. Старая, 3", false);
+        }
+
+        private CarrierTerminal saveTerminal(CarrierCode carrier, String externalId, String name, String address, boolean active) {
+            return terminalRepository.save(CarrierTerminal.builder()
+                    .carrierCode(carrier).externalId(externalId).pointType(PointType.TERMINAL)
+                    .city("Новосибирск").name(name).address(address)
+                    .latitude(new BigDecimal("55.030000")).longitude(new BigDecimal("82.920000"))
+                    .active(active).syncedAt(Instant.now()).build());
+        }
+
+        private void setDellinTerminalDelivery(boolean enabled) {
+            Carrier dellin = carrierRepository.findById(CarrierCode.DELLIN).orElseThrow();
+            dellin.setTerminalDeliveryEnabled(enabled);
+            carrierRepository.save(dellin);
+        }
+
+        private CreateOrderRequest terminalRequest(CarrierCode carrier, Long terminalId, AddressDto address) {
+            return new CreateOrderRequest(PaymentMethod.CARD, DeliveryMethod.CARRIER_TERMINAL,
+                    address, null, "Иван Иванов", "+79990000000", null, null, null, null, null, carrier, terminalId);
+        }
+
+        @Test
+        @DisplayName("заказ сохраняет снимок названия и адреса терминала из БД, а не из запроса")
+        void shouldSnapshotTerminalFromDb() {
+            addItemsToCart();
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, dellinTerminal.getId(), null));
+
+            assertThat(order.getDeliveryMethod()).isEqualTo(DeliveryMethod.CARRIER_TERMINAL);
+            assertThat(order.getDeliveryAddress()).isNull();
+            assertThat(order.getCarrierCode()).isEqualTo(CarrierCode.DELLIN);
+            assertThat(order.getCarrierName()).isEqualTo("Деловые Линии");
+            assertThat(order.getCarrierTerminalId()).isEqualTo(dellinTerminal.getId());
+            assertThat(order.getTerminalName()).isEqualTo("Терминал Толмачёво");
+            assertThat(order.getTerminalAddress()).isEqualTo("ул. Ленина, 1");
+
+            // терминал сменил адрес — снимок в заказе остаётся прежним
+            dellinTerminal.setAddress("ул. Новая, 9");
+            terminalRepository.save(dellinTerminal);
+            Order reloaded = orderRepository.findById(order.getId()).orElseThrow();
+            assertThat(reloaded.getTerminalAddress()).isEqualTo("ул. Ленина, 1");
+        }
+
+        @Test
+        @DisplayName("терминал другой ТК — отказ")
+        void shouldRejectForeignCarrierTerminal() {
+            addItemsToCart();
+            CreateOrderRequest request = terminalRequest(CarrierCode.DELLIN, cdekTerminal.getId(), buildAddressDto());
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("недоступен");
+        }
+
+        @Test
+        @DisplayName("пришедший с запросом адрес для терминала не сохраняется")
+        void shouldIgnoreAddressForTerminal() {
+            addItemsToCart();
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, dellinTerminal.getId(), buildAddressDto()));
+
+            assertThat(order.getDeliveryAddress()).isNull();
+            assertThat(order.getTerminalName()).isEqualTo("Терминал Толмачёво");
+        }
+
+        @Test
+        @DisplayName("неактивный терминал — отказ")
+        void shouldRejectInactiveTerminal() {
+            addItemsToCart();
+            CreateOrderRequest request = terminalRequest(CarrierCode.DELLIN, closedDellinTerminal.getId(), buildAddressDto());
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("недоступен");
+        }
+
+        @Test
+        @DisplayName("ТК без terminal_delivery_enabled — отказ")
+        void shouldRejectCarrierWithoutTerminalDelivery() {
+            setDellinTerminalDelivery(false);
+            addItemsToCart();
+            CreateOrderRequest request = terminalRequest(CarrierCode.DELLIN, dellinTerminal.getId(), buildAddressDto());
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("до терминала");
+        }
+
+        @Test
+        @DisplayName("несуществующий терминал, пустой терминал, пустая ТК — отказ")
+        void shouldRejectIncompleteRequests() {
+            addItemsToCart();
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, 999_999L, buildAddressDto())))
+                    .isInstanceOf(InvalidOrderStateException.class).hasMessageContaining("не найден");
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, null, buildAddressDto())))
+                    .isInstanceOf(InvalidOrderStateException.class).hasMessageContaining("терминал");
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(null, dellinTerminal.getId(), buildAddressDto())))
+                    .isInstanceOf(InvalidOrderStateException.class).hasMessageContaining("транспортную компанию");
+        }
+
+        @Test
+        @DisplayName("редактирование: адресная доставка → терминал → самовывоз меняет и очищает снимок")
+        void shouldSwitchSnapshotOnUpdate() {
+            Order order = createTestOrder();
+            OrderItemDto item = new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null);
+
+            Order toTerminal = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.CARRIER_TERMINAL)
+                    .carrierCode(CarrierCode.DELLIN).carrierTerminalId(dellinTerminal.getId())
+                    .pickupRecipientName("Иван Иванов").pickupRecipientPhone("+79990000000")
+                    .items(List.of(item)).build());
+
+            assertThat(toTerminal.getDeliveryAddress()).isNull();
+            assertThat(toTerminal.getCarrierCode()).isEqualTo(CarrierCode.DELLIN);
+            assertThat(toTerminal.getCarrierTerminalId()).isEqualTo(dellinTerminal.getId());
+            assertThat(toTerminal.getTerminalName()).isEqualTo("Терминал Толмачёво");
+            assertThat(toTerminal.getPickupRecipientName()).isEqualTo("Иван Иванов");
+
+            Order toPickup = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.PICKUP)
+                    .warehousePointId(savedWarehousePoint.getId()).items(List.of(item)).build());
+
+            assertThat(toPickup.getCarrierCode()).isNull();
+            assertThat(toPickup.getCarrierName()).isNull();
+            assertThat(toPickup.getCarrierTerminalId()).isNull();
+            assertThat(toPickup.getTerminalName()).isNull();
+            assertThat(toPickup.getTerminalAddress()).isNull();
+        }
+
+        @Test
+        @DisplayName("редактирование: получатель берётся из запроса для самовывоза и очищается для адресной доставки")
+        void shouldApplyRecipientOnUpdate() {
+            Order order = createTestOrder();
+            OrderItemDto item = new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null);
+
+            Order toPickup = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.PICKUP)
+                    .warehousePointId(savedWarehousePoint.getId())
+                    .pickupRecipientName("Пётр Петров").pickupRecipientPhone("+79991112233")
+                    .items(List.of(item)).build());
+            assertThat(toPickup.getPickupRecipientName()).isEqualTo("Пётр Петров");
+            assertThat(toPickup.getPickupRecipientPhone()).isEqualTo("+79991112233");
+
+            Order toAddress = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.CARRIER_ADDRESS)
+                    .carrierCode(CarrierCode.PEC).deliveryAddress(buildAddressDto())
+                    .items(List.of(item)).build());
+            assertThat(toAddress.getPickupRecipientName()).isNull();
+            assertThat(toAddress.getPickupRecipientPhone()).isNull();
+        }
+
+        @Test
+        @DisplayName("получатель сохраняется в заказ; без ФИО или телефона — отказ")
+        void shouldRequireRecipient() {
+            addItemsToCart();
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, dellinTerminal.getId(), null));
+            assertThat(order.getPickupRecipientName()).isEqualTo("Иван Иванов");
+            assertThat(order.getPickupRecipientPhone()).isEqualTo("+79990000000");
+
+            CreateOrderRequest noName = new CreateOrderRequest(PaymentMethod.CARD, DeliveryMethod.CARRIER_TERMINAL,
+                    null, null, " ", "+79990000000", null, null, null, null, null,
+                    CarrierCode.DELLIN, dellinTerminal.getId());
+            addItemsToCart();
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", noName))
+                    .isInstanceOf(InvalidOrderStateException.class).hasMessage("Укажите ФИО и телефон получателя");
+
+            Order created = createTestOrder();
+            OrderItemDto item = new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null);
+            UpdateOrderRequest noPhone = UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.CARRIER_TERMINAL)
+                    .carrierCode(CarrierCode.DELLIN).carrierTerminalId(dellinTerminal.getId())
+                    .pickupRecipientName("Иван Иванов").items(List.of(item)).build();
+            assertThatThrownBy(() -> orderService.updateOrder(created.getId(), USER_ID, noPhone))
+                    .isInstanceOf(InvalidOrderStateException.class).hasMessage("Укажите ФИО и телефон получателя");
+        }
+
+        @Test
+        @DisplayName("повтор заказа с терминалом копирует получателя; закрытый терминал или выключенная ТК — понятная ошибка")
+        void shouldRepeatTerminalOrderOnlyIfTerminalAvailable() {
+            addItemsToCart();
+            Order original = orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, dellinTerminal.getId(), null));
+
+            Order repeated = orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL);
+            assertThat(repeated.getTerminalName()).isEqualTo("Терминал Толмачёво");
+            assertThat(repeated.getPickupRecipientName()).isEqualTo("Иван Иванов");
+            assertThat(repeated.getPickupRecipientPhone()).isEqualTo("+79990000000");
+
+            setDellinTerminalDelivery(false);
+            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessage("Терминал больше недоступен, выберите другой");
+
+            setDellinTerminalDelivery(true);
+            dellinTerminal.setActive(false);
+            terminalRepository.save(dellinTerminal);
+            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessage("Терминал больше недоступен, выберите другой");
         }
     }
 

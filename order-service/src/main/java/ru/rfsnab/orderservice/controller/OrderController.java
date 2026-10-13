@@ -19,6 +19,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.orderservice.mapper.OrderDocumentMapper;
+import ru.rfsnab.orderservice.delivery.CarrierTerminal;
+import ru.rfsnab.orderservice.delivery.AddShipmentRequest;
+import ru.rfsnab.orderservice.delivery.DeliveryService;
+import ru.rfsnab.orderservice.delivery.ShipmentDto;
+import ru.rfsnab.orderservice.delivery.ShipmentService;
 import ru.rfsnab.orderservice.mapper.OrderMapper;
 import ru.rfsnab.orderservice.models.dto.order.*;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
@@ -47,7 +52,9 @@ public class OrderController {
 
     private final OrderService orderService;
     private final WarehousePointService warehousePointService;
+    private final DeliveryService deliveryService;
     private final OrderDocumentService orderDocumentService;
+    private final ShipmentService shipmentService;
 
     @PostMapping
     @Operation(summary = "Создать заказ из корзины")
@@ -222,7 +229,11 @@ public class OrderController {
         if (order.getWarehousePointId() != null) {
             warehousePoint = warehousePointService.getPoint(order.getWarehousePointId());
         }
-        return OrderMapper.toDto(order, warehousePoint);
+        CarrierTerminal terminal = order.getCarrierTerminalId() != null
+                ? deliveryService.findTerminal(order.getCarrierTerminalId()).orElse(null)
+                : null;
+        List<ShipmentDto> shipments = shipmentService.getByOrderId(order.getId()).stream().map(ShipmentDto::forClient).toList();
+        return OrderMapper.toDto(order, warehousePoint, terminal, shipments);
     }
 
     /**

@@ -15,6 +15,15 @@ public sealed interface HasDeliveryInfo permits CreateOrderRequest, UpdateOrderR
 
     Long warehousePointId();
 
-    /** ТК для CARRIER_ADDRESS; для остальных способов игнорируется. */
+    /** ФИО получателя для CARRIER_TERMINAL; для остальных способов игнорируется. */
+    String pickupRecipientName();
+
+    /** Телефон получателя для CARRIER_TERMINAL; для остальных способов игнорируется. */
+    String pickupRecipientPhone();
+
+    /** ТК для CARRIER_ADDRESS и CARRIER_TERMINAL; для остальных способов игнорируется. */
     CarrierCode carrierCode();
+
+    /** Терминал для CARRIER_TERMINAL (только ТК из carrierCode); для остальных способов игнорируется. Адрес для терминала не нужен. */
+    Long carrierTerminalId();
 }

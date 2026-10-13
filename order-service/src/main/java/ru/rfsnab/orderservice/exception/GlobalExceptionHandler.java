@@ -7,9 +7,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
+import ru.rfsnab.orderservice.delivery.CarrierApiException;
+import ru.rfsnab.orderservice.delivery.ShipmentAlreadyExistsException;
+import ru.rfsnab.orderservice.delivery.ShipmentModeSwitchRequiredException;
+import ru.rfsnab.orderservice.delivery.ShipmentNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -79,6 +85,16 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Не передан обязательный параметр запроса (например, carrier/city/type справочника терминалов).
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParameter(
+            MissingServletRequestParameterException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Missing Parameter",
+                "Не передан параметр " + ex.getParameterName(), request);
+    }
+
+    /**
      * Невалидный файл документа заказа (тип, размер, пустой файл).
      */
     @ExceptionHandler(InvalidDocumentException.class)
@@ -132,6 +148,53 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleOrderDocumentNotFound(
             OrderDocumentNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, "Order Document Not Found", ex.getMessage(), request);
+    }
+
+    /**
+     * Отправление не найдено.
+     */
+    @ExceptionHandler(ShipmentNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleShipmentNotFound(
+            ShipmentNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, "Shipment Not Found", ex.getMessage(), request);
+    }
+
+    /**
+     * Накладная этой ТК уже внесена.
+     */
+    @ExceptionHandler(ShipmentAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleShipmentAlreadyExists(
+            ShipmentAlreadyExistsException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, "Shipment Already Exists", ex.getMessage(), request);
+    }
+
+    /**
+     * Вторая накладная при режиме SINGLE: код SHIPMENT_MODE_SWITCH_REQUIRED в error, message и code.
+     */
+    @ExceptionHandler(ShipmentModeSwitchRequiredException.class)
+    public ResponseEntity<ErrorResponse> handleShipmentModeSwitchRequired(
+            ShipmentModeSwitchRequiredException ex, HttpServletRequest request) {
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error(ShipmentModeSwitchRequiredException.CODE)
+                .code(ShipmentModeSwitchRequiredException.CODE)
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    // ==================== 502 Bad Gateway ====================
+
+    /**
+     * ТК недоступна или ответила непонятно (ручное обновление статуса).
+     */
+    @ExceptionHandler(CarrierApiException.class)
+    public ResponseEntity<ErrorResponse> handleCarrierApi(
+            CarrierApiException ex, HttpServletRequest request) {
+        log.warn("Ошибка ТК на {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.BAD_GATEWAY, "Carrier Error", ex.getMessage(), request);
     }
 
     // ==================== 422 Unprocessable Entity ====================

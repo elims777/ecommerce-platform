@@ -2,6 +2,8 @@ package ru.rfsnab.orderservice.models.dto.order;
 
 import lombok.Builder;
 import ru.rfsnab.orderservice.delivery.CarrierCode;
+import ru.rfsnab.orderservice.delivery.ShipmentDto;
+import ru.rfsnab.orderservice.delivery.ShipmentMode;
 import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
@@ -27,10 +29,20 @@ public record OrderDto(
         WarehousePointDto warehousePoint,
         CarrierCode carrierCode,
         String carrierName,
+        Long carrierTerminalId,
+        String terminalName,
+        String terminalAddress,
+        boolean terminalClosed,
+        String terminalCurrentAddress,
+        ShipmentMode shipmentMode,
+        boolean shipmentsComplete,
+        List<ShipmentDto> shipments,
         String trackingNumber,
         String customerEmail,
         String customerName,
         String customerPhone,
+        String pickupRecipientName,
+        String pickupRecipientPhone,
         String comment,
         CustomerType customerType,
         String companyName,

@@ -307,6 +307,11 @@ spring:
               predicates:
                 - Path=/api/v1/admin/carriers/**,/api/v1/admin/carriers
 
+            - id: order-admin-shipments
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/v1/admin/shipments/**,/api/v1/admin/shipments
+
             - id: order-admin-warehouse-points
               uri: http://localhost:8084
               predicates:

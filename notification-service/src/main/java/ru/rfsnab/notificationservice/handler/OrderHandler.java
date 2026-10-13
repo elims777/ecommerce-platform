@@ -25,7 +25,8 @@ public class OrderHandler implements NotificationHandler{
 
     @Override
     public boolean supports(String topic, String eventType) {
-        return this.topic.equals(topic);
+        return this.topic.equals(topic) && !CarrierSyncHandler.EVENT_TYPE.equals(eventType)
+                && !ShipmentNotFoundHandler.EVENT_TYPE.equals(eventType);
     }
 
     @Override
@@ -95,11 +96,7 @@ public class OrderHandler implements NotificationHandler{
                 log.info("Awaiting confirmation email: order={}, email={}", event.orderNumber(), event.customerEmail());
             }
             default -> {
-                emailService.sendOrderStatusChangedEmail(
-                        event.customerEmail(),
-                        event.orderNumber(),
-                        event.status()
-                );
+                emailService.sendOrderStatusChangedEmail(event);
                 log.info("Order status changed email: order={}, status={}, email={}",
                         event.orderNumber(), event.status(), event.customerEmail());
             }

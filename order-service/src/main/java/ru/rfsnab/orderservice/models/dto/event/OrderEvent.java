@@ -33,8 +33,14 @@ public record OrderEvent(
         PickupPointDto pickupPoint,
         String documentType,
         String documentFileName,
-        String carrierName
+        String carrierName,
+        String terminalName,
+        String terminalAddress,
+        List<ShipmentLine> shipments
 ) {
+    /** Отправление в письме о смене статуса: ТК, номер, ссылка «Отследить», статус ТК. */
+    public record ShipmentLine(String carrierName, String waybillNumber, String trackingUrl, String carrierStatus) {}
+
     public record OrderItemLine(String productName, Integer quantity, BigDecimal price, String variantAttributes, String sku) {}
 
     public record DeliveryAddressDto(String city, String street, String building, String apartment,

@@ -1,5 +1,6 @@
 package ru.rfsnab.orderservice.exception;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,4 +22,7 @@ public class ErrorResponse {
     private String error;
     private String message;
     private String path;
+    /** Машиночитаемый код ошибки; null, если не задан. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String code;
 }

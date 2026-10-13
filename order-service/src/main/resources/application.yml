@@ -11,6 +11,11 @@ spring:
     password: ${ORDER_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
+  task:
+    scheduling:
+      pool:
+        size: 3
+
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -89,3 +94,24 @@ app:
       order-events: order-events
       order-1c-export: order-1c-export
       payment-processed: payment.processed
+
+# Ключи API транспортных компаний; пусто — ТК отключена в синхронизации терминалов
+carriers:
+  cdek:
+    client-id: ${CDEK_CLIENT_ID:}
+    client-secret: ${CDEK_CLIENT_SECRET:}
+  dellin:
+    appkey: ${DELLIN_APPKEY:}
+    login: ${DELLIN_LOGIN:}
+    password: ${DELLIN_PASSWORD:}
+  pec:
+    login: ${PEC_LOGIN:}
+    api-key: ${PEC_API_KEY:}
+  baikal:
+    api-key: ${BAIKAL_API_KEY:}
+  vozovoz:
+    token: ${VOZOVOZ_TOKEN:}
+
+# ИНН нашей компании — для направления отправлений в журнале ТК
+company:
+  inn: ${COMPANY_INN:}

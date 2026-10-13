@@ -3,6 +3,9 @@ import { App, Button, Form, Input, InputNumber, Modal, Switch, Table, Tag } from
 import { PlusOutlined } from '@ant-design/icons';
 import { isAxiosError } from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import PointsMap from '@/components/maps/PointsMap';
+import { geocodeAddress } from '@/api/yandexGeo';
+import { YANDEX_GEOCODER_KEY, YANDEX_MAPS_KEY } from '@/lib/ymaps';
 import { createWarehousePoint, getAdminWarehousePoints, updateWarehousePoint } from '@/api/adminLogistics';
 import type { WarehousePointDto } from '@/types/order';
 import type { WarehousePointRequest } from '@/types/delivery';
@@ -14,6 +17,7 @@ const WarehousePointsTab = () => {
     const [form] = Form.useForm<WarehousePointRequest>();
     const [editing, setEditing] = useState<WarehousePointDto | null>(null);
     const [open, setOpen] = useState(false);
+    const [geocoding, setGeocoding] = useState(false);
 
     const { data: points = [], isLoading } = useQuery({
         queryKey: ['adminWarehousePoints'],
@@ -32,6 +36,18 @@ const WarehousePointsTab = () => {
         onError: (err) => messageApi.error(
             (isAxiosError(err) && err.response?.data?.message) || 'Не удалось сохранить точку'),
     });
+
+    const findOnMap = async () => {
+        const { city, street, building } = form.getFieldsValue(['city', 'street', 'building']);
+        setGeocoding(true);
+        try {
+            const geo = await geocodeAddress([city, street, building].filter(Boolean).join(', '));
+            if (geo) form.setFieldsValue({ latitude: geo.latitude, longitude: geo.longitude });
+            else messageApi.warning('Адрес не найден на карте — уточните адрес или введите координаты вручную');
+        } finally {
+            setGeocoding(false);
+        }
+    };
 
     const openForm = (point: WarehousePointDto | null) => {
         setEditing(point);
@@ -110,6 +126,27 @@ const WarehousePointsTab = () => {
                             <InputNumber min={-180} max={180} step={0.000001} style={{ width: 160 }} />
                         </Form.Item>
                     </div>
+                    {YANDEX_MAPS_KEY && (
+                        <>
+                            {YANDEX_GEOCODER_KEY && (
+                                <Button onClick={findOnMap} loading={geocoding} style={{ marginBottom: 12 }}>Найти на карте</Button>
+                            )}
+                            <Form.Item noStyle shouldUpdate={(a, b) => a.latitude !== b.latitude || a.longitude !== b.longitude}>
+                                {() => {
+                                    const latitude = form.getFieldValue('latitude');
+                                    const longitude = form.getFieldValue('longitude');
+                                    return latitude != null && longitude != null ? (
+                                        <div style={{ marginBottom: 12 }}>
+                                            <PointsMap
+                                                points={[{ id: 'point', latitude, longitude }]}
+                                                onDragEnd={(lat, lng) => form.setFieldsValue({ latitude: lat, longitude: lng })}
+                                            />
+                                        </div>
+                                    ) : null;
+                                }}
+                            </Form.Item>
+                        </>
+                    )}
                     <Form.Item name="active" label="Активна" valuePropName="checked">
                         <Switch />
                     </Form.Item>

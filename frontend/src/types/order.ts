@@ -1,4 +1,4 @@
-import type { CarrierCode } from './delivery';
+import type { CarrierCode, ShipmentDto, ShipmentMode } from './delivery';
 
 /** Способы оплаты */
 export enum PaymentMethod {
@@ -19,12 +19,14 @@ export const PaymentMethodLabels: Record<PaymentMethod, string> = {
 export enum DeliveryMethod {
     PICKUP = 'PICKUP',
     CARRIER_ADDRESS = 'CARRIER_ADDRESS',
+    CARRIER_TERMINAL = 'CARRIER_TERMINAL',
     SUPPLIER_DELIVERY = 'SUPPLIER_DELIVERY',
 }
 
 export const DeliveryMethodLabels: Record<DeliveryMethod, string> = {
     [DeliveryMethod.PICKUP]: 'Самовывоз',
     [DeliveryMethod.CARRIER_ADDRESS]: 'Доставка до адреса (ТК)',
+    [DeliveryMethod.CARRIER_TERMINAL]: 'До терминала ТК',
     [DeliveryMethod.SUPPLIER_DELIVERY]: 'Доставка поставщиком',
 };
 
@@ -32,6 +34,7 @@ export const DeliveryMethodLabels: Record<DeliveryMethod, string> = {
 export const CLIENT_DELIVERY_METHODS: DeliveryMethod[] = [
     DeliveryMethod.PICKUP,
     DeliveryMethod.CARRIER_ADDRESS,
+    DeliveryMethod.CARRIER_TERMINAL,
 ];
 
 /** Адрес доставки */
@@ -54,6 +57,7 @@ export enum OrderStatus {
     PROCESSING = 'PROCESSING',
     SHIPPED = 'SHIPPED',
     IN_TRANSIT = 'IN_TRANSIT',
+    ARRIVED_AT_TERMINAL = 'ARRIVED_AT_TERMINAL',
     DELIVERED = 'DELIVERED',
     CANCELLED = 'CANCELLED',
     REFUNDED = 'REFUNDED',
@@ -71,6 +75,7 @@ export const OrderStatusLabels: Record<OrderStatus, string> = {
     [OrderStatus.PROCESSING]: 'В обработке',
     [OrderStatus.SHIPPED]: 'Отгружен',
     [OrderStatus.IN_TRANSIT]: 'В пути',
+    [OrderStatus.ARRIVED_AT_TERMINAL]: 'Прибыл на терминал',
     [OrderStatus.DELIVERED]: 'Доставлен',
     [OrderStatus.CANCELLED]: 'Отменён',
     [OrderStatus.REFUNDED]: 'Возврат средств',
@@ -87,6 +92,10 @@ export interface CreateOrderRequest {
     deliveryAddress?: AddressDto;
     warehousePointId?: number;
     carrierCode?: CarrierCode;
+    carrierTerminalId?: number;
+    /** Получатель на терминале ТК (CARRIER_TERMINAL) */
+    pickupRecipientName?: string;
+    pickupRecipientPhone?: string;
     comment?: string;
     companyName?: string;
     inn?: string;
@@ -119,6 +128,9 @@ export interface UpdateOrderRequest {
     deliveryAddress?: AddressDto;
     warehousePointId?: number;
     carrierCode?: CarrierCode;
+    carrierTerminalId?: number;
+    pickupRecipientName?: string;
+    pickupRecipientPhone?: string;
     items: UpdateOrderItemRequest[];
     comment?: string;
 }
@@ -153,7 +165,20 @@ export interface OrderDto {
     warehousePoint?: WarehousePointDto;
     carrierCode?: CarrierCode | null;
     carrierName?: string | null;
+    carrierTerminalId?: number | null;
+    pickupRecipientName?: string | null;
+    pickupRecipientPhone?: string | null;
+    /** Снимок терминала на момент заказа */
+    terminalName?: string | null;
+    terminalAddress?: string | null;
+    /** Терминал стал неактивным в справочнике ТК */
+    terminalClosed?: boolean;
+    /** Текущий адрес терминала, если отличается от снимка */
+    terminalCurrentAddress?: string | null;
     trackingNumber?: string;
+    shipmentMode?: ShipmentMode | null;
+    shipmentsComplete?: boolean;
+    shipments?: ShipmentDto[];
     customerEmail: string;
     customerName?: string | null;
     customerPhone?: string | null;

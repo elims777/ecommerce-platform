@@ -22,6 +22,7 @@ const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
   INVOICE_SENT:          { cls: 'rf-badge-navy',                 label: 'Счёт выставлен' },
   SHIPPED:               { cls: 'rf-badge-navy rf-badge-dot',    label: 'В доставке' },
   IN_TRANSIT:            { cls: 'rf-badge-navy rf-badge-dot',    label: 'В пути' },
+  ARRIVED_AT_TERMINAL:   { cls: 'rf-badge-navy rf-badge-dot',    label: 'Прибыл на терминал' },
   DELIVERED:             { cls: 'rf-badge-neutral',              label: 'Доставлено' },
   COMPLETED:             { cls: 'rf-badge-neutral',              label: 'Завершено' },
   PAYMENT_FAILED:        { cls: 'rf-badge-red',                  label: 'Ошибка оплаты' },

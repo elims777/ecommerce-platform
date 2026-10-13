@@ -23,17 +23,25 @@ import java.util.List;
 public class AdminCarrierController {
 
     private final CarrierService carrierService;
+    private final CarrierSyncService carrierSyncService;
 
     @GetMapping
     @Operation(summary = "Все транспортные компании")
     public ResponseEntity<List<CarrierDto>> getAll() {
-        return ResponseEntity.ok(carrierService.getAll().stream().map(CarrierDto::from).toList());
+        return ResponseEntity.ok(carrierService.getAll());
     }
 
     @PatchMapping("/{code}")
     @Operation(summary = "Обновить настройки ТК")
     public ResponseEntity<CarrierDto> update(@PathVariable CarrierCode code,
                                              @Valid @RequestBody CarrierUpdateRequest request) {
-        return ResponseEntity.ok(CarrierDto.from(carrierService.update(code, request)));
+        return ResponseEntity.ok(carrierService.update(code, request));
+    }
+
+    /** Ручная синхронизация терминалов ТК; возвращает отчёт. */
+    @PostMapping("/{code}/sync-terminals")
+    @Operation(summary = "Синхронизировать терминалы ТК сейчас; ошибка ТК приходит отчётом со статусом ERROR")
+    public ResponseEntity<CarrierSyncReport> syncTerminals(@PathVariable CarrierCode code) {
+        return ResponseEntity.ok(carrierSyncService.syncManually(code));
     }
 }

@@ -1,5 +1,7 @@
 package ru.rfsnab.orderservice.mapper;
 
+import ru.rfsnab.orderservice.delivery.CarrierTerminal;
+import ru.rfsnab.orderservice.delivery.ShipmentDto;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.OrderDto;
 import ru.rfsnab.orderservice.models.dto.order.OrderSummaryDto;
@@ -8,6 +10,9 @@ import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.service.PriceSelector;
+
+import java.util.List;
+import java.util.Objects;
 
 public class OrderMapper {
 
@@ -18,6 +23,25 @@ public class OrderMapper {
      * @param warehousePoint точка самовывоза (nullable — null для DELIVERY заказов)
      */
     public static OrderDto toDto(Order order, WarehousePoint warehousePoint) {
+        return toDto(order, warehousePoint, null);
+    }
+
+    /**
+     * Order → OrderDto с точкой самовывоза и текущим состоянием терминала ТК.
+     *
+     * @param terminal терминал заказа (nullable — null, если способ доставки без терминала)
+     */
+    public static OrderDto toDto(Order order, WarehousePoint warehousePoint, CarrierTerminal terminal) {
+        return toDto(order, warehousePoint, terminal, List.of());
+    }
+
+    /**
+     * Order → OrderDto с точкой самовывоза, терминалом ТК и отправлениями заказа.
+     *
+     * @param shipments отправления заказа (не null; пустой список, если их нет)
+     */
+    public static OrderDto toDto(Order order, WarehousePoint warehousePoint, CarrierTerminal terminal,
+                                 List<ShipmentDto> shipments) {
         return new OrderDto(
                 order.getId(),
                 order.getUserId(),
@@ -36,10 +60,22 @@ public class OrderMapper {
                         : null,
                 order.getCarrierCode(),
                 order.getCarrierName(),
+                order.getCarrierTerminalId(),
+                order.getTerminalName(),
+                order.getTerminalAddress(),
+                terminal != null && !terminal.isActive(),
+                terminal != null && !Objects.equals(terminal.getAddress(), order.getTerminalAddress())
+                        ? terminal.getAddress()
+                        : null,
+                order.getShipmentMode(),
+                order.isShipmentsComplete(),
+                shipments,
                 order.getTrackingNumber(),
                 order.getCustomerEmail(),
                 order.getCustomerName(),
                 order.getCustomerPhone(),
+                order.getPickupRecipientName(),
+                order.getPickupRecipientPhone(),
                 order.getComment(),
                 order.getCustomerType(),
                 order.getCompanyName(),
@@ -98,6 +134,11 @@ public class OrderMapper {
 
         if (request.deliveryMethod() == DeliveryMethod.PICKUP) {
             order.setWarehousePointId(request.warehousePointId());
+            order.setPickupRecipientName(request.pickupRecipientName());
+            order.setPickupRecipientPhone(request.pickupRecipientPhone());
+        } else if (request.deliveryMethod() == DeliveryMethod.CARRIER_TERMINAL) {
+            // адрес не храним: место получения — снимок терминала
+            order.setCarrierCode(request.carrierCode());
             order.setPickupRecipientName(request.pickupRecipientName());
             order.setPickupRecipientPhone(request.pickupRecipientPhone());
         } else {
