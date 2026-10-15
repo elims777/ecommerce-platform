@@ -67,6 +67,12 @@ public class ImageProcessingPool {
         );
         executor.allowCoreThreadTimeOut(true);  // core-потоки тоже завершаются при простое
 
+        // До running=true: pollAndProcess не захватит задачи, пока не закончено восстановление
+        int recovered = taskRepository.recoverInterruptedTasks(config.getMaxRetries());
+        if (recovered > 0) {
+            log.warn("Восстановлено {} задач, прерванных перезапуском (PROCESSING → PENDING/FAILED)", recovered);
+        }
+
         running.set(true);
         log.info("ImageProcessingPool инициализирован: core={}, max={}, queue={}",
                 config.getMinThreads(), config.getMaxThreads(), config.getBufferMaxSize());
