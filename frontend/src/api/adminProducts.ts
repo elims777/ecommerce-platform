@@ -133,9 +133,15 @@ export const setParentProduct = async (id: number, parentProductId: number | nul
     return data;
 };
 
-/** Поиск товаров по имени (для выбора родителя) */
-export const searchProducts = async (query: string): Promise<Product[]> => {
-    const { data } = await apiClient.get<Page<Product>>('/v1/products/search', { params: { query, size: 20 } });
+/** Кандидаты в родители (включая неактивные; товары categoryId — первыми) */
+export const searchParentCandidates = async (
+    query: string,
+    categoryId: number | null | undefined,
+    excludeIds: number[],
+): Promise<Product[]> => {
+    const { data } = await apiClient.get<Page<Product>>('/v1/products/admin/parent-candidates', {
+        params: { query, categoryId: categoryId ?? undefined, excludeIds: excludeIds.join(','), size: 20 },
+    });
     return data.content;
 };
 

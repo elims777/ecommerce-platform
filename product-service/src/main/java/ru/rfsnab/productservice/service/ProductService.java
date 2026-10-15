@@ -199,6 +199,14 @@ public class ProductService {
     }
 
     /**
+     * Кандидаты в родители для админки (включая неактивные товары)
+     */
+    @Transactional(readOnly = true)
+    public Page<Product> findParentCandidates(String query, Long categoryId, List<Long> excludeIds, Pageable pageable) {
+        return productRepository.findParentCandidates(query == null ? "" : query, categoryId, excludeIds, pageable);
+    }
+
+    /**
      * Получить рекомендуемые товары
      */
     public List<Product> getFeaturedProducts() {
