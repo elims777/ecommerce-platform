@@ -53,6 +53,12 @@ class ImageProcessingWorkerTest extends BaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("buildWebpFileName: берёт имя файла без пути и меняет расширение на webp")
+    void shouldBuildWebpFileName() {
+        assertThat(ImageProcessingWorker.buildWebpFileName("import_files/af/x_y.jpeg")).isEqualTo("x_y.webp");
+    }
+
+    @Test
     @DisplayName("FAILED при несуществующем файле")
     void shouldFailWhenFileNotFound() {
         ImageProcessingTask task = createTask("/nonexistent/path/photo.jpg", "photo.jpg");

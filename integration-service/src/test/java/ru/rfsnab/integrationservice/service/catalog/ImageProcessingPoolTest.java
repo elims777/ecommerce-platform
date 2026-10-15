@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.reactive.function.client.WebClient;
 import ru.rfsnab.integrationservice.BaseIntegrationTest;
+import ru.rfsnab.integrationservice.config.IntegrationProperties;
 import ru.rfsnab.integrationservice.model.ImageProcessingTask;
 import ru.rfsnab.integrationservice.model.ImageProcessingTask.TaskStatus;
 import ru.rfsnab.integrationservice.repository.ImageProcessingTaskRepository;
@@ -87,6 +88,71 @@ class ImageProcessingPoolTest extends BaseIntegrationTest {
             imageProcessingPool.enqueueImages(tempExchangeDir, "ext-003", imagePaths, "session-3");
 
             assertThat(taskRepository.findAll()).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("recoverInterruptedTasks")
+    class RecoverTests {
+
+        @Autowired
+        private IntegrationProperties properties;
+
+        private ImageProcessingTask save(TaskStatus status, int retryCount) {
+            return taskRepository.save(ImageProcessingTask.builder()
+                    .productExternalId("ext-recover")
+                    .filePath("/tmp/none.jpg")
+                    .originalFilename("none.jpg")
+                    .status(status)
+                    .retryCount(retryCount)
+                    .build());
+        }
+
+        @Test
+        @DisplayName("PROCESSING с запасом попыток → PENDING, retry+1, error_message заполнен")
+        void shouldReturnProcessingToPending() {
+            ImageProcessingTask task = save(TaskStatus.PROCESSING, 0);
+
+            int recovered = taskRepository.recoverInterruptedTasks(properties.getImageProcessing().getMaxRetries());
+
+            ImageProcessingTask reloaded = taskRepository.findById(task.getId()).orElseThrow();
+            assertThat(recovered).isEqualTo(1);
+            assertThat(reloaded.getStatus()).isEqualTo(TaskStatus.PENDING);
+            assertThat(reloaded.getRetryCount()).isEqualTo(1);
+            assertThat(reloaded.getErrorMessage()).isEqualTo("Прервано перезапуском сервиса");
+        }
+
+        @Test
+        @DisplayName("PROCESSING на последней попытке → FAILED")
+        void shouldFailTaskOnLastAttempt() {
+            int maxRetries = properties.getImageProcessing().getMaxRetries();
+            ImageProcessingTask task = save(TaskStatus.PROCESSING, maxRetries - 1);
+
+            taskRepository.recoverInterruptedTasks(maxRetries);
+
+            ImageProcessingTask reloaded = taskRepository.findById(task.getId()).orElseThrow();
+            assertThat(reloaded.getStatus()).isEqualTo(TaskStatus.FAILED);
+            assertThat(reloaded.getRetryCount()).isEqualTo(maxRetries);
+        }
+
+        @Test
+        @DisplayName("PENDING и COMPLETED не трогает, возвращает число PROCESSING")
+        void shouldNotTouchOtherStatuses() {
+            ImageProcessingTask pending = save(TaskStatus.PENDING, 0);
+            ImageProcessingTask completed = save(TaskStatus.COMPLETED, 0);
+            save(TaskStatus.PROCESSING, 0);
+            save(TaskStatus.PROCESSING, 0);
+
+            int recovered = taskRepository.recoverInterruptedTasks(properties.getImageProcessing().getMaxRetries());
+
+            assertThat(recovered).isEqualTo(2);
+            ImageProcessingTask reloadedPending = taskRepository.findById(pending.getId()).orElseThrow();
+            assertThat(reloadedPending.getStatus()).isEqualTo(TaskStatus.PENDING);
+            assertThat(reloadedPending.getRetryCount()).isZero();
+            assertThat(reloadedPending.getErrorMessage()).isNull();
+            ImageProcessingTask reloadedCompleted = taskRepository.findById(completed.getId()).orElseThrow();
+            assertThat(reloadedCompleted.getStatus()).isEqualTo(TaskStatus.COMPLETED);
+            assertThat(reloadedCompleted.getRetryCount()).isZero();
         }
     }
 
