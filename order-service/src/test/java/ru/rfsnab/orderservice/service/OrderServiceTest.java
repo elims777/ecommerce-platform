@@ -85,10 +85,10 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
     private static final ProductDto PRODUCT_1 = new ProductDto(
             PRODUCT_ID_1, "Доска обрезная 50x150", new BigDecimal("1500.00"),
-            null, 100, true, "ext-001", "ART-001", "шт", null, null);
+            null, 100, true, "ext-001", "ART-001", "шт", null, null, null);
     private static final ProductDto PRODUCT_2 = new ProductDto(
             PRODUCT_ID_2, "Брус 100x100", new BigDecimal("1000.00"),
-            null, 50, true, "ext-002", "ART-002", "м3", null, null);
+            null, 50, true, "ext-002", "ART-002", "м3", null, null, null);
 
     private final ObjectMapper jsonMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule());
@@ -291,7 +291,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         void createOrder_B2B_usesWholesalePrice() {
             Long productId = 10L;
             ProductDto product = new ProductDto(productId, "Товар B2B", new BigDecimal("1000.00"),
-                    new BigDecimal("800.00"), 100, true, "ext-010", null, null, null, null);
+                    new BigDecimal("800.00"), 100, true, "ext-010", null, null, null, null, null);
 
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
             when(productServiceClient.getProduct(productId)).thenReturn(product);
@@ -311,11 +311,37 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         }
 
         @Test
+        @DisplayName("вариант товара: variantAttributes (Размер, Рост) и sku сохраняются в позиции")
+        void createOrder_variant_savesVariantAttributesAndSku() {
+            Long productId = 12L;
+            ProductDto product = new ProductDto(productId, "Костюм", new BigDecimal("1000.00"),
+                    new BigDecimal("800.00"), 100, true, "FTK-50991000.014", "50991000.014", null, null, 99L,
+                    List.of(new ProductDto.Attribute("Признак наличия", "Складской"),
+                            new ProductDto.Attribute("Рост", "170-176"),
+                            new ProductDto.Attribute("Размер", "64-66")));
+
+            when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
+            when(productServiceClient.getProduct(productId)).thenReturn(product);
+
+            cartService.addItemToCart(USER_ID, productId, 1);
+
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, null, null, null, null, null);
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
+
+            OrderItem item = order.getItems().get(0);
+            assertThat(item.getVariantAttributes()).isEqualTo("Размер: 64-66, Рост: 170-176");
+            assertThat(item.getSku()).isEqualTo("50991000.014");
+        }
+
+        @Test
         @DisplayName("B2C: использует розничную цену (wholesalePrice), не оптовую (price)")
         void createOrder_B2C_usesRetailPrice() {
             Long productId = 11L;
             ProductDto product = new ProductDto(productId, "Товар B2C", new BigDecimal("1000.00"),
-                    new BigDecimal("800.00"), 100, true, "ext-011", null, null, null, null);
+                    new BigDecimal("800.00"), 100, true, "ext-011", null, null, null, null, null);
 
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
             when(productServiceClient.getProduct(productId)).thenReturn(product);
@@ -393,7 +419,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .deliveryMethod(DeliveryMethod.PICKUP)
                     .warehousePointId(savedWarehousePoint.getId())
                     .items(List.of(
-                            new OrderItemDto(PRODUCT_ID_1, null, 20, null, null, null, null, null, null)))
+                            new OrderItemDto(PRODUCT_ID_1, null, 20, null, null, null, null, null, null, null)))
                     .comment("Обновлённый комментарий")
                     .build();
 
@@ -420,7 +446,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .paymentMethod(PaymentMethod.CARD)
                     .deliveryMethod(DeliveryMethod.PICKUP)
                     .warehousePointId(savedWarehousePoint.getId())
-                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null, null)))
+                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null, null, null)))
                     .build();
 
             assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, request))
@@ -437,7 +463,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .paymentMethod(PaymentMethod.CARD)
                     .deliveryMethod(DeliveryMethod.PICKUP)
                     .warehousePointId(savedWarehousePoint.getId())
-                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null, null)))
+                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null, null, null)))
                     .build();
 
             assertThatThrownBy(() -> orderService.updateOrder(order.getId(), 999L, request))

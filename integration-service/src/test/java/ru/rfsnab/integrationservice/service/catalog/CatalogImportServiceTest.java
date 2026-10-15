@@ -10,14 +10,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.reactive.function.client.WebClient;
 import ru.rfsnab.integrationservice.BaseIntegrationTest;
+import ru.rfsnab.integrationservice.model.commerceml.CmlProduct;
 import ru.rfsnab.integrationservice.repository.ImportLogRepository;
+import ru.rfsnab.integrationservice.service.ftk.FtkImageDownloader;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Тесты CatalogImportService.
@@ -130,6 +141,74 @@ class CatalogImportServiceTest extends BaseIntegrationTest {
             // 2 товара в XML
             assertThat(logs.getFirst().getTotalReceived() + logs.getFirst().getFailed())
                     .isGreaterThanOrEqualTo(0); // не NPE, лог записан
+        }
+    }
+
+    @Nested
+    @DisplayName("enqueueImageTasks — пропуск уже загруженных картинок")
+    class EnqueueImageTasksTests {
+
+        private static final String PRODUCT_ID = "ext-1041";
+        private static final String IMAGE = "import_files/af/x_y.jpeg";
+
+        private final ImageProcessingPool pool = mock(ImageProcessingPool.class);
+        private final FtkImageDownloader downloader = mock(FtkImageDownloader.class);
+        private final CatalogImportService service =
+                new CatalogImportService(null, null, null, null, pool, null, null, downloader);
+
+        private CmlProduct product(String... images) {
+            CmlProduct p = new CmlProduct();
+            p.setId(PRODUCT_ID);
+            p.setImages(List.of(images));
+            return p;
+        }
+
+        @Test
+        @DisplayName("имя уже есть в legacy-ключе products/{id}/x.webp → не ставится в очередь")
+        void shouldSkipWhenLegacyKeyExists() {
+            when(downloader.getExistingFileKeysBatch(anyList()))
+                    .thenReturn(Map.of(PRODUCT_ID, Set.of("products/1041/x_y.webp")));
+
+            int enqueued = service.enqueueImageTasks(tempExchangeDir, List.of(product(IMAGE)), "s");
+
+            assertThat(enqueued).isZero();
+            verify(pool, never()).enqueueImages(any(), any(), anyList(), any());
+        }
+
+        @Test
+        @DisplayName("имя уже есть в текущем ключе products/ftk/{ext}/x.webp → не ставится в очередь")
+        void shouldSkipWhenCurrentKeyExists() {
+            when(downloader.getExistingFileKeysBatch(anyList()))
+                    .thenReturn(Map.of(PRODUCT_ID, Set.of("products/ftk/" + PRODUCT_ID + "/x_y.webp")));
+
+            int enqueued = service.enqueueImageTasks(tempExchangeDir, List.of(product(IMAGE)), "s");
+
+            assertThat(enqueued).isZero();
+            verify(pool, never()).enqueueImages(any(), any(), anyList(), any());
+        }
+
+        @Test
+        @DisplayName("новое имя → ставится в очередь, старое пропускается")
+        void shouldEnqueueOnlyNewNames() {
+            when(downloader.getExistingFileKeysBatch(anyList()))
+                    .thenReturn(Map.of(PRODUCT_ID, Set.of("products/1041/x_y.webp")));
+            String newImage = "import_files/af/new.jpeg";
+
+            int enqueued = service.enqueueImageTasks(tempExchangeDir, List.of(product(IMAGE, newImage)), "s");
+
+            assertThat(enqueued).isEqualTo(1);
+            verify(pool).enqueueImages(tempExchangeDir, PRODUCT_ID, List.of(newImage), "s");
+        }
+
+        @Test
+        @DisplayName("пустая Map (ошибка запроса) → ставятся все картинки")
+        void shouldEnqueueAllWhenBatchEmpty() {
+            when(downloader.getExistingFileKeysBatch(anyList())).thenReturn(Map.of());
+
+            int enqueued = service.enqueueImageTasks(tempExchangeDir, List.of(product(IMAGE, "a/b.png")), "s");
+
+            assertThat(enqueued).isEqualTo(2);
+            verify(pool).enqueueImages(tempExchangeDir, PRODUCT_ID, List.of(IMAGE, "a/b.png"), "s");
         }
     }
 }

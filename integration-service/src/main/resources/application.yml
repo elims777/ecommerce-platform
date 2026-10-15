@@ -66,7 +66,7 @@ integration:
   # Обработка изображений (adaptive thread pool)
   image-processing:
     min-threads: 2
-    max-threads: 20
+    max-threads: 8
     max-threads-per-cpu: 5        # потолок = кол-во ядер × 5
     scale-up-threshold: 100       # pending > 100 → увеличить пул
     scale-down-threshold: 10      # pending < 10 → уменьшить пул

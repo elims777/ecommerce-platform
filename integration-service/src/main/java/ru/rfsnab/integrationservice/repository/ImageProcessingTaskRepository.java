@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.integrationservice.model.ImageProcessingTask;
 import ru.rfsnab.integrationservice.model.ImageProcessingTask.TaskStatus;
 
@@ -38,6 +39,22 @@ public interface ImageProcessingTaskRepository extends JpaRepository<ImageProces
             WHERE id = :taskId AND status = 'PENDING'
             """, nativeQuery = true)
     int claimTask(@Param("taskId") Long taskId);
+
+    /**
+     * Вернуть в очередь задачи, зависшие в PROCESSING после падения JVM.
+     * Попытка засчитывается (как в ImageProcessingWorker.handleFailure): задача, убивающая JVM,
+     * после maxRetries уходит в FAILED, а не зацикливается.
+     */
+    @Modifying
+    @Transactional
+    @Query(value = """
+            UPDATE image_processing_tasks
+            SET retry_count = retry_count + 1,
+                status = CASE WHEN retry_count + 1 >= :maxRetries THEN 'FAILED' ELSE 'PENDING' END,
+                error_message = 'Прервано перезапуском сервиса'
+            WHERE status = 'PROCESSING'
+            """, nativeQuery = true)
+    int recoverInterruptedTasks(@Param("maxRetries") int maxRetries);
 
     long countByStatus(TaskStatus status);
 

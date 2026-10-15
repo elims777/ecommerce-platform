@@ -265,6 +265,11 @@ const AdminOrderDetailPage = () => {
                     <NavLink to={`/products/${item.parentProductId ?? item.productId}`}>
                       {item.productName}
                     </NavLink>
+                    {(item.variantAttributes || item.sku) && (
+                      <div style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 2 }}>
+                        {[item.variantAttributes, item.sku && `Арт. ${item.sku}`].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
                   </td>
                   <td className="col-right rf-tabular">{item.quantity}</td>
                   <td className="col-right rf-tabular">{formatPrice(item.price)}</td>
