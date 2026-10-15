@@ -42,7 +42,8 @@ public class SecurityConfig {
                         // Админские чтения каталога: список товаров (базовые цены, неактивные,
                         // варианты) и сводка. Идут ДО публичного GET /api/v1/products/**,
                         // иначе permitAll перехватил бы их
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/admin", "/api/v1/products/stats")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/admin", "/api/v1/products/stats",
+                                "/api/v1/products/admin/parent-candidates")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
 
                         // Публичные endpoints (только чтение)

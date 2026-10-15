@@ -1,10 +1,7 @@
 package ru.rfsnab.productservice.dto;
 
-import java.io.Serializable;
-
 /**
  * Сводка по каталогу для админки.
- * Serializable — значение кладётся в Redis-кэш.
  *
  * @param uniqueProducts товары без учёта дочерних вариантов
  * @param total          все записи каталога, включая варианты
@@ -20,5 +17,5 @@ public record ProductStatsResponse(
         long fromFtk,
         long active,
         long inactive
-) implements Serializable {
+) {
 }

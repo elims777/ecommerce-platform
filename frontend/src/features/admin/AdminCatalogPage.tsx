@@ -13,8 +13,9 @@ import {
     setCategoryParent,
     reorderCategories,
 } from '@/api/adminCategories';
-import { batchUpdateActive, batchUpdateSale, changeProductCategory, bulkDeleteProducts, setParentProduct, searchProducts as searchProductsApi, reorderProducts } from '@/api/adminProducts';
+import { batchUpdateActive, batchUpdateSale, changeProductCategory, bulkDeleteProducts, setParentProduct, searchParentCandidates, reorderProducts } from '@/api/adminProducts';
 import apiClient from '@/api/client';
+import { useDraggableDialog } from '@/hooks/useDraggableDialog';
 import type { CategoryRequest } from '@/api/adminCategories';
 import type { Product, CategoryTree } from '@/types/product';
 import {
@@ -264,6 +265,10 @@ const AdminCatalogPage = () => {
 
     // Batch set parent
     const batchParentDialogRef = useRef<HTMLDialogElement>(null);
+    const dragCat = useDraggableDialog(catDialogRef);
+    const dragMove = useDraggableDialog(batchMoveDialogRef);
+    const dragSale = useDraggableDialog(batchSaleDialogRef);
+    const dragParent = useDraggableDialog(batchParentDialogRef);
     const [parentSearch, setParentSearch] = useState('');
     const [parentSearchResults, setParentSearchResults] = useState<{ id: number; name: string }[]>([]);
     const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
@@ -664,8 +669,9 @@ const AdminCatalogPage = () => {
         setSelectedParentName('');
         if (query.trim().length < 2) { setParentSearchResults([]); return; }
         try {
-            const results = await searchProductsApi(query);
-            setParentSearchResults(results.map(p => ({ id: p.id, name: p.name })));
+            const categoryId = groupedRows.find(r => r.product.id === selectedRowKeys[0])?.product.categoryId ?? null;
+            const results = await searchParentCandidates(query, categoryId, selectedRowKeys);
+            setParentSearchResults(results.map(p => ({ id: p.id, name: p.isActive ? p.name : `${p.name} (неактивен)` })));
         } catch {
             setParentSearchResults([]);
         }
@@ -1594,7 +1600,7 @@ const AdminCatalogPage = () => {
                     }
                 }}
             >
-                <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'move' }} onPointerDown={dragMove}>
                     <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)' }}>
                         Переместить {selectedRowKeys.length} товаров
                     </span>
@@ -1647,7 +1653,7 @@ const AdminCatalogPage = () => {
                 style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', color: 'var(--ink-1)', padding: 0, width: 420, maxWidth: '90vw', boxShadow: 'var(--shadow-pop)', margin: 'auto' }}
                 onKeyDown={(e) => { if (e.key === 'Escape') { batchSaleDialogRef.current?.close(); } }}
             >
-                <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'move' }} onPointerDown={dragSale}>
                     <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)' }}>
                         Акция для {selectedRowKeys.length} товаров
                     </span>
@@ -1714,7 +1720,7 @@ const AdminCatalogPage = () => {
                 style={{ border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', background: 'var(--surface)', color: 'var(--ink-1)', padding: 0, width: 420, maxWidth: '90vw', boxShadow: 'var(--shadow-pop)', margin: 'auto', overflow: 'visible' }}
                 onKeyDown={(e) => { if (e.key === 'Escape') { batchParentDialogRef.current?.close(); } }}
             >
-                <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--line-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'move' }} onPointerDown={dragParent}>
                     <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)' }}>
                         Назначить родителя для {selectedRowKeys.length} товаров
                     </span>
@@ -1798,7 +1804,8 @@ const AdminCatalogPage = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                }}>
+                    cursor: 'move',
+                }} onPointerDown={dragCat}>
                     <span style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 'var(--text-lg)' }}>
                         {editingCatId ? 'Редактировать категорию' : 'Новая категория'}
                     </span>
