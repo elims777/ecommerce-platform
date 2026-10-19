@@ -169,7 +169,11 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     # Без пароля Redis захватывали через REPLICAOF (01–15.10.2026)
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD не задан в .env}"]
+    # rename-command "" отключает команды, через которые захватывали Redis; приложения их не используют
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD не задан в .env}",
+              "--rename-command", "REPLICAOF", "", "--rename-command", "SLAVEOF", "",
+              "--rename-command", "CONFIG", "", "--rename-command", "MODULE", "",
+              "--rename-command", "DEBUG", ""]
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD}
     ports:
