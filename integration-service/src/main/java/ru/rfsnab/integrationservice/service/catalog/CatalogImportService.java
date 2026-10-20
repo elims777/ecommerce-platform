@@ -22,6 +22,7 @@ import ru.rfsnab.integrationservice.model.ImageProcessingTask.TaskStatus;
 import ru.rfsnab.integrationservice.repository.ImageProcessingTaskRepository;
 import ru.rfsnab.integrationservice.repository.ImportLogRepository;
 import ru.rfsnab.integrationservice.service.ftk.FtkCategoryMapper;
+import ru.rfsnab.integrationservice.service.ftk.FtkImageDownloader;
 import ru.rfsnab.integrationservice.service.ftk.FtkXmlParser.ClassifierData;
 
 import java.io.IOException;
@@ -75,6 +76,7 @@ public class CatalogImportService {
     private final ImageProcessingPool imageProcessingPool;
     private final ImageProcessingTaskRepository imageTaskRepository;
     private final FtkCategoryMapper categoryMapper;
+    private final FtkImageDownloader imageDownloader;
 
     /**
      * Запускает полный цикл импорта каталога.
@@ -480,17 +482,36 @@ public class CatalogImportService {
      *
      * @return количество поставленных в очередь задач
      */
-    private int enqueueImageTasks(Path exchangeDir, List<CmlProduct> products, String sessionId) {
+    int enqueueImageTasks(Path exchangeDir, List<CmlProduct> products, String sessionId) {
+        List<String> idsWithImages = products.stream()
+                .filter(p -> p.getImages() != null && !p.getImages().isEmpty())
+                .map(CmlProduct::getId)
+                .toList();
+        // одним запросом; при ошибке — пустая Map, тогда ставим все картинки как раньше
+        Map<String, Set<String>> existingKeys = imageDownloader.getExistingFileKeysBatch(idsWithImages);
+
         int enqueued = 0;
+        int skipped = 0;
         for (CmlProduct product : products) {
-            if (product.getImages() != null && !product.getImages().isEmpty()) {
-                imageProcessingPool.enqueueImages(
-                        exchangeDir, product.getId(), product.getImages(), sessionId);
-                enqueued += product.getImages().size();
+            if (product.getImages() == null || product.getImages().isEmpty()) {
+                continue;
+            }
+            // сравниваем только по имени файла: ключи бывают products/{id}/x.webp и products/ftk/{ext}/x.webp
+            Set<String> existingNames = existingKeys.getOrDefault(product.getId(), Set.of()).stream()
+                    .map(key -> key.substring(key.lastIndexOf('/') + 1))
+                    .collect(Collectors.toSet());
+            List<String> newImages = product.getImages().stream()
+                    .filter(img -> !existingNames.contains(ImageProcessingWorker.buildWebpFileName(img)))
+                    .toList();
+            skipped += product.getImages().size() - newImages.size();
+            if (!newImages.isEmpty()) {
+                imageProcessingPool.enqueueImages(exchangeDir, product.getId(), newImages, sessionId);
+                enqueued += newImages.size();
             }
         }
-        if (enqueued > 0) {
-            log.info("Создано {} задач на обработку изображений. Session: {}", enqueued, sessionId);
+        if (enqueued > 0 || skipped > 0) {
+            log.info("Создано {} задач на обработку изображений, пропущено {} (уже загружены). Session: {}",
+                    enqueued, skipped, sessionId);
         }
         return enqueued;
     }

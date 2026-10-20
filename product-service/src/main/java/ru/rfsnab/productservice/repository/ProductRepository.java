@@ -36,6 +36,38 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             """)
     Page<Product> searchByNameOrArticle(@Param("query") String query, Pageable pageable);
 
+    /**
+     * Кандидаты в родители для админки: в отличие от публичного поиска НЕ фильтрует по isActive
+     * (свежеимпортированные товары неактивны). Сначала товары из категории categoryId,
+     * затем те, у кого имя/артикул начинается с запроса, затем по имени.
+     */
+    @Query(value = """
+            SELECT p FROM Product p
+            LEFT JOIN p.category c
+            WHERE p.isVariantChild = false
+              AND p.id NOT IN :excludeIds
+              AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :query, '%'))
+                OR LOWER(p.externalCode) LIKE LOWER(CONCAT('%', :query, '%')))
+            ORDER BY
+              CASE WHEN c.id = :categoryId THEN 0 ELSE 1 END,
+              CASE WHEN LOWER(p.name) LIKE LOWER(CONCAT(:query, '%'))
+                     OR LOWER(p.sku) LIKE LOWER(CONCAT(:query, '%')) THEN 0 ELSE 1 END,
+              p.name
+            """,
+            countQuery = """
+            SELECT COUNT(p) FROM Product p
+            WHERE p.isVariantChild = false
+              AND p.id NOT IN :excludeIds
+              AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :query, '%'))
+                OR LOWER(p.externalCode) LIKE LOWER(CONCAT('%', :query, '%')))
+            """)
+    Page<Product> findParentCandidates(@Param("query") String query,
+                                       @Param("categoryId") Long categoryId,
+                                       @Param("excludeIds") List<Long> excludeIds,
+                                       Pageable pageable);
+
     @Query("SELECT p FROM Product p WHERE p.isFeatured = true AND p.isActive = true")
     List<Product> findFeatured();
 

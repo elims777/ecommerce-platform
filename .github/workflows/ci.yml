@@ -43,6 +43,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      # Прод-порты только на 127.0.0.1: наружу ходят через nginx (80/443). Без привязки Docker
+      # публикует порт на 0.0.0.0 в обход ufw — так в интернет торчали БД, Redis и Kafka.
+      - name: Check prod ports bound to 127.0.0.1
+        run: |
+          awk '/^[ \t]+ports:/{p=1;next} p && /^[ \t]+- /{ if ($0 !~ /127\.0\.0\.1:/) {print FILENAME":"NR": "$0; bad=1}; next} {p=0} END{exit bad}' infra/docker-compose.yml
+
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:

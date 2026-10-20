@@ -6,7 +6,7 @@ import { getProductById } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
 import {
     updateProduct, uploadImage, deleteImage, setPrimaryImage,
-    addAttribute, updateAttribute, deleteAttribute, setParentProduct, searchProducts,
+    addAttribute, updateAttribute, deleteAttribute, setParentProduct, searchParentCandidates,
     updateDisplayOrder,
 } from '@/api/adminProducts';
 import type { ProductRequest, ProductAttributeRequest } from '@/api/adminProducts';
@@ -171,8 +171,8 @@ const AdminProductEditPage = () => {
         setParentSearch(query);
         if (query.trim().length < 2) { setParentSearchResults([]); return; }
         try {
-            const results = await searchProducts(query);
-            setParentSearchResults(results.filter(p => p.id !== productId).map(p => ({ id: p.id, name: p.name })));
+            const results = await searchParentCandidates(query, product?.categoryId, [productId]);
+            setParentSearchResults(results.map(p => ({ id: p.id, name: p.isActive ? p.name : `${p.name} (неактивен)` })));
         } catch {
             setParentSearchResults([]);
         }

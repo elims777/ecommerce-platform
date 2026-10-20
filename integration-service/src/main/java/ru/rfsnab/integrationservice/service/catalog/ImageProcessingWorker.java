@@ -205,7 +205,7 @@ public class ImageProcessingWorker {
      * Формирует имя WebP-файла из оригинального имени.
      * "import_files/foto/product123.jpg" → "product123.webp"
      */
-    private String buildWebpFileName(String originalFilename) {
+    static String buildWebpFileName(String originalFilename) {
         String fileName = Path.of(originalFilename).getFileName().toString();
         int dotIndex = fileName.lastIndexOf('.');
         String baseName = (dotIndex > 0) ? fileName.substring(0, dotIndex) : fileName;

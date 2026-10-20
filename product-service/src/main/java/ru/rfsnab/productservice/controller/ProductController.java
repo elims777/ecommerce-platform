@@ -87,6 +87,19 @@ public class ProductController {
     }
 
     /**
+     * Поиск кандидатов в родители для админки (в т.ч. неактивные товары)
+     */
+    @GetMapping("/admin/parent-candidates")
+    public ResponseEntity<Page<ProductResponse>> getParentCandidates(
+            @RequestParam(defaultValue = "") String query,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam List<Long> excludeIds,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(productService.findParentCandidates(query, categoryId, excludeIds, pageable)
+                .map(ProductMapper::mapToResponse));
+    }
+
+    /**
      * Получить товар по ID (с дочерними вариантами если есть)
      */
     @GetMapping("/{id}")

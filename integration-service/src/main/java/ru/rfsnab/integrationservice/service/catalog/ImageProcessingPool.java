@@ -57,7 +57,7 @@ public class ImageProcessingPool {
 
         executor = new ThreadPoolExecutor(
                 config.getMinThreads(),                     // core: 2
-                config.getMaxThreads(),                     // max: 20
+                config.getMaxThreads(),                     // max: 8
                 60L, TimeUnit.SECONDS,                      // idle threads живут 60 сек
                 new LinkedBlockingQueue<>(config.getBufferMaxSize()),  // bounded buffer: 500
                 Thread.ofPlatform()
@@ -66,6 +66,12 @@ public class ImageProcessingPool {
                 new ThreadPoolExecutor.CallerRunsPolicy()   // backpressure: при переполнении — caller обрабатывает сам
         );
         executor.allowCoreThreadTimeOut(true);  // core-потоки тоже завершаются при простое
+
+        // До running=true: pollAndProcess не захватит задачи, пока не закончено восстановление
+        int recovered = taskRepository.recoverInterruptedTasks(config.getMaxRetries());
+        if (recovered > 0) {
+            log.warn("Восстановлено {} задач, прерванных перезапуском (PROCESSING → PENDING/FAILED)", recovered);
+        }
 
         running.set(true);
         log.info("ImageProcessingPool инициализирован: core={}, max={}, queue={}",

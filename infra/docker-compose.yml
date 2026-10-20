@@ -12,7 +12,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "127.0.0.1:${POSTGRES_PORT}:5432"
     volumes:
       - user_db_data:/var/lib/postgresql/data
     networks:
@@ -34,7 +34,7 @@ services:
       POSTGRES_USER: ${NOTIFICATION_DB_USER}
       POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASSWORD}
     ports:
-      - "${NOTIFICATION_DB_PORT}:5432"
+      - "127.0.0.1:${NOTIFICATION_DB_PORT}:5432"
     volumes:
       - notification_db_data:/var/lib/postgresql/data
     networks:
@@ -56,7 +56,7 @@ services:
       POSTGRES_USER: ${PRODUCT_DB_USER}
       POSTGRES_PASSWORD: ${PRODUCT_DB_PASSWORD}
     ports:
-      - "${PRODUCT_DB_PORT}:5432"
+      - "127.0.0.1:${PRODUCT_DB_PORT}:5432"
     volumes:
       - product_db_data:/var/lib/postgresql/data
     networks:
@@ -78,7 +78,7 @@ services:
       POSTGRES_USER: ${ORDER_DB_USER}
       POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD}
     ports:
-      - "${ORDER_DB_PORT}:5432"
+      - "127.0.0.1:${ORDER_DB_PORT}:5432"
     volumes:
       - order_db_data:/var/lib/postgresql/data
     networks:
@@ -100,7 +100,7 @@ services:
       POSTGRES_USER: ${INTEGRATION_DB_USER}
       POSTGRES_PASSWORD: ${INTEGRATION_DB_PASSWORD}
     ports:
-      - "${INTEGRATION_DB_PORT}:5432"
+      - "127.0.0.1:${INTEGRATION_DB_PORT}:5432"
     volumes:
       - integration_db_data:/var/lib/postgresql/data
     networks:
@@ -125,7 +125,7 @@ services:
       # дефолт образа — 512m heap; для одного брокера хватает с запасом
       KAFKA_HEAP_OPTS: "-Xms128m -Xmx256m"
     ports:
-      - "2181:2181"
+      - "127.0.0.1:2181:2181"
     networks:
       - ecommerce-net
 
@@ -137,7 +137,7 @@ services:
     depends_on:
       - zookeeper
     ports:
-      - "9092:9092"
+      - "127.0.0.1:9092:9092"
     environment:
       # дефолт образа -Xms1G -Xmx1G рассчитан на тысячи msg/s; наш трафик — единичные события
       KAFKA_HEAP_OPTS: "-Xms256m -Xmx512m"
@@ -168,8 +168,16 @@ services:
     container_name: redis
     restart: unless-stopped
     mem_limit: 128m
+    # Без пароля Redis захватывали через REPLICAOF (01–15.10.2026)
+    # rename-command "" отключает команды, через которые захватывали Redis; приложения их не используют
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD не задан в .env}",
+              "--rename-command", "REPLICAOF", "", "--rename-command", "SLAVEOF", "",
+              "--rename-command", "CONFIG", "", "--rename-command", "MODULE", "",
+              "--rename-command", "DEBUG", ""]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -188,7 +196,7 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:80"
     depends_on:
       - gateway-service
     networks:
@@ -202,12 +210,13 @@ services:
     # без mem_limit каждая JVM считала доступной всю память хоста
     mem_limit: 640m
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SECRET_JWT: ${SECRET_JWT}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - /var/log/rfsnab/gateway-service:/var/log/rfsnab/gateway-service
     depends_on:
@@ -325,6 +334,7 @@ services:
       SECRET_JWT: ${SECRET_JWT}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
       SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
     volumes:
       - /var/log/rfsnab/product-service:/var/log/rfsnab/product-service
     depends_on:
@@ -347,6 +357,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${ORDER_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${ORDER_DB_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       PRODUCT_SERVICE_URL: http://product-service:8083
       USER_SERVICE_URL: http://user-service:8081
@@ -383,7 +394,7 @@ services:
     # больше остальных: скачивание и конвертация картинок при ФТК-импорте
     mem_limit: 1280m
     ports:
-      - "8085:8085"
+      - "127.0.0.1:8085:8085"
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://integration-db:5432/${INTEGRATION_DB_NAME}
