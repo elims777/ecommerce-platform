@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
 import ru.rfsnab.orderservice.delivery.models.entity.Carrier;
 import ru.rfsnab.orderservice.delivery.models.entity.CarrierTerminal;
@@ -24,6 +25,7 @@ import ru.rfsnab.orderservice.exception.CartEmptyException;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
 import ru.rfsnab.orderservice.exception.PaymentMethodNotAvailableException;
 import ru.rfsnab.orderservice.exception.ProfileIncompleteException;
+import ru.rfsnab.orderservice.kafka.Order1CKafkaProducer;
 import ru.rfsnab.orderservice.models.dto.event.OrderEvent;
 import ru.rfsnab.orderservice.models.dto.order.AddressDto;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
@@ -51,8 +53,12 @@ import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -89,6 +95,9 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
 
 //    @MockitoBean
 //    private ProductServiceClient productServiceClient;
+
+    @MockitoBean
+    private Order1CKafkaProducer order1CKafkaProducer;
 
     private static final Long USER_ID = 100L;
     private static final Long PRODUCT_ID_1 = 1L;
@@ -580,13 +589,108 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             assertThat(updated.getItems().get(0).getPrice()).isEqualByComparingTo("1500.00");
             assertThat(updated.getTotalAmount()).isEqualByComparingTo("30000.00");
             assertThat(updated.getComment()).isEqualTo("Обновлённый комментарий");
+            // CREATED в 1С не отправляется — уйдёт при confirmOrder
+            verify(order1CKafkaProducer, never()).sendOrderFor1C(any());
         }
 
         @Test
-        @DisplayName("выбрасывает исключение при обновлении не в статусе CREATED")
-        void shouldThrowWhenNotCreatedStatus() {
+        @DisplayName("обновляет заказ в статусе PROCESSING и повторно отправляет в 1С")
+        void shouldUpdateProcessingOrderAndResendTo1C() {
             Order order = createTestOrder();
             orderService.confirmOrder(order.getId(), USER_ID);
+            clearInvocations(order1CKafkaProducer);
+
+            UpdateOrderRequest request = UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD)
+                    .deliveryMethod(DeliveryMethod.PICKUP)
+                    .warehousePointId(savedWarehousePoint.getId())
+                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null, null, null)))
+                    .comment("Правка в PROCESSING")
+                    .build();
+
+            Order updated = orderService.updateOrder(order.getId(), USER_ID, request);
+
+            assertThat(updated.getStatus()).isEqualTo(OrderStatus.PROCESSING);
+            assertThat(updated.getComment()).isEqualTo("Правка в PROCESSING");
+            assertThat(updated.getItems()).hasSize(1);
+            assertThat(updated.getItems().get(0).getQuantity()).isEqualTo(5);
+            assertThat(updated.getTotalAmount()).isEqualByComparingTo("7500.00");
+            verify(order1CKafkaProducer).sendOrderFor1C(any(Order.class));
+        }
+
+        @Test
+        @DisplayName("PROCESSING: переключение на выключенный способ оплаты — PaymentMethodNotAvailableException, в 1С не уходит")
+        void shouldRejectDisabledPaymentMethodOnProcessingEdit() {
+            Order order = createTestOrder();
+            orderService.confirmOrder(order.getId(), USER_ID);
+            clearInvocations(order1CKafkaProducer);
+
+            PaymentMethodSettings s = getOrCreateSettings();
+            s.setSbpEnabled(false);
+            paymentMethodSettingsRepository.save(s);
+
+            UpdateOrderRequest request = UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.SBP)
+                    .deliveryMethod(DeliveryMethod.PICKUP)
+                    .warehousePointId(savedWarehousePoint.getId())
+                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null, null, null)))
+                    .build();
+
+            UUID orderId = order.getId();
+            assertThatThrownBy(() -> orderService.updateOrder(orderId, USER_ID, request))
+                    .isInstanceOf(PaymentMethodNotAvailableException.class)
+                    .hasMessageContaining("СБП");
+            verify(order1CKafkaProducer, never()).sendOrderFor1C(any());
+        }
+
+        @Test
+        @DisplayName("PROCESSING: способ оплаты не менялся и выключен в настройках — правка комментария проходит, в 1С уходит")
+        void shouldAllowEditWithoutPaymentChangeWhenCurrentMethodDisabled() {
+            Order order = createTestOrder();
+            orderService.confirmOrder(order.getId(), USER_ID);
+            clearInvocations(order1CKafkaProducer);
+
+            PaymentMethodSettings s = getOrCreateSettings();
+            s.setCardEnabled(false);
+            paymentMethodSettingsRepository.save(s);
+
+            UpdateOrderRequest request = UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD)
+                    .deliveryMethod(DeliveryMethod.PICKUP)
+                    .warehousePointId(savedWarehousePoint.getId())
+                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null, null, null)))
+                    .comment("Только комментарий")
+                    .build();
+
+            Order updated = orderService.updateOrder(order.getId(), USER_ID, request);
+
+            assertThat(updated.getComment()).isEqualTo("Только комментарий");
+            verify(order1CKafkaProducer).sendOrderFor1C(any(Order.class));
+        }
+
+        @Test
+        @DisplayName("PROCESSING: чужой пользователь не может редактировать заказ")
+        void shouldThrowWhenWrongUserOnProcessingOrder() {
+            Order order = createTestOrder();
+            orderService.confirmOrder(order.getId(), USER_ID);
+
+            UpdateOrderRequest request = UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD)
+                    .deliveryMethod(DeliveryMethod.PICKUP)
+                    .warehousePointId(savedWarehousePoint.getId())
+                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null, null, null)))
+                    .build();
+
+            UUID orderId = order.getId();
+            assertThatThrownBy(() -> orderService.updateOrder(orderId, 999L, request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("Нет доступа");
+        }
+
+        @Test
+        @DisplayName("выбрасывает исключение при обновлении не в статусе CREATED/PROCESSING")
+        void shouldThrowWhenNotCreatedStatus() {
+            Order order = seedOrderWithStatus(OrderStatus.INVOICE_SENT);
 
             UpdateOrderRequest request = UpdateOrderRequest.builder()
                     .paymentMethod(PaymentMethod.CARD)

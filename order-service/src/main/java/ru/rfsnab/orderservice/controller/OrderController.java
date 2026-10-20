@@ -100,7 +100,7 @@ public class OrderController {
     }
 
     @PutMapping("/{orderId}")
-    @Operation(summary = "Обновить заказ (только в статусе CREATED)")
+    @Operation(summary = "Обновить заказ (в статусах CREATED и PROCESSING)")
     public ResponseEntity<OrderDto> updateOrder(
             Authentication authentication,
             @PathVariable UUID orderId,

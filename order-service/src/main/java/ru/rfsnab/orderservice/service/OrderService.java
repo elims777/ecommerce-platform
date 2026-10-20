@@ -207,6 +207,20 @@ public class OrderService {
     public Order confirmOrder(UUID orderId, Long userId) {
         Order order = getOrderAndValidateOwner(orderId, userId);
 
+        validatePaymentMethodAvailable(order);
+
+        changeStatus(order, OrderStatus.PROCESSING);
+        order = orderRepository.save(order);
+
+        log.info("Заказ подтверждён клиентом: {}", order.getOrderNumber());
+        kafkaProducer.sendOrderStatusChanged(order);
+        order1CKafkaProducer.sendOrderFor1C(order);
+
+        return order;
+    }
+
+    /** Для B2C проверяет, что выбранный способ оплаты (CARD/SBP) включён в настройках. */
+    private void validatePaymentMethodAvailable(Order order) {
         if (order.getCustomerType() == CustomerType.B2C) {
             PaymentMethodSettingsDto settings = paymentMethodSettingsService.getSettings();
             PaymentMethod method = order.getPaymentMethod();
@@ -219,26 +233,18 @@ public class OrderService {
             }
             // INVOICE — оба метода выключены, заказ идёт в 1С как B2B
         }
-
-        changeStatus(order, OrderStatus.PROCESSING);
-        order = orderRepository.save(order);
-
-        log.info("Заказ подтверждён клиентом: {}", order.getOrderNumber());
-        kafkaProducer.sendOrderStatusChanged(order);
-        order1CKafkaProducer.sendOrderFor1C(order);
-
-        return order;
     }
 
     /**
-     * Обновление заказа. Разрешено только в статусе CREATED.
+     * Обновление заказа. Разрешено в статусах CREATED и PROCESSING.
+     * Для PROCESSING заказ повторно отправляется в 1С.
      * Можно изменить: items, адрес, способ доставки, способ оплаты, комментарий.
      */
     @Transactional
     public Order updateOrder(UUID orderId, Long userId, UpdateOrderRequest request) {
         Order order = getOrderAndValidateOwner(orderId, userId);
 
-        if (order.getStatus() != OrderStatus.CREATED) {
+        if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PROCESSING) {
             throw new InvalidOrderStateException(
                     String.format("Редактирование заказа %s невозможно в статусе %s",
                             order.getOrderNumber(), order.getStatus().getDisplayName()));
@@ -256,6 +262,7 @@ public class OrderService {
         validateStockForItems(request.items(), products);
 
         // Обновляем поля заказа
+        PaymentMethod previousPaymentMethod = order.getPaymentMethod();
         order.setPaymentMethod(request.paymentMethod());
         order.setDeliveryMethod(request.deliveryMethod());
         order.setComment(request.comment());
@@ -286,8 +293,18 @@ public class OrderService {
         BigDecimal totalAmount = addItemsFromDto(order, request.items(), products, order.getCustomerType());
         order.setTotalAmount(totalAmount);
 
+        // В PROCESSING подтверждения не будет — доступность способа оплаты проверяем здесь,
+        // но только при смене способа (иначе нельзя поправить, например, комментарий после отключения способа)
+        if (order.getStatus() == OrderStatus.PROCESSING && previousPaymentMethod != order.getPaymentMethod()) {
+            validatePaymentMethodAvailable(order);
+        }
+
         order = orderRepository.save(order);
         log.info("Заказ обновлён: {}", order.getOrderNumber());
+
+        if (order.getStatus() == OrderStatus.PROCESSING) {
+            order1CKafkaProducer.sendOrderFor1C(order);
+        }
 
         return order;
     }

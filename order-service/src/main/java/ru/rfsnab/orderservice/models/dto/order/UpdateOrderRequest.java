@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * DTO для обновления заказа.
- * Разрешено только в статусе CREATED.
+ * Разрешено в статусах CREATED и PROCESSING.
  */
 @Builder
 public record UpdateOrderRequest(

@@ -23,6 +23,9 @@ const CANCELLABLE_STATUSES: OrderStatus[] = [
     OrderStatus.PAYMENT_FAILED,
 ];
 
+/** Статусы, в которых клиент может редактировать заказ (PROCESSING — с повторной отправкой в 1С) */
+const EDITABLE_STATUSES: OrderStatus[] = [OrderStatus.CREATED, OrderStatus.PROCESSING];
+
 const formatPrice = formatPriceOrPlaceholder;
 
 const formatDate = (dateStr: string): string =>
@@ -368,7 +371,7 @@ const OrdersPage = () => {
                 )}
                 {CANCELLABLE_STATUSES.includes(extractEnumCode(order.status) as OrderStatus) && (
                     <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                        {extractEnumCode(order.status) === OrderStatus.CREATED && (
+                        {EDITABLE_STATUSES.includes(extractEnumCode(order.status) as OrderStatus) && (
                             <Button onClick={() => setEditingOrder(order)}>
                                 Редактировать заказ
                             </Button>

@@ -121,7 +121,7 @@ export interface UpdateOrderItemRequest {
     quantity: number;
 }
 
-/** Запрос на редактирование заказа — разрешён только в статусе CREATED */
+/** Запрос на редактирование заказа — разрешён в статусах CREATED и PROCESSING */
 export interface UpdateOrderRequest {
     paymentMethod: PaymentMethod;
     deliveryMethod: DeliveryMethod;

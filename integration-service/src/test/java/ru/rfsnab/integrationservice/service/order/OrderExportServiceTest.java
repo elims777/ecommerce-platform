@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.ReflectionTestUtils;
 import ru.rfsnab.integrationservice.BaseIntegrationTest;
 import ru.rfsnab.integrationservice.model.PendingOrder;
 import ru.rfsnab.integrationservice.repository.PendingOrderRepository;
@@ -428,6 +429,7 @@ class OrderExportServiceTest extends BaseIntegrationTest {
             savePendingOrder("uuid-007", "ORD-00007");
             savePendingOrder("uuid-008", "ORD-00008");
 
+            orderExportService.exportPendingOrders();
             orderExportService.markOrdersAsExported();
 
             List<PendingOrder> all = pendingOrderRepository.findAll();
@@ -446,6 +448,7 @@ class OrderExportServiceTest extends BaseIntegrationTest {
 
             savePendingOrder("uuid-010", "ORD-00010");
 
+            orderExportService.exportPendingOrders();
             orderExportService.markOrdersAsExported();
 
             PendingOrder reloaded = pendingOrderRepository.findAll().stream()
@@ -454,6 +457,79 @@ class OrderExportServiceTest extends BaseIntegrationTest {
 
             // exported_at не перезаписался
             assertThat(reloaded.getExportedAt()).isEqualTo(previousExportTime);
+        }
+
+        @Test
+        @DisplayName("success без предшествующего query ничего не помечает")
+        void shouldMarkNothingWithoutQuery() {
+            ReflectionTestUtils.setField(orderExportService, "lastExportedSnapshot", null);
+            savePendingOrder("uuid-011", "ORD-00011");
+
+            int count = orderExportService.markOrdersAsExported();
+
+            assertThat(count).isZero();
+            assertThat(pendingOrderRepository.findAll()).noneMatch(PendingOrder::isExported);
+        }
+
+        @Test
+        @DisplayName("заказ, переотправленный после query (новый createdAt), остаётся непереданным")
+        void shouldNotMarkOrderRequeuedAfterQuery() {
+            PendingOrder requeued = savePendingOrder("uuid-012", "ORD-00012");
+
+            orderExportService.exportPendingOrders();
+
+            requeued.setCreatedAt(requeued.getCreatedAt().plusSeconds(1)); // upsert после query
+            pendingOrderRepository.save(requeued);
+
+            int count = orderExportService.markOrdersAsExported();
+
+            assertThat(count).isZero();
+            assertThat(pendingOrderRepository.findByOrderId("uuid-012").orElseThrow().isExported()).isFalse();
+        }
+
+        @Test
+        @DisplayName("заказ, появившийся после query (даже с более ранним createdAt), не помечается")
+        void shouldNotMarkOrderInsertedAfterQuery() {
+            savePendingOrder("uuid-013", "ORD-00013");
+
+            orderExportService.exportPendingOrders();
+
+            PendingOrder late = savePendingOrder("uuid-014", "ORD-00014");
+            late.setCreatedAt(LocalDateTime.now().minusMinutes(1));
+            pendingOrderRepository.save(late);
+
+            int count = orderExportService.markOrdersAsExported();
+
+            assertThat(count).isEqualTo(1);
+            assertThat(pendingOrderRepository.findByOrderId("uuid-013").orElseThrow().isExported()).isTrue();
+            assertThat(pendingOrderRepository.findByOrderId("uuid-014").orElseThrow().isExported()).isFalse();
+        }
+
+        @Test
+        @DisplayName("заказ с ошибкой формирования XML не помечается, остальные помечаются")
+        void shouldNotMarkOrderWhoseDocumentFailed() {
+            savePendingOrder("uuid-015", "ORD-00015");
+            pendingOrderRepository.save(PendingOrder.builder()
+                    .orderId("uuid-bad")
+                    .orderData("{\"orderId\": \"uuid-bad\"}") // нет orderNumber → buildDocument падает
+                    .externalId("ORD-BAD")
+                    .build());
+
+            OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
+            int count = orderExportService.markOrdersAsExported();
+
+            assertThat(result.xml()).doesNotContain("uuid-bad");
+            assertThat(count).isEqualTo(1);
+            assertThat(pendingOrderRepository.findByOrderId("uuid-015").orElseThrow().isExported()).isTrue();
+            assertThat(pendingOrderRepository.findByOrderId("uuid-bad").orElseThrow().isExported()).isFalse();
+        }
+
+        @Test
+        @DisplayName("пустой query → success возвращает 0")
+        void shouldReturnZeroAfterEmptyQuery() {
+            orderExportService.exportPendingOrders();
+
+            assertThat(orderExportService.markOrdersAsExported()).isZero();
         }
     }
 }

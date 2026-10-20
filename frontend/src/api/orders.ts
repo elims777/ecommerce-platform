@@ -33,7 +33,7 @@ export const cancelOrder = async (id: string): Promise<OrderDto> => {
     return data;
 };
 
-/** Редактировать заказ — разрешено только в статусе CREATED — PUT /api/v1/orders/{orderId} */
+/** Редактировать заказ — разрешено в статусах CREATED и PROCESSING — PUT /api/v1/orders/{orderId} */
 export const updateOrder = async (id: string, request: UpdateOrderRequest): Promise<OrderDto> => {
     const { data } = await apiClient.put<OrderDto>(`/v1/orders/${id}`, request);
     return data;
