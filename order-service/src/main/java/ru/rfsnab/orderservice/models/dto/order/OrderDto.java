@@ -1,9 +1,9 @@
 package ru.rfsnab.orderservice.models.dto.order;
 
 import lombok.Builder;
-import ru.rfsnab.orderservice.delivery.CarrierCode;
-import ru.rfsnab.orderservice.delivery.ShipmentDto;
-import ru.rfsnab.orderservice.delivery.ShipmentMode;
+import ru.rfsnab.orderservice.delivery.models.dto.ShipmentDto;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentMode;
 import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;

@@ -11,6 +11,7 @@ import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
 import type { OrderSummaryDto, OrderDto, OrderItemDto } from '@/types/order';
 import type { ColumnsType } from 'antd/es/table';
 import { formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
+import { deliveryDateLabel } from '@/utils/deliveryDate';
 import EditOrderModal from './EditOrderModal';
 
 /** Статусы, в которых заказ ещё можно отменить (до отгрузки) */
@@ -385,11 +386,14 @@ const OrdersPage = () => {
                     <div style={{ marginTop: 16 }}>
                         <div style={{ color: 'var(--ink-3)', marginBottom: 8 }}>Отправления:</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {order.shipments.map((s) => (
+                            {order.shipments.map((s) => {
+                                const date = deliveryDateLabel(s);
+                                return (
                                 <div key={s.id} style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', alignItems: 'baseline' }}>
                                     <span style={{ fontWeight: 500 }}>{s.carrierName}</span>
                                     <span style={{ fontFamily: 'var(--font-mono)' }}>{s.waybillNumber}</span>
                                     {s.carrierStatus && <span>{s.carrierStatus}</span>}
+                                    {date && <span>{date}</span>}
                                     {(s.routeFrom || s.routeTo) && (
                                         <span style={{ color: 'var(--ink-3)' }}>{s.routeFrom ?? '—'} → {s.routeTo ?? '—'}</span>
                                     )}
@@ -402,7 +406,8 @@ const OrdersPage = () => {
                                         </a>
                                     )}
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}

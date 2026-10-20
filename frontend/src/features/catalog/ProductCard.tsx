@@ -114,6 +114,13 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
     const isFavourite = useFavouritesStore((s) => s.isFavourite(product.id));
     const toggleFavourite = useFavouritesStore((s) => s.toggle);
 
+    const isAnimating = isHovered && hasMultipleImages;
+    const [prevAnimating, setPrevAnimating] = useState(isAnimating);
+    if (isAnimating !== prevAnimating) {
+        setPrevAnimating(isAnimating);
+        if (!isAnimating) setCurrentImageIndex(0);
+    }
+
     useEffect(() => {
         if (isHovered && hasMultipleImages) {
             intervalRef.current = setInterval(() => {
@@ -121,7 +128,6 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             }, 1200);
         } else {
             if (intervalRef.current) clearInterval(intervalRef.current);
-            setCurrentImageIndex(0);
         }
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);

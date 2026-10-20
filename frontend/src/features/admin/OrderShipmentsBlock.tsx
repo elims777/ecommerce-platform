@@ -12,6 +12,7 @@ import {
 import type { CarrierCode, ShipmentMode } from '@/types/delivery';
 import type { OrderDto } from '@/types/order';
 import { ShipmentStatus } from './logistics/ShipmentStatus';
+import { deliveryDateLabel } from '@/utils/deliveryDate';
 
 const SWITCH_REQUIRED_CODE = 'SHIPMENT_MODE_SWITCH_REQUIRED';
 
@@ -95,7 +96,9 @@ const OrderShipmentsBlock = ({ order }: { order: OrderDto }) => {
         )}
       </div>
 
-      {shipments.map((s) => (
+      {shipments.map((s) => {
+        const date = deliveryDateLabel(s);
+        return (
         <div key={s.id} style={{ padding: 16, borderBottom: '1px solid var(--line-1)', display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ minWidth: 180 }}>
             <div style={{ fontWeight: 600 }}>{s.carrierName}</div>
@@ -104,7 +107,10 @@ const OrderShipmentsBlock = ({ order }: { order: OrderDto }) => {
               <div style={{ fontSize: 13, color: 'var(--ink-3)' }}>{s.routeFrom ?? '—'} → {s.routeTo ?? '—'}</div>
             )}
           </div>
-          <div style={{ flex: 1, minWidth: 180 }}><ShipmentStatus shipment={s} /></div>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <ShipmentStatus shipment={s} />
+            {date && <div style={{ fontSize: 12, color: 'var(--ink-3)' }}>{date}</div>}
+          </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {s.trackingUrl && (
               <Button size="small" href={s.trackingUrl} target="_blank" rel="noopener noreferrer">Отследить</Button>
@@ -120,7 +126,8 @@ const OrderShipmentsBlock = ({ order }: { order: OrderDto }) => {
             </Popconfirm>
           </div>
         </div>
-      ))}
+        );
+      })}
       {isFirst && (
         <div style={{ textAlign: 'center', color: 'var(--ink-3)', padding: 24 }}>Накладных пока нет</div>
       )}

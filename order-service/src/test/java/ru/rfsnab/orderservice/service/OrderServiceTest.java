@@ -14,14 +14,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
-import ru.rfsnab.orderservice.delivery.Carrier;
-import ru.rfsnab.orderservice.delivery.CarrierCode;
-import ru.rfsnab.orderservice.delivery.CarrierRepository;
-import ru.rfsnab.orderservice.delivery.CarrierTerminal;
-import ru.rfsnab.orderservice.delivery.CarrierTerminalRepository;
-import ru.rfsnab.orderservice.delivery.PointType;
+import ru.rfsnab.orderservice.delivery.models.entity.Carrier;
+import ru.rfsnab.orderservice.delivery.models.entity.CarrierTerminal;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.PointType;
+import ru.rfsnab.orderservice.delivery.repository.CarrierRepository;
+import ru.rfsnab.orderservice.delivery.repository.CarrierTerminalRepository;
 import ru.rfsnab.orderservice.exception.CartEmptyException;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
+import ru.rfsnab.orderservice.exception.PaymentMethodNotAvailableException;
 import ru.rfsnab.orderservice.exception.ProfileIncompleteException;
 import ru.rfsnab.orderservice.models.dto.event.OrderEvent;
 import ru.rfsnab.orderservice.models.dto.order.AddressDto;
@@ -34,12 +35,11 @@ import ru.rfsnab.orderservice.models.dto.user.ProfileCompletenessDto;
 import ru.rfsnab.orderservice.models.entity.Cart;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.OrderItem;
+import ru.rfsnab.orderservice.models.entity.PaymentMethodSettings;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
-import ru.rfsnab.orderservice.exception.PaymentMethodNotAvailableException;
-import ru.rfsnab.orderservice.models.entity.PaymentMethodSettings;
 import ru.rfsnab.orderservice.repository.OrderRepository;
 import ru.rfsnab.orderservice.repository.PaymentMethodSettingsRepository;
 import ru.rfsnab.orderservice.repository.WarehousePointRepository;
@@ -61,7 +61,7 @@ import static org.mockito.Mockito.when;
  * ProductServiceClient — mock (внешний сервис).
  */
 @DisplayName("OrderService — интеграционные тесты")
-class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
+class OrderServiceTest extends BaseServiceIntegrationTest {
 
     @Autowired
     private OrderService orderService;
@@ -1378,33 +1378,5 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         }
 
         return events;
-    }
-
-    /**
-     * Чтение raw сообщений из Kafka топика (без десериализации в конкретный тип).
-     */
-    private List<String> consumeRawMessages(String topic, int maxMessages) {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-raw-" + UUID.randomUUID());
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-
-        List<String> messages = new ArrayList<>();
-
-        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
-            consumer.subscribe(List.of(topic));
-
-            long deadline = System.currentTimeMillis() + 15_000;
-            while (messages.size() < maxMessages && System.currentTimeMillis() < deadline) {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
-                for (ConsumerRecord<String, String> record : records) {
-                    messages.add(record.value());
-                }
-            }
-        }
-
-        return messages;
     }
 }

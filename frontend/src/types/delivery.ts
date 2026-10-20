@@ -18,7 +18,7 @@ export interface CarrierDto {
     statusTrackingSupported: boolean;
 }
 
-export type ShipmentStatusCode = 'IN_TRANSIT' | 'ARRIVED_AT_TERMINAL' | 'DELIVERED' | 'CANCELLED' | 'PROBLEM' | 'NOT_FOUND';
+export type ShipmentStatusCode = 'CREATED' | 'IN_TRANSIT' | 'ARRIVED_AT_TERMINAL' | 'DELIVERED' | 'CANCELLED' | 'PROBLEM' | 'NOT_FOUND';
 export type ShipmentDirection = 'OUTGOING' | 'INCOMING' | 'UNKNOWN';
 export type ShipmentSource = 'MANUAL' | 'IMPORT';
 export type ShipmentMode = 'SINGLE' | 'MULTIPLE';
@@ -31,7 +31,7 @@ export interface ShipmentDto {
     carrierCode: CarrierCode;
     carrierName: string;
     waybillNumber: string;
-    direction: ShipmentDirection;
+    direction: ShipmentDirection | null;
     sender: string | null;
     receiver: string | null;
     routeFrom: string | null;
@@ -49,6 +49,42 @@ export interface ShipmentDto {
     source: ShipmentSource;
     trackingUrl: string | null;
     createdAt: string;
+    weightKg: number | null;
+    volumeM3: number | null;
+    placesCount: number | null;
+    cost: number | null;
+    /** null — ТК не сообщает */
+    paid: boolean | null;
+    /** true — забор от адреса, false — от терминала */
+    fromAddress: boolean | null;
+    /** true — доставка до адреса, false — до терминала */
+    toAddress: boolean | null;
+    deliveredAt: string | null;
+    documents: ShipmentDocumentDto[];
+    packages: ShipmentPackageDto[];
+    senderInn: string | null;
+    receiverInn: string | null;
+    /** В клиентском API всегда пустой */
+    payers: ShipmentPayerDto[];
+}
+
+export interface ShipmentPayerDto {
+    name: string | null;
+    inn: string | null;
+    role: 'SENDER' | 'RECEIVER' | 'THIRD' | null;
+}
+
+export interface ShipmentDocumentDto {
+    code: string;
+    name: string;
+}
+
+export interface ShipmentPackageDto {
+    number: string | null;
+    weightKg: number | null;
+    lengthCm: number | null;
+    widthCm: number | null;
+    heightCm: number | null;
 }
 
 export interface AddShipmentRequest {

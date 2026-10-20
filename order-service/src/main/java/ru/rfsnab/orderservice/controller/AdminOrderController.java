@@ -1,5 +1,6 @@
 package ru.rfsnab.orderservice.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
@@ -17,13 +18,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import jakarta.validation.Valid;
+import ru.rfsnab.orderservice.delivery.models.dto.AddShipmentRequest;
+import ru.rfsnab.orderservice.delivery.models.dto.ShipmentDto;
+import ru.rfsnab.orderservice.delivery.models.entity.CarrierTerminal;
+import ru.rfsnab.orderservice.delivery.service.DeliveryService;
+import ru.rfsnab.orderservice.delivery.service.ShipmentService;
 import ru.rfsnab.orderservice.mapper.OrderDocumentMapper;
-import ru.rfsnab.orderservice.delivery.CarrierTerminal;
-import ru.rfsnab.orderservice.delivery.AddShipmentRequest;
-import ru.rfsnab.orderservice.delivery.DeliveryService;
-import ru.rfsnab.orderservice.delivery.ShipmentDto;
-import ru.rfsnab.orderservice.delivery.ShipmentService;
 import ru.rfsnab.orderservice.mapper.OrderMapper;
 import ru.rfsnab.orderservice.models.dto.order.OrderDocumentDto;
 import ru.rfsnab.orderservice.models.dto.order.OrderDto;

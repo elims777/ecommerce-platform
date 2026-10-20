@@ -57,9 +57,15 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
 
     const warehousePickerPoints = useMemo(() => warehousePoints.map(warehouseToPickerPoint), [warehousePoints]);
 
+    // open: false — модалка монтируется уже открытой, товары должны заполниться на первом рендере
+    const [prevInput, setPrevInput] = useState({ open: false, order });
+    if (prevInput.open !== open || prevInput.order !== order) {
+        setPrevInput({ open, order });
+        if (open) setItems(order.items.map((i) => ({ productId: i.productId, quantity: i.quantity })));
+    }
+
     useEffect(() => {
         if (!open) return;
-        setItems(order.items.map((i) => ({ productId: i.productId, quantity: i.quantity })));
         form.setFieldsValue({
             paymentMethod: extractEnumCode(order.paymentMethod) as PaymentMethod,
             deliveryMethod: extractEnumCode(order.deliveryMethod) as DeliveryMethod,

@@ -69,15 +69,17 @@ const LoginPage = () => {
 
     const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
+    const [initialSearch] = useState(location.search);
+
     useEffect(() => {
-        const params = new URLSearchParams(location.search);
+        const params = new URLSearchParams(initialSearch);
         const confirmed = params.get('legal_confirmed');
         if (confirmed === 'true') {
             messageApi.success('Email подтверждён. Ожидайте верификации от менеджера — это займёт до 1 рабочего дня.');
         } else if (confirmed === 'error') {
             messageApi.error('Ссылка подтверждения недействительна или уже была использована.');
         }
-    }, []);
+    }, [initialSearch, messageApi]);
 
     const handleSubmit = async (values: LoginRequest & { login?: string }) => {
         setLoading(true);

@@ -12,7 +12,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
-import ru.rfsnab.orderservice.delivery.CarrierCode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -52,7 +52,7 @@ class FlywayMigrationsIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    @DisplayName("контекст поднимается, все миграции применены, сид ТК и таблицы этапов 2-4 на месте")
+    @DisplayName("контекст поднимается, все миграции применены, сид ТК, таблицы справочника и отправлений, колонки груза и плательщиков на месте")
     void migrationsApplyAndEntitiesValidate() {
         assertThat(flyway.info().pending()).isEmpty();
         assertThat(jdbcTemplate.queryForObject("select count(*) from carriers", Integer.class)).isEqualTo(CarrierCode.values().length);
@@ -61,5 +61,9 @@ class FlywayMigrationsIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("select count(*) from carrier_terminals", Integer.class)).isZero();
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from pg_constraint where conname = 'uq_shipments_carrier_waybill'", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForList(
+                "select column_name from information_schema.columns where table_name = 'shipments'", String.class))
+                .contains("weight_kg", "volume_m3", "places_count", "cost", "paid", "from_address", "to_address",
+                        "delivered_at", "documents", "packages", "sender_inn", "receiver_inn", "payers");
     }
 }

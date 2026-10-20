@@ -11,13 +11,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import ru.rfsnab.orderservice.delivery.CarrierCode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 import ru.rfsnab.orderservice.models.dto.event.Order1CExportEvent;
 import ru.rfsnab.orderservice.models.entity.DeliveryAddress;
 import ru.rfsnab.orderservice.models.entity.Order;
+import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
-import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.repository.WarehousePointRepository;
 
 import java.math.BigDecimal;

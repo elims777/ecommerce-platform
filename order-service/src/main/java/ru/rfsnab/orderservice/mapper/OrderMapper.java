@@ -1,7 +1,7 @@
 package ru.rfsnab.orderservice.mapper;
 
-import ru.rfsnab.orderservice.delivery.CarrierTerminal;
-import ru.rfsnab.orderservice.delivery.ShipmentDto;
+import ru.rfsnab.orderservice.delivery.models.dto.ShipmentDto;
+import ru.rfsnab.orderservice.delivery.models.entity.CarrierTerminal;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.OrderDto;
 import ru.rfsnab.orderservice.models.dto.order.OrderSummaryDto;

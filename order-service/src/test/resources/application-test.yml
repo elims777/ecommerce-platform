@@ -56,18 +56,23 @@ yandex:
 
 carriers:
   cdek:
+    base-url: "https://api.cdek.ru/v2"
     client-id: ""
     client-secret: ""
   dellin:
+    base-url: "https://api.dellin.ru"
     appkey: ""
     login: ""
     password: ""
   pec:
+    base-url: "https://kabinet.pecom.ru"
     login: ""
     api-key: ""
   baikal:
+    base-url: "https://api.baikalsr.ru"
     api-key: ""
   vozovoz:
+    base-url: "https://vozovoz.ru"
     token: ""
 
 company:

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink } from '@/components/navigation';
+import { isAxiosError } from 'axios';
 import apiClient from '@/api/client';
 
 interface ImportLogEntry {
@@ -71,8 +72,8 @@ const IntegrationPage = () => {
                     ftkPollIntervalRef.current = null;
                 }
             }, 30000);
-        } catch (e: any) {
-            setFtkError(e?.response?.data?.message ?? 'Ошибка импорта');
+        } catch (e) {
+            setFtkError((isAxiosError(e) && e.response?.data?.message) || 'Ошибка импорта');
         } finally {
             setFtkLoading(false);
         }

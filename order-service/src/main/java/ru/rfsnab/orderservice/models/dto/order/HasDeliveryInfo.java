@@ -1,6 +1,6 @@
 package ru.rfsnab.orderservice.models.dto.order;
 
-import ru.rfsnab.orderservice.delivery.CarrierCode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 
 /**

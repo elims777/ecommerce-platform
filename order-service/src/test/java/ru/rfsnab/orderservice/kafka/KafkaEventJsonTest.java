@@ -5,12 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import ru.rfsnab.orderservice.config.KafkaConfig;
-import ru.rfsnab.orderservice.delivery.CarrierCode;
-import ru.rfsnab.orderservice.delivery.CarrierSyncEvent;
-import ru.rfsnab.orderservice.delivery.CarrierSyncReport;
-import ru.rfsnab.orderservice.delivery.ShipmentNotFoundEvent;
-import ru.rfsnab.orderservice.delivery.SyncStatus;
-import ru.rfsnab.orderservice.delivery.SyncTrigger;
+import ru.rfsnab.orderservice.delivery.models.dto.CarrierSyncReport;
+import ru.rfsnab.orderservice.delivery.models.dto.event.CarrierSyncEvent;
+import ru.rfsnab.orderservice.delivery.models.dto.event.ShipmentNotFoundEvent;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.SyncStatus;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.SyncTrigger;
 import ru.rfsnab.orderservice.models.dto.event.OrderEvent;
 
 import java.time.Instant;
@@ -39,7 +39,7 @@ class KafkaEventJsonTest {
                 List.of(new CarrierSyncReport.SkippedItem("X1", "Нет города")), 4, "Подозрительный ответ", 1500,
                 Instant.parse("2026-10-12T20:00:01Z"));
 
-        JsonNode node = json(CarrierSyncEvent.of(SyncTrigger.SCHEDULED, List.of(report)));
+        JsonNode node = json(new CarrierSyncEvent(CarrierSyncEvent.TYPE, SyncTrigger.SCHEDULED, List.of(report)));
 
         assertThat(node.get("eventType").asText()).isEqualTo("CARRIER_SYNC_COMPLETED");
         assertThat(node.get("trigger").asText()).isEqualTo("SCHEDULED");
@@ -64,7 +64,8 @@ class KafkaEventJsonTest {
     @Test
     @DisplayName("ShipmentNotFoundEvent: notFoundSince — ISO-строка")
     void shipmentNotFoundEvent() throws Exception {
-        JsonNode node = json(ShipmentNotFoundEvent.of("ABC-1", "ПЭК", "123", Instant.parse("2026-10-11T08:30:00Z")));
+        JsonNode node = json(new ShipmentNotFoundEvent(ShipmentNotFoundEvent.TYPE, "ABC-1", "ПЭК", "123",
+                Instant.parse("2026-10-11T08:30:00Z").toString()));
 
         assertThat(node.get("eventType").asText()).isEqualTo("SHIPMENT_NOT_FOUND");
         assertThat(node.get("orderNumber").asText()).isEqualTo("ABC-1");

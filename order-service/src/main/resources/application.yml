@@ -98,18 +98,23 @@ app:
 # Ключи API транспортных компаний; пусто — ТК отключена в синхронизации терминалов
 carriers:
   cdek:
+    base-url: ${CDEK_BASE_URL:https://api.cdek.ru/v2}
     client-id: ${CDEK_CLIENT_ID:}
     client-secret: ${CDEK_CLIENT_SECRET:}
   dellin:
+    base-url: ${DELLIN_BASE_URL:https://api.dellin.ru}
     appkey: ${DELLIN_APPKEY:}
     login: ${DELLIN_LOGIN:}
     password: ${DELLIN_PASSWORD:}
   pec:
+    base-url: ${PEC_BASE_URL:https://kabinet.pecom.ru}
     login: ${PEC_LOGIN:}
     api-key: ${PEC_API_KEY:}
   baikal:
+    base-url: ${BAIKAL_BASE_URL:https://api.baikalsr.ru}
     api-key: ${BAIKAL_API_KEY:}
   vozovoz:
+    base-url: ${VOZOVOZ_BASE_URL:https://vozovoz.ru}
     token: ${VOZOVOZ_TOKEN:}
 
 # ИНН нашей компании — для направления отправлений в журнале ТК

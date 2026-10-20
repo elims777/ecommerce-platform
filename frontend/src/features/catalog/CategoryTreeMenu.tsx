@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { CategoryTree } from '@/types/product';
 
 const subtreeContainsSelected = (category: CategoryTree, selectedId?: number): boolean =>
@@ -23,9 +23,11 @@ const CategoryNode = ({ category, selectedId, onSelect, depth = 0 }: CategoryNod
     const isSelected = selectedId === category.id;
     const [expanded, setExpanded] = useState(() => subtreeContainsSelected(category, selectedId));
 
-    useEffect(() => {
+    const [prevInput, setPrevInput] = useState({ category, selectedId });
+    if (prevInput.category !== category || prevInput.selectedId !== selectedId) {
+        setPrevInput({ category, selectedId });
         if (subtreeContainsSelected(category, selectedId)) setExpanded(true);
-    }, [category, selectedId]);
+    }
 
     const activeChildren = category.children
         .filter((c) => c.isActive)

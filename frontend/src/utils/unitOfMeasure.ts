@@ -37,7 +37,7 @@ export const unitShort = (unit: string | null | undefined): string => {
     return UNIT_SHORT_MAP[key] ?? key;
 };
 
-const pluralIndex = (n: number): 0 | 1 | 2 => {
+export const pluralIndex = (n: number): 0 | 1 | 2 => {
     const abs = Math.abs(n) % 100;
     const d = abs % 10;
     if (abs > 10 && abs < 20) return 2;

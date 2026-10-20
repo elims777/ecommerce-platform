@@ -2,6 +2,7 @@ package ru.rfsnab.orderservice.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -12,11 +13,11 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import ru.rfsnab.orderservice.delivery.CarrierApiException;
-import ru.rfsnab.orderservice.delivery.ShipmentAlreadyExistsException;
-import ru.rfsnab.orderservice.delivery.ShipmentModeSwitchRequiredException;
-import ru.rfsnab.orderservice.delivery.ShipmentNotFoundException;
-import ru.rfsnab.orderservice.delivery.WaybillNotFoundInCarrierException;
+import ru.rfsnab.orderservice.delivery.exception.CarrierApiException;
+import ru.rfsnab.orderservice.delivery.exception.ShipmentAlreadyExistsException;
+import ru.rfsnab.orderservice.delivery.exception.ShipmentModeSwitchRequiredException;
+import ru.rfsnab.orderservice.delivery.exception.ShipmentNotFoundException;
+import ru.rfsnab.orderservice.delivery.exception.WaybillNotFoundInCarrierException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -83,6 +84,16 @@ public class GlobalExceptionHandler {
         log.warn("Некорректный параметр на {}: {}", request.getRequestURI(), ex.getMessage());
         return buildResponse(HttpStatus.BAD_REQUEST, "Invalid Parameter",
                 "Некорректное значение параметра " + ex.getName(), request);
+    }
+
+    /**
+     * Неизвестное поле в sort (например, журнал отправлений).
+     */
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSortProperty(
+            PropertyReferenceException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid Sort",
+                "Некорректное поле сортировки: " + ex.getPropertyName(), request);
     }
 
     /**

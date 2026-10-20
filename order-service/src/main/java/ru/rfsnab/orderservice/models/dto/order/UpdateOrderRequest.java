@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
-import ru.rfsnab.orderservice.delivery.CarrierCode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
 

@@ -56,8 +56,8 @@ const RegisterPage = () => {
     const handlePersonalSubmit = async (values: PersonalFormValues) => {
         setLoading(true);
         try {
-            const { confirmPassword: _, privacyPolicy: __, personalData: ___, newsletterConsent: ____, ...rest } = values;
-            const request = { ...rest, newsletterConsent: values.newsletterConsent ?? false };
+            const { email, password, firstname, lastname, surname, phone } = values;
+            const request: RegisterRequest = { email, password, firstname, lastname, surname, phone, newsletterConsent: values.newsletterConsent ?? false };
             await register(request);
             reachGoal('register_success');
             messageApi.success('Регистрация прошла успешно! Проверьте почту для подтверждения аккаунта.');
@@ -77,7 +77,8 @@ const RegisterPage = () => {
     const handleLegalSubmit = async (values: LegalFormValues) => {
         setLoading(true);
         try {
-            const { confirmPassword: _, privacyPolicy: __, personalData: ___, newsletterConsent: ____, ...request } = values;
+            const { inn, ogrn, fullName, director, phone, email, password, legalCity, legalStreet, legalBuilding, legalPostalCode } = values;
+            const request: RegisterLegalRequest = { inn, ogrn, fullName, director, phone, email, password, legalCity, legalStreet, legalBuilding, legalPostalCode };
             await registerLegal(request);
             reachGoal('register_success');
             messageApi.success('Заявка на регистрацию отправлена! Проверьте почту — ссылка для подтверждения.');

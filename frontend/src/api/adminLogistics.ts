@@ -56,6 +56,26 @@ export const linkShipment = async (id: number, orderNumber: string): Promise<Shi
     return data;
 };
 
+/** Скачать документ отправления — GET /api/v1/admin/shipments/{id}/documents/{code}, сохраняет файл в браузере */
+export const downloadShipmentDocument = async (id: number, code: string, waybill: string): Promise<void> => {
+    const res = await apiClient.get<Blob>(`/v1/admin/shipments/${id}/documents/${encodeURIComponent(code)}`, { responseType: 'blob' });
+    const disposition: string | undefined = res.headers['content-disposition'];
+    const encoded = disposition?.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    const plain = disposition?.match(/filename="?([^";]+)"?/i)?.[1];
+    let fileName = plain;
+    try {
+        fileName = encoded ? decodeURIComponent(encoded) : plain && decodeURIComponent(plain);
+    } catch {
+        // битое percent-кодирование — оставляем имя как есть
+    }
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName || `${waybill}-${code}.pdf`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+};
+
 /** Внести накладную в заказ. 409 SHIPMENT_MODE_SWITCH_REQUIRED — нужно повторить с shipmentMode=MULTIPLE */
 export const addOrderShipment = async (orderId: string, request: AddShipmentRequest): Promise<ShipmentDto> => {
     const { data } = await apiClient.post<ShipmentDto>(`/v1/admin/orders/${orderId}/shipments`, request);
@@ -70,6 +90,12 @@ export const unlinkOrderShipment = async (orderId: string, shipmentId: number): 
 /** Запустить импорт журнала ТК — 202 запущен, 409 уже идёт */
 export const importShipments = async (): Promise<void> => {
     await apiClient.post('/v1/admin/shipments/import');
+};
+
+/** Идёт ли сейчас импорт журнала ТК */
+export const getShipmentImportStatus = async (): Promise<{ running: boolean }> => {
+    const { data } = await apiClient.get<{ running: boolean }>('/v1/admin/shipments/import');
+    return data;
 };
 
 /** «Все отправления внесены» */

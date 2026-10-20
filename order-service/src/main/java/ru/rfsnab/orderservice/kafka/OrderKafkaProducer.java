@@ -5,13 +5,14 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import ru.rfsnab.orderservice.delivery.Carrier;
-import ru.rfsnab.orderservice.delivery.CarrierCode;
-import ru.rfsnab.orderservice.delivery.CarrierRepository;
-import ru.rfsnab.orderservice.delivery.CarrierSyncEvent;
-import ru.rfsnab.orderservice.delivery.Shipment;
-import ru.rfsnab.orderservice.delivery.ShipmentNotFoundEvent;
-import ru.rfsnab.orderservice.delivery.ShipmentRepository;
+import ru.rfsnab.orderservice.delivery.mapper.ShipmentMapper;
+import ru.rfsnab.orderservice.delivery.models.dto.event.CarrierSyncEvent;
+import ru.rfsnab.orderservice.delivery.models.dto.event.ShipmentNotFoundEvent;
+import ru.rfsnab.orderservice.delivery.models.entity.Carrier;
+import ru.rfsnab.orderservice.delivery.models.entity.Shipment;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
+import ru.rfsnab.orderservice.delivery.repository.CarrierRepository;
+import ru.rfsnab.orderservice.delivery.repository.ShipmentRepository;
 import ru.rfsnab.orderservice.models.dto.event.OrderEvent;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
@@ -37,6 +38,7 @@ public class OrderKafkaProducer {
     private final WarehousePointRepository warehousePointRepository;
     private final ShipmentRepository shipmentRepository;
     private final CarrierRepository carrierRepository;
+    private final ShipmentMapper shipmentMapper;
 
     private void send(String eventType, Order order){
         send(eventType, order, null, null);
@@ -122,7 +124,7 @@ public class OrderKafkaProducer {
         return shipments.stream().map(s -> {
             Carrier carrier = carriers.get(s.getCarrierCode());
             return new OrderEvent.ShipmentLine(carrier == null ? s.getCarrierCode().name() : carrier.getName(),
-                    s.getWaybillNumber(), carrier == null ? null : carrier.trackingUrl(s.getWaybillNumber()),
+                    s.getWaybillNumber(), carrier == null ? null : shipmentMapper.trackingUrl(carrier, s.getWaybillNumber()),
                     s.getCarrierStatus());
         }).toList();
     }
