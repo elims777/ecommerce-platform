@@ -1,5 +1,10 @@
-import { Form, Radio, Select, Typography, Divider, Spin } from 'antd';
-import { DeliveryMethod, DeliveryMethodLabels } from '@/types/order';
+import { useMemo } from 'react';
+import { Form, Radio, Typography, Divider, Spin } from 'antd';
+import { CLIENT_DELIVERY_METHODS, DeliveryMethod, DeliveryMethodLabels } from '@/types/order';
+import CarrierPicker from './CarrierPicker';
+import PointsPicker from './PointsPicker';
+import { warehouseToPickerPoint } from './warehouseToPickerPoint';
+import TerminalPicker from './TerminalPicker';
 import type { WarehousePointDto } from '@/types/order';
 
 const { Text } = Typography;
@@ -18,22 +23,39 @@ const DeliveryStep = ({
     warehouseLoading,
     recipientsCount,
     onDeliveryMethodChange,
-}: DeliveryStepProps) => (
+}: DeliveryStepProps) => {
+    const form = Form.useFormInstance();
+    const warehousePickerPoints = useMemo(() => warehousePoints.map(warehouseToPickerPoint), [warehousePoints]);
+    return (
     <>
         <Form.Item
             name="deliveryMethod"
             rules={[{ required: true, message: 'Выберите способ доставки' }]}
         >
             <Radio.Group
-                onChange={() => onDeliveryMethodChange(recipientsCount)}
+                onChange={() => {
+                    // Выбор ТК и терминала относится к конкретному способу — не переносим его в другой
+                    form.setFieldsValue({ carrierCode: undefined, carrierTerminalId: undefined });
+                    onDeliveryMethodChange(recipientsCount);
+                }}
+                style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
             >
-                {Object.entries(DeliveryMethodLabels).map(([key, label]) => (
-                    <Radio.Button key={key} value={key}>
-                        {label}
+                {CLIENT_DELIVERY_METHODS.map((method) => (
+                    <Radio.Button key={method} value={method}>
+                        {DeliveryMethodLabels[method]}
                     </Radio.Button>
                 ))}
             </Radio.Group>
         </Form.Item>
+
+        {deliveryMethod === DeliveryMethod.CARRIER_ADDRESS && <CarrierPicker mode="address" />}
+
+        {deliveryMethod === DeliveryMethod.CARRIER_TERMINAL && (
+            <>
+                <CarrierPicker mode="terminal" />
+                <TerminalPicker />
+            </>
+        )}
 
         {deliveryMethod === DeliveryMethod.PICKUP && (
             <>
@@ -49,20 +71,7 @@ const DeliveryStep = ({
                         name="warehousePointId"
                         rules={[{ required: true, message: 'Выберите точку самовывоза' }]}
                     >
-                        <Select placeholder="Выберите точку самовывоза" size="large">
-                            {warehousePoints.map((point) => (
-                                <Select.Option key={point.id} value={point.id}>
-                                    <div>
-                                        <Text strong>{point.name}</Text>
-                                        <br />
-                                        <Text type="secondary">
-                                            {point.city}, {point.street}, д. {point.building}
-                                            {point.workingHours && ` | ${point.workingHours}`}
-                                        </Text>
-                                    </div>
-                                </Select.Option>
-                            ))}
-                        </Select>
+                        <PointsPicker points={warehousePickerPoints} />
                     </Form.Item>
                 ) : (
                     <Text type="secondary">
@@ -72,6 +81,7 @@ const DeliveryStep = ({
             </>
         )}
     </>
-);
+    );
+};
 
 export default DeliveryStep;

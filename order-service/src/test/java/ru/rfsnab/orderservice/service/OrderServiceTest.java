@@ -14,8 +14,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
+import ru.rfsnab.orderservice.delivery.models.entity.Carrier;
+import ru.rfsnab.orderservice.delivery.models.entity.CarrierTerminal;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.PointType;
+import ru.rfsnab.orderservice.delivery.repository.CarrierRepository;
+import ru.rfsnab.orderservice.delivery.repository.CarrierTerminalRepository;
 import ru.rfsnab.orderservice.exception.CartEmptyException;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
+import ru.rfsnab.orderservice.exception.PaymentMethodNotAvailableException;
 import ru.rfsnab.orderservice.exception.ProfileIncompleteException;
 import ru.rfsnab.orderservice.models.dto.event.OrderEvent;
 import ru.rfsnab.orderservice.models.dto.order.AddressDto;
@@ -28,17 +35,17 @@ import ru.rfsnab.orderservice.models.dto.user.ProfileCompletenessDto;
 import ru.rfsnab.orderservice.models.entity.Cart;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.OrderItem;
+import ru.rfsnab.orderservice.models.entity.PaymentMethodSettings;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
-import ru.rfsnab.orderservice.exception.PaymentMethodNotAvailableException;
-import ru.rfsnab.orderservice.models.entity.PaymentMethodSettings;
 import ru.rfsnab.orderservice.repository.OrderRepository;
 import ru.rfsnab.orderservice.repository.PaymentMethodSettingsRepository;
 import ru.rfsnab.orderservice.repository.WarehousePointRepository;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.Duration;
 import java.util.*;
 
@@ -54,7 +61,7 @@ import static org.mockito.Mockito.when;
  * ProductServiceClient — mock (внешний сервис).
  */
 @DisplayName("OrderService — интеграционные тесты")
-class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
+class OrderServiceTest extends BaseServiceIntegrationTest {
 
     @Autowired
     private OrderService orderService;
@@ -70,6 +77,12 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private CarrierRepository carrierRepository;
+
+    @Autowired
+    private CarrierTerminalRepository terminalRepository;
 
     @Autowired
     private PaymentMethodSettingsRepository paymentMethodSettingsRepository;
@@ -99,6 +112,11 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
     void setUp() {
         orderRepository.deleteAll();
         cartService.clearCart(USER_ID);
+
+        Carrier dellin = carrierRepository.findById(CarrierCode.DELLIN).orElseThrow();
+        dellin.setEnabled(true);
+        dellin.setAddressDeliveryEnabled(true);
+        carrierRepository.save(dellin);
 
         // Создаём точку самовывоза
         savedWarehousePoint = warehousePointRepository.save(
@@ -140,13 +158,85 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
     class CreateOrderTests {
 
         @Test
+        @DisplayName("SUPPLIER_DELIVERY от клиента — отказ")
+        void shouldRejectSupplierDeliveryFromClient() {
+            addItemsToCart();
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
+                    buildAddressDto(), null, null, null, null, null, null, null, null, null);
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("менеджер");
+        }
+
+        @Test
+        @DisplayName("CARRIER_ADDRESS без ТК — отказ")
+        void shouldRejectCarrierAddressWithoutCarrier() {
+            addItemsToCart();
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, null, null, null, null, null);
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("транспортную компанию");
+        }
+
+        @Test
+        @DisplayName("CARRIER_ADDRESS с выключенной ТК — отказ")
+        void shouldRejectDisabledCarrier() {
+            Carrier dellin = carrierRepository.findById(CarrierCode.DELLIN).orElseThrow();
+            dellin.setAddressDeliveryEnabled(false);
+            carrierRepository.save(dellin);
+            addItemsToCart();
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("недоступна");
+        }
+
+        @Test
+        @DisplayName("CARRIER_ADDRESS с полностью выключенной ТК — отказ")
+        void shouldRejectFullyDisabledCarrier() {
+            Carrier dellin = carrierRepository.findById(CarrierCode.DELLIN).orElseThrow();
+            dellin.setEnabled(false);
+            carrierRepository.save(dellin);
+            addItemsToCart();
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("недоступна");
+        }
+
+        @Test
+        @DisplayName("PICKUP — carrierCode из запроса не сохраняется")
+        void shouldIgnoreCarrierForPickup() {
+            addItemsToCart();
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.PICKUP,
+                    null, savedWarehousePoint.getId(), null, null, null, null, null, null, null, CarrierCode.DELLIN);
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
+
+            assertThat(order.getCarrierCode()).isNull();
+            assertThat(order.getCarrierName()).isNull();
+        }
+
+        @Test
         @DisplayName("создаёт заказ из корзины с доставкой")
         void shouldCreateDeliveryOrder() {
             addItemsToCart();
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, "Тестовый заказ", null, null, null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, "Тестовый заказ", null, null, null, null, CarrierCode.DELLIN);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -154,7 +244,9 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             assertThat(order.getOrderNumber()).isNotBlank();
             assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
             assertThat(order.getPaymentMethod()).isEqualTo(PaymentMethod.CARD);
-            assertThat(order.getDeliveryMethod()).isEqualTo(DeliveryMethod.SUPPLIER_DELIVERY);
+            assertThat(order.getDeliveryMethod()).isEqualTo(DeliveryMethod.CARRIER_ADDRESS);
+            assertThat(order.getCarrierCode()).isEqualTo(CarrierCode.DELLIN);
+            assertThat(order.getCarrierName()).isEqualTo("Деловые Линии");
             assertThat(order.getDeliveryAddress().getCity()).isEqualTo("Сыктывкар");
             assertThat(order.getItems()).hasSize(2);
             assertThat(order.getTotalAmount()).isEqualByComparingTo("25000.00");
@@ -181,7 +273,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CASH_ON_DELIVERY, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null, null, null, null, null);
+                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null, null, null, null, null, null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -197,7 +289,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         void shouldThrowWhenCartEmpty() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), null, null, null, null, null, null, null);
+                    null, savedWarehousePoint.getId(), null, null, null, null, null, null, null, null);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
                     .isInstanceOf(CartEmptyException.class);
@@ -211,7 +303,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, null, null, null, null, null, null, null, null);
+                    null, null, null, null, null, null, null, null, null, null);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
                     .isInstanceOf(InvalidOrderStateException.class)
@@ -224,8 +316,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             addItemsToCart();
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    null, null, null, null, null, null, null, null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    null, null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
                     .isInstanceOf(InvalidOrderStateException.class)
@@ -238,8 +330,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             addItemsToCart();
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, "Тест externalId", null, null, null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, "Тест externalId", null, null, null, null, CarrierCode.DELLIN);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -260,8 +352,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, "ООО Ромашка", "1234567890", null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, "ООО Ромашка", "1234567890", null, null, CarrierCode.DELLIN);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2B", request);
 
@@ -276,8 +368,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, null, null, null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -299,8 +391,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartService.addItemToCart(USER_ID, productId, 2);
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, "ООО Тест", "9876543210", null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, "ООО Тест", "9876543210", null, null, CarrierCode.DELLIN);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2B", request);
 
@@ -326,8 +418,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartService.addItemToCart(USER_ID, productId, 1);
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, null, null, null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -349,8 +441,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartService.addItemToCart(USER_ID, productId, 2);
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, null, null, null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -366,8 +458,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, "ООО Ромашка", null, null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, "ООО Ромашка", null, null, null, CarrierCode.DELLIN);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2B", request))
                     .isInstanceOf(InvalidOrderStateException.class);
@@ -381,8 +473,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .thenReturn(new ProfileCompletenessDto(false, List.of("Телефон")));
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, "Тестовый заказ", null, null, null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, "Тестовый заказ", null, null, null, null, CarrierCode.DELLIN);
 
             assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
                     .isInstanceOf(ProfileIncompleteException.class);
@@ -394,8 +486,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             addItemsToCart();
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, "Тестовый заказ", null, null, null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, "Тестовый заказ", null, null, null, null, CarrierCode.DELLIN);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -408,6 +500,60 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
     @Nested
     @DisplayName("updateOrder")
     class UpdateOrderTests {
+
+        @Test
+        @DisplayName("смена на SUPPLIER_DELIVERY клиентом — отказ")
+        void shouldRejectSwitchToSupplierDelivery() {
+            Order order = createTestOrder();
+            UpdateOrderRequest request = UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD)
+                    .deliveryMethod(DeliveryMethod.SUPPLIER_DELIVERY)
+                    .deliveryAddress(buildAddressDto())
+                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null)))
+                    .build();
+
+            assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("менеджер");
+        }
+
+        @Test
+        @DisplayName("SUPPLIER_DELIVERY, назначенный менеджером, можно оставить")
+        void shouldKeepSupplierDeliveryAssignedByManager() {
+            Order order = createTestOrder();
+            jdbcTemplate.update("UPDATE orders SET delivery_method = 'SUPPLIER_DELIVERY', carrier_code = NULL WHERE id = ?",
+                    order.getId());
+            UpdateOrderRequest request = UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD)
+                    .deliveryMethod(DeliveryMethod.SUPPLIER_DELIVERY)
+                    .deliveryAddress(buildAddressDto())
+                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null)))
+                    .comment("новый")
+                    .build();
+
+            Order updated = orderService.updateOrder(order.getId(), USER_ID, request);
+
+            assertThat(updated.getDeliveryMethod()).isEqualTo(DeliveryMethod.SUPPLIER_DELIVERY);
+            assertThat(updated.getComment()).isEqualTo("новый");
+        }
+
+        @Test
+        @DisplayName("смена ТК при редактировании сохраняется")
+        void shouldUpdateCarrier() {
+            Order order = createTestOrder();
+            UpdateOrderRequest request = UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD)
+                    .deliveryMethod(DeliveryMethod.CARRIER_ADDRESS)
+                    .carrierCode(CarrierCode.PEC)
+                    .deliveryAddress(buildAddressDto())
+                    .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null)))
+                    .build();
+
+            Order updated = orderService.updateOrder(order.getId(), USER_ID, request);
+
+            assertThat(updated.getCarrierCode()).isEqualTo(CarrierCode.PEC);
+            assertThat(updated.getCarrierName()).isEqualTo("ПЭК");
+        }
 
         @Test
         @DisplayName("обновляет заказ в статусе CREATED")
@@ -491,6 +637,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             assertThat(repeated.getItems()).hasSize(original.getItems().size());
             assertThat(repeated.getPaymentMethod()).isEqualTo(original.getPaymentMethod());
             assertThat(repeated.getDeliveryMethod()).isEqualTo(original.getDeliveryMethod());
+            assertThat(repeated.getCarrierCode()).isEqualTo(CarrierCode.DELLIN);
+            assertThat(repeated.getCarrierName()).isEqualTo("Деловые Линии");
         }
 
     }
@@ -554,8 +702,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
-                    PaymentMethod.INVOICE, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, null, null, null, null);
+                    PaymentMethod.INVOICE, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
 
             Order confirmed = orderService.confirmOrder(order.getId(), USER_ID);
@@ -572,8 +720,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, null, null, null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
 
             UUID orderId = order.getId();
@@ -592,8 +740,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
-                    PaymentMethod.SBP, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, null, null, null, null);
+                    PaymentMethod.SBP, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
 
             UUID orderId = order.getId();
@@ -612,8 +760,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
-                    PaymentMethod.INVOICE, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, null, "ООО Тест", "1234567890", null, null);
+                    PaymentMethod.INVOICE, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, "ООО Тест", "1234567890", null, null, CarrierCode.DELLIN);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2B", req);
 
             Order confirmed = orderService.confirmOrder(order.getId(), USER_ID);
@@ -841,7 +989,7 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.PICKUP,
-                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null, null, null, null, null);
+                    null, savedWarehousePoint.getId(), "Петров Петр", "+79001112233", null, null, null, null, null, null);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -881,8 +1029,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
             addItemsToCart();
 
             CreateOrderRequest request = new CreateOrderRequest(
-                    PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    buildAddressDto(), null, null, null, "Тест 1С export", null, null, null, null);
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, "Тест 1С export", null, null, null, null, CarrierCode.DELLIN);
 
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
 
@@ -898,6 +1046,230 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
                     .filter(i -> i.getProductId().equals(PRODUCT_ID_2))
                     .findFirst().orElseThrow();
             assertThat(item2.getExternalId()).isEqualTo("ext-002");
+        }
+    }
+
+    @Nested
+    @DisplayName("CARRIER_TERMINAL")
+    class CarrierTerminalTests {
+
+        private CarrierTerminal dellinTerminal;
+        private CarrierTerminal cdekTerminal;
+        private CarrierTerminal closedDellinTerminal;
+
+        @BeforeEach
+        void setUpTerminals() {
+            terminalRepository.deleteAll();
+            setDellinTerminalDelivery(true);
+            dellinTerminal = saveTerminal(CarrierCode.DELLIN, "D1", "Терминал Толмачёво", "ул. Ленина, 1", true);
+            cdekTerminal = saveTerminal(CarrierCode.CDEK, "C1", "ПВЗ СДЭК", "ул. Мира, 2", true);
+            closedDellinTerminal = saveTerminal(CarrierCode.DELLIN, "D2", "Закрытый терминал", "ул. Старая, 3", false);
+        }
+
+        private CarrierTerminal saveTerminal(CarrierCode carrier, String externalId, String name, String address, boolean active) {
+            return terminalRepository.save(CarrierTerminal.builder()
+                    .carrierCode(carrier).externalId(externalId).pointType(PointType.TERMINAL)
+                    .city("Новосибирск").name(name).address(address)
+                    .latitude(new BigDecimal("55.030000")).longitude(new BigDecimal("82.920000"))
+                    .active(active).syncedAt(Instant.now()).build());
+        }
+
+        private void setDellinTerminalDelivery(boolean enabled) {
+            Carrier dellin = carrierRepository.findById(CarrierCode.DELLIN).orElseThrow();
+            dellin.setTerminalDeliveryEnabled(enabled);
+            carrierRepository.save(dellin);
+        }
+
+        private CreateOrderRequest terminalRequest(CarrierCode carrier, Long terminalId, AddressDto address) {
+            return new CreateOrderRequest(PaymentMethod.CARD, DeliveryMethod.CARRIER_TERMINAL,
+                    address, null, "Иван Иванов", "+79990000000", null, null, null, null, null, carrier, terminalId);
+        }
+
+        @Test
+        @DisplayName("заказ сохраняет снимок названия и адреса терминала из БД, а не из запроса")
+        void shouldSnapshotTerminalFromDb() {
+            addItemsToCart();
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, dellinTerminal.getId(), null));
+
+            assertThat(order.getDeliveryMethod()).isEqualTo(DeliveryMethod.CARRIER_TERMINAL);
+            assertThat(order.getDeliveryAddress()).isNull();
+            assertThat(order.getCarrierCode()).isEqualTo(CarrierCode.DELLIN);
+            assertThat(order.getCarrierName()).isEqualTo("Деловые Линии");
+            assertThat(order.getCarrierTerminalId()).isEqualTo(dellinTerminal.getId());
+            assertThat(order.getTerminalName()).isEqualTo("Терминал Толмачёво");
+            assertThat(order.getTerminalAddress()).isEqualTo("ул. Ленина, 1");
+
+            // терминал сменил адрес — снимок в заказе остаётся прежним
+            dellinTerminal.setAddress("ул. Новая, 9");
+            terminalRepository.save(dellinTerminal);
+            Order reloaded = orderRepository.findById(order.getId()).orElseThrow();
+            assertThat(reloaded.getTerminalAddress()).isEqualTo("ул. Ленина, 1");
+        }
+
+        @Test
+        @DisplayName("терминал другой ТК — отказ")
+        void shouldRejectForeignCarrierTerminal() {
+            addItemsToCart();
+            CreateOrderRequest request = terminalRequest(CarrierCode.DELLIN, cdekTerminal.getId(), buildAddressDto());
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("недоступен");
+        }
+
+        @Test
+        @DisplayName("пришедший с запросом адрес для терминала не сохраняется")
+        void shouldIgnoreAddressForTerminal() {
+            addItemsToCart();
+
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, dellinTerminal.getId(), buildAddressDto()));
+
+            assertThat(order.getDeliveryAddress()).isNull();
+            assertThat(order.getTerminalName()).isEqualTo("Терминал Толмачёво");
+        }
+
+        @Test
+        @DisplayName("неактивный терминал — отказ")
+        void shouldRejectInactiveTerminal() {
+            addItemsToCart();
+            CreateOrderRequest request = terminalRequest(CarrierCode.DELLIN, closedDellinTerminal.getId(), buildAddressDto());
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("недоступен");
+        }
+
+        @Test
+        @DisplayName("ТК без terminal_delivery_enabled — отказ")
+        void shouldRejectCarrierWithoutTerminalDelivery() {
+            setDellinTerminalDelivery(false);
+            addItemsToCart();
+            CreateOrderRequest request = terminalRequest(CarrierCode.DELLIN, dellinTerminal.getId(), buildAddressDto());
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessageContaining("до терминала");
+        }
+
+        @Test
+        @DisplayName("несуществующий терминал, пустой терминал, пустая ТК — отказ")
+        void shouldRejectIncompleteRequests() {
+            addItemsToCart();
+
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, 999_999L, buildAddressDto())))
+                    .isInstanceOf(InvalidOrderStateException.class).hasMessageContaining("не найден");
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, null, buildAddressDto())))
+                    .isInstanceOf(InvalidOrderStateException.class).hasMessageContaining("терминал");
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(null, dellinTerminal.getId(), buildAddressDto())))
+                    .isInstanceOf(InvalidOrderStateException.class).hasMessageContaining("транспортную компанию");
+        }
+
+        @Test
+        @DisplayName("редактирование: адресная доставка → терминал → самовывоз меняет и очищает снимок")
+        void shouldSwitchSnapshotOnUpdate() {
+            Order order = createTestOrder();
+            OrderItemDto item = new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null);
+
+            Order toTerminal = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.CARRIER_TERMINAL)
+                    .carrierCode(CarrierCode.DELLIN).carrierTerminalId(dellinTerminal.getId())
+                    .pickupRecipientName("Иван Иванов").pickupRecipientPhone("+79990000000")
+                    .items(List.of(item)).build());
+
+            assertThat(toTerminal.getDeliveryAddress()).isNull();
+            assertThat(toTerminal.getCarrierCode()).isEqualTo(CarrierCode.DELLIN);
+            assertThat(toTerminal.getCarrierTerminalId()).isEqualTo(dellinTerminal.getId());
+            assertThat(toTerminal.getTerminalName()).isEqualTo("Терминал Толмачёво");
+            assertThat(toTerminal.getPickupRecipientName()).isEqualTo("Иван Иванов");
+
+            Order toPickup = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.PICKUP)
+                    .warehousePointId(savedWarehousePoint.getId()).items(List.of(item)).build());
+
+            assertThat(toPickup.getCarrierCode()).isNull();
+            assertThat(toPickup.getCarrierName()).isNull();
+            assertThat(toPickup.getCarrierTerminalId()).isNull();
+            assertThat(toPickup.getTerminalName()).isNull();
+            assertThat(toPickup.getTerminalAddress()).isNull();
+        }
+
+        @Test
+        @DisplayName("редактирование: получатель берётся из запроса для самовывоза и очищается для адресной доставки")
+        void shouldApplyRecipientOnUpdate() {
+            Order order = createTestOrder();
+            OrderItemDto item = new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null);
+
+            Order toPickup = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.PICKUP)
+                    .warehousePointId(savedWarehousePoint.getId())
+                    .pickupRecipientName("Пётр Петров").pickupRecipientPhone("+79991112233")
+                    .items(List.of(item)).build());
+            assertThat(toPickup.getPickupRecipientName()).isEqualTo("Пётр Петров");
+            assertThat(toPickup.getPickupRecipientPhone()).isEqualTo("+79991112233");
+
+            Order toAddress = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.CARRIER_ADDRESS)
+                    .carrierCode(CarrierCode.PEC).deliveryAddress(buildAddressDto())
+                    .items(List.of(item)).build());
+            assertThat(toAddress.getPickupRecipientName()).isNull();
+            assertThat(toAddress.getPickupRecipientPhone()).isNull();
+        }
+
+        @Test
+        @DisplayName("получатель сохраняется в заказ; без ФИО или телефона — отказ")
+        void shouldRequireRecipient() {
+            addItemsToCart();
+            Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, dellinTerminal.getId(), null));
+            assertThat(order.getPickupRecipientName()).isEqualTo("Иван Иванов");
+            assertThat(order.getPickupRecipientPhone()).isEqualTo("+79990000000");
+
+            CreateOrderRequest noName = new CreateOrderRequest(PaymentMethod.CARD, DeliveryMethod.CARRIER_TERMINAL,
+                    null, null, " ", "+79990000000", null, null, null, null, null,
+                    CarrierCode.DELLIN, dellinTerminal.getId());
+            addItemsToCart();
+            assertThatThrownBy(() -> orderService.createOrder(USER_ID, USER_EMAIL, "B2C", noName))
+                    .isInstanceOf(InvalidOrderStateException.class).hasMessage("Укажите ФИО и телефон получателя");
+
+            Order created = createTestOrder();
+            OrderItemDto item = new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null);
+            UpdateOrderRequest noPhone = UpdateOrderRequest.builder()
+                    .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.CARRIER_TERMINAL)
+                    .carrierCode(CarrierCode.DELLIN).carrierTerminalId(dellinTerminal.getId())
+                    .pickupRecipientName("Иван Иванов").items(List.of(item)).build();
+            assertThatThrownBy(() -> orderService.updateOrder(created.getId(), USER_ID, noPhone))
+                    .isInstanceOf(InvalidOrderStateException.class).hasMessage("Укажите ФИО и телефон получателя");
+        }
+
+        @Test
+        @DisplayName("повтор заказа с терминалом копирует получателя; закрытый терминал или выключенная ТК — понятная ошибка")
+        void shouldRepeatTerminalOrderOnlyIfTerminalAvailable() {
+            addItemsToCart();
+            Order original = orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
+                    terminalRequest(CarrierCode.DELLIN, dellinTerminal.getId(), null));
+
+            Order repeated = orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL);
+            assertThat(repeated.getTerminalName()).isEqualTo("Терминал Толмачёво");
+            assertThat(repeated.getPickupRecipientName()).isEqualTo("Иван Иванов");
+            assertThat(repeated.getPickupRecipientPhone()).isEqualTo("+79990000000");
+
+            setDellinTerminalDelivery(false);
+            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessage("Терминал больше недоступен, выберите другой");
+
+            setDellinTerminalDelivery(true);
+            dellinTerminal.setActive(false);
+            terminalRepository.save(dellinTerminal);
+            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL))
+                    .isInstanceOf(InvalidOrderStateException.class)
+                    .hasMessage("Терминал больше недоступен, выберите другой");
         }
     }
 
@@ -925,8 +1297,8 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         addItemsToCart();
 
         CreateOrderRequest request = new CreateOrderRequest(
-                PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                buildAddressDto(), null, null, null, "Тест", null, null, null, null);
+                PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                buildAddressDto(), null, null, null, "Тест", null, null, null, null, CarrierCode.DELLIN);
 
         return orderService.createOrder(USER_ID, USER_EMAIL, "B2C", request);
     }
@@ -1006,33 +1378,5 @@ class OrderServiceIntegrationTest extends BaseServiceIntegrationTest {
         }
 
         return events;
-    }
-
-    /**
-     * Чтение raw сообщений из Kafka топика (без десериализации в конкретный тип).
-     */
-    private List<String> consumeRawMessages(String topic, int maxMessages) {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "test-raw-" + UUID.randomUUID());
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-
-        List<String> messages = new ArrayList<>();
-
-        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
-            consumer.subscribe(List.of(topic));
-
-            long deadline = System.currentTimeMillis() + 15_000;
-            while (messages.size() < maxMessages && System.currentTimeMillis() < deadline) {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
-                for (ConsumerRecord<String, String> record : records) {
-                    messages.add(record.value());
-                }
-            }
-        }
-
-        return messages;
     }
 }

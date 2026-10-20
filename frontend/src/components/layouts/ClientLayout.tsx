@@ -26,14 +26,6 @@ const TOPBAR_H_MOBILE = 32;
 const MAIN_H_MOBILE = 60;
 const HEADER_TOTAL_MOBILE = TOPBAR_H_MOBILE + MAIN_H_MOBILE;
 
-const PAGE_ORDER = ['/about', '/contacts', '/', '/catalog', '/cart', '/orders', '/price-lists', '/profile', '/privacy-policy', '/personal-data'];
-const getPageIndex = (pathname: string): number => {
-    if (pathname.startsWith('/products/')) return 2.5;
-    if (pathname.startsWith('/checkout')) return 4.5;
-    const idx = PAGE_ORDER.indexOf(pathname);
-    return idx >= 0 ? idx : 5;
-};
-
 const FOOTER_INK = 'rgba(255,255,255,.6)';
 const FOOTER_INK_HOVER = 'rgba(255,255,255,.9)';
 
@@ -152,7 +144,7 @@ const ContextSwitcher = () => {
             </div>
 
             {showPasswordModal && (
-                <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' as any }}
+                <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' }}
                     onClick={() => { setShowPasswordModal(false); setPassword(''); setError(''); }}>
                     <div style={{ background: 'var(--surface)', borderRadius: 'var(--r-5)', padding: 'var(--sp-10)', width: 360 }}
                         onClick={(e) => e.stopPropagation()}>
@@ -202,7 +194,6 @@ const ClientLayout = () => {
     const [megaMenuOpen, setMegaMenuOpen] = useState(false);
     const [priceListModalOpen, setPriceListModalOpen] = useState(false);
     const megaMenuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const prevIndexRef = useRef(getPageIndex(location.pathname));
     const screens = Grid.useBreakpoint();
     const isMobile = screens.md === false;
     // На планшете (768–992) десктопный топбар не помещается: адрес и «Доставка по РФ» рвутся на строки.
@@ -253,16 +244,16 @@ const ClientLayout = () => {
         setPriceListModalOpen(true);
     };
 
-    const currentIndex = getPageIndex(location.pathname);
-    prevIndexRef.current = currentIndex;
-
-    useEffect(() => {
+    // null — чтобы на первом рендере тоже подтянуть запрос из URL.
+    const [syncedPathname, setSyncedPathname] = useState<string | null>(null);
+    if (syncedPathname !== location.pathname) {
+        setSyncedPathname(location.pathname);
         setMobileNavOpen(false);
         // Запрос остаётся только на выдаче, куда сам поиск и привёл; при уходе поле пустеет.
         // Зависимость только от pathname: смена фильтров каталога не должна стирать ввод.
         const q = new URLSearchParams(window.location.search).get('q');
         setSearchQuery(location.pathname === '/catalog' && q ? q : '');
-    }, [location.pathname]);
+    }
 
     const userMenuItems: MenuProps['items'] = [
         { key: 'orders', label: <NavLink to="/orders">Мои заказы</NavLink> },
@@ -282,7 +273,7 @@ const ClientLayout = () => {
 
     return (
         <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
-            <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 'var(--z-header)' as any }}>
+            <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 'var(--z-header)' }}>
                 {/* TopBar */}
                 <div style={{
                     background: 'var(--brand-navy)', color: 'var(--overlay-white-85)',

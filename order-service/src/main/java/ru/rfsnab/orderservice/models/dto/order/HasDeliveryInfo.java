@@ -1,5 +1,6 @@
 package ru.rfsnab.orderservice.models.dto.order;
 
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 
 /**
@@ -13,4 +14,16 @@ public sealed interface HasDeliveryInfo permits CreateOrderRequest, UpdateOrderR
     AddressDto deliveryAddress();
 
     Long warehousePointId();
+
+    /** ФИО получателя для CARRIER_TERMINAL; для остальных способов игнорируется. */
+    String pickupRecipientName();
+
+    /** Телефон получателя для CARRIER_TERMINAL; для остальных способов игнорируется. */
+    String pickupRecipientPhone();
+
+    /** ТК для CARRIER_ADDRESS и CARRIER_TERMINAL; для остальных способов игнорируется. */
+    CarrierCode carrierCode();
+
+    /** Терминал для CARRIER_TERMINAL (только ТК из carrierCode); для остальных способов игнорируется. Адрес для терминала не нужен. */
+    Long carrierTerminalId();
 }

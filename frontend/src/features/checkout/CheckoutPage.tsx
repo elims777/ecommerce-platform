@@ -35,6 +35,7 @@ import {
     PaymentMethod,
 } from '@/types/order';
 import type { CreateOrderRequest } from '@/types/order';
+import type { CarrierCode } from '@/types/delivery';
 import type { AxiosError } from 'axios';
 import { handleProfileIncomplete } from '@/utils/profileGate';
 import DeliveryStep from './DeliveryStep';
@@ -46,6 +47,10 @@ const { Title } = Typography;
 interface CheckoutFormValues {
     deliveryMethod: DeliveryMethod;
     warehousePointId?: number;
+    carrierCode?: CarrierCode;
+    carrierTerminalId?: number;
+    pickupRecipientName?: string;
+    pickupRecipientPhone?: string;
     comment?: string;
     newRecipientName?: string;
     newRecipientPhone?: string;
@@ -164,7 +169,8 @@ const createRecipientMutation = useMutation({
                 } : {}),
             };
 
-            if (values.deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY) {
+            if (values.deliveryMethod === DeliveryMethod.CARRIER_ADDRESS) {
+                request.carrierCode = values.carrierCode;
                 if (manualInput) {
                     const newRecipient = await createRecipientMutation.mutateAsync({
                         name: values.newRecipientName!,
@@ -206,6 +212,13 @@ const createRecipientMutation = useMutation({
                         recipientName: selectedRecipient.name,
                     };
                 }
+            }
+
+            if (values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL) {
+                request.carrierCode = values.carrierCode;
+                request.carrierTerminalId = values.carrierTerminalId;
+                request.pickupRecipientName = values.pickupRecipientName;
+                request.pickupRecipientPhone = values.pickupRecipientPhone;
             }
 
             if (values.deliveryMethod === DeliveryMethod.PICKUP && values.warehousePointId) {

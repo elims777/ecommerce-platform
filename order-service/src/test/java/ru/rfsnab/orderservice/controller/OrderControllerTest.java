@@ -17,6 +17,12 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
+import ru.rfsnab.orderservice.delivery.models.dto.ShipmentDto;
+import ru.rfsnab.orderservice.delivery.models.dto.ShipmentPayerDto;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentDirection;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentSource;
+import ru.rfsnab.orderservice.delivery.service.ShipmentService;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
@@ -41,6 +47,7 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -72,6 +79,9 @@ class OrderControllerTest extends BaseIntegrationTest {
 
     @MockitoBean
     private WarehousePointService warehousePointService;
+
+    @MockitoBean
+    private ShipmentService shipmentService;
 
     private static final Long USER_ID = 100L;
     private static final UUID ORDER_ID = UUID.randomUUID();
@@ -124,7 +134,7 @@ class OrderControllerTest extends BaseIntegrationTest {
             WarehousePoint point = buildWarehousePoint();
             when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class)))
                     .thenReturn(order);
-            when(warehousePointService.getActivePoint(1L)).thenReturn(point);
+            when(warehousePointService.getPoint(1L)).thenReturn(point);
 
             String json = """
                     {
@@ -215,6 +225,31 @@ class OrderControllerTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.orderNumber").value("ABC-00001"))
                     .andExpect(jsonPath("$.items", hasSize(1)))
                     .andExpect(jsonPath("$.items[0].productName").value("Доска обрезная"));
+        }
+
+        @Test
+        @DisplayName("200 OK — отправления клиенту без sender, receiver и direction")
+        void shouldHideShipmentCounterparties() throws Exception {
+            Order order = buildDeliveryOrder();
+            when(orderService.getOrderByIdAndUser(order.getId(), USER_ID)).thenReturn(order);
+            when(shipmentService.getByOrderId(order.getId())).thenReturn(List.of(new ShipmentDto(1L, order.getId(),
+                    "ABC-00001", CarrierCode.DELLIN, "Деловые Линии", "123", ShipmentDirection.OUTGOING, "ООО Отправитель", "7701",
+                    "ООО Получатель", "5401", "Москва", "Сыктывкар", null, null, "В пути", null, null, null, false, false,
+                    ShipmentSource.MANUAL, null, null,
+                    null, null, null, null, null, null, null, null, null, null,
+                    List.of(new ShipmentPayerDto("ООО Плательщик", "7702", null)))));
+
+            mockMvc.perform(get("/api/v1/orders/{id}", order.getId()).with(jwtUser()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.shipments", hasSize(1)))
+                    .andExpect(jsonPath("$.shipments[0].waybillNumber").value("123"))
+                    .andExpect(jsonPath("$.shipments[0].routeFrom").value("Москва"))
+                    .andExpect(jsonPath("$.shipments[0].sender").doesNotExist())
+                    .andExpect(jsonPath("$.shipments[0].receiver").doesNotExist())
+                    .andExpect(jsonPath("$.shipments[0].senderInn").doesNotExist())
+                    .andExpect(jsonPath("$.shipments[0].receiverInn").doesNotExist())
+                    .andExpect(jsonPath("$.shipments[0].payers").isEmpty())
+                    .andExpect(jsonPath("$.shipments[0].direction").doesNotExist());
         }
     }
 
@@ -369,6 +404,57 @@ class OrderControllerTest extends BaseIntegrationTest {
         }
     }
 
+    // ==================== POST /api/v1/orders/{id}/pay/cash/confirm, /refund ====================
+
+    @Nested
+    @DisplayName("Операции менеджера: подтверждение наличных и возврат — только ROLE_ADMIN")
+    class ManagerOnlyTests {
+
+        @Test
+        @DisplayName("403 — USER не может подтвердить наличные, сервис не вызывается")
+        void confirmCashForbiddenForUser() throws Exception {
+            mockMvc.perform(post("/api/v1/orders/{id}/pay/cash/confirm", ORDER_ID)
+                            .with(jwtUser()).with(csrf()))
+                    .andExpect(status().isForbidden());
+
+            verify(orderService, never()).confirmCashPayment(any());
+        }
+
+        @Test
+        @DisplayName("200 — ADMIN подтверждает наличные")
+        void confirmCashAllowedForAdmin() throws Exception {
+            when(orderService.confirmCashPayment(ORDER_ID)).thenReturn(buildDeliveryOrder());
+
+            mockMvc.perform(post("/api/v1/orders/{id}/pay/cash/confirm", ORDER_ID)
+                            .with(jwtAdmin()).with(csrf()))
+                    .andExpect(status().isOk());
+
+            verify(orderService).confirmCashPayment(ORDER_ID);
+        }
+
+        @Test
+        @DisplayName("403 — USER не может инициировать возврат, сервис не вызывается")
+        void refundForbiddenForUser() throws Exception {
+            mockMvc.perform(post("/api/v1/orders/{id}/refund", ORDER_ID)
+                            .with(jwtUser()).with(csrf()))
+                    .andExpect(status().isForbidden());
+
+            verify(orderService, never()).refund(any());
+        }
+
+        @Test
+        @DisplayName("200 — ADMIN инициирует возврат")
+        void refundAllowedForAdmin() throws Exception {
+            when(orderService.refund(ORDER_ID)).thenReturn(buildDeliveryOrder());
+
+            mockMvc.perform(post("/api/v1/orders/{id}/refund", ORDER_ID)
+                            .with(jwtAdmin()).with(csrf()))
+                    .andExpect(status().isOk());
+
+            verify(orderService).refund(ORDER_ID);
+        }
+    }
+
     // ==================== PATCH /api/v1/orders/{id}/1c-sync ====================
 
     @Nested
@@ -410,7 +496,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                             .header("X-Internal-Token", "test-secret")
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isInternalServerError());
+                    .andExpect(status().isBadRequest());
         }
     }
 
@@ -473,10 +559,18 @@ class OrderControllerTest extends BaseIntegrationTest {
     }
 
     private static RequestPostProcessor jwtUser() {
+        return jwtWithRole("ROLE_USER");
+    }
+
+    private static RequestPostProcessor jwtAdmin() {
+        return jwtWithRole("ROLE_ADMIN");
+    }
+
+    private static RequestPostProcessor jwtWithRole(String role) {
         UsernamePasswordAuthenticationToken auth =
                 new UsernamePasswordAuthenticationToken(
                         USER_ID.toString(), null,
-                        List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                        List.of(new SimpleGrantedAuthority(role)));
         auth.setDetails(Map.of("email", USER_EMAIL));
         return SecurityMockMvcRequestPostProcessors.authentication(auth);
     }

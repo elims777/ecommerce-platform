@@ -33,7 +33,7 @@ const OAuth2SuccessPage = () => {
         useAuthStore.setState({ user: tokens.user, isAuthenticated: true, isLoading: false });
 
         navigate('/profile', { replace: true });
-    }, []);
+    }, [searchParams, navigate]);
 
     return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>

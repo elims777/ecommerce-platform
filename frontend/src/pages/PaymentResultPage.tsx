@@ -7,15 +7,14 @@ import { getPaymentStatus } from '@/api/orders';
 const PaymentResultPage = () => {
     const [searchParams] = useSearchParams();
     const orderId = searchParams.get('orderId');
-    const [status, setStatus] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [fetchedStatus, setStatus] = useState<string | null>(null);
+    const [fetching, setLoading] = useState(true);
+
+    const status = orderId ? fetchedStatus : 'error';
+    const loading = orderId ? fetching : false;
 
     useEffect(() => {
-        if (!orderId) {
-            setStatus('error');
-            setLoading(false);
-            return;
-        }
+        if (!orderId) return;
         getPaymentStatus(orderId)
             .then(({ status: s }) => setStatus(s))
             .catch(() => setStatus('error'))

@@ -4,14 +4,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.StringUtils;
 import ru.rfsnab.orderservice.models.dto.event.Order1CExportEvent;
 import ru.rfsnab.orderservice.models.entity.DeliveryAddress;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
+import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.repository.WarehousePointRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Отправка полного заказа в Kafka для выгрузки в 1С.
@@ -32,7 +37,8 @@ public class Order1CKafkaProducer {
      */
     public void sendOrderFor1C(Order order) {
         DeliveryAddress address = order.getDeliveryAddress();
-        boolean isPickup = address == null;
+        boolean isTerminal = order.getDeliveryMethod() == DeliveryMethod.CARRIER_TERMINAL;
+        boolean isPickup = address == null && !isTerminal;
 
         log.info("Sending order to 1C: orderId={}", order.getId());
 
@@ -47,14 +53,14 @@ public class Order1CKafkaProducer {
                 .inn(order.getInn())
                 .customerName(order.getCustomerName())
                 .customerPhone(order.getCustomerPhone())
-                .recipientName(isPickup ? order.getPickupRecipientName() : address.getRecipientName())
-                .recipientPhone(isPickup ? order.getPickupRecipientPhone() : address.getPhone())
+                .recipientName(isTerminal || isPickup ? order.getPickupRecipientName() : address.getRecipientName())
+                .recipientPhone(isTerminal || isPickup ? order.getPickupRecipientPhone() : address.getPhone())
                 .deliveryMethod(order.getDeliveryMethod().name())
-                .city(isPickup ? null : address.getCity())
-                .street(isPickup ? null : address.getStreet())
-                .building(isPickup ? null : address.getBuilding())
-                .apartment(isPickup ? null : address.getApartment())
-                .postalCode(isPickup ? null : address.getPostalCode())
+                .city(address == null ? null : address.getCity())
+                .street(address == null ? null : address.getStreet())
+                .building(address == null ? null : address.getBuilding())
+                .apartment(address == null ? null : address.getApartment())
+                .postalCode(address == null ? null : address.getPostalCode())
                 .warehousePointId(order.getWarehousePointId())
                 .paymentMethod(order.getPaymentMethod().name())
                 .totalAmount(order.getTotalAmount())
@@ -62,32 +68,51 @@ public class Order1CKafkaProducer {
                 .items(mapItems(order))
                 .build();
 
-        kafkaTemplate.send(topics.getOrder1cExport(), order.getId().toString(), event)
+        Runnable send = () -> kafkaTemplate.send(topics.getOrder1cExport(), order.getId().toString(), event)
                 .whenComplete((result, ex) -> {
-            if (ex == null) {
-                log.info("Order sent to 1C: orderId={}, topic={}, offset={}",
-                        order.getId(), topics.getOrder1cExport(), result.getRecordMetadata().offset());
-            } else {
-                log.error("Failed to send order to 1C: orderId={}", order.getId(), ex);
-            }
-        });
+                    if (ex == null) {
+                        log.info("Order sent to 1C: orderId={}, topic={}, offset={}",
+                                order.getId(), topics.getOrder1cExport(), result.getRecordMetadata().offset());
+                    } else {
+                        log.error("Failed to send order to 1C: orderId={}", order.getId(), ex);
+                    }
+                });
+        // отправка только после коммита (при rollback заказ в 1С не уходит); вне транзакции — сразу
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    send.run();
+                }
+            });
+        } else {
+            send.run();
+        }
     }
 
     /**
-     * Собирает комментарий заказа для 1С: способ доставки + адрес (доставки или склада)
-     * + получатель. Дублирует данные, которые 1С не показывает в карточке контрагента,
-     * чтобы менеджер видел всё в одном месте.
+     * Собирает комментарий заказа для 1С: способ доставки (+ ТК) + адрес (доставки или склада)
+     * + получатель; затем, если есть, «---» и комментарий клиента. Блок доставки — первым,
+     * чтобы менеджер видел его сразу.
      */
     private String buildComment(Order order, DeliveryAddress address, boolean isPickup) {
         List<String> lines = new ArrayList<>();
 
-        if (order.getComment() != null && !order.getComment().isBlank()) {
-            lines.add(order.getComment());
+        String method = order.getDeliveryMethod().getDisplayName();
+        if (order.getCarrierName() != null) {
+            method += " — " + order.getCarrierName();
         }
+        lines.add("Способ доставки: " + method);
 
-        lines.add("Способ доставки: " + order.getDeliveryMethod().getDisplayName());
-
-        if (isPickup) {
+        if (order.getDeliveryMethod() == DeliveryMethod.CARRIER_TERMINAL) {
+            // вместо адреса — терминал из снимка заказа
+            lines.add("Терминал: " + String.join(", ", Stream.of(order.getTerminalName(), order.getTerminalAddress())
+                    .filter(StringUtils::hasText).toList()));
+            if (order.getPickupRecipientName() != null) {
+                lines.add("Получатель: " + order.getPickupRecipientName()
+                        + (order.getPickupRecipientPhone() != null ? ", " + order.getPickupRecipientPhone() : ""));
+            }
+        } else if (isPickup) {
             if (order.getWarehousePointId() != null) {
                 warehousePointRepository.findById(order.getWarehousePointId()).ifPresent(wp ->
                         lines.add("Пункт самовывоза: " + wp.getName() + ", "
@@ -106,17 +131,22 @@ public class Order1CKafkaProducer {
             }
         }
 
+        if (order.getComment() != null && !order.getComment().isBlank()) {
+            lines.add("---");
+            lines.add(order.getComment());
+        }
+
         return String.join("\n", lines);
     }
 
     /** Склеивает непустые части адреса через запятую; квартиру — с префиксом «кв.». */
     private String joinAddress(String postalCode, String city, String street, String building, String apartment) {
         List<String> parts = new ArrayList<>();
-        if (postalCode != null) parts.add(postalCode);
-        if (city != null) parts.add(city);
-        if (street != null) parts.add(street);
-        if (building != null) parts.add("д. " + building);
-        if (apartment != null) parts.add("кв. " + apartment);
+        if (StringUtils.hasText(postalCode)) parts.add(postalCode);
+        if (StringUtils.hasText(city)) parts.add(city);
+        if (StringUtils.hasText(street)) parts.add(street);
+        if (StringUtils.hasText(building)) parts.add("д. " + building);
+        if (StringUtils.hasText(apartment)) parts.add("кв. " + apartment);
         return String.join(", ", parts);
     }
 

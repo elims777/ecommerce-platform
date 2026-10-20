@@ -11,6 +11,7 @@ import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
 import type { OrderSummaryDto, OrderDto, OrderItemDto } from '@/types/order';
 import type { ColumnsType } from 'antd/es/table';
 import { formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
+import { deliveryDateLabel } from '@/utils/deliveryDate';
 import EditOrderModal from './EditOrderModal';
 
 /** Статусы, в которых заказ ещё можно отменить (до отгрузки) */
@@ -39,6 +40,7 @@ const StatusBadge = ({ status }: { status: string }) => {
         PAID: { bg: 'var(--navy-tint)', color: 'var(--brand-navy)' },
         SHIPPED: { bg: 'var(--warn-tint)', color: 'var(--warn)' },
         IN_TRANSIT: { bg: 'var(--warn-tint)', color: 'var(--warn)' },
+        ARRIVED_AT_TERMINAL: { bg: 'var(--warn-tint)', color: 'var(--warn)' },
         DELIVERED: { bg: 'var(--brand-green-soft)', color: 'var(--brand-green)' },
         COMPLETED: { bg: 'var(--brand-green-soft)', color: 'var(--brand-green)' },
         CANCELLED: { bg: 'var(--red-tint)', color: 'var(--brand-red)' },
@@ -289,6 +291,21 @@ const OrdersPage = () => {
                         <span style={{ color: 'var(--ink-3)' }}>Доставка:</span>
                         <span style={{ fontWeight: 500 }}>{DeliveryMethodLabels[deliveryCode as keyof typeof DeliveryMethodLabels] || extractEnumDisplayName(order.deliveryMethod)}</span>
                     </div>
+                    {order.carrierName && (
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <span style={{ color: 'var(--ink-3)' }}>ТК:</span>
+                            <span style={{ fontWeight: 500 }}>{order.carrierName}</span>
+                        </div>
+                    )}
+                    {order.terminalName && (
+                        <div style={{ display: 'flex', gap: 8, gridColumn: 'span 2', flexWrap: 'wrap' }}>
+                            <span style={{ color: 'var(--ink-3)' }}>Терминал:</span>
+                            <span style={{ fontWeight: 500 }}>{order.terminalName}, {order.terminalCurrentAddress ?? order.terminalAddress}</span>
+                            {order.terminalCurrentAddress && (
+                                <span style={{ color: 'var(--warning, #d48806)' }}>Адрес терминала изменился, был: {order.terminalAddress}</span>
+                            )}
+                        </div>
+                    )}
                     {order.deliveryAddress && (
                         <>
                             <div style={{ display: 'flex', gap: 8 }}>
@@ -363,6 +380,35 @@ const OrdersPage = () => {
                         >
                             Отменить заказ
                         </Button>
+                    </div>
+                )}
+                {order.shipments && order.shipments.length > 0 && (
+                    <div style={{ marginTop: 16 }}>
+                        <div style={{ color: 'var(--ink-3)', marginBottom: 8 }}>Отправления:</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {order.shipments.map((s) => {
+                                const date = deliveryDateLabel(s);
+                                return (
+                                <div key={s.id} style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', alignItems: 'baseline' }}>
+                                    <span style={{ fontWeight: 500 }}>{s.carrierName}</span>
+                                    <span style={{ fontFamily: 'var(--font-mono)' }}>{s.waybillNumber}</span>
+                                    {s.carrierStatus && <span>{s.carrierStatus}</span>}
+                                    {date && <span>{date}</span>}
+                                    {(s.routeFrom || s.routeTo) && (
+                                        <span style={{ color: 'var(--ink-3)' }}>{s.routeFrom ?? '—'} → {s.routeTo ?? '—'}</span>
+                                    )}
+                                    {(s.carrierStatusUpdatedAt ?? s.polledAt) && (
+                                        <span style={{ color: 'var(--ink-3)' }}>обновлено {formatDate((s.carrierStatusUpdatedAt ?? s.polledAt)!)}</span>
+                                    )}
+                                    {s.trackingUrl && (
+                                        <a href={s.trackingUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-navy)' }}>
+                                            Отследить на сайте ТК
+                                        </a>
+                                    )}
+                                </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
                 <OrderDocumentsSection orderId={order.id} />

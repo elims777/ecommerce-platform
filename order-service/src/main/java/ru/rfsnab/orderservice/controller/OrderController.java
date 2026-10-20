@@ -16,8 +16,14 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import ru.rfsnab.orderservice.delivery.mapper.ShipmentMapper;
+import ru.rfsnab.orderservice.delivery.models.dto.ShipmentDto;
+import ru.rfsnab.orderservice.delivery.models.entity.CarrierTerminal;
+import ru.rfsnab.orderservice.delivery.service.DeliveryService;
+import ru.rfsnab.orderservice.delivery.service.ShipmentService;
 import ru.rfsnab.orderservice.mapper.OrderDocumentMapper;
 import ru.rfsnab.orderservice.mapper.OrderMapper;
 import ru.rfsnab.orderservice.models.dto.order.*;
@@ -47,7 +53,10 @@ public class OrderController {
 
     private final OrderService orderService;
     private final WarehousePointService warehousePointService;
+    private final DeliveryService deliveryService;
     private final OrderDocumentService orderDocumentService;
+    private final ShipmentService shipmentService;
+    private final ShipmentMapper shipmentMapper;
 
     @PostMapping
     @Operation(summary = "Создать заказ из корзины")
@@ -136,6 +145,7 @@ public class OrderController {
     }
 
     @PostMapping("/{orderId}/pay/cash/confirm")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Operation(summary = "Зафиксировать получение наличных при доставке (менеджер)")
     public ResponseEntity<OrderDto> confirmCashPayment(@PathVariable UUID orderId) {
         Order order = orderService.confirmCashPayment(orderId);
@@ -143,6 +153,7 @@ public class OrderController {
     }
 
     @PostMapping("/{orderId}/refund")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Operation(summary = "Инициировать возврат (менеджер)")
     public ResponseEntity<OrderDto> refund(@PathVariable UUID orderId) {
         Order order = orderService.refund(orderId);
@@ -220,9 +231,13 @@ public class OrderController {
     private OrderDto enrichAndMap(Order order) {
         WarehousePoint warehousePoint = null;
         if (order.getWarehousePointId() != null) {
-            warehousePoint = warehousePointService.getActivePoint(order.getWarehousePointId());
+            warehousePoint = warehousePointService.getPoint(order.getWarehousePointId());
         }
-        return OrderMapper.toDto(order, warehousePoint);
+        CarrierTerminal terminal = order.getCarrierTerminalId() != null
+                ? deliveryService.findTerminal(order.getCarrierTerminalId()).orElse(null)
+                : null;
+        List<ShipmentDto> shipments = shipmentService.getByOrderId(order.getId()).stream().map(shipmentMapper::toClientDto).toList();
+        return OrderMapper.toDto(order, warehousePoint, terminal, shipments);
     }
 
     /**

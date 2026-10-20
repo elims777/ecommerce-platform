@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { App } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -71,7 +71,11 @@ const AdminProductEditPage = () => {
         staleTime: 5 * 60 * 1000,
     });
 
-    useEffect(() => {
+    // синхронизация формы с загруженным товаром во время рендера, а не в эффекте (рекомендация React)
+    // undefined — товар из кэша есть уже на первом рендере, форму надо заполнить и тогда
+    const [syncedProduct, setSyncedProduct] = useState<typeof product>(undefined);
+    if (product !== syncedProduct) {
+        setSyncedProduct(product);
         if (product && !formTouched) {
             setForm({
                 name: product.name,
@@ -94,7 +98,7 @@ const AdminProductEditPage = () => {
             });
             setDisplayOrderValue(product.displayOrder ?? 0);
         }
-    }, [product]);
+    }
 
     const categoryOptions = flattenCategories(categoryTree);
 

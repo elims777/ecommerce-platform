@@ -3,6 +3,8 @@ package ru.rfsnab.orderservice.mapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import ru.rfsnab.orderservice.delivery.models.entity.CarrierTerminal;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 import ru.rfsnab.orderservice.models.dto.order.AddressDto;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.order.OrderDto;
@@ -44,13 +46,15 @@ class OrderMapperTest {
             assertThat(dto.orderNumber()).isEqualTo("ABC-00001");
             assertThat(dto.status()).isEqualTo(OrderStatus.CREATED);
             assertThat(dto.paymentMethod()).isEqualTo(PaymentMethod.CARD);
-            assertThat(dto.deliveryMethod()).isEqualTo(DeliveryMethod.SUPPLIER_DELIVERY);
+            assertThat(dto.deliveryMethod()).isEqualTo(DeliveryMethod.CARRIER_ADDRESS);
             assertThat(dto.totalAmount()).isEqualByComparingTo("15000.00");
             assertThat(dto.items()).hasSize(1);
             assertThat(dto.deliveryAddress()).isNotNull();
             assertThat(dto.deliveryAddress().city()).isEqualTo("Сыктывкар");
             assertThat(dto.warehousePoint()).isNull();
             assertThat(dto.trackingNumber()).isEqualTo("TRACK-123");
+            assertThat(dto.carrierCode()).isEqualTo(CarrierCode.DELLIN);
+            assertThat(dto.carrierName()).isEqualTo("Деловые Линии");
         }
 
         @Test
@@ -86,6 +90,58 @@ class OrderMapperTest {
 
             assertThat(dto.items()).isEmpty();
         }
+
+        @Test
+        @DisplayName("терминал активен, адрес прежний — снимок без предупреждений")
+        void shouldMapTerminalSnapshotWithoutWarnings() {
+            Order order = buildTerminalOrder();
+            order.setPickupRecipientName("Петров Петр");
+            order.setPickupRecipientPhone("+79001112233");
+            CarrierTerminal terminal = buildTerminal(true, "ул. Ленина, 1");
+
+            OrderDto dto = OrderMapper.toDto(order, null, terminal);
+
+            assertThat(dto.carrierTerminalId()).isEqualTo(7L);
+            assertThat(dto.terminalName()).isEqualTo("Терминал Толмачёво");
+            assertThat(dto.terminalAddress()).isEqualTo("ул. Ленина, 1");
+            assertThat(dto.terminalClosed()).isFalse();
+            assertThat(dto.terminalCurrentAddress()).isNull();
+            assertThat(dto.pickupRecipientName()).isEqualTo("Петров Петр");
+            assertThat(dto.pickupRecipientPhone()).isEqualTo("+79001112233");
+        }
+
+        @Test
+        @DisplayName("терминал закрыт ТК — terminalClosed = true, снимок остаётся")
+        void shouldFlagClosedTerminal() {
+            Order order = buildTerminalOrder();
+
+            OrderDto dto = OrderMapper.toDto(order, null, buildTerminal(false, "ул. Ленина, 1"));
+
+            assertThat(dto.terminalClosed()).isTrue();
+            assertThat(dto.terminalAddress()).isEqualTo("ул. Ленина, 1");
+        }
+
+        @Test
+        @DisplayName("адрес терминала изменился — отдаётся текущий адрес")
+        void shouldReturnCurrentAddressWhenChanged() {
+            Order order = buildTerminalOrder();
+
+            OrderDto dto = OrderMapper.toDto(order, null, buildTerminal(true, "ул. Мира, 5"));
+
+            assertThat(dto.terminalAddress()).isEqualTo("ул. Ленина, 1");
+            assertThat(dto.terminalCurrentAddress()).isEqualTo("ул. Мира, 5");
+            assertThat(dto.terminalClosed()).isFalse();
+        }
+
+        @Test
+        @DisplayName("без терминала — terminalClosed = false, текущего адреса нет")
+        void shouldHaveNoTerminalFlagsWithoutTerminal() {
+            OrderDto dto = OrderMapper.toDto(buildDeliveryOrder());
+
+            assertThat(dto.carrierTerminalId()).isNull();
+            assertThat(dto.terminalClosed()).isFalse();
+            assertThat(dto.terminalCurrentAddress()).isNull();
+        }
     }
 
     @Nested
@@ -112,6 +168,22 @@ class OrderMapperTest {
     class ToEntityTests {
 
         @Test
+        @DisplayName("CARRIER_ADDRESS — переносит carrierCode")
+        void shouldMapCarrierCode() {
+            AddressDto address = AddressDto.builder()
+                    .city("Новосибирск").street("Ленина").building("1")
+                    .phone("+79001234567").recipientName("Иванов Иван").build();
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    address, null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
+
+            Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
+
+            assertThat(order.getCarrierCode()).isEqualTo(CarrierCode.DELLIN);
+            assertThat(order.getDeliveryAddress().getCity()).isEqualTo("Новосибирск");
+        }
+
+        @Test
         @DisplayName("маппит CreateOrderRequest для DELIVERY в Order")
         void shouldMapDeliveryRequestToEntity() {
             AddressDto address = AddressDto.builder()
@@ -121,7 +193,7 @@ class OrderMapperTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    address, null, null, null, "Комментарий", null, null, null, null);
+                    address, null, null, null, "Комментарий", null, null, null, null, null);
 
             Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
@@ -140,7 +212,7 @@ class OrderMapperTest {
         void shouldMapPickupRequestToEntity() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CASH_ON_DELIVERY, DeliveryMethod.PICKUP,
-                    null, 1L, "Петров Петр", "+79001112233", null, null, null, null, null);
+                    null, 1L, "Петров Петр", "+79001112233", null, null, null, null, null, null);
 
             Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
@@ -156,7 +228,7 @@ class OrderMapperTest {
         void shouldNotPopulateItemsAndTotal() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.SBP, DeliveryMethod.PICKUP,
-                    null, 1L, null, null, null, null, null, null, null);
+                    null, 1L, null, null, null, null, null, null, null, null);
 
             Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
@@ -168,6 +240,21 @@ class OrderMapperTest {
 
     // ==================== Test data builders ====================
 
+
+    private Order buildTerminalOrder() {
+        Order order = buildDeliveryOrder();
+        order.setDeliveryMethod(DeliveryMethod.CARRIER_TERMINAL);
+        order.setCarrierTerminalId(7L);
+        order.setTerminalName("Терминал Толмачёво");
+        order.setTerminalAddress("ул. Ленина, 1");
+        return order;
+    }
+
+    private CarrierTerminal buildTerminal(boolean active, String address) {
+        return CarrierTerminal.builder().id(7L).carrierCode(CarrierCode.DELLIN).externalId("T7")
+                .name("Терминал Толмачёво").address(address).active(active).build();
+    }
+
     private Order buildDeliveryOrder() {
         Order order = Order.builder()
                 .id(UUID.randomUUID())
@@ -175,7 +262,8 @@ class OrderMapperTest {
                 .orderNumber("ABC-00001")
                 .status(OrderStatus.CREATED)
                 .paymentMethod(PaymentMethod.CARD)
-                .deliveryMethod(DeliveryMethod.SUPPLIER_DELIVERY)
+                .deliveryMethod(DeliveryMethod.CARRIER_ADDRESS)
+                .carrierCode(CarrierCode.DELLIN).carrierName("Деловые Линии")
                 .totalAmount(new BigDecimal("15000.00"))
                 .deliveryAddress(DeliveryAddress.builder()
                         .city("Сыктывкар").street("Октябрьский проспект")

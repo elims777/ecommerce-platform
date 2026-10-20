@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { NavLink } from '@/components/navigation';
-import { Select, App, Upload, Button, Popconfirm } from 'antd';
+import { Select, App, Upload, Button, Popconfirm, Alert } from 'antd';
 import { UploadOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
@@ -17,6 +17,7 @@ import {
 import { OrderStatus, OrderStatusLabels, PaymentMethodLabels, DeliveryMethodLabels } from '@/types/order';
 import { extractEnumCode, extractEnumDisplayName } from '@/utils/enumUtils';
 import { getAllowedTransitions } from '@/utils/orderTransitions';
+import OrderShipmentsBlock from './OrderShipmentsBlock';
 import type { OrderDto, OrderItemDto } from '@/types/order';
 
 /** Коды типов документов заказа — соответствие бэкенду (OrderDocument.type) */
@@ -46,6 +47,7 @@ const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
   INVOICE_SENT:          { cls: 'rf-badge-navy',                 label: 'Счёт выставлен' },
   SHIPPED:               { cls: 'rf-badge-navy rf-badge-dot',    label: 'В доставке' },
   IN_TRANSIT:            { cls: 'rf-badge-navy rf-badge-dot',    label: 'В пути' },
+  ARRIVED_AT_TERMINAL:   { cls: 'rf-badge-navy rf-badge-dot',    label: 'Прибыл на терминал' },
   DELIVERED:             { cls: 'rf-badge-neutral',              label: 'Доставлено' },
   COMPLETED:             { cls: 'rf-badge-neutral',              label: 'Завершено' },
   PAYMENT_FAILED:        { cls: 'rf-badge-red',                  label: 'Ошибка оплаты' },
@@ -201,6 +203,28 @@ const AdminOrderDetailPage = () => {
               ?? extractEnumDisplayName(order.deliveryMethod, deliveryCode)}
           </div>
 
+          {order.carrierName && (
+            <>
+              <div className="rf-detail-label">Транспортная компания</div>
+              <div className="rf-detail-value">{order.carrierName}</div>
+            </>
+          )}
+
+          {order.terminalName && (
+            <>
+              <div className="rf-detail-label">Терминал</div>
+              <div className="rf-detail-value">
+                {order.terminalName}, {order.terminalCurrentAddress ?? order.terminalAddress}
+                {order.terminalClosed && (
+                  <Alert type="warning" showIcon style={{ marginTop: 8 }} message="Терминал закрыт ТК, уточните у клиента" />
+                )}
+                {order.terminalCurrentAddress && (
+                  <Alert type="warning" showIcon style={{ marginTop: 8 }} message={`Адрес терминала изменился, был: ${order.terminalAddress}`} />
+                )}
+              </div>
+            </>
+          )}
+
           {order.trackingNumber && (
             <>
               <div className="rf-detail-label">Трек-номер</div>
@@ -282,6 +306,8 @@ const AdminOrderDetailPage = () => {
           </table>
         </div>
       </div>
+
+      <OrderShipmentsBlock order={order} />
 
       {/* Documents */}
       <div className="rf-card" style={{ marginTop: 16, overflow: 'hidden' }}>

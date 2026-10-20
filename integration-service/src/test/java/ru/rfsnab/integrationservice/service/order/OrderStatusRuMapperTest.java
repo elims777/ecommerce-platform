@@ -24,6 +24,7 @@ class OrderStatusRuMapperTest {
             "'Ошибка оплаты',           PAYMENT_FAILED",
             "'Отгружен',                SHIPPED",
             "'В пути',                  IN_TRANSIT",
+            "'Прибыл на терминал',      IN_TRANSIT",
             "'Доставлен',               DELIVERED",
             "'Отменён',                 CANCELLED",
             "'Отменен',                 CANCELLED",

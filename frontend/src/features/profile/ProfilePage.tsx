@@ -545,7 +545,7 @@ const B2CProfilePage = () => {
             messageApi.error('Ссылка недействительна или уже была использована');
             setSearchParams({}, { replace: true });
         }
-    }, []);
+    }, [searchParams, setSearchParams, messageApi]);
 
     const updateMutation = useMutation({
         mutationFn: (values: UpdateProfileRequest) => updateProfile(user.id, values),

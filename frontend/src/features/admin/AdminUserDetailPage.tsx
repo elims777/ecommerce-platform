@@ -37,6 +37,7 @@ const ORDER_STATUS_BADGE: Record<string, string> = {
   INVOICE_SENT: 'rf-badge-navy',
   SHIPPED: 'rf-badge-navy rf-badge-dot',
   IN_TRANSIT: 'rf-badge-navy rf-badge-dot',
+  ARRIVED_AT_TERMINAL: 'rf-badge-navy rf-badge-dot',
   PAYMENT_FAILED: 'rf-badge-red',
   CANCELLED: 'rf-badge-red',
   REFUNDED: 'rf-badge-neutral',

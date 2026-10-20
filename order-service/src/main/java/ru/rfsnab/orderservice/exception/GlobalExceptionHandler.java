@@ -2,12 +2,22 @@ package ru.rfsnab.orderservice.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
+import ru.rfsnab.orderservice.delivery.exception.CarrierApiException;
+import ru.rfsnab.orderservice.delivery.exception.ShipmentAlreadyExistsException;
+import ru.rfsnab.orderservice.delivery.exception.ShipmentModeSwitchRequiredException;
+import ru.rfsnab.orderservice.delivery.exception.ShipmentNotFoundException;
+import ru.rfsnab.orderservice.delivery.exception.WaybillNotFoundInCarrierException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -56,12 +66,62 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Нечитаемое тело запроса — битый JSON, лишнее или неверного типа поле.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleNotReadable(
+            HttpMessageNotReadableException ex, HttpServletRequest request) {
+        log.warn("Некорректное тело запроса на {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "Malformed Request", "Некорректное тело запроса", request);
+    }
+
+    /**
+     * Параметр пути/запроса не приводится к нужному типу (неизвестный код ТК, нечисловой id).
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        log.warn("Некорректный параметр на {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid Parameter",
+                "Некорректное значение параметра " + ex.getName(), request);
+    }
+
+    /**
+     * Неизвестное поле в sort (например, журнал отправлений).
+     */
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSortProperty(
+            PropertyReferenceException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid Sort",
+                "Некорректное поле сортировки: " + ex.getPropertyName(), request);
+    }
+
+    /**
+     * Не передан обязательный параметр запроса (например, carrier/city/type справочника терминалов).
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParameter(
+            MissingServletRequestParameterException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Missing Parameter",
+                "Не передан параметр " + ex.getParameterName(), request);
+    }
+
+    /**
      * Невалидный файл документа заказа (тип, размер, пустой файл).
      */
     @ExceptionHandler(InvalidDocumentException.class)
     public ResponseEntity<ErrorResponse> handleInvalidDocument(
             InvalidDocumentException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST, "Invalid Document", ex.getMessage(), request);
+    }
+
+    /**
+     * Вносимой вручную накладной нет в ТК.
+     */
+    @ExceptionHandler(WaybillNotFoundInCarrierException.class)
+    public ResponseEntity<ErrorResponse> handleWaybillNotFoundInCarrier(
+            WaybillNotFoundInCarrierException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Waybill Not Found In Carrier", ex.getMessage(), request);
     }
 
     // ==================== 404 Not Found ====================
@@ -94,12 +154,68 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Точка самовывоза с таким названием уже есть.
+     */
+    @ExceptionHandler(DuplicateWarehousePointException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateWarehousePoint(
+            DuplicateWarehousePointException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, "Warehouse Point Name Taken", ex.getMessage(), request);
+    }
+
+    /**
      * Документ заказа не найден.
      */
     @ExceptionHandler(OrderDocumentNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleOrderDocumentNotFound(
             OrderDocumentNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, "Order Document Not Found", ex.getMessage(), request);
+    }
+
+    /**
+     * Отправление не найдено.
+     */
+    @ExceptionHandler(ShipmentNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleShipmentNotFound(
+            ShipmentNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, "Shipment Not Found", ex.getMessage(), request);
+    }
+
+    /**
+     * Накладная этой ТК уже внесена.
+     */
+    @ExceptionHandler(ShipmentAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleShipmentAlreadyExists(
+            ShipmentAlreadyExistsException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, "Shipment Already Exists", ex.getMessage(), request);
+    }
+
+    /**
+     * Вторая накладная при режиме SINGLE: код SHIPMENT_MODE_SWITCH_REQUIRED в error, message и code.
+     */
+    @ExceptionHandler(ShipmentModeSwitchRequiredException.class)
+    public ResponseEntity<ErrorResponse> handleShipmentModeSwitchRequired(
+            ShipmentModeSwitchRequiredException ex, HttpServletRequest request) {
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error(ShipmentModeSwitchRequiredException.CODE)
+                .code(ShipmentModeSwitchRequiredException.CODE)
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    // ==================== 502 Bad Gateway ====================
+
+    /**
+     * ТК недоступна или ответила непонятно (ручное обновление статуса).
+     */
+    @ExceptionHandler(CarrierApiException.class)
+    public ResponseEntity<ErrorResponse> handleCarrierApi(
+            CarrierApiException ex, HttpServletRequest request) {
+        log.warn("Ошибка ТК на {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.BAD_GATEWAY, "Carrier Error", ex.getMessage(), request);
     }
 
     // ==================== 422 Unprocessable Entity ====================

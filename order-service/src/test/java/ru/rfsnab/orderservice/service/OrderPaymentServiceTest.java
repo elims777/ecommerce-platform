@@ -8,6 +8,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
 import ru.rfsnab.orderservice.models.dto.order.AddressDto;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
@@ -15,10 +16,10 @@ import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentLinkResponse;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.entity.Order;
+import ru.rfsnab.orderservice.models.entity.PaymentMethodSettings;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
-import ru.rfsnab.orderservice.models.entity.PaymentMethodSettings;
 import ru.rfsnab.orderservice.repository.OrderRepository;
 import ru.rfsnab.orderservice.repository.PaymentMethodSettingsRepository;
 import ru.rfsnab.orderservice.service.client.PaymentServiceClient;
@@ -339,14 +340,14 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
     private Order createOrder(PaymentMethod paymentMethod, String clientType) {
         cartService.addItemToCart(USER_ID, PRODUCT_ID, 2);
         CreateOrderRequest request = new CreateOrderRequest(
-                paymentMethod, DeliveryMethod.SUPPLIER_DELIVERY,
+                paymentMethod, DeliveryMethod.CARRIER_ADDRESS,
                 AddressDto.builder()
                         .city("Москва").street("Тверская").building("1")
                         .phone("+79001234567").recipientName("Тест").build(),
                 null, null, null, null,
                 "B2B".equals(clientType) ? "ООО Тест" : null,
                 "B2B".equals(clientType) ? "1234567890" : null,
-                null, null);
+                null, null, CarrierCode.DELLIN);
         return orderService.createOrder(USER_ID, USER_EMAIL, clientType, request);
     }
 

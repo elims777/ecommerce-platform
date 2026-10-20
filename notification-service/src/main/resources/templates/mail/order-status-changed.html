@@ -15,6 +15,34 @@
             <p style="color:#1A1A1A; font-size:14px; line-height:20px; margin:0 0 16px;">
                 Новый статус: <strong th:text="${statusLabel}"></strong>
             </p>
+            <div th:if="${showDelivery}" style="margin:0 0 16px;">
+                <h3 style="color:#1E3A5F; margin:0 0 8px; font-size:15px;">Доставка / Отправления</h3>
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                    <strong>Способ доставки:</strong> <span th:text="${deliveryMethod}"></span>
+                </p>
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${carrierName}">
+                    <strong>Транспортная компания:</strong> <span th:text="${carrierName}"></span>
+                </p>
+                <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${terminalName}">
+                    <strong>Терминал:</strong> <span th:text="${terminalName}"></span><span th:if="${terminalAddress}">, <span th:text="${terminalAddress}"></span></span>
+                </p>
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" th:if="${not #lists.isEmpty(shipments)}">
+                    <tr style="background-color:#1E3A5F;">
+                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">ТК</td>
+                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Номер</td>
+                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Статус ТК</td>
+                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;"></td>
+                    </tr>
+                    <tr th:each="sh : ${shipments}" style="border-bottom:1px solid #EEEEEE;">
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" th:text="${sh.carrierName}"></td>
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" th:text="${sh.waybillNumber}"></td>
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" th:text="${sh.carrierStatus}"></td>
+                        <td style="padding:8px 12px; font-size:13px; font-family:Arial, system-ui, sans-serif;">
+                            <a th:if="${sh.trackingUrl}" th:href="${sh.trackingUrl}" style="color:#1E3A5F;">Отследить</a>
+                        </td>
+                    </tr>
+                </table>
+            </div>
             <p style="color:#1A1A1A; font-size:14px; line-height:20px; margin:0 0 16px;">
                 Отслеживайте заказ в личном кабинете.
             </p>

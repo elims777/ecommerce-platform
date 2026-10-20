@@ -132,7 +132,7 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <aside className="rf-admin-sidebar">
         <NavLink
-          to="/admin"
+          to="/"
           className="rf-admin-logo"
           style={{ display: 'flex', alignItems: 'center', gap: 8 }}
         >

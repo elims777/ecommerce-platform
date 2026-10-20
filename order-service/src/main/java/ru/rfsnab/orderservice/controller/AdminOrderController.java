@@ -1,5 +1,6 @@
 package ru.rfsnab.orderservice.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
@@ -17,6 +18,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import ru.rfsnab.orderservice.delivery.models.dto.AddShipmentRequest;
+import ru.rfsnab.orderservice.delivery.models.dto.ShipmentDto;
+import ru.rfsnab.orderservice.delivery.models.entity.CarrierTerminal;
+import ru.rfsnab.orderservice.delivery.service.DeliveryService;
+import ru.rfsnab.orderservice.delivery.service.ShipmentService;
 import ru.rfsnab.orderservice.mapper.OrderDocumentMapper;
 import ru.rfsnab.orderservice.mapper.OrderMapper;
 import ru.rfsnab.orderservice.models.dto.order.OrderDocumentDto;
@@ -45,7 +51,9 @@ public class AdminOrderController {
 
     private final OrderService orderService;
     private final WarehousePointService warehousePointService;
+    private final DeliveryService deliveryService;
     private final OrderDocumentService orderDocumentService;
+    private final ShipmentService shipmentService;
 
     @GetMapping
     public ResponseEntity<Page<OrderSummaryDto>> getAdminOrders(
@@ -107,6 +115,31 @@ public class AdminOrderController {
         return ResponseEntity.ok(enrichAndMap(order));
     }
 
+    // ==================== Отправления заказа ====================
+
+    /** Внести накладную; первая накладная заказа требует shipmentMode, вторая при SINGLE — MULTIPLE (иначе 409). */
+    @PostMapping("/{orderId}/shipments")
+    public ResponseEntity<ShipmentDto> addShipment(
+            @PathVariable UUID orderId,
+            @Valid @RequestBody AddShipmentRequest request,
+            Authentication authentication) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(shipmentService.add(orderId, request, getCurrentUserId(authentication)));
+    }
+
+    /** Отвязать накладную от заказа; сама накладная остаётся в журнале отправлений. */
+    @PostMapping("/{orderId}/shipments/{shipmentId}/unlink")
+    public ResponseEntity<Void> unlinkShipment(@PathVariable UUID orderId, @PathVariable Long shipmentId) {
+        shipmentService.unlink(orderId, shipmentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** «Все отправления внесены»: флаг и пересчёт статуса заказа. */
+    @PostMapping("/{orderId}/shipments/complete")
+    public ResponseEntity<OrderDto> completeShipments(@PathVariable UUID orderId) {
+        return ResponseEntity.ok(enrichAndMap(shipmentService.complete(orderId)));
+    }
+
     // ==================== Документы заказа ====================
 
     @PostMapping("/{orderId}/documents")
@@ -165,8 +198,11 @@ public class AdminOrderController {
 
     private OrderDto enrichAndMap(Order order) {
         var warehousePoint = order.getWarehousePointId() != null
-                ? warehousePointService.getActivePoint(order.getWarehousePointId())
+                ? warehousePointService.getPoint(order.getWarehousePointId())
                 : null;
-        return OrderMapper.toDto(order, warehousePoint);
+        CarrierTerminal terminal = order.getCarrierTerminalId() != null
+                ? deliveryService.findTerminal(order.getCarrierTerminalId()).orElse(null)
+                : null;
+        return OrderMapper.toDto(order, warehousePoint, terminal, shipmentService.getByOrderId(order.getId()));
     }
 }

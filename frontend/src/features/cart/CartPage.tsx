@@ -36,7 +36,7 @@ const formatPrice = formatPriceOrPlaceholder;
 
 // ── Confirm dialog (нативный) ─────────────────────────────────
 const ConfirmDialog = ({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) => (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' as any }}
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' }}
         onClick={onCancel}>
         <div style={{ background: 'var(--surface)', borderRadius: 'var(--r-5)', padding: '24px 28px', width: 340, boxShadow: 'var(--shadow-pop)' }}
             onClick={(e) => e.stopPropagation()}>

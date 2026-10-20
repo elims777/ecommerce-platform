@@ -1,6 +1,7 @@
 import { Form, Row, Col, Input, Select, Button, Typography, Divider, Spin, Space } from 'antd';
 import { EnvironmentOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons';
 import { DeliveryMethod } from '@/types/order';
+import AddressSuggest from './AddressSuggest';
 import type { RecipientDto, RecipientAddressDto } from '@/api/recipients';
 
 const { Text } = Typography;
@@ -34,7 +35,7 @@ const RecipientStep = ({
     onSwitchToManual,
     onSwitchToSaved,
 }: RecipientStepProps) => {
-    if (deliveryMethod !== DeliveryMethod.SUPPLIER_DELIVERY) return null;
+    if (deliveryMethod !== DeliveryMethod.CARRIER_ADDRESS) return null;
 
     return (
         <>
@@ -148,6 +149,8 @@ const RecipientStep = ({
                             </Form.Item>
                         </Col>
                     </Row>
+
+                    <AddressSuggest fields={{ city: 'newCity', street: 'newStreet', building: 'newBuilding', postalCode: 'newPostalCode' }} />
 
                     <Row gutter={12}>
                         <Col span={8}>

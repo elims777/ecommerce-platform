@@ -5,6 +5,8 @@ import lombok.*;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentMode;
 import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
@@ -48,6 +50,33 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DeliveryMethod deliveryMethod;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "carrier_code", length = 20)
+    private CarrierCode carrierCode;
+
+    // Снимок carriers.name на момент заказа
+    @Column(name = "carrier_name", length = 100)
+    private String carrierName;
+
+    /** Режим отправлений; null до первой накладной. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "shipment_mode", length = 10)
+    private ShipmentMode shipmentMode;
+
+    /** Менеджер нажал «Все отправления внесены». */
+    @Column(name = "shipments_complete", nullable = false)
+    private boolean shipmentsComplete;
+
+    @Column(name = "carrier_terminal_id")
+    private Long carrierTerminalId;
+
+    // Снимок терминала на момент заказа — берётся из БД по carrierTerminalId, не из запроса
+    @Column(name = "terminal_name")
+    private String terminalName;
+
+    @Column(name = "terminal_address")
+    private String terminalAddress;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;

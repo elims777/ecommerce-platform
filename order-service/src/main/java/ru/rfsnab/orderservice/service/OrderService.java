@@ -6,6 +6,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import ru.rfsnab.orderservice.delivery.models.entity.Carrier;
+import ru.rfsnab.orderservice.delivery.models.entity.CarrierTerminal;
+import ru.rfsnab.orderservice.delivery.service.CarrierService;
+import ru.rfsnab.orderservice.delivery.service.DeliveryService;
 import ru.rfsnab.orderservice.exception.*;
 import ru.rfsnab.orderservice.kafka.Order1CKafkaProducer;
 import ru.rfsnab.orderservice.kafka.OrderKafkaProducer;
@@ -17,8 +22,8 @@ import ru.rfsnab.orderservice.models.dto.order.OrderItemDto;
 import ru.rfsnab.orderservice.models.dto.order.OrderStatsResponse;
 import ru.rfsnab.orderservice.models.dto.order.UpdateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
-import ru.rfsnab.orderservice.models.dto.payment.PaymentMethodSettingsDto;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentLinkResponse;
+import ru.rfsnab.orderservice.models.dto.payment.PaymentMethodSettingsDto;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.entity.*;
 import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
@@ -55,6 +60,8 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CartService cartService;
     private final WarehousePointService warehousePointService;
+    private final CarrierService carrierService;
+    private final DeliveryService deliveryService;
     private final ProductServiceClient productServiceClient;
     private final PaymentServiceClient paymentServiceClient;
     private final UserServiceClient userServiceClient;
@@ -75,12 +82,21 @@ public class OrderService {
         t.put(OrderStatus.AWAITING_CONFIRMATION, Set.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED));
         t.put(OrderStatus.PAID,                  Set.of(OrderStatus.SHIPPED, OrderStatus.REFUNDED, OrderStatus.COMPLETED));
         t.put(OrderStatus.PARTIALLY_PAID,        Set.of(OrderStatus.SHIPPED, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED));
-        t.put(OrderStatus.SHIPPED,               Set.of(OrderStatus.IN_TRANSIT, OrderStatus.DELIVERED));
-        t.put(OrderStatus.IN_TRANSIT,            Set.of(OrderStatus.DELIVERED));
+        t.put(OrderStatus.SHIPPED,               Set.of(OrderStatus.IN_TRANSIT, OrderStatus.ARRIVED_AT_TERMINAL, OrderStatus.DELIVERED));
+        t.put(OrderStatus.IN_TRANSIT,            Set.of(OrderStatus.ARRIVED_AT_TERMINAL, OrderStatus.DELIVERED));
+        t.put(OrderStatus.ARRIVED_AT_TERMINAL,   Set.of(OrderStatus.DELIVERED));
         t.put(OrderStatus.DELIVERED,             Set.of(OrderStatus.PAID, OrderStatus.PENDING_PAYMENT, OrderStatus.COMPLETED));
         t.put(OrderStatus.CANCELLED,             Set.of(OrderStatus.REFUNDED, OrderStatus.COMPLETED));
         t.put(OrderStatus.REFUNDED,              Set.of(OrderStatus.COMPLETED));
         ALLOWED_TRANSITIONS = java.util.Collections.unmodifiableMap(t);
+    }
+
+    /**
+     * Допустим ли прямой переход между статусами. Нужен тем, кто решает о переходе заранее,
+     * чтобы не ловить исключение внутри чужой транзакции (она стала бы rollback-only).
+     */
+    public static boolean isTransitionAllowed(OrderStatus from, OrderStatus to) {
+        return ALLOWED_TRANSITIONS.getOrDefault(from, Set.of()).contains(to);
     }
 
     /** Статусы, в которых клиент может отменить заказ самостоятельно */
@@ -145,10 +161,12 @@ public class OrderService {
 
         // 2. Получаем данные о товарах и валидируем
         Map<Long, ProductDto> products = fetchAndValidateProducts(cart.getItems());
-        validateDeliveryInfo(request);
+        rejectSupplierDelivery(request.deliveryMethod(), null);
+        ValidatedDelivery delivery = validateDeliveryInfo(request);
 
         // 3. Создаём заказ — базовые поля через маппер
         Order order = OrderMapper.toEntity(userId, customerEmail, clientType, request);
+        applyCarrierSnapshot(order, delivery);
         order.setOrderNumber(generateOrderNumber(userId));
 
         // Снапшот имени и телефона заказчика
@@ -227,7 +245,8 @@ public class OrderService {
         }
 
         // Валидация доставки — единый метод через HasDeliveryInfo
-        validateDeliveryInfo(request);
+        rejectSupplierDelivery(request.deliveryMethod(), order.getDeliveryMethod());
+        ValidatedDelivery delivery = validateDeliveryInfo(request);
 
         // Валидация и обогащение items
         Set<Long> productIds = request.items().stream()
@@ -241,14 +260,26 @@ public class OrderService {
         order.setDeliveryMethod(request.deliveryMethod());
         order.setComment(request.comment());
 
-        // Обновляем адрес / точку самовывоза
+        // Обновляем адрес / точку самовывоза / ТК
         if (request.deliveryMethod() == DeliveryMethod.PICKUP) {
             order.setWarehousePointId(request.warehousePointId());
             order.setDeliveryAddress(null);
+            order.setPickupRecipientName(request.pickupRecipientName());
+            order.setPickupRecipientPhone(request.pickupRecipientPhone());
+        } else if (request.deliveryMethod() == DeliveryMethod.CARRIER_TERMINAL) {
+            order.setDeliveryAddress(null);
+            order.setWarehousePointId(null);
+            order.setPickupRecipientName(request.pickupRecipientName());
+            order.setPickupRecipientPhone(request.pickupRecipientPhone());
         } else {
             order.setDeliveryAddress(AddressMapper.mapToDeliveryAddress(request.deliveryAddress()));
             order.setWarehousePointId(null);
+            order.setPickupRecipientName(null);
+            order.setPickupRecipientPhone(null);
         }
+        // carrierCode есть только у способов с ТК — у них delivery.carrierName() != null
+        order.setCarrierCode(delivery.carrierName() != null ? request.carrierCode() : null);
+        applyCarrierSnapshot(order, delivery);
 
         // Обновляем items — orphanRemoval удалит старые
         order.getItems().clear();
@@ -286,12 +317,31 @@ public class OrderService {
                 .status(OrderStatus.CREATED)
                 .paymentMethod(sourceOrder.getPaymentMethod())
                 .deliveryMethod(sourceOrder.getDeliveryMethod())
+                .carrierCode(sourceOrder.getCarrierCode())
+                .carrierName(sourceOrder.getCarrierName())
+                .carrierTerminalId(sourceOrder.getCarrierTerminalId())
+                .terminalName(sourceOrder.getTerminalName())
+                .terminalAddress(sourceOrder.getTerminalAddress())
                 .warehousePointId(sourceOrder.getWarehousePointId())
+                .pickupRecipientName(sourceOrder.getPickupRecipientName())
+                .pickupRecipientPhone(sourceOrder.getPickupRecipientPhone())
                 .deliveryAddress(copyDeliveryAddress(sourceOrder.getDeliveryAddress()))
                 .customerEmail(customerEmail)
                 .customerType(sourceOrder.getCustomerType())
                 .comment(sourceOrder.getComment())
                 .build();
+
+        if (sourceOrder.getDeliveryMethod() == DeliveryMethod.CARRIER_TERMINAL) {
+            // терминал и ТК могли отключить после исходного заказа — снимок берём заново
+            try {
+                carrierService.requireTerminalDelivery(sourceOrder.getCarrierCode());
+                CarrierTerminal terminal = deliveryService.requireActiveTerminal(
+                        sourceOrder.getCarrierCode(), sourceOrder.getCarrierTerminalId());
+                applyCarrierSnapshot(newOrder, new ValidatedDelivery(sourceOrder.getCarrierName(), terminal));
+            } catch (InvalidOrderStateException e) {
+                throw new InvalidOrderStateException("Терминал больше недоступен, выберите другой");
+            }
+        }
 
         // Добавляем items с актуальными ценами
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -612,24 +662,85 @@ public class OrderService {
 
     // ==================== Private methods ====================
 
+    /** Итог проверки доставки: название ТК и терминал для снимка в заказе (оба null, если способ без ТК). */
+    private record ValidatedDelivery(String carrierName, CarrierTerminal terminal) {
+    }
+
     /**
      * Единая валидация данных доставки.
      * Работает с любым DTO через sealed interface HasDeliveryInfo.
      * PICKUP → warehousePointId обязателен и точка должна быть активна.
+     * CARRIER_ADDRESS → carrierCode (ТК включена для доставки до адреса) + deliveryAddress.
+     * CARRIER_TERMINAL → carrierCode (ТК включена для доставки до терминала) + активный терминал этой ТК
+     * + ФИО и телефон получателя (адрес не нужен).
      * SUPPLIER_DELIVERY → deliveryAddress обязателен.
      */
-    private void validateDeliveryInfo(HasDeliveryInfo request) {
-        if (request.deliveryMethod() == DeliveryMethod.PICKUP) {
-            if (request.warehousePointId() == null) {
-                throw new InvalidOrderStateException(
-                        "Для самовывоза необходимо указать точку получения");
+    private ValidatedDelivery validateDeliveryInfo(HasDeliveryInfo request) {
+        return switch (request.deliveryMethod()) {
+            case PICKUP -> {
+                if (request.warehousePointId() == null) {
+                    throw new InvalidOrderStateException(
+                            "Для самовывоза необходимо указать точку получения");
+                }
+                warehousePointService.getActivePoint(request.warehousePointId());
+                yield new ValidatedDelivery(null, null);
             }
-            warehousePointService.getActivePoint(request.warehousePointId());
-        } else {
-            if (request.deliveryAddress() == null) {
-                throw new InvalidOrderStateException(
-                        "Для доставки необходимо указать адрес");
+            case CARRIER_ADDRESS -> {
+                if (request.carrierCode() == null) {
+                    throw new InvalidOrderStateException("Выберите транспортную компанию");
+                }
+                Carrier carrier = carrierService.requireAddressDelivery(request.carrierCode());
+                requireDeliveryAddress(request);
+                yield new ValidatedDelivery(carrier.getName(), null);
             }
+            case CARRIER_TERMINAL -> {
+                if (request.carrierCode() == null) {
+                    throw new InvalidOrderStateException("Выберите транспортную компанию");
+                }
+                if (request.carrierTerminalId() == null) {
+                    throw new InvalidOrderStateException("Выберите терминал транспортной компании");
+                }
+                if (!StringUtils.hasText(request.pickupRecipientName())
+                        || !StringUtils.hasText(request.pickupRecipientPhone())) {
+                    throw new InvalidOrderStateException("Укажите ФИО и телефон получателя");
+                }
+                Carrier carrier = carrierService.requireTerminalDelivery(request.carrierCode());
+                CarrierTerminal terminal = deliveryService.requireActiveTerminal(
+                        request.carrierCode(), request.carrierTerminalId());
+                yield new ValidatedDelivery(carrier.getName(), terminal);
+            }
+            case SUPPLIER_DELIVERY -> {
+                requireDeliveryAddress(request);
+                yield new ValidatedDelivery(null, null);
+            }
+        };
+    }
+
+    /** Снимок ТК и терминала в заказе — из БД, а не из запроса клиента. */
+    private void applyCarrierSnapshot(Order order, ValidatedDelivery delivery) {
+        order.setCarrierName(delivery.carrierName());
+        CarrierTerminal terminal = delivery.terminal();
+        order.setCarrierTerminalId(terminal != null ? terminal.getId() : null);
+        order.setTerminalName(terminal != null ? terminal.getName() : null);
+        order.setTerminalAddress(terminal != null ? terminal.getAddress() : null);
+    }
+
+    private void requireDeliveryAddress(HasDeliveryInfo request) {
+        if (request.deliveryAddress() == null) {
+            throw new InvalidOrderStateException("Для доставки необходимо указать адрес");
+        }
+    }
+
+    /**
+     * «Доставка поставщиком» назначает только менеджер. Клиент может лишь оставить её,
+     * если заказ уже в этом способе.
+     *
+     * @param current текущий способ заказа; null — заказ создаётся
+     */
+    private void rejectSupplierDelivery(DeliveryMethod requested, DeliveryMethod current) {
+        if (requested == DeliveryMethod.SUPPLIER_DELIVERY && current != DeliveryMethod.SUPPLIER_DELIVERY) {
+            throw new InvalidOrderStateException(
+                    "Способ «Доставка поставщиком» назначает менеджер — выберите другой способ");
         }
     }
 

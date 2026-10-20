@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+</head>
+<body style="margin:0; padding:0; background-color:#F2F2F2;">
+
+<div th:replace="~{mail/layout :: header}"></div>
+
+<table width="600" cellpadding="0" cellspacing="0" border="0"
+       style="width:600px; max-width:600px; margin:0 auto; background-color:#FFFFFF;">
+    <tr>
+        <td style="padding:32px 24px; font-family:Arial, system-ui, sans-serif;">
+            <h2 style="color:#1E3A5F; margin:0 0 16px; text-align:center;">Синхронизация терминалов ТК</h2>
+
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 16px;">
+                <strong>Запуск:</strong> <span th:text="${triggerLabel}"></span>
+            </p>
+
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+                <tr style="background-color:#1E3A5F;">
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">ТК</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Статус</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Получено</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Добавлено</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Обновлено</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Деактив.</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Пропущено</td>
+                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Время, с</td>
+                </tr>
+                <th:block th:each="r : ${reports}">
+                    <tr style="border-bottom:1px solid #EEEEEE;">
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" th:text="${r.carrierName}"></td>
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" th:text="${statusLabels.getOrDefault(r.status, r.status)}"></td>
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${r.received}"></td>
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${r.added}"></td>
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${r.updated}"></td>
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${r.deactivated}"></td>
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${r.skipped}"></td>
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right" th:text="${#numbers.formatDecimal(r.durationMs / 1000.0, 1, 1)}"></td>
+                    </tr>
+                    <tr th:if="${r.message != null and !#strings.isEmpty(r.message)}" style="border-bottom:1px solid #EEEEEE;">
+                        <td colspan="8" style="padding:4px 12px 8px; color:#C0272D; font-size:13px; font-family:Arial, system-ui, sans-serif; word-break:break-word;"
+                            th:text="${r.message}"></td>
+                    </tr>
+                </th:block>
+            </table>
+
+            <div th:each="r : ${reports}" th:if="${not #lists.isEmpty(r.skippedItems)}">
+                <h3 style="color:#1E3A5F; margin:0 0 8px; font-size:15px;">
+                    Пропущенные записи: <span th:text="${r.carrierName}"></span>
+                </h3>
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
+                    <tr style="background-color:#1E3A5F;">
+                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="30%">ID точки</td>
+                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="70%">Причина</td>
+                    </tr>
+                    <tr th:each="item : ${r.skippedItems}" style="border-bottom:1px solid #EEEEEE;">
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" th:text="${item.externalId}"></td>
+                        <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" th:text="${item.reason}"></td>
+                    </tr>
+                </table>
+                <p style="color:#666666; font-size:13px; margin:0 0 16px;" th:if="${r.moreSkipped > 0}">
+                    и ещё <span th:text="${r.moreSkipped}"></span>
+                </p>
+            </div>
+
+            <p style="color:#1A1A1A; font-size:14px; margin:16px 0 0;">С уважением, команда РФСнаб</p>
+        </td>
+    </tr>
+</table>
+
+<div th:replace="~{mail/layout :: footer}"></div>
+
+</body>
+</html>
