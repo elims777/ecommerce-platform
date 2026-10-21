@@ -38,6 +38,7 @@ public record OrderEvent(
         String carrierName,
         String terminalName,
         String terminalAddress,
+        String shippingWarehouseCity,
         List<ShipmentLine> shipments
 ) {
     public record OrderItemLine(String productName, Integer quantity, BigDecimal price, String variantAttributes, String sku) {}

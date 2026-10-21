@@ -16,6 +16,8 @@ import ru.rfsnab.productservice.dto.ProductStatsResponse;
 import ru.rfsnab.productservice.mapper.ProductMapper;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.service.ProductService;
+import ru.rfsnab.productservice.service.ProductStockService;
+import ru.rfsnab.productservice.service.WarehouseService;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -27,6 +29,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ProductController {
     private final ProductService productService;
+    private final ProductStockService stockService;
+    private final WarehouseService warehouseService;
 
     /**
      * Получить все активные товары с пагинацией
@@ -75,15 +79,18 @@ public class ProductController {
     public ResponseEntity<Page<ProductResponse>> getAllProductsAdmin(
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Boolean isActive,
+            @RequestParam(required = false) Boolean unmatched,
             @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
-        Page<Product> productsPage = productService.getAllProductsAdminPage(categoryId, isActive, pageable);
+        Page<Product> productsPage = productService.getAllProductsAdminPage(categoryId, isActive, unmatched, pageable);
         List<Long> parentIds = productsPage.getContent().stream().map(Product::getId).toList();
         Map<Long, List<Product>> childrenByParent = productService.getChildrenForParents(parentIds);
         // Админка работает с БАЗОВЫМИ ценами — их же редактируют в карточке товара.
         // Акция видна во флагах (в т.ч. унаследованная от категории), но цену в списке не подменяет.
-        return ResponseEntity.ok(productsPage.map(p ->
+        Page<ProductResponse> response = productsPage.map(p ->
                 ProductMapper.mapForAdmin(p, childrenByParent.getOrDefault(p.getId(), List.of()),
-                        productService.getSaleMarkupFor(p))));
+                        productService.getSaleMarkupFor(p)));
+        productService.fillMergedProductIds(response.getContent());
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -106,8 +113,10 @@ public class ProductController {
     public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id){
         Product product = productService.getProductById(id);
         List<Product> children = productService.getChildren(id);
-        return ResponseEntity.ok(ProductMapper.mapToResponse(
-                product, children, productService.getSaleMarkupFor(product)));
+        ProductResponse response = ProductMapper.mapToResponse(
+                product, children, productService.getSaleMarkupFor(product));
+        productService.fillStocks(response);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -117,8 +126,10 @@ public class ProductController {
     public ResponseEntity<ProductResponse> getProductBySlug(@PathVariable String slug){
         Product product = productService.getProductBySlug(slug);
         List<Product> children = productService.getChildren(product.getId());
-        return ResponseEntity.ok(ProductMapper.mapToResponse(
-                product, children, productService.getSaleMarkupFor(product)));
+        ProductResponse response = ProductMapper.mapToResponse(
+                product, children, productService.getSaleMarkupFor(product));
+        productService.fillStocks(response);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -239,17 +250,19 @@ public class ProductController {
     }
 
     /**
-     * Изменить количество на складе
+     * Задать остаток записи на конкретном складе (отрицательное значение — 400 из сервиса)
      */
-    @PutMapping("/{id}/stock")
-    public ResponseEntity<ProductResponse> changeStock(
+    @PutMapping("/{id}/stocks/{warehouseId}")
+    public ResponseEntity<ProductResponse> setStock(
             @PathVariable Long id,
+            @PathVariable Long warehouseId,
             @RequestParam Integer quantity
     ){
         Product product = productService.getProductById(id);
-        product.setStockQuantity(quantity);
-        Product updated = productService.updateProduct(id, product);
-        return ResponseEntity.ok(ProductMapper.mapToResponse(updated));
+        stockService.setQuantity(product, warehouseService.requireById(warehouseId), quantity);
+        ProductResponse response = ProductMapper.mapToResponse(product);
+        productService.fillStocks(response);
+        return ResponseEntity.ok(response);
     }
 
     /**

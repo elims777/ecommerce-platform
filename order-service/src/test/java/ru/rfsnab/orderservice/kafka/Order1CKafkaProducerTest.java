@@ -83,11 +83,32 @@ class Order1CKafkaProducerTest {
         producer.sendOrderFor1C(order);
 
         assertThat(sentComment(order)).isEqualTo("""
-                Способ доставки: Доставка до адреса — Деловые Линии
+                Способ доставки: Доставка ТК до двери — Деловые Линии
                 Адрес доставки: 630000, Новосибирск, Ленина, д. 1
                 Получатель: Иванов, +79990000000
                 ---
                 Позвонить заранее""");
+    }
+
+    @Test
+    @DisplayName("город отгрузки — первой строкой комментария")
+    void shippingWarehouseCityFirstLine() {
+        Order order = carrierOrder(null);
+        order.setShippingWarehouseCity("Пушкин");
+
+        producer.sendOrderFor1C(order);
+
+        assertThat(sentComment(order)).startsWith("Город отгрузки: Пушкин\nСпособ доставки:");
+    }
+
+    @Test
+    @DisplayName("у старого заказа без склада строки «Город отгрузки» нет")
+    void noShippingWarehouseLineForOldOrder() {
+        Order order = carrierOrder(null);
+
+        producer.sendOrderFor1C(order);
+
+        assertThat(sentComment(order)).doesNotContain("Город отгрузки");
     }
 
     @Test
@@ -98,7 +119,7 @@ class Order1CKafkaProducerTest {
         producer.sendOrderFor1C(order);
 
         assertThat(sentComment(order)).doesNotContain("---")
-                .startsWith("Способ доставки: Доставка до адреса — Деловые Линии");
+                .startsWith("Способ доставки: Доставка ТК до двери — Деловые Линии");
     }
 
     @Test

@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/navigation';
 import { getProductById } from '@/api/products';
-import type { ProductImage, ProductChild } from '@/types/product';
+import type { ProductImage, ProductChild, ProductStock } from '@/types/product';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { useDisplayPrice, useOldDisplayPrice, formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
@@ -84,13 +84,21 @@ const ProductPage = () => {
             externalId: product.externalId,
             barcode: null,
             countryOfOrigin: null,
+            stocks: product.stocks,
         };
         return [parentAsVariant, ...children];
     }, [product]);
 
-    const activeStock = hasVariants
-        ? activeVariants.reduce((sum, v) => sum + v.stockQuantity, 0)
-        : product?.stockQuantity ?? 0;
+    // Остатки по складам: у товара с вариантами — сумма по активным вариантам
+    const stockRows = useMemo(() => {
+        const byWarehouse = new Map<number, ProductStock>();
+        const all = hasVariants ? activeVariants.flatMap(v => v.stocks ?? []) : product?.stocks ?? [];
+        for (const s of all) {
+            const prev = byWarehouse.get(s.warehouseId);
+            byWarehouse.set(s.warehouseId, prev ? { ...prev, quantity: prev.quantity + s.quantity } : s);
+        }
+        return [...byWarehouse.values()];
+    }, [hasVariants, activeVariants, product]);
     const displayPrice = useDisplayPrice({ price: product?.price ?? 0, wholesalePrice: product?.wholesalePrice ?? null });
     const oldDisplayPrice = useOldDisplayPrice({ oldPrice: product?.oldPrice ?? null, oldWholesalePrice: product?.oldWholesalePrice ?? null });
 
@@ -182,7 +190,6 @@ const ProductPage = () => {
     }
 
     const sortedImages = sortImages(product.images || []);
-    const inStock = activeStock > 0;
     const metaDescription = (product.shortDescription || product.description || '')
         .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
 
@@ -276,11 +283,15 @@ const ProductPage = () => {
                         {product.categoryName && (
                             <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--brand-navy)' }}>{product.categoryName}</span>
                         )}
-                        {inStock ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>
-                                <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', flexShrink: 0 }} />
-                                В наличии {activeStock} {unitPlural(activeStock, product.unitOfMeasure)}
-                            </span>
+                        {stockRows.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {stockRows.map(s => (
+                                    <span key={s.warehouseId} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--brand-green-soft)', color: 'var(--brand-green)' }}>
+                                        <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', flexShrink: 0 }} />
+                                        {s.city} — {s.quantity} {unitPlural(s.quantity, product.unitOfMeasure)}
+                                    </span>
+                                ))}
+                            </div>
                         ) : (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 22, padding: '0 8px', borderRadius: 'var(--r-full)', fontSize: 'var(--text-sm)', fontWeight: 500, background: 'var(--red-tint)', color: 'var(--brand-red)' }}>
                                 <span style={{ width: 6, height: 6, borderRadius: 3, background: 'currentColor', flexShrink: 0 }} />

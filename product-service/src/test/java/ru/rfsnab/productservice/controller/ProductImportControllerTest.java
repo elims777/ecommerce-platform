@@ -1,6 +1,7 @@
 package ru.rfsnab.productservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,8 +17,11 @@ import ru.rfsnab.productservice.dto.BatchProductImportRequest;
 import ru.rfsnab.productservice.dto.ProductImportItem;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
+import ru.rfsnab.productservice.model.Warehouse;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
+import ru.rfsnab.productservice.repository.ProductStockRepository;
+import ru.rfsnab.productservice.repository.WarehouseRepository;
 import ru.rfsnab.productservice.service.StorageService;
 
 import java.math.BigDecimal;
@@ -39,15 +43,29 @@ class ProductImportControllerTest {
     @Autowired private ObjectMapper objectMapper;
     @Autowired private ProductRepository productRepository;
     @Autowired private CategoryRepository categoryRepository;
+    @Autowired private ProductStockRepository productStockRepository;
+    @Autowired private WarehouseRepository warehouseRepository;
 
     @MockitoBean private StorageService storageService;
 
+    private static final String WAREHOUSE_CODE = "SYKTYVKAR";
+
     private Category importCategory;
+    private Warehouse warehouse;
+
+    private BatchProductImportRequest batch(List<ProductImportItem> items) {
+        return new BatchProductImportRequest(items, WAREHOUSE_CODE);
+    }
 
     @BeforeEach
     void setUp() {
+        productStockRepository.deleteAll();
         productRepository.deleteAll();
         categoryRepository.deleteAll();
+        warehouseRepository.deleteAll();
+
+        warehouse = warehouseRepository.save(Warehouse.builder()
+                .code(WAREHOUSE_CODE).name("Основной склад").city("Сыктывкар").pickupAvailable(true).sortOrder(1).build());
 
         importCategory = categoryRepository.save(Category.builder()
                 .name("import-1c")
@@ -57,11 +75,19 @@ class ProductImportControllerTest {
                 .build());
     }
 
+    // Остатки ссылаются на products/warehouses — убираем, чтобы не ломать deleteAll() в соседних тестах
+    @AfterEach
+    void cleanStocks() {
+        productStockRepository.deleteAll();
+        productRepository.deleteAll();
+        warehouseRepository.deleteAll();
+    }
+
     @Test
     @WithMockUser
     @DisplayName("POST /import/batch — создаёт товар с description и material")
     void shouldImportProductWithDescriptionAndMaterial() throws Exception {
-        BatchProductImportRequest request = new BatchProductImportRequest(List.of(
+        BatchProductImportRequest request = batch(List.of(
                 ProductImportItem.builder()
                         .externalId("FTK-87490974")
                         .name("Костюм летний")
@@ -96,7 +122,7 @@ class ProductImportControllerTest {
     @DisplayName("POST /import/batch — повторный импорт не затирает description если null")
     void shouldNotOverwriteDescriptionOnReimport() throws Exception {
         // Первый импорт — с description
-        BatchProductImportRequest first = new BatchProductImportRequest(List.of(
+        BatchProductImportRequest first = batch(List.of(
                 ProductImportItem.builder()
                         .externalId("FTK-111")
                         .name("Товар")
@@ -115,7 +141,7 @@ class ProductImportControllerTest {
                 .andExpect(status().isOk());
 
         // Второй импорт — description=null (обновление цены из 1С)
-        BatchProductImportRequest second = new BatchProductImportRequest(List.of(
+        BatchProductImportRequest second = batch(List.of(
                 ProductImportItem.builder()
                         .externalId("FTK-111")
                         .name("Товар")
@@ -146,7 +172,7 @@ class ProductImportControllerTest {
     @WithMockUser
     @DisplayName("POST /import/batch — shortDescription и description независимы")
     void shouldStoreShortDescriptionAndDescriptionIndependently() throws Exception {
-        BatchProductImportRequest request = new BatchProductImportRequest(List.of(
+        BatchProductImportRequest request = batch(List.of(
                 ProductImportItem.builder()
                         .externalId("FTK-222")
                         .name("Жилет")
@@ -177,7 +203,7 @@ class ProductImportControllerTest {
     @WithMockUser
     @DisplayName("POST /import/batch — пустой список возвращает 400 (валидация @NotEmpty)")
     void shouldRejectEmptyBatch() throws Exception {
-        BatchProductImportRequest request = new BatchProductImportRequest(List.of());
+        BatchProductImportRequest request = batch(List.of());
 
         mockMvc.perform(post("/api/v1/products/import/batch")
                         .header("X-Internal-Token", "test-secret")
@@ -190,7 +216,7 @@ class ProductImportControllerTest {
     @WithMockUser
     @DisplayName("POST /import/batch — варианты создаются как дочерние Product записи")
     void shouldImportVariantsAsChildProducts() throws Exception {
-        BatchProductImportRequest request = new BatchProductImportRequest(List.of(
+        BatchProductImportRequest request = batch(List.of(
                 ProductImportItem.builder()
                         .externalId("FTK-PARENT-001")
                         .name("Костюм защитный")
@@ -264,7 +290,7 @@ class ProductImportControllerTest {
     @DisplayName("POST /import/batch — повторный импорт вариантов обновляет дочерние Product")
     void shouldUpdateChildProductsOnReimport() throws Exception {
         // Первый импорт
-        BatchProductImportRequest first = new BatchProductImportRequest(List.of(
+        BatchProductImportRequest first = batch(List.of(
                 ProductImportItem.builder()
                         .externalId("FTK-CHILD-TEST")
                         .name("Куртка зимняя")
@@ -288,7 +314,7 @@ class ProductImportControllerTest {
                 .andExpect(status().isOk());
 
         // Второй импорт — обновляем цену и остаток варианта
-        BatchProductImportRequest second = new BatchProductImportRequest(List.of(
+        BatchProductImportRequest second = batch(List.of(
                 ProductImportItem.builder()
                         .externalId("FTK-CHILD-TEST")
                         .name("Куртка зимняя")
@@ -325,7 +351,7 @@ class ProductImportControllerTest {
     @WithMockUser
     @DisplayName("POST /import/batch — новый товар: CREATED и slug сгенерирован")
     void shouldGenerateSlugAndCreatedForNewProduct() throws Exception {
-        BatchProductImportRequest request = new BatchProductImportRequest(List.of(
+        BatchProductImportRequest request = batch(List.of(
                 ProductImportItem.builder()
                         .externalId("FTK-NEW-001")
                         .name("Новый костюм")
@@ -362,7 +388,7 @@ class ProductImportControllerTest {
                 .wholesalePrice(new BigDecimal("1500"))
                 .source("FTK")
                 .build();
-        BatchProductImportRequest request = new BatchProductImportRequest(List.of(item));
+        BatchProductImportRequest request = batch(List.of(item));
 
         mockMvc.perform(post("/api/v1/products/import/batch")
                         .header("X-Internal-Token", "test-secret")
@@ -409,7 +435,7 @@ class ProductImportControllerTest {
         mockMvc.perform(post("/api/v1/products/import/batch")
                         .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new BatchProductImportRequest(List.of(first)))))
+                        .content(objectMapper.writeValueAsString(batch(List.of(first)))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.created").value(1));
 
@@ -430,7 +456,7 @@ class ProductImportControllerTest {
         mockMvc.perform(post("/api/v1/products/import/batch")
                         .header("X-Internal-Token", "test-secret")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new BatchProductImportRequest(List.of(second)))))
+                        .content(objectMapper.writeValueAsString(batch(List.of(second)))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.created").value(0))
                 .andExpect(jsonPath("$.updated").value(1))
@@ -448,7 +474,7 @@ class ProductImportControllerTest {
     @WithMockUser
     @DisplayName("POST /import/batch — импорт barcode и countryOfOrigin на уровне товара")
     void shouldImportBarcodeAndCountryOfOrigin() throws Exception {
-        BatchProductImportRequest request = new BatchProductImportRequest(List.of(
+        BatchProductImportRequest request = batch(List.of(
                 ProductImportItem.builder()
                         .externalId("FTK-BARCODE-001")
                         .name("Перчатки рабочие")
@@ -473,5 +499,79 @@ class ProductImportControllerTest {
                 .orElseThrow();
         assertThat(saved.getBarcode()).isEqualTo("4600000000001");
         assertThat(saved.getCountryOfOrigin()).isEqualTo("Китай");
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /import/batch — пачка без warehouseCode отклоняется 400")
+    void shouldRejectBatchWithoutWarehouseCode() throws Exception {
+        BatchProductImportRequest request = new BatchProductImportRequest(List.of(
+                ProductImportItem.builder().externalId("1C-NOWH").name("Товар").build()), null);
+
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /import/batch — неизвестный склад отклоняется 400")
+    void shouldRejectUnknownWarehouse() throws Exception {
+        BatchProductImportRequest request = new BatchProductImportRequest(List.of(
+                ProductImportItem.builder().externalId("1C-UNK").name("Товар").build()), "NOWHERE");
+
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /import/batch — остаток товара 1С пишется в product_stocks и в stock_quantity")
+    void shouldWriteStockToWarehouse() throws Exception {
+        BatchProductImportRequest request = batch(List.of(
+                ProductImportItem.builder().externalId("1C-STOCK").name("Перчатки 1С").stockQuantity(50).build()));
+
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.failed").value(0));
+
+        Product saved = productRepository.findByExternalId("1C-STOCK").orElseThrow();
+        assertThat(saved.getStockQuantity()).isEqualTo(50);
+        assertThat(productStockRepository.findByProductIdAndWarehouseId(saved.getId(), warehouse.getId()))
+                .get().extracting(s -> s.getQuantity()).isEqualTo(50);
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /import/batch — товар 1С с тем же sku склеивается с товаром Факела, остаток суммируется")
+    void shouldAutoMergeOneCIntoFtkBySku() throws Exception {
+        Product ftk = productRepository.save(Product.builder()
+                .name("Перчатки Гвард").slug("perchatki-gvard").sku("5004").source("FTK")
+                .externalId("FTK-5004").stockQuantity(0).isActive(true).build());
+        productStockRepository.save(ru.rfsnab.productservice.model.ProductStock.builder()
+                .product(ftk).warehouse(warehouse).quantity(230).build());
+
+        BatchProductImportRequest request = batch(List.of(
+                ProductImportItem.builder().externalId("1C-5004").name("Перчатки 1С").sku("5004").stockQuantity(50).build()));
+
+        mockMvc.perform(post("/api/v1/products/import/batch")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.failed").value(0));
+
+        Product oneC = productRepository.findByExternalId("1C-5004").orElseThrow();
+        assertThat(oneC.getMergedIntoProductId()).isEqualTo(ftk.getId());
+        assertThat(oneC.getIsActive()).isFalse();
+        assertThat(productRepository.findById(ftk.getId()).orElseThrow().getStockQuantity()).isEqualTo(280);
     }
 }

@@ -57,6 +57,9 @@
             <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
                 <strong>Способ доставки:</strong> <span th:text="${deliveryMethod}"></span>
             </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${shippingWarehouseCity}">
+                <strong>Город отгрузки:</strong> <span th:text="${shippingWarehouseCity}"></span>
+            </p>
             <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${carrierName}">
                 <strong>Транспортная компания:</strong> <span th:text="${carrierName}"></span>
             </p>

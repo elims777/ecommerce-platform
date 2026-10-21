@@ -55,11 +55,15 @@ integration:
     file-limit: 52428800  # 50MB
     # Временная директория для файлов обмена
     temp-dir: ${CML_TEMP_DIR:/app/1c-exchange}
+    # Код склада, на который 1С выгружает остатки
+    warehouse-code: ${CML_WAREHOUSE_CODE:SYKTYVKAR}
 
   # Адреса внутренних сервисов
   product-service:
     url: ${PRODUCT_SERVICE_URL:http://localhost:8083}
     batch-size: 100  # размер пачки для HTTP-запроса в product-service
+    # Ожидание ответа на пачку: 100 товаров с остатками по складам и склейкой — до ~20 с на деве
+    read-timeout-ms: ${PRODUCT_SERVICE_READ_TIMEOUT_MS:60000}
   order-service:
     url: ${ORDER_SERVICE_URL:http://localhost:8084}
 
@@ -84,6 +88,8 @@ integration:
     import-limit: ${FTK_IMPORT_LIMIT:0}
     # Категория-корень для товаров ФТК в нашем каталоге
     root-category-slug: ${FTK_ROOT_CATEGORY_SLUG:ftk}
+    # Код склада, на который импортируются остатки ФТК
+    warehouse-code: ${FTK_WAREHOUSE_CODE:PUSHKIN}
     # Таймаут скачивания изображения (сек)
     image-download-timeout-sec: ${FTK_IMAGE_TIMEOUT:30}
     ftp:

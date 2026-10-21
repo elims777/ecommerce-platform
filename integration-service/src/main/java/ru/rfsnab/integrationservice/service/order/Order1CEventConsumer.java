@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 import ru.rfsnab.integrationservice.model.PendingOrder;
 import ru.rfsnab.integrationservice.repository.PendingOrderRepository;
 
+import java.time.LocalDateTime;
+
 /**
  * Kafka consumer для топика "order-1c-export".
  * Получает полные данные заказа от order-service,
@@ -38,20 +40,31 @@ public class Order1CEventConsumer {
             String orderId = jsonNode.get("orderId").asText();
             String orderNumber = jsonNode.has("orderNumber") ? jsonNode.get("orderNumber").asText() : null;
 
-            // Проверяем дубликат
-            if(repository.existsByOrderId(orderId)){
-                log.debug("Заказ {} уже существует в pending_orders - пропускаем", orderId);
+            // Заказ уже есть: редактирование в PROCESSING — перезаписываем и ставим на повторную выгрузку;
+            // идентичное сообщение (повторная доставка Kafka) — пропускаем
+            PendingOrder existing = repository.findByOrderId(orderId).orElse(null);
+            if (existing == null) {
+                repository.save(PendingOrder.builder()
+                        .orderId(orderId)
+                        .externalId(orderNumber)
+                        .orderData(message)
+                        .build());
+                log.info("Заказ {} сохранен в pending_orders для вышрузки в 1С", orderId);
                 return;
             }
-
-            PendingOrder pendingOrder = PendingOrder.builder()
-                    .orderId(orderId)
-                    .externalId(orderNumber)
-                    .orderData(message)
-                    .build();
-
-            repository.save(pendingOrder);
-            log.info("Заказ {} сохранен в pending_orders для вышрузки в 1С", orderId);
+            // JSONB нормализует текст (пробелы, порядок ключей) — сравниваем деревья, не строки
+            if (jsonNode.equals(objectMapper.readTree(existing.getOrderData()))) {
+                log.debug("Заказ {}: повторная доставка, пропускаем", orderId);
+                return;
+            }
+            existing.setExternalId(orderNumber);
+            existing.setOrderData(message);
+            existing.setExported(false);
+            existing.setExportedAt(null);
+            // момент постановки в очередь: правка должна быть новее последнего query 1С
+            existing.setCreatedAt(LocalDateTime.now());
+            repository.save(existing);
+            log.info("Заказ {} обновлён, будет выгружен в 1С повторно", orderId);
         } catch (JsonProcessingException e){
             log.error("Ошибка парсинга сообщения из order-1c-export: {}", e.getMessage(), e);
         }

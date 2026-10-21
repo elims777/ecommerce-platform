@@ -8,6 +8,7 @@ import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.orderservice.exception.ProductNotFoundException;
 import ru.rfsnab.orderservice.exception.ServiceUnavailableException;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
+import ru.rfsnab.orderservice.models.dto.product.WarehouseDto;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,20 @@ public class ProductServiceClient {
             );
         } catch (HttpClientErrorException.NotFound e) {
             throw new ProductNotFoundException("Product not found " + productId);
+        } catch (Exception e) {
+            log.error("Product service unavailable: {}", e.getMessage());
+            throw new ServiceUnavailableException("Product service unavailable");
+        }
+    }
+
+    /** Активные склады (города отгрузки). */
+    public List<WarehouseDto> getActiveWarehouses() {
+        try {
+            WarehouseDto[] warehouses = restTemplate.getForObject(
+                    productServiceUrl + "/api/v1/products/warehouses",
+                    WarehouseDto[].class
+            );
+            return warehouses == null ? List.of() : List.of(warehouses);
         } catch (Exception e) {
             log.error("Product service unavailable: {}", e.getMessage());
             throw new ServiceUnavailableException("Product service unavailable");

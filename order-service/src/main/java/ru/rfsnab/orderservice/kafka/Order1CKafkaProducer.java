@@ -98,6 +98,10 @@ public class Order1CKafkaProducer {
     private String buildComment(Order order, DeliveryAddress address, boolean isPickup) {
         List<String> lines = new ArrayList<>();
 
+        if (order.getShippingWarehouseCity() != null) {
+            lines.add("Город отгрузки: " + order.getShippingWarehouseCity());
+        }
+
         String method = order.getDeliveryMethod().getDisplayName();
         if (order.getCarrierName() != null) {
             method += " — " + order.getCarrierName();

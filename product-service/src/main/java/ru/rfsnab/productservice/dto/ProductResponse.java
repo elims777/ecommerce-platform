@@ -40,6 +40,14 @@ public class ProductResponse {
     private BigDecimal ownSaleMarkupPercent;
 
     private Integer stockQuantity;
+    /** Остатки по активным складам (с учётом склеенных товаров 1С); заполняется для карточки товара. */
+    private List<ProductStockResponse> stocks;
+    /** Склеенный товар 1С: id главного товара Факела. */
+    private Long mergedIntoProductId;
+    /** Ид номенклатуры 1С склеенного товара — для экспорта заказа в 1С. */
+    private String oneCExternalId;
+    /** Главный товар Факела: id склеенного с ним товара 1С (первый по id); заполняется для списка админки. */
+    private Long mergedProductId;
     private Long categoryId;
     private String categoryName;  // для удобства фронтенда
     private String categoryExternalId;

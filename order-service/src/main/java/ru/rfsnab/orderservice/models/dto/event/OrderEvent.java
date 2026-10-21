@@ -36,6 +36,7 @@ public record OrderEvent(
         String carrierName,
         String terminalName,
         String terminalAddress,
+        String shippingWarehouseCity,
         List<ShipmentLine> shipments
 ) {
     /** Отправление в письме о смене статуса: ТК, номер, ссылка «Отследить», статус ТК. */

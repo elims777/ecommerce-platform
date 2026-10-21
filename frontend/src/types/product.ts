@@ -25,6 +25,26 @@ export interface ProductAttribute {
     attributeValue: string;
 }
 
+/** Остаток товара на складе */
+export interface ProductStock {
+    warehouseId: number;
+    code: string;
+    name: string;
+    city: string;
+    quantity: number;
+}
+
+/** Склад (город отгрузки) */
+export interface Warehouse {
+    id: number;
+    code: string;
+    name: string;
+    city: string;
+    pickupAvailable: boolean;
+    active: boolean;
+    sortOrder: number;
+}
+
 /** Дочерний товар-вариант (размер, рост, цвет и т.д.) */
 export interface ProductChild {
     id: number;
@@ -38,6 +58,7 @@ export interface ProductChild {
     externalId: string | null;
     barcode: string | null;
     countryOfOrigin: string | null;
+    stocks?: ProductStock[];
 }
 
 /** Товар — полный ответ от product-service */
@@ -63,6 +84,11 @@ export interface Product {
     ownSale: boolean;
     ownSaleMarkupPercent: number | null;
     stockQuantity: number;
+    stocks?: ProductStock[];
+    mergedIntoProductId?: number | null;
+    /** Список админки: id склеенного с этой записью товара 1С */
+    mergedProductId?: number | null;
+    oneCExternalId?: string | null;
     categoryId: number | null;
     categoryName: string | null;
     isActive: boolean;

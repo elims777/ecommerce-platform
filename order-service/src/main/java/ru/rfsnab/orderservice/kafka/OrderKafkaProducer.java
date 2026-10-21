@@ -81,6 +81,7 @@ public class OrderKafkaProducer {
                 .carrierName(order.getCarrierName())
                 .terminalName(order.getTerminalName())
                 .terminalAddress(order.getTerminalAddress())
+                .shippingWarehouseCity(order.getShippingWarehouseCity())
                 .shipments("ORDER_STATUS_CHANGED".equals(eventType) ? buildShipments(order) : null)
                 .build();
 

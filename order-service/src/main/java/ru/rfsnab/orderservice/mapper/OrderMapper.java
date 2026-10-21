@@ -63,6 +63,9 @@ public class OrderMapper {
                 order.getCarrierTerminalId(),
                 order.getTerminalName(),
                 order.getTerminalAddress(),
+                order.getShippingWarehouseId(),
+                order.getShippingWarehouseName(),
+                order.getShippingWarehouseCity(),
                 terminal != null && !terminal.isActive(),
                 terminal != null && !Objects.equals(terminal.getAddress(), order.getTerminalAddress())
                         ? terminal.getAddress()

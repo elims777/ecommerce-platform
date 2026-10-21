@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { Product, ProductImage, ProductAttribute, Page } from '@/types/product';
+import type { Product, ProductImage, ProductAttribute, ProductStock, Page } from '@/types/product';
 
 /** Запрос на создание/обновление товара */
 export interface ProductRequest {
@@ -8,7 +8,6 @@ export interface ProductRequest {
     shortDescription?: string;
     price?: number;
     wholesalePrice?: number | null;
-    stockQuantity?: number;
     categoryId?: number | null;
     isActive?: boolean;
     isFeatured?: boolean;
@@ -41,12 +40,42 @@ export const deleteProduct = async (id: number): Promise<void> => {
     await apiClient.delete(`/v1/products/${id}`);
 };
 
-/** Изменить остаток на складе */
-export const changeStock = async (id: number, quantity: number): Promise<Product> => {
-    const { data } = await apiClient.put<Product>(`/v1/products/${id}/stock`, null, {
+// === Остатки по складам и склейка 1С ↔ Факел ===
+
+/** Собственные остатки записи по складам (включая нулевые) */
+export const getOwnStocks = async (id: number): Promise<ProductStock[]> => {
+    const { data } = await apiClient.get<ProductStock[]>(`/v1/products/admin/${id}/stocks`);
+    return data;
+};
+
+/** Задать собственный остаток на складе */
+export const setProductStock = async (id: number, warehouseId: number, quantity: number): Promise<Product> => {
+    const { data } = await apiClient.put<Product>(`/v1/products/${id}/stocks/${warehouseId}`, null, {
         params: { quantity },
     });
     return data;
+};
+
+/** Товары 1С, склеенные с данным */
+export const getMergedProducts = async (id: number): Promise<Product[]> => {
+    const { data } = await apiClient.get<Product[]>(`/v1/products/admin/${id}/merged`);
+    return data;
+};
+
+/** Кандидаты на склейку (несклеенные товары 1С) */
+export const getMergeCandidates = async (query: string): Promise<Product[]> => {
+    const { data } = await apiClient.get<Page<Product>>('/v1/products/admin/merge-candidates', {
+        params: { query, size: 20 },
+    });
+    return data.content;
+};
+
+export const mergeProduct = async (id: number, oneCId: number): Promise<void> => {
+    await apiClient.post(`/v1/products/admin/${id}/merged/${oneCId}`);
+};
+
+export const unmergeProduct = async (oneCId: number): Promise<void> => {
+    await apiClient.delete(`/v1/products/admin/merged/${oneCId}`);
 };
 
 /** Изменить категорию товара */

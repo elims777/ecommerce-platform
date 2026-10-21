@@ -44,15 +44,19 @@ public record CreateOrderRequest(
         CarrierCode carrierCode,
 
         // Терминал ТК — обязателен для CARRIER_TERMINAL, проверяется в сервисе
-        Long carrierTerminalId
+        Long carrierTerminalId,
+
+        // Склад отгрузки (город) — обязателен для всех способов доставки
+        @NotNull(message = "Выберите город отгрузки")
+        Long shippingWarehouseId
 ) implements HasDeliveryInfo {
 
     /** Запрос без терминала ТК — для способов доставки, где терминал не выбирается. */
     public CreateOrderRequest(PaymentMethod paymentMethod, DeliveryMethod deliveryMethod, AddressDto deliveryAddress,
                               Long warehousePointId, String pickupRecipientName, String pickupRecipientPhone,
                               String comment, String companyName, String inn, String customerName,
-                              String customerPhone, CarrierCode carrierCode) {
+                              String customerPhone, CarrierCode carrierCode, Long shippingWarehouseId) {
         this(paymentMethod, deliveryMethod, deliveryAddress, warehousePointId, pickupRecipientName,
-                pickupRecipientPhone, comment, companyName, inn, customerName, customerPhone, carrierCode, null);
+                pickupRecipientPhone, comment, companyName, inn, customerName, customerPhone, carrierCode, null, shippingWarehouseId);
     }
 }

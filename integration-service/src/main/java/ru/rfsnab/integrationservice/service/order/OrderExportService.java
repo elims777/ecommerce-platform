@@ -24,7 +24,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Формирование XML заказов для выгрузки в 1С.
@@ -42,6 +44,11 @@ public class OrderExportService {
     private final JAXBContext commerceMlJaxbContext;
     private final ObjectMapper objectMapper;
 
+    // ponytail: снимок (id → createdAt) заказов, попавших в XML последнего query, хранится в памяти,
+    // подразумевается один экземпляр integration-service; рестарт между query и success →
+    // ничего не помечается, заказы уйдут повторно (1С сопоставляет по Ид)
+    private volatile Map<Long, LocalDateTime> lastExportedSnapshot;
+
     /** Результат выгрузки заказов: XML для 1С + количество заказов. */
     public record OrderExportResult(String xml, int count) {}
 
@@ -56,6 +63,7 @@ public class OrderExportService {
 
         if(orders.isEmpty()){
             log.info("Нет заказов для выгрузки в 1С");
+            lastExportedSnapshot = Map.of();
             return new OrderExportResult(buildEmptyResponse(), 0);
         }
 
@@ -66,27 +74,48 @@ public class OrderExportService {
         commerceInfo.setFormationDate(LocalDateTime.now().format(DATETIME_FORMAT));
 
         List<CmlDocument> documents = new ArrayList<>();
+        Map<Long, LocalDateTime> snapshot = new HashMap<>();
         for(PendingOrder pendingOrder:orders){
             try{
                 CmlDocument doc = buildDocument(pendingOrder);
                 documents.add(doc);
+                snapshot.put(pendingOrder.getId(), pendingOrder.getCreatedAt());
             } catch (Exception e){
                 log.error("Ошибка формирования XML для заказа {}: {}",
                         pendingOrder.getOrderId(), e.getMessage(), e);
             }
         }
         commerceInfo.setDocuments(documents);
+        lastExportedSnapshot = snapshot;
         return new OrderExportResult(marshalToXml(commerceInfo), orders.size());
     }
 
     /**
-     * Помечает все непереданные заказы как exported.
+     * Помечает как exported заказы, попавшие в XML последнего mode=query и не изменённые с тех пор.
      * Вызывается при type=sale, mode=success (1С подтвердила получение).
      * @return количество помеченных заказов
      */
     @Transactional
     public int markOrdersAsExported() {
-        int count = repository.markAllAsExported(LocalDateTime.now());
+        Map<Long, LocalDateTime> snapshot = lastExportedSnapshot;
+        if (snapshot == null) {
+            log.warn("mode=success без предшествующего mode=query — заказы не помечаются");
+            return 0;
+        }
+        if (snapshot.isEmpty()) {
+            return 0;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        int count = 0;
+        for (PendingOrder order : repository.findAllById(snapshot.keySet())) {
+            // другой createdAt — заказ переотправлен после query, остаётся в очереди
+            if (!order.isExported() && order.getCreatedAt().equals(snapshot.get(order.getId()))) {
+                order.setExported(true);
+                order.setExportedAt(now);
+                count++;
+            }
+        }
+        lastExportedSnapshot = null;
         log.info("Помечено {} заказов как exported", count);
         return count;
     }

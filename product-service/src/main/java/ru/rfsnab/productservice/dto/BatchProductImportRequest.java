@@ -1,6 +1,7 @@
 package ru.rfsnab.productservice.dto;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -22,4 +23,8 @@ public class BatchProductImportRequest {
     @Size(max = 100, message = "Максимум 100 товаров за 1 запрос")
     @Valid
     private List<ProductImportItem> items;
+
+    /** Код склада, в который пишутся остатки этой пачки. */
+    @NotBlank(message = "warehouseCode обязателен")
+    private String warehouseCode;
 }

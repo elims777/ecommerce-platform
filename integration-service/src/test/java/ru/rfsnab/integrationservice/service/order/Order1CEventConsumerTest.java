@@ -69,14 +69,44 @@ class Order1CEventConsumerTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("пропускает дубликат по orderId (idempotency)")
-    void shouldSkipDuplicateOrder() {
-        String message = buildOrderMessage("uuid-101", "ORD-00101");
+    @DisplayName("повторное сообщение перезаписывает запись и ставит на повторную выгрузку")
+    void shouldOverwriteExistingOrder() {
+        consumer.consume(buildOrderMessage("uuid-101", "ORD-00101"));
+        PendingOrder existing = pendingOrderRepository.findByOrderId("uuid-101").orElseThrow();
+        existing.setExported(true);
+        existing.setExportedAt(java.time.LocalDateTime.now());
+        pendingOrderRepository.save(existing);
+        java.time.LocalDateTime createdBefore = pendingOrderRepository.findByOrderId("uuid-101").orElseThrow().getCreatedAt();
+
+        String updated = buildOrderMessage("uuid-101", "ORD-00102").replace("15000.00", "99999.00");
+        consumer.consume(updated);
+
+        List<PendingOrder> orders = pendingOrderRepository.findAll();
+        assertThat(orders).hasSize(1);
+        assertThat(orders.getFirst().getExternalId()).isEqualTo("ORD-00102");
+        assertThat(orders.getFirst().getCreatedAt()).isAfter(createdBefore);
+        assertThat(orders.getFirst().getOrderData()).contains("99999.00");
+        assertThat(orders.getFirst().isExported()).isFalse();
+        assertThat(orders.getFirst().getExportedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("идентичное сообщение после выгрузки (повторная доставка) не ставит заказ в очередь заново")
+    void shouldSkipIdenticalRedelivery() {
+        String message = buildOrderMessage("uuid-103", "ORD-00103");
+        consumer.consume(message);
+        PendingOrder saved = pendingOrderRepository.findByOrderId("uuid-103").orElseThrow();
+        saved.setExported(true);
+        saved.setExportedAt(java.time.LocalDateTime.now());
+        pendingOrderRepository.save(saved);
+        PendingOrder exported = pendingOrderRepository.findByOrderId("uuid-103").orElseThrow();
 
         consumer.consume(message);
-        consumer.consume(message); // повторное сообщение
 
-        assertThat(pendingOrderRepository.findAll()).hasSize(1);
+        PendingOrder after = pendingOrderRepository.findByOrderId("uuid-103").orElseThrow();
+        assertThat(after.isExported()).isTrue();
+        assertThat(after.getExportedAt()).isEqualTo(exported.getExportedAt());
+        assertThat(after.getCreatedAt()).isEqualTo(exported.getCreatedAt());
     }
 
     @Test

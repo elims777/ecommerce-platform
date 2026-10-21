@@ -68,6 +68,7 @@ class FtkImportServiceTest {
     void setUp() throws IOException {
         properties = new IntegrationProperties();
         properties.getFtk().setImportLimit(0);
+        properties.getFtk().setWarehouseCode("PUSHKIN");
         properties.getProductService().setUrl("http://product-service:8083");
         properties.getImportConfig().setChunkSize(100);
 
@@ -166,6 +167,22 @@ class FtkImportServiceTest {
             ArgumentCaptor<BatchImportRequest> captor = ArgumentCaptor.forClass(BatchImportRequest.class);
             verify(productServiceRestTemplate).postForEntity(anyString(), captor.capture(), eq(BatchImportResponse.class));
             assertThat(captor.getValue().getItems().get(0).getExternalId()).isEqualTo("FTK-87490974");
+        }
+
+        @Test
+        @DisplayName("в запрос уходит warehouseCode = PUSHKIN")
+        void shouldSendWarehouseCode() throws IOException {
+            FtkProduct p = product("1", "Товар", new BigDecimal("1000"), null, null, List.of());
+            when(xlsParser.parse(any())).thenReturn(List.of(p));
+            when(categoryMapper.resolveCategory(anyString())).thenReturn(42L);
+            when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
+                    .thenReturn(ResponseEntity.ok(okResponse(1, 0)));
+
+            service.importFromXls(InputStream.nullInputStream());
+
+            ArgumentCaptor<BatchImportRequest> captor = ArgumentCaptor.forClass(BatchImportRequest.class);
+            verify(productServiceRestTemplate).postForEntity(anyString(), captor.capture(), eq(BatchImportResponse.class));
+            assertThat(captor.getValue().getWarehouseCode()).isEqualTo("PUSHKIN");
         }
 
         @Test

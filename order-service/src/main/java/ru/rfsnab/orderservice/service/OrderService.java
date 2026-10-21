@@ -25,6 +25,7 @@ import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentLinkResponse;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentMethodSettingsDto;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
+import ru.rfsnab.orderservice.models.dto.product.WarehouseDto;
 import ru.rfsnab.orderservice.models.entity.*;
 import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
@@ -139,6 +140,8 @@ public class OrderService {
     /** Атрибуты варианта, попадающие в позицию заказа (в порядке вывода) */
     private static final List<String> VARIANT_ATTR_NAMES = List.of("Размер", "Рост");
 
+    private static final String SHIPPING_WAREHOUSE_REQUIRED = "Выберите город отгрузки";
+
     /**
      * Создание заказа из корзины.
      * Flow:
@@ -207,6 +210,20 @@ public class OrderService {
     public Order confirmOrder(UUID orderId, Long userId) {
         Order order = getOrderAndValidateOwner(orderId, userId);
 
+        validatePaymentMethodAvailable(order);
+
+        changeStatus(order, OrderStatus.PROCESSING);
+        order = orderRepository.save(order);
+
+        log.info("Заказ подтверждён клиентом: {}", order.getOrderNumber());
+        kafkaProducer.sendOrderStatusChanged(order);
+        order1CKafkaProducer.sendOrderFor1C(order);
+
+        return order;
+    }
+
+    /** Для B2C проверяет, что выбранный способ оплаты (CARD/SBP) включён в настройках. */
+    private void validatePaymentMethodAvailable(Order order) {
         if (order.getCustomerType() == CustomerType.B2C) {
             PaymentMethodSettingsDto settings = paymentMethodSettingsService.getSettings();
             PaymentMethod method = order.getPaymentMethod();
@@ -219,26 +236,18 @@ public class OrderService {
             }
             // INVOICE — оба метода выключены, заказ идёт в 1С как B2B
         }
-
-        changeStatus(order, OrderStatus.PROCESSING);
-        order = orderRepository.save(order);
-
-        log.info("Заказ подтверждён клиентом: {}", order.getOrderNumber());
-        kafkaProducer.sendOrderStatusChanged(order);
-        order1CKafkaProducer.sendOrderFor1C(order);
-
-        return order;
     }
 
     /**
-     * Обновление заказа. Разрешено только в статусе CREATED.
+     * Обновление заказа. Разрешено в статусах CREATED и PROCESSING.
+     * Для PROCESSING заказ повторно отправляется в 1С.
      * Можно изменить: items, адрес, способ доставки, способ оплаты, комментарий.
      */
     @Transactional
     public Order updateOrder(UUID orderId, Long userId, UpdateOrderRequest request) {
         Order order = getOrderAndValidateOwner(orderId, userId);
 
-        if (order.getStatus() != OrderStatus.CREATED) {
+        if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PROCESSING) {
             throw new InvalidOrderStateException(
                     String.format("Редактирование заказа %s невозможно в статусе %s",
                             order.getOrderNumber(), order.getStatus().getDisplayName()));
@@ -256,6 +265,7 @@ public class OrderService {
         validateStockForItems(request.items(), products);
 
         // Обновляем поля заказа
+        PaymentMethod previousPaymentMethod = order.getPaymentMethod();
         order.setPaymentMethod(request.paymentMethod());
         order.setDeliveryMethod(request.deliveryMethod());
         order.setComment(request.comment());
@@ -286,8 +296,18 @@ public class OrderService {
         BigDecimal totalAmount = addItemsFromDto(order, request.items(), products, order.getCustomerType());
         order.setTotalAmount(totalAmount);
 
+        // В PROCESSING подтверждения не будет — доступность способа оплаты проверяем здесь,
+        // но только при смене способа (иначе нельзя поправить, например, комментарий после отключения способа)
+        if (order.getStatus() == OrderStatus.PROCESSING && previousPaymentMethod != order.getPaymentMethod()) {
+            validatePaymentMethodAvailable(order);
+        }
+
         order = orderRepository.save(order);
         log.info("Заказ обновлён: {}", order.getOrderNumber());
+
+        if (order.getStatus() == OrderStatus.PROCESSING) {
+            order1CKafkaProducer.sendOrderFor1C(order);
+        }
 
         return order;
     }
@@ -331,17 +351,24 @@ public class OrderService {
                 .comment(sourceOrder.getComment())
                 .build();
 
+        // склад могли выключить после исходного заказа — снимок берём заново; у старых заказов склада нет
+        WarehouseDto warehouse = null;
+        if (sourceOrder.getShippingWarehouseId() != null) {
+            warehouse = findActiveWarehouse(sourceOrder.getShippingWarehouseId())
+                    .orElseThrow(() -> new InvalidOrderStateException("Город отгрузки больше недоступен, выберите другой"));
+        }
+        CarrierTerminal terminal = null;
         if (sourceOrder.getDeliveryMethod() == DeliveryMethod.CARRIER_TERMINAL) {
             // терминал и ТК могли отключить после исходного заказа — снимок берём заново
             try {
                 carrierService.requireTerminalDelivery(sourceOrder.getCarrierCode());
-                CarrierTerminal terminal = deliveryService.requireActiveTerminal(
+                terminal = deliveryService.requireActiveTerminal(
                         sourceOrder.getCarrierCode(), sourceOrder.getCarrierTerminalId());
-                applyCarrierSnapshot(newOrder, new ValidatedDelivery(sourceOrder.getCarrierName(), terminal));
             } catch (InvalidOrderStateException e) {
                 throw new InvalidOrderStateException("Терминал больше недоступен, выберите другой");
             }
         }
+        applyCarrierSnapshot(newOrder, new ValidatedDelivery(sourceOrder.getCarrierName(), terminal, warehouse));
 
         // Добавляем items с актуальными ценами
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -359,7 +386,8 @@ public class OrderService {
                     .productName(product.name())
                     .quantity(sourceItem.getQuantity())
                     .price(snapshotPrice)
-                    .externalId(product.externalId())
+                    // склеенный товар уходит в 1С с Ид номенклатуры 1С
+                    .externalId(product.oneCExternalId() != null ? product.oneCExternalId() : product.externalId())
                     .sku(product.sku())
                     .unitOfMeasure(product.unitOfMeasure())
                     .categoryExternalId(product.categoryExternalId())
@@ -662,8 +690,11 @@ public class OrderService {
 
     // ==================== Private methods ====================
 
-    /** Итог проверки доставки: название ТК и терминал для снимка в заказе (оба null, если способ без ТК). */
-    private record ValidatedDelivery(String carrierName, CarrierTerminal terminal) {
+    /**
+     * Итог проверки доставки: название ТК и терминал для снимка в заказе (оба null, если способ без ТК)
+     * и склад отгрузки (null только в repeatOrder для старого заказа без склада).
+     */
+    private record ValidatedDelivery(String carrierName, CarrierTerminal terminal, WarehouseDto warehouse) {
     }
 
     /**
@@ -676,6 +707,7 @@ public class OrderService {
      * SUPPLIER_DELIVERY → deliveryAddress обязателен.
      */
     private ValidatedDelivery validateDeliveryInfo(HasDeliveryInfo request) {
+        WarehouseDto warehouse = requireShippingWarehouse(request);
         return switch (request.deliveryMethod()) {
             case PICKUP -> {
                 if (request.warehousePointId() == null) {
@@ -683,7 +715,10 @@ public class OrderService {
                             "Для самовывоза необходимо указать точку получения");
                 }
                 warehousePointService.getActivePoint(request.warehousePointId());
-                yield new ValidatedDelivery(null, null);
+                if (!warehouse.pickupAvailable()) {
+                    throw new InvalidOrderStateException("Самовывоз недоступен для выбранного города");
+                }
+                yield new ValidatedDelivery(null, null, warehouse);
             }
             case CARRIER_ADDRESS -> {
                 if (request.carrierCode() == null) {
@@ -691,7 +726,7 @@ public class OrderService {
                 }
                 Carrier carrier = carrierService.requireAddressDelivery(request.carrierCode());
                 requireDeliveryAddress(request);
-                yield new ValidatedDelivery(carrier.getName(), null);
+                yield new ValidatedDelivery(carrier.getName(), null, warehouse);
             }
             case CARRIER_TERMINAL -> {
                 if (request.carrierCode() == null) {
@@ -707,22 +742,40 @@ public class OrderService {
                 Carrier carrier = carrierService.requireTerminalDelivery(request.carrierCode());
                 CarrierTerminal terminal = deliveryService.requireActiveTerminal(
                         request.carrierCode(), request.carrierTerminalId());
-                yield new ValidatedDelivery(carrier.getName(), terminal);
+                yield new ValidatedDelivery(carrier.getName(), terminal, warehouse);
             }
             case SUPPLIER_DELIVERY -> {
                 requireDeliveryAddress(request);
-                yield new ValidatedDelivery(null, null);
+                yield new ValidatedDelivery(null, null, warehouse);
             }
         };
     }
 
-    /** Снимок ТК и терминала в заказе — из БД, а не из запроса клиента. */
+    private WarehouseDto requireShippingWarehouse(HasDeliveryInfo request) {
+        if (request.shippingWarehouseId() == null) {
+            throw new InvalidOrderStateException(SHIPPING_WAREHOUSE_REQUIRED);
+        }
+        return findActiveWarehouse(request.shippingWarehouseId())
+                .orElseThrow(() -> new InvalidOrderStateException(SHIPPING_WAREHOUSE_REQUIRED));
+    }
+
+    private Optional<WarehouseDto> findActiveWarehouse(Long warehouseId) {
+        return productServiceClient.getActiveWarehouses().stream()
+                .filter(w -> w.id().equals(warehouseId))
+                .findFirst();
+    }
+
+    /** Снимок ТК, терминала и склада отгрузки в заказе — из БД/product-service, а не из запроса клиента. */
     private void applyCarrierSnapshot(Order order, ValidatedDelivery delivery) {
         order.setCarrierName(delivery.carrierName());
         CarrierTerminal terminal = delivery.terminal();
         order.setCarrierTerminalId(terminal != null ? terminal.getId() : null);
         order.setTerminalName(terminal != null ? terminal.getName() : null);
         order.setTerminalAddress(terminal != null ? terminal.getAddress() : null);
+        WarehouseDto warehouse = delivery.warehouse();
+        order.setShippingWarehouseId(warehouse != null ? warehouse.id() : null);
+        order.setShippingWarehouseName(warehouse != null ? warehouse.name() : null);
+        order.setShippingWarehouseCity(warehouse != null ? warehouse.city() : null);
     }
 
     private void requireDeliveryAddress(HasDeliveryInfo request) {
@@ -783,7 +836,8 @@ public class OrderService {
                     .productName(product.name())
                     .quantity(cartItem.getQuantity())
                     .price(snapshotPrice)
-                    .externalId(product.externalId())
+                    // склеенный товар уходит в 1С с Ид номенклатуры 1С
+                    .externalId(product.oneCExternalId() != null ? product.oneCExternalId() : product.externalId())
                     .sku(product.sku())
                     .unitOfMeasure(product.unitOfMeasure())
                     .categoryExternalId(product.categoryExternalId())
@@ -819,7 +873,8 @@ public class OrderService {
                     .productName(product.name())
                     .quantity(itemDto.quantity())
                     .price(snapshotPrice)
-                    .externalId(product.externalId())
+                    // склеенный товар уходит в 1С с Ид номенклатуры 1С
+                    .externalId(product.oneCExternalId() != null ? product.oneCExternalId() : product.externalId())
                     .sku(product.sku())
                     .unitOfMeasure(product.unitOfMeasure())
                     .categoryExternalId(product.categoryExternalId())

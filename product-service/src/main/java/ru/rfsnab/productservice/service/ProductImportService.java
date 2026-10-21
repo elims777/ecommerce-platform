@@ -14,10 +14,13 @@ import ru.rfsnab.productservice.dto.BatchProductImportResponse;
 import ru.rfsnab.productservice.dto.BatchProductImportResponse.ImportAction;
 import ru.rfsnab.productservice.dto.BatchProductImportResponse.ImportItemResult;
 import ru.rfsnab.productservice.dto.ProductImportItem;
+import ru.rfsnab.productservice.exception.BusinessException;
 import ru.rfsnab.productservice.exception.CategoryNotFoundException;
+import ru.rfsnab.productservice.exception.WarehouseNotFoundException;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.model.ProductAttribute;
+import ru.rfsnab.productservice.model.Warehouse;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
 
@@ -55,6 +58,9 @@ public class ProductImportService {
     private final CategoryRepository categoryRepository;
     private final PlatformTransactionManager transactionManager;
     private final SlugGeneratorService slugService;
+    private final ProductStockService stockService;
+    private final WarehouseService warehouseService;
+    private final ProductMergeService mergeService;
 
     @Caching(evict = {
             @CacheEvict(value = CacheConfig.FACETS_CACHE, allEntries = true),
@@ -62,6 +68,7 @@ public class ProductImportService {
     })
     public BatchProductImportResponse importBatch(BatchProductImportRequest request) {
         List<ProductImportItem> items = request.getItems();
+        Warehouse warehouse = requireWarehouse(request.getWarehouseCode());
 
         Map<String, Product> existingProducts = loadExistingProducts(items);
         Set<String> reservedSlugs = ConcurrentHashMap.newKeySet();
@@ -75,10 +82,19 @@ public class ProductImportService {
 
         List<ImportItemResult> allResults = new ArrayList<>(items.size());
         for (List<ProductImportItem> chunk : chunks) {
-            allResults.addAll(processChunk(chunk, existingProducts, reservedSlugs, importCategory));
+            allResults.addAll(processChunk(chunk, existingProducts, reservedSlugs, importCategory, warehouse));
         }
 
         return buildResponse(items.size(), allResults);
+    }
+
+    /** Неизвестный склад — ошибка запроса (400), а не «не найдено» (404), чтобы текст попал в отчёт импорта. */
+    private Warehouse requireWarehouse(String code) {
+        try {
+            return warehouseService.requireActiveByCode(code);
+        } catch (WarehouseNotFoundException e) {
+            throw new BusinessException(e.getMessage());
+        }
     }
 
     /**
@@ -89,11 +105,12 @@ public class ProductImportService {
     private List<ImportItemResult> processChunk(List<ProductImportItem> chunk,
                                                 Map<String, Product> existingProducts,
                                                 Set<String> reservedSlugs,
-                                                Category importCategory) {
+                                                Category importCategory,
+                                                Warehouse warehouse) {
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
         List<ImportItemResult> results = new ArrayList<>(chunk.size());
         for (ProductImportItem item : chunk) {
-            results.add(processItem(item, existingProducts, reservedSlugs, importCategory, txTemplate));
+            results.add(processItem(item, existingProducts, reservedSlugs, importCategory, warehouse, txTemplate));
         }
         return results;
     }
@@ -102,10 +119,11 @@ public class ProductImportService {
                                          Map<String, Product> existingProducts,
                                          Set<String> reservedSlugs,
                                          Category importCategory,
+                                         Warehouse warehouse,
                                          TransactionTemplate txTemplate) {
         try {
             return txTemplate.execute(status ->
-                    upsertProduct(item, existingProducts, reservedSlugs, importCategory));
+                    upsertProduct(item, existingProducts, reservedSlugs, importCategory, warehouse));
         } catch (Exception e) {
             boolean cascade = isCascadeFailure(e);
             if (cascade) {
@@ -127,7 +145,8 @@ public class ProductImportService {
     private ImportItemResult upsertProduct(ProductImportItem item,
                                            Map<String, Product> existingProducts,
                                            Set<String> reservedSlugs,
-                                           Category importCategory) {
+                                           Category importCategory,
+                                           Warehouse warehouse) {
             Product product = existingProducts.get(item.getExternalId());
             boolean isNew = (product == null);
             ProductSnapshot beforeSnapshot = isNew ? null : ProductSnapshot.of(product);
@@ -172,9 +191,6 @@ public class ProductImportService {
             if (item.getWholesalePrice() != null) {
                 product.setWholesalePrice(item.getWholesalePrice());
             }
-            if (item.getStockQuantity() != null) {
-                product.setStockQuantity(item.getStockQuantity());
-            }
 
             List<ProductImportItem.ProductAttributeImportItem> parentAttrs = resolveParentAttributes(item);
             boolean attributesChanged = !isNew && attributesChanged(product, parentAttrs);
@@ -186,9 +202,23 @@ public class ProductImportService {
 
             Product savedProduct = productRepository.save(product);
 
+            if (item.getStockQuantity() != null) {
+                stockService.setQuantity(savedProduct, warehouse, item.getStockQuantity());
+            }
+            boolean hasVariants = item.getVariants() != null && !item.getVariants().isEmpty();
+            if (ProductMergeService.SOURCE_FTK.equals(savedProduct.getSource())) {
+                // К родителю с вариантами не клеим: склеиваются конкретные варианты
+                if (!hasVariants) {
+                    mergeService.autoMergeFtk(savedProduct);
+                }
+            } else {
+                mergeService.autoMergeOneC(savedProduct);
+            }
+
             boolean childrenChanged = false;
-            if (item.getVariants() != null && !item.getVariants().isEmpty()) {
-                childrenChanged = upsertChildVariants(savedProduct, item.getVariants(), existingProducts, reservedSlugs, importCategory);
+            if (hasVariants) {
+                childrenChanged = upsertChildVariants(savedProduct, item.getVariants(), existingProducts,
+                        reservedSlugs, importCategory, warehouse);
             }
 
             ImportAction action;
@@ -279,7 +309,8 @@ public class ProductImportService {
                                      List<ProductImportItem.VariantImportItem> variantItems,
                                      Map<String, Product> existingProducts,
                                      Set<String> reservedSlugs,
-                                     Category importCategory) {
+                                     Category importCategory,
+                                     Warehouse warehouse) {
         List<String> externalIds = variantItems.stream()
                 .map(ProductImportItem.VariantImportItem::getExternalId)
                 .filter(id -> id != null)
@@ -319,7 +350,6 @@ public class ProductImportService {
             }
             if (vi.getPrice() != null) child.setPrice(vi.getPrice());
             if (vi.getWholesalePrice() != null) child.setWholesalePrice(vi.getWholesalePrice());
-            if (vi.getStockQuantity() != null) child.setStockQuantity(vi.getStockQuantity());
             if (vi.getBarcode() != null) child.setBarcode(vi.getBarcode());
             if (vi.getCountryOfOrigin() != null) child.setCountryOfOrigin(vi.getCountryOfOrigin());
 
@@ -332,6 +362,13 @@ public class ProductImportService {
             updateAttributes(child, attrs);
 
             Product savedChild = productRepository.save(child);
+
+            if (vi.getStockQuantity() != null) {
+                stockService.setQuantity(savedChild, warehouse, vi.getStockQuantity());
+            }
+            if (ProductMergeService.SOURCE_FTK.equals(savedChild.getSource())) {
+                mergeService.autoMergeFtk(savedChild);
+            }
 
             if (isNew || attributesChanged || !beforeSnapshot.equals(ProductSnapshot.of(savedChild))) {
                 anyChanged = true;

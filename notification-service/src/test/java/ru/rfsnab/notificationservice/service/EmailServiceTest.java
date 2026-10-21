@@ -82,6 +82,7 @@ class EmailServiceTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }
@@ -122,16 +123,36 @@ class EmailServiceTest {
                     base.totalAmount(), base.customerEmail(), base.customerName(), base.customerPhone(),
                     base.timestamp(), base.items(), "CARRIER_ADDRESS", base.paymentMethod(), base.comment(),
                     base.deliveryAddress(), base.customerType(), base.companyName(), base.inn(),
-                    null, null, null, "Деловые Линии", "Терминал Север", "ул. Складская, 5", null);
+                    null, null, null, "Деловые Линии", "Терминал Север", "ул. Складская, 5", null, null);
             ArgumentCaptor<Context> captor = ArgumentCaptor.forClass(Context.class);
 
             emailService.sendOrderCreatedEmail(event);
 
             verify(templateEngine).process(eq("mail/order-created"), captor.capture());
             assertThat(captor.getValue().getVariable("carrierName")).isEqualTo("Деловые Линии");
-            assertThat(captor.getValue().getVariable("deliveryMethod")).isEqualTo("Доставка до адреса (ТК)");
+            assertThat(captor.getValue().getVariable("deliveryMethod")).isEqualTo("Доставка ТК до двери");
             assertThat(captor.getValue().getVariable("terminalName")).isEqualTo("Терминал Север");
             assertThat(captor.getValue().getVariable("terminalAddress")).isEqualTo("ул. Складская, 5");
+        }
+
+        @Test
+        @DisplayName("город отгрузки попадает в модель письма; без города переменная пуста")
+        void sendOrderCreatedEmail_PutsShippingWarehouseCity() {
+            OrderEvent base = createOrderEvent();
+            OrderEvent event = new OrderEvent(
+                    base.eventType(), base.orderId(), base.orderNumber(), base.userId(), base.status(),
+                    base.totalAmount(), base.customerEmail(), base.customerName(), base.customerPhone(),
+                    base.timestamp(), base.items(), base.deliveryMethod(), base.paymentMethod(), base.comment(),
+                    base.deliveryAddress(), base.customerType(), base.companyName(), base.inn(),
+                    null, null, null, null, null, null, "Пушкин", null);
+            ArgumentCaptor<Context> captured = ArgumentCaptor.forClass(Context.class);
+
+            emailService.sendOrderCreatedEmail(event);
+            emailService.sendOrderCreatedEmail(base);
+
+            verify(templateEngine, times(2)).process(eq("mail/order-created"), captured.capture());
+            assertThat(captured.getAllValues().get(0).getVariable("shippingWarehouseCity")).isEqualTo("Пушкин");
+            assertThat(captured.getAllValues().get(1).getVariable("shippingWarehouseCity")).isNull();
         }
     }
 
@@ -157,7 +178,7 @@ class EmailServiceTest {
                     base.totalAmount(), base.customerEmail(), base.customerName(), base.customerPhone(),
                     base.timestamp(), base.items(), "CARRIER_ADDRESS", base.paymentMethod(), base.comment(),
                     base.deliveryAddress(), base.customerType(), base.companyName(), base.inn(),
-                    null, null, null, "Деловые Линии", "Терминал Север", "ул. Складская, 5", null);
+                    null, null, null, "Деловые Линии", "Терминал Север", "ул. Складская, 5", null, null);
             ArgumentCaptor<Context> captor = ArgumentCaptor.forClass(Context.class);
 
             emailService.sendManagerOrderNotification(event);

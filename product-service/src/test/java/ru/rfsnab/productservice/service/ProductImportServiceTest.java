@@ -15,7 +15,10 @@ import ru.rfsnab.productservice.dto.BatchProductImportResponse;
 import ru.rfsnab.productservice.dto.BatchProductImportResponse.ImportAction;
 import ru.rfsnab.productservice.dto.ProductImportItem;
 import ru.rfsnab.productservice.model.Category;
+import ru.rfsnab.productservice.exception.BusinessException;
+import ru.rfsnab.productservice.exception.WarehouseNotFoundException;
 import ru.rfsnab.productservice.model.Product;
+import ru.rfsnab.productservice.model.Warehouse;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
 
@@ -25,8 +28,11 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 
@@ -46,7 +52,20 @@ class ProductImportServiceTest {
     @Mock
     private SlugGeneratorService slugService;
 
+    @Mock
+    private ProductStockService stockService;
+
+    @Mock
+    private WarehouseService warehouseService;
+
+    @Mock
+    private ProductMergeService mergeService;
+
+    private static final String WAREHOUSE_CODE = "PUSHKIN";
+
     private ProductImportService importService;
+
+    private Warehouse pushkin;
 
     private Category importCategory;
 
@@ -54,14 +73,17 @@ class ProductImportServiceTest {
     void setUp() {
         // Импорт выполняет каждый товар в своей транзакции через TransactionTemplate:
         // без этого стаба мок отдаёт null вместо TransactionStatus и товары не обрабатываются.
-        when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+        lenient().when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
 
-        importService = new ProductImportService(productRepository, categoryRepository, transactionManager, slugService);
+        importService = new ProductImportService(productRepository, categoryRepository, transactionManager, slugService,
+                stockService, warehouseService, mergeService);
         ReflectionTestUtils.setField(importService, "chunkSize", 25);
 
         importCategory = Category.builder().id(1L).name("Импорт из 1С").slug("import-1c").build();
-        when(categoryRepository.findBySlug("import-1c")).thenReturn(Optional.of(importCategory));
-        when(productRepository.findAllSlugs()).thenReturn(List.of());
+        lenient().when(categoryRepository.findBySlug("import-1c")).thenReturn(Optional.of(importCategory));
+        lenient().when(productRepository.findAllSlugs()).thenReturn(List.of());
+        pushkin = Warehouse.builder().id(2L).code(WAREHOUSE_CODE).name("Склад Пушкин").city("Пушкин").build();
+        when(warehouseService.requireActiveByCode(WAREHOUSE_CODE)).thenReturn(pushkin);
     }
 
     // ==================== upsertChildVariants() — категория ребёнка ====================
@@ -122,6 +144,7 @@ class ProductImportServiceTest {
 
             BatchProductImportRequest request = BatchProductImportRequest.builder()
                     .items(List.of(item))
+                    .warehouseCode(WAREHOUSE_CODE)
                     .build();
 
             // When
@@ -171,6 +194,7 @@ class ProductImportServiceTest {
 
             BatchProductImportRequest request = BatchProductImportRequest.builder()
                     .items(List.of(item))
+                    .warehouseCode(WAREHOUSE_CODE)
                     .build();
 
             // When
@@ -212,7 +236,7 @@ class ProductImportServiceTest {
             when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
             BatchProductImportResponse response = importService.importBatch(
-                    BatchProductImportRequest.builder().items(List.of(item)).build());
+                    BatchProductImportRequest.builder().items(List.of(item)).warehouseCode(WAREHOUSE_CODE).build());
 
             assertThat(response.getResults().get(0).isSuccess()).isTrue();
             org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
@@ -246,7 +270,7 @@ class ProductImportServiceTest {
             when(productRepository.findByExternalIdIn(List.of("FTK-1"))).thenReturn(List.of(existing));
             when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            importService.importBatch(BatchProductImportRequest.builder().items(List.of(item)).build());
+            importService.importBatch(BatchProductImportRequest.builder().items(List.of(item)).warehouseCode(WAREHOUSE_CODE).build());
 
             org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
             verify(productRepository, org.mockito.Mockito.atLeastOnce()).save(captor.capture());
@@ -272,7 +296,7 @@ class ProductImportServiceTest {
         when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
 
         BatchProductImportResponse response = importService.importBatch(
-                BatchProductImportRequest.builder().items(List.of(item)).build());
+                BatchProductImportRequest.builder().items(List.of(item)).warehouseCode(WAREHOUSE_CODE).build());
 
         assertThat(response.getResults().get(0).isSuccess()).isTrue();
         org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
@@ -284,5 +308,127 @@ class ProductImportServiceTest {
         assertThat(saved.getAttributes())
                 .extracting(a -> a.getAttributeName() + "=" + a.getAttributeValue())
                 .containsExactlyInAnyOrder("Состав ткани=100% хлопок", "Защитные свойства=Ми");
+    }
+
+    // ==================== остатки по складам и автосклейка ====================
+
+    @Nested
+    @DisplayName("остатки пишутся в склад, склейка запускается из импорта")
+    class StockAndMergeTests {
+
+        private BatchProductImportResponse run(ProductImportItem item) {
+            when(slugService.generateUniqueSlug(anyString(), any())).thenReturn("slug-" + item.getExternalId());
+            when(productRepository.save(any(Product.class))).thenAnswer(inv -> inv.getArgument(0));
+            return importService.importBatch(
+                    BatchProductImportRequest.builder().items(List.of(item)).warehouseCode(WAREHOUSE_CODE).build());
+        }
+
+        @Test
+        @DisplayName("stockQuantity товара уходит в ProductStockService, а не в поле товара напрямую")
+        void stockQuantity_GoesToWarehouse() {
+            ProductImportItem item = ProductImportItem.builder()
+                    .externalId("FTK-1").name("Ботинки").source("FTK").stockQuantity(7).build();
+
+            run(item);
+
+            org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
+            verify(stockService).setQuantity(captor.capture(), org.mockito.ArgumentMatchers.eq(pushkin),
+                    org.mockito.ArgumentMatchers.eq(7));
+            assertThat(captor.getValue().getExternalId()).isEqualTo("FTK-1");
+            assertThat(captor.getValue().getStockQuantity()).isZero();
+        }
+
+        @Test
+        @DisplayName("stockQuantity=null (нет offer) — остаток не трогается")
+        void nullStock_NoSetQuantity() {
+            run(ProductImportItem.builder().externalId("1C-1").name("Перчатки").build());
+
+            verify(stockService, never()).setQuantity(any(), any(), org.mockito.ArgumentMatchers.anyInt());
+        }
+
+        @Test
+        @DisplayName("остаток варианта Факела пишется в склад")
+        void variantStock_GoesToWarehouse() {
+            Product parent = Product.builder().id(10L).externalId("FTK-P").name("Куртка").source("FTK")
+                    .category(importCategory).build();
+            when(productRepository.findByExternalIdIn(any())).thenAnswer(inv -> {
+                List<String> ids = inv.getArgument(0);
+                return ids.contains("FTK-P") && !ids.contains("FTK-P.001") ? List.of(parent) : List.of();
+            });
+            ProductImportItem item = ProductImportItem.builder()
+                    .externalId("FTK-P").name("Куртка").source("FTK")
+                    .variants(List.of(ProductImportItem.VariantImportItem.builder()
+                            .externalId("FTK-P.001").sku("K-1").stockQuantity(3).build()))
+                    .build();
+
+            run(item);
+
+            org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
+            verify(stockService).setQuantity(captor.capture(), org.mockito.ArgumentMatchers.eq(pushkin),
+                    org.mockito.ArgumentMatchers.eq(3));
+            assertThat(captor.getValue().getExternalId()).isEqualTo("FTK-P.001");
+        }
+
+        @Test
+        @DisplayName("товар 1С — автосклейка 1С")
+        void oneCProduct_AutoMergeOneC() {
+            run(ProductImportItem.builder().externalId("uuid-1").name("Перчатки").sku("5004").build());
+
+            verify(mergeService).autoMergeOneC(any(Product.class));
+            verify(mergeService, never()).autoMergeFtk(any());
+        }
+
+        @Test
+        @DisplayName("товар Факела без вариантов — автосклейка Факела")
+        void ftkWithoutVariants_AutoMergeFtk() {
+            run(ProductImportItem.builder().externalId("FTK-2").name("Перчатки").source("FTK").sku("5004").build());
+
+            verify(mergeService).autoMergeFtk(any(Product.class));
+            verify(mergeService, never()).autoMergeOneC(any());
+        }
+
+        @Test
+        @DisplayName("товар Факела с вариантами — автосклейка для каждого варианта, но не для родителя")
+        void ftkWithVariants_AutoMergeOnlyVariants() {
+            ProductImportItem item = ProductImportItem.builder()
+                    .externalId("FTK-3").name("Куртка").source("FTK")
+                    .variants(List.of(
+                            ProductImportItem.VariantImportItem.builder().externalId("FTK-3.001").sku("K-1").build(),
+                            ProductImportItem.VariantImportItem.builder().externalId("FTK-3.002").sku("K-2").build()))
+                    .build();
+
+            run(item);
+
+            org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
+            verify(mergeService, org.mockito.Mockito.times(2)).autoMergeFtk(captor.capture());
+            assertThat(captor.getAllValues()).extracting(Product::getExternalId)
+                    .containsExactly("FTK-3.001", "FTK-3.002");
+        }
+
+        @Test
+        @DisplayName("выключенный склад — исключение пробрасывается, пачка не обрабатывается")
+        void inactiveWarehouse_Propagates() {
+            when(warehouseService.requireActiveByCode(WAREHOUSE_CODE))
+                    .thenThrow(new BusinessException("Склад PUSHKIN выключен"));
+
+            assertThatThrownBy(() -> importService.importBatch(BatchProductImportRequest.builder()
+                    .items(List.of(ProductImportItem.builder().externalId("1C-1").name("X").build()))
+                    .warehouseCode(WAREHOUSE_CODE).build()))
+                    .isInstanceOf(BusinessException.class);
+            verify(productRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("неизвестный склад превращается в BusinessException (400, а не 404)")
+        void unknownWarehouse_BecomesBusinessException() {
+            when(warehouseService.requireActiveByCode(WAREHOUSE_CODE))
+                    .thenThrow(new WarehouseNotFoundException("Склад PUSHKIN не найден"));
+
+            assertThatThrownBy(() -> importService.importBatch(BatchProductImportRequest.builder()
+                    .items(List.of(ProductImportItem.builder().externalId("1C-1").name("X").build()))
+                    .warehouseCode(WAREHOUSE_CODE).build()))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage("Склад PUSHKIN не найден");
+        }
     }
 }

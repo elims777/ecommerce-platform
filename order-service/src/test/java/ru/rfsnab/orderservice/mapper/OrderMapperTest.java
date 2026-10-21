@@ -175,7 +175,7 @@ class OrderMapperTest {
                     .phone("+79001234567").recipientName("Иванов Иван").build();
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
-                    address, null, null, null, null, null, null, null, null, CarrierCode.DELLIN);
+                    address, null, null, null, null, null, null, null, null, CarrierCode.DELLIN, 1L);
 
             Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
@@ -193,7 +193,7 @@ class OrderMapperTest {
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.SUPPLIER_DELIVERY,
-                    address, null, null, null, "Комментарий", null, null, null, null, null);
+                    address, null, null, null, "Комментарий", null, null, null, null, null, 1L);
 
             Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
@@ -212,7 +212,7 @@ class OrderMapperTest {
         void shouldMapPickupRequestToEntity() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CASH_ON_DELIVERY, DeliveryMethod.PICKUP,
-                    null, 1L, "Петров Петр", "+79001112233", null, null, null, null, null, null);
+                    null, 1L, "Петров Петр", "+79001112233", null, null, null, null, null, null, 1L);
 
             Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 
@@ -228,7 +228,7 @@ class OrderMapperTest {
         void shouldNotPopulateItemsAndTotal() {
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.SBP, DeliveryMethod.PICKUP,
-                    null, 1L, null, null, null, null, null, null, null, null);
+                    null, 1L, null, null, null, null, null, null, null, null, 1L);
 
             Order order = OrderMapper.toEntity(100L, USER_EMAIL, "B2C", request);
 

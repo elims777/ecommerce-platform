@@ -77,6 +77,26 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Склад не найден
+     */
+    @ExceptionHandler(WarehouseNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleWarehouseNotFound(
+            WarehouseNotFoundException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Warehouse not found: {}", ex.getMessage());
+
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    /**
      * Бизнес-логика (валидация)
      */
     @ExceptionHandler(BusinessException.class)

@@ -22,6 +22,7 @@ import { useAuthStore } from '@/store/authStore';
 import { createOrder, confirmOrder } from '@/api/orders';
 import { pushEcommerce } from '@/lib/metrika';
 import { getWarehousePoints } from '@/api/warehouse';
+import { getWarehouses, getProductStocks } from '@/api/warehouses';
 import {
     getRecipients,
     getRecipientAddresses,
@@ -45,6 +46,7 @@ import SummaryStep from './SummaryStep';
 const { Title } = Typography;
 
 interface CheckoutFormValues {
+    shippingWarehouseId: number;
     deliveryMethod: DeliveryMethod;
     warehousePointId?: number;
     carrierCode?: CarrierCode;
@@ -138,6 +140,28 @@ const createRecipientMutation = useMutation({
         staleTime: 5 * 60 * 1000,
     });
 
+    const { data: warehouses = [] } = useQuery({
+        queryKey: ['warehouses'],
+        queryFn: getWarehouses,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const itemIds = items.map((i) => i.productId);
+    const { data: cartStocks, isLoading: stocksLoading } = useQuery({
+        queryKey: ['cartStocks', itemIds],
+        queryFn: () => getProductStocks(itemIds),
+        enabled: itemIds.length > 0,
+    });
+
+    // Город по умолчанию: первый, где остатка хватает на все позиции; иначе первый
+    useEffect(() => {
+        if (warehouses.length === 0 || items.length === 0 || stocksLoading) return;
+        if (form.getFieldValue('shippingWarehouseId') !== undefined) return;
+        const covers = (warehouseId: number) => items.every((i) =>
+            (cartStocks?.[i.productId]?.find((s) => s.warehouseId === warehouseId)?.quantity ?? 0) >= i.quantity);
+        form.setFieldValue('shippingWarehouseId', (warehouses.find((w) => covers(w.id)) ?? warehouses[0]).id);
+    }, [warehouses, items, cartStocks, stocksLoading, form]);
+
     const handleSubmit = async (values: CheckoutFormValues) => {
         setLoading(true);
         try {
@@ -160,6 +184,7 @@ const createRecipientMutation = useMutation({
             const request: CreateOrderRequest = {
                 paymentMethod: PaymentMethod.INVOICE,
                 deliveryMethod: values.deliveryMethod,
+                shippingWarehouseId: values.shippingWarehouseId,
                 comment: values.comment,
                 customerName,
                 customerPhone,
@@ -327,6 +352,7 @@ const createRecipientMutation = useMutation({
                                 deliveryMethod={deliveryMethod}
                                 warehousePoints={warehousePoints}
                                 warehouseLoading={warehouseLoading}
+                                warehouses={warehouses}
                                 recipientsCount={recipients.length}
                                 onDeliveryMethodChange={(count) => setManualInput(count === 0)}
                             />
@@ -365,6 +391,8 @@ const createRecipientMutation = useMutation({
                                 items={items}
                                 totalAmount={totalAmount}
                                 loading={loading}
+                                warehouses={warehouses}
+                                cartStocks={cartStocks}
                             />
                         </Card>
                     </Col>

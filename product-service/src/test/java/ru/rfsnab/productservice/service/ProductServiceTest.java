@@ -320,6 +320,44 @@ class ProductServiceTest {
             // Then
             assertThat(result.getIsActive()).isFalse();
         }
+
+        @Test
+        @DisplayName("activateProduct() склеенного товара 1С — BusinessException")
+        void activateProduct_Merged_Throws() {
+            testProduct.setIsActive(false);
+            testProduct.setMergedIntoProductId(10L);
+            when(productRepository.findById(1L)).thenReturn(Optional.of(testProduct));
+
+            assertThatThrownBy(() -> productService.activateProduct(1L))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("id=10");
+            assertThat(testProduct.getIsActive()).isFalse();
+        }
+
+        @Test
+        @DisplayName("updateProduct() с isActive=true для склеенного товара — BusinessException")
+        void updateProduct_EnableMerged_Throws() {
+            testProduct.setIsActive(false);
+            testProduct.setMergedIntoProductId(10L);
+            when(productRepository.findById(1L)).thenReturn(Optional.of(testProduct));
+            Product update = Product.builder().name("Имя").isActive(true).build();
+
+            assertThatThrownBy(() -> productService.updateProduct(1L, update))
+                    .isInstanceOf(BusinessException.class);
+        }
+
+        @Test
+        @DisplayName("batchUpdateActive() при активации пропускает склеенные товары, остальные включает")
+        void batchUpdateActive_SkipsMerged() {
+            Product merged = Product.builder().id(2L).name("1С").isActive(false).mergedIntoProductId(10L).build();
+            testProduct.setIsActive(false);
+            when(productRepository.findAllById(List.of(1L, 2L))).thenReturn(List.of(testProduct, merged));
+
+            productService.batchUpdateActive(List.of(1L, 2L), true);
+
+            assertThat(testProduct.getIsActive()).isTrue();
+            assertThat(merged.getIsActive()).isFalse();
+        }
     }
 
     // ==================== Search & Query Tests ====================

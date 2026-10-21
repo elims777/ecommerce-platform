@@ -108,6 +108,15 @@ public class Product {
     @Column(name = "sale_markup_percent", precision = 5, scale = 2)
     private BigDecimal saleMarkupPercent;
 
+    /** Склеенный товар 1С: ссылка на главный товар Факела. Сам товар скрыт (isActive=false). */
+    @Column(name = "merged_into_product_id")
+    private Long mergedIntoProductId;
+
+    /** Ручная отвязка: автосклейка импорта такой товар больше не склеивает. */
+    @Column(name = "merge_locked", nullable = false)
+    @Builder.Default
+    private Boolean mergeLocked = false;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     @Builder.Default

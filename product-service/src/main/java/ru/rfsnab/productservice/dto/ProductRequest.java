@@ -1,7 +1,6 @@
 package ru.rfsnab.productservice.dto;
 
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -29,10 +28,6 @@ public class ProductRequest {
 
     @DecimalMin(value = "0.0", message = "Оптовая цена не может быть отрицательной")
     private BigDecimal wholesalePrice;
-
-    @Min(value = 0, message = "Количество не может быть отрицательным")
-    @Builder.Default
-    private Integer stockQuantity = 0;
 
     private Long categoryId;  // может быть null
 

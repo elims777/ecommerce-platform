@@ -8,7 +8,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.mockito.ArgumentCaptor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
+import ru.rfsnab.integrationservice.config.IntegrationProperties;
+import ru.rfsnab.integrationservice.dto.BatchImportRequest;
+import ru.rfsnab.integrationservice.dto.BatchImportResponse;
 import ru.rfsnab.integrationservice.BaseIntegrationTest;
 import ru.rfsnab.integrationservice.model.commerceml.CmlProduct;
 import ru.rfsnab.integrationservice.repository.ImportLogRepository;
@@ -25,6 +31,8 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -209,6 +217,30 @@ class CatalogImportServiceTest extends BaseIntegrationTest {
 
             assertThat(enqueued).isEqualTo(2);
             verify(pool).enqueueImages(tempExchangeDir, PRODUCT_ID, List.of(IMAGE, "a/b.png"), "s");
+        }
+    }
+
+    @Nested
+    @DisplayName("sendChunk — код склада")
+    class SendChunkTests {
+
+        @Test
+        @DisplayName("в запрос уходит warehouseCode = SYKTYVKAR")
+        void shouldSendWarehouseCode() {
+            RestTemplate restTemplate = mock(RestTemplate.class);
+            IntegrationProperties props = new IntegrationProperties();
+            props.getProductService().setUrl("http://product-service:8083");
+            props.getCommerceml().setWarehouseCode("SYKTYVKAR");
+            when(restTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
+                    .thenReturn(ResponseEntity.ok(new BatchImportResponse()));
+            CatalogImportService service =
+                    new CatalogImportService(null, restTemplate, props, null, null, null, null, null);
+
+            service.sendChunk(List.of());
+
+            ArgumentCaptor<BatchImportRequest> captor = ArgumentCaptor.forClass(BatchImportRequest.class);
+            verify(restTemplate).postForEntity(anyString(), captor.capture(), eq(BatchImportResponse.class));
+            assertThat(captor.getValue().getWarehouseCode()).isEqualTo("SYKTYVKAR");
         }
     }
 }

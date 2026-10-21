@@ -78,6 +78,16 @@ public class Order {
     @Column(name = "terminal_address")
     private String terminalAddress;
 
+    // Снимок склада отгрузки (product-service) на момент заказа; null у старых заказов
+    @Column(name = "shipping_warehouse_id")
+    private Long shippingWarehouseId;
+
+    @Column(name = "shipping_warehouse_name", length = 100)
+    private String shippingWarehouseName;
+
+    @Column(name = "shipping_warehouse_city", length = 100)
+    private String shippingWarehouseCity;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
 

@@ -12,6 +12,8 @@ import {
 import type { ProductRequest, ProductAttributeRequest } from '@/api/adminProducts';
 import type { CategoryTree, ProductImage } from '@/types/product';
 import { RowLink } from '@/components/navigation';
+import ProductStocksBlock from './ProductStocksBlock';
+import ProductMergeBlock from './ProductMergeBlock';
 
 const flattenCategories = (tree: CategoryTree[], prefix = ''): { value: number; label: string }[] => {
     const result: { value: number; label: string }[] = [];
@@ -45,7 +47,7 @@ const AdminProductEditPage = () => {
 
     const [form, setForm] = useState<ProductRequest>({
         name: '', description: '', shortDescription: '', price: 0, wholesalePrice: null,
-        stockQuantity: 0, categoryId: undefined, isActive: true,
+        categoryId: undefined, isActive: true,
         isFeatured: false, isSale: false, saleMarkupPercent: null,
         sku: '', unitOfMeasure: '', material: '',
     });
@@ -84,7 +86,6 @@ const AdminProductEditPage = () => {
                 // редактируем БАЗОВУЮ цену: price приходит уже с акцией, базовая лежит в oldPrice
                 price: product.oldPrice ?? product.price,
                 wholesalePrice: product.oldWholesalePrice ?? product.wholesalePrice ?? null,
-                stockQuantity: product.stockQuantity,
                 categoryId: product.categoryId,
                 isActive: product.isActive,
                 isFeatured: product.isFeatured,
@@ -250,7 +251,7 @@ const AdminProductEditPage = () => {
                                 />
                             </label>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                                 <label style={labelStyle}>
                                     <span style={labelTextStyle}>Цена розн., ₽</span>
                                     <input
@@ -271,16 +272,6 @@ const AdminProductEditPage = () => {
                                         style={inputStyle}
                                         value={form.price}
                                         onChange={(e) => { setForm((f) => ({ ...f, price: Number(e.target.value) })); setFormTouched(true); }}
-                                    />
-                                </label>
-                                <label style={labelStyle}>
-                                    <span style={labelTextStyle}>Остаток</span>
-                                    <input
-                                        type="number"
-                                        min={0}
-                                        style={inputStyle}
-                                        value={form.stockQuantity}
-                                        onChange={(e) => { setForm((f) => ({ ...f, stockQuantity: Number(e.target.value) })); setFormTouched(true); }}
                                     />
                                 </label>
                             </div>
@@ -592,6 +583,10 @@ const AdminProductEditPage = () => {
                             )}
                         </div>
                     </div>
+
+                    {/* У товара с вариантами остатки правятся в карточке варианта */}
+                    {(product.children?.length ?? 0) === 0 && <ProductStocksBlock key={product.id} productId={product.id} />}
+                    <ProductMergeBlock key={`merge-${product.id}`} product={product} />
 
                     {/* Display order card */}
                     <div className="rf-card" style={{ overflow: 'hidden', marginTop: 16 }}>

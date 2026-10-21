@@ -32,6 +32,8 @@ public class IntegrationProperties {
         private long fileLimit = 52428800L; // 50MB
         /** Временная директория для файлов обмена */
         private String tempDir = "/tmp/1c-exchange";
+        /** Код склада, на который 1С выгружает остатки */
+        private String warehouseCode;
     }
 
     @Getter
@@ -89,6 +91,8 @@ public class IntegrationProperties {
         private int importLimit = 0;
         /** Slug корневой категории ФТК (должна существовать в product-service) */
         private String rootCategorySlug = "ftk";
+        /** Код склада, на который импортируются остатки ФТК */
+        private String warehouseCode;
         /** Таймаут скачивания одного изображения в секундах */
         private int imageDownloadTimeoutSec = 30;
         /** Параметры FTP-сервера ФТК */

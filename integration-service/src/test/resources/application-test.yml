@@ -28,6 +28,7 @@ integration:
     password: test_pass
     file-limit: 52428800
     temp-dir: ${java.io.tmpdir}/1c-exchange-test
+    warehouse-code: SYKTYVKAR
   product-service:
     url: http://localhost:9999
     batch-size: 100

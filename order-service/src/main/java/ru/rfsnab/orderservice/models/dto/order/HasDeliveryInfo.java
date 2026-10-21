@@ -26,4 +26,7 @@ public sealed interface HasDeliveryInfo permits CreateOrderRequest, UpdateOrderR
 
     /** Терминал для CARRIER_TERMINAL (только ТК из carrierCode); для остальных способов игнорируется. Адрес для терминала не нужен. */
     Long carrierTerminalId();
+
+    /** Склад отгрузки (product-service). Обязателен. */
+    Long shippingWarehouseId();
 }
