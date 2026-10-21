@@ -25,7 +25,7 @@ export enum DeliveryMethod {
 
 export const DeliveryMethodLabels: Record<DeliveryMethod, string> = {
     [DeliveryMethod.PICKUP]: 'Самовывоз',
-    [DeliveryMethod.CARRIER_ADDRESS]: 'Доставка до адреса (ТК)',
+    [DeliveryMethod.CARRIER_ADDRESS]: 'Доставка ТК до двери',
     [DeliveryMethod.CARRIER_TERMINAL]: 'До терминала ТК',
     [DeliveryMethod.SUPPLIER_DELIVERY]: 'Доставка поставщиком',
 };
@@ -90,6 +90,8 @@ export interface CreateOrderRequest {
     paymentMethod: PaymentMethod;
     deliveryMethod: DeliveryMethod;
     deliveryAddress?: AddressDto;
+    /** Склад (город) отгрузки */
+    shippingWarehouseId: number;
     warehousePointId?: number;
     carrierCode?: CarrierCode;
     carrierTerminalId?: number;
@@ -126,6 +128,7 @@ export interface UpdateOrderRequest {
     paymentMethod: PaymentMethod;
     deliveryMethod: DeliveryMethod;
     deliveryAddress?: AddressDto;
+    shippingWarehouseId: number;
     warehousePointId?: number;
     carrierCode?: CarrierCode;
     carrierTerminalId?: number;
@@ -165,6 +168,9 @@ export interface OrderDto {
     warehousePoint?: WarehousePointDto;
     carrierCode?: CarrierCode | null;
     carrierName?: string | null;
+    shippingWarehouseId?: number | null;
+    shippingWarehouseName?: string | null;
+    shippingWarehouseCity?: string | null;
     carrierTerminalId?: number | null;
     pickupRecipientName?: string | null;
     pickupRecipientPhone?: string | null;
@@ -179,6 +185,7 @@ export interface OrderDto {
     shipmentMode?: ShipmentMode | null;
     shipmentsComplete?: boolean;
     shipments?: ShipmentDto[];
+    customerType?: unknown;
     customerEmail: string;
     customerName?: string | null;
     customerPhone?: string | null;

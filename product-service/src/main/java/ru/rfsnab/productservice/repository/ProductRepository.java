@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import ru.rfsnab.productservice.model.Product;
 import ru.rfsnab.productservice.repository.projection.ProductStatsProjection;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -93,6 +94,42 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     List<Long> findParentIdsWithActiveChildren(@Param("ids") List<Long> ids);
 
     List<Product> findByParentProductId(Long parentProductId);
+
+    boolean existsByParentProductId(Long parentProductId);
+
+    /** Записи Факела с данным артикулом, у которых нет вариантов (склеиваемые). */
+    @Query("""
+            SELECT p FROM Product p
+            WHERE p.sku = :sku AND p.source = 'FTK'
+              AND NOT EXISTS (SELECT 1 FROM Product c WHERE c.parentProductId = p.id)
+            """)
+    List<Product> findMergeableFtkBySku(@Param("sku") String sku);
+
+    /** Несклеенные и не заблокированные товары 1С с данным артикулом. */
+    @Query("""
+            SELECT p FROM Product p
+            WHERE p.sku = :sku AND p.source = 'INTERNAL' AND p.externalId IS NOT NULL
+              AND p.mergedIntoProductId IS NULL AND p.mergeLocked = false
+            """)
+    List<Product> findMergeableOneCBySku(@Param("sku") String sku);
+
+    /** Склеенные с данными товарами записи 1С — для oneCExternalId и блока «Связанные товары». */
+    List<Product> findByMergedIntoProductIdInOrderByIdAsc(Collection<Long> mainIds);
+
+    @Query("""
+            SELECT p FROM Product p
+            WHERE p.source = 'INTERNAL' AND p.externalId IS NOT NULL AND p.mergedIntoProductId IS NULL
+              AND (LOWER(p.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :query, '%')))
+            """)
+    Page<Product> findMergeCandidates(@Param("query") String query, Pageable pageable);
+
+    @Query("""
+            SELECT p FROM Product p
+            WHERE p.source = 'INTERNAL' AND p.externalId IS NOT NULL
+              AND p.mergedIntoProductId IS NULL AND p.isVariantChild = false
+            """)
+    Page<Product> findUnmatchedOneC(Pageable pageable);
 
     Page<Product> findByIsActiveTrueAndIsVariantChildFalse(Pageable pageable);
 

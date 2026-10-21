@@ -5,7 +5,9 @@ import CarrierPicker from './CarrierPicker';
 import PointsPicker from './PointsPicker';
 import { warehouseToPickerPoint } from './warehouseToPickerPoint';
 import TerminalPicker from './TerminalPicker';
+import ShippingWarehouseField from './ShippingWarehouseField';
 import type { WarehousePointDto } from '@/types/order';
+import type { Warehouse } from '@/types/product';
 
 const { Text } = Typography;
 
@@ -15,6 +17,7 @@ interface DeliveryStepProps {
     warehouseLoading: boolean;
     recipientsCount: number;
     onDeliveryMethodChange: (recipientsCount: number) => void;
+    warehouses: Warehouse[];
 }
 
 const DeliveryStep = ({
@@ -23,11 +26,15 @@ const DeliveryStep = ({
     warehouseLoading,
     recipientsCount,
     onDeliveryMethodChange,
+    warehouses,
 }: DeliveryStepProps) => {
     const form = Form.useFormInstance();
+    const shippingWarehouseId = Form.useWatch('shippingWarehouseId', form);
+    const pickupAvailable = warehouses.find((w) => w.id === shippingWarehouseId)?.pickupAvailable !== false;
     const warehousePickerPoints = useMemo(() => warehousePoints.map(warehouseToPickerPoint), [warehousePoints]);
     return (
     <>
+        <ShippingWarehouseField warehouses={warehouses} />
         <Form.Item
             name="deliveryMethod"
             rules={[{ required: true, message: 'Выберите способ доставки' }]}
@@ -40,7 +47,7 @@ const DeliveryStep = ({
                 }}
                 style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
             >
-                {CLIENT_DELIVERY_METHODS.map((method) => (
+                {CLIENT_DELIVERY_METHODS.filter((m) => m !== DeliveryMethod.PICKUP || pickupAvailable).map((method) => (
                     <Radio.Button key={method} value={method}>
                         {DeliveryMethodLabels[method]}
                     </Radio.Button>

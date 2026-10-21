@@ -1,6 +1,7 @@
 package ru.rfsnab.productservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,8 +17,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import ru.rfsnab.productservice.dto.ProductRequest;
 import ru.rfsnab.productservice.model.Category;
 import ru.rfsnab.productservice.model.Product;
+import ru.rfsnab.productservice.model.ProductStock;
+import ru.rfsnab.productservice.model.Warehouse;
 import ru.rfsnab.productservice.repository.CategoryRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
+import ru.rfsnab.productservice.repository.ProductStockRepository;
+import ru.rfsnab.productservice.repository.WarehouseRepository;
 import ru.rfsnab.productservice.service.CategoryService;
 import ru.rfsnab.productservice.service.StorageService;
 
@@ -44,6 +49,12 @@ class ProductControllerTest {
     private CategoryRepository categoryRepository;
 
     @Autowired
+    private ProductStockRepository productStockRepository;
+
+    @Autowired
+    private WarehouseRepository warehouseRepository;
+
+    @Autowired
     private CategoryService categoryService;
 
     @Autowired
@@ -54,11 +65,17 @@ class ProductControllerTest {
 
     private Category testCategory;
     private Product testProduct;
+    private Warehouse syktyvkar;
 
     @BeforeEach
     void setUp() {
+        productStockRepository.deleteAll();
         productRepository.deleteAll();
         categoryRepository.deleteAll();
+        warehouseRepository.deleteAll();
+
+        syktyvkar = warehouseRepository.save(Warehouse.builder()
+                .code("SYKTYVKAR").name("Основной склад").city("Сыктывкар").pickupAvailable(true).sortOrder(1).build());
 
         testCategory = categoryRepository.save(Category.builder()
                 .name("Огнетушители")
@@ -77,6 +94,16 @@ class ProductControllerTest {
                 .isFeatured(false)
                 .category(testCategory)
                 .build());
+        productStockRepository.save(ProductStock.builder()
+                .product(testProduct).warehouse(syktyvkar).quantity(100).build());
+    }
+
+    // Остатки ссылаются на products/warehouses — убираем, чтобы не ломать deleteAll() в соседних тестах
+    @AfterEach
+    void cleanStocks() {
+        productStockRepository.deleteAll();
+        productRepository.deleteAll();
+        warehouseRepository.deleteAll();
     }
 
     // ==================== GET Endpoints (Public) ====================
@@ -125,6 +152,50 @@ class ProductControllerTest {
                     .andExpect(jsonPath("$.children", hasSize(1)))
                     .andExpect(jsonPath("$.children[0].name", is("Огнетушитель ОП-4 (S)")))
                     .andExpect(jsonPath("$.children[0].isVariantChild", is(true)));
+        }
+
+        @Test
+        @DisplayName("возвращает остатки по складам у товара и его вариантов и Ид 1С склеенного товара")
+        void getProductById_ReturnsStocksAndOneCExternalId() throws Exception {
+            Product child = productRepository.save(Product.builder()
+                    .name("Огнетушитель ОП-4 (S)")
+                    .slug("ognetushitel-op-4-s")
+                    .price(new BigDecimal("1500.00"))
+                    .stockQuantity(10)
+                    .isActive(true)
+                    .isVariantChild(true)
+                    .parentProductId(testProduct.getId())
+                    .category(testCategory)
+                    .build());
+            productStockRepository.save(ProductStock.builder()
+                    .product(child).warehouse(syktyvkar).quantity(10).build());
+            productRepository.save(Product.builder()
+                    .name("Огнетушитель 1С")
+                    .slug("ognetushitel-1c")
+                    .source("INTERNAL")
+                    .externalId("uuid-1c")
+                    .isActive(false)
+                    .mergedIntoProductId(testProduct.getId())
+                    .build());
+
+            mockMvc.perform(get("/api/v1/products/{id}", testProduct.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.stocks[0].city", is("Сыктывкар")))
+                    .andExpect(jsonPath("$.stocks[0].quantity", is(100)))
+                    .andExpect(jsonPath("$.children[0].stocks[0].quantity", is(10)))
+                    .andExpect(jsonPath("$.oneCExternalId", is("uuid-1c")));
+        }
+
+        @Test
+        @DisplayName("/warehouses и /stocks не перехватываются шаблоном /{id}")
+        void warehousesAndStocks_AreNotCapturedByIdPath() throws Exception {
+            mockMvc.perform(get("/api/v1/products/warehouses"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].code", is("SYKTYVKAR")));
+
+            mockMvc.perform(get("/api/v1/products/stocks").param("ids", testProduct.getId().toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$['" + testProduct.getId() + "'][0].quantity", is(100)));
         }
 
         @Test
@@ -511,7 +582,6 @@ class ProductControllerTest {
                     .name("Новый продукт")
                     .description("Описание")
                     .price(new BigDecimal("2000.00"))
-                    .stockQuantity(50)
                     .categoryId(testCategory.getId())
                     .build();
 
@@ -572,6 +642,22 @@ class ProductControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.name", is("Обновлённый огнетушитель")));
+        }
+
+        @Test
+        @WithMockUser(authorities = "ROLE_ADMIN")
+        @DisplayName("обычное редактирование не меняет stockQuantity (остаток правится только по складам)")
+        void updateProduct_DoesNotChangeStockQuantity() throws Exception {
+            ProductRequest request = ProductRequest.builder()
+                    .name("Обновлённый огнетушитель")
+                    .price(new BigDecimal("1800.00"))
+                    .build();
+
+            mockMvc.perform(put("/api/v1/products/{id}", testProduct.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.stockQuantity", is(100)));
         }
     }
 
@@ -658,25 +744,74 @@ class ProductControllerTest {
     // ==================== Stock Management ====================
 
     @Nested
-    @DisplayName("PUT /api/v1/products/{id}/stock")
+    @DisplayName("PUT /api/v1/products/{id}/stocks/{warehouseId}")
     class StockManagementTests {
 
         @Test
         @WithMockUser(authorities = "ROLE_ADMIN")
-        @DisplayName("изменение количества на складе → 200 OK")
-        void changeStock_RoleAdmin_Returns200() throws Exception {
-            mockMvc.perform(put("/api/v1/products/{id}/stock", testProduct.getId())
+        @DisplayName("изменение остатка на складе → 200 OK, сумма пересчитана")
+        void setStock_RoleAdmin_Returns200() throws Exception {
+            mockMvc.perform(put("/api/v1/products/{id}/stocks/{warehouseId}", testProduct.getId(), syktyvkar.getId())
                             .param("quantity", "200"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.stockQuantity", is(200)));
+                    .andExpect(jsonPath("$.stockQuantity", is(200)))
+                    .andExpect(jsonPath("$.stocks[0].quantity", is(200)));
+
+            assertThat(productRepository.findById(testProduct.getId()).orElseThrow().getStockQuantity())
+                    .isEqualTo(200);
+        }
+
+        @Test
+        @WithMockUser(authorities = "ROLE_ADMIN")
+        @DisplayName("отрицательное количество → 400")
+        void setStock_Negative_Returns400() throws Exception {
+            mockMvc.perform(put("/api/v1/products/{id}/stocks/{warehouseId}", testProduct.getId(), syktyvkar.getId())
+                            .param("quantity", "-1"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @WithMockUser(authorities = "ROLE_ADMIN")
+        @DisplayName("несуществующий склад → 404")
+        void setStock_UnknownWarehouse_Returns404() throws Exception {
+            mockMvc.perform(put("/api/v1/products/{id}/stocks/{warehouseId}", testProduct.getId(), 9999L)
+                            .param("quantity", "5"))
+                    .andExpect(status().isNotFound());
         }
 
         @Test
         @DisplayName("без авторизации → 401 Unauthorized")
-        void changeStock_NoAuth_Returns401() throws Exception {
-            mockMvc.perform(put("/api/v1/products/{id}/stock", testProduct.getId())
+        void setStock_NoAuth_Returns401() throws Exception {
+            mockMvc.perform(put("/api/v1/products/{id}/stocks/{warehouseId}", testProduct.getId(), syktyvkar.getId())
                             .param("quantity", "200"))
                     .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/products/admin — статус склейки")
+    class AdminListMergeTests {
+
+        @Test
+        @WithMockUser(authorities = "ROLE_ADMIN")
+        @DisplayName("главный товар получает mergedProductId, склеенный 1С — mergedIntoProductId")
+        void adminList_ShowsMergeLinksBothWays() throws Exception {
+            Product ftk = productRepository.save(Product.builder()
+                    .name("Перчатки Факел").slug("perchatki-ftk").price(new BigDecimal("100.00"))
+                    .source("FTK").externalId("FTK-5004").sku("5004").isActive(true).category(testCategory).build());
+            Product oneC = productRepository.save(Product.builder()
+                    .name("Перчатки 1С").slug("perchatki-1c").price(new BigDecimal("90.00"))
+                    .source("INTERNAL").externalId("uuid-1c").sku("5004").isActive(false)
+                    .mergedIntoProductId(ftk.getId()).category(testCategory).build());
+
+            mockMvc.perform(get("/api/v1/products/admin").param("size", "50"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[?(@.id == " + ftk.getId() + ")].mergedProductId",
+                            contains(oneC.getId().intValue())))
+                    .andExpect(jsonPath("$.content[?(@.id == " + oneC.getId() + ")].mergedIntoProductId",
+                            contains(ftk.getId().intValue())))
+                    .andExpect(jsonPath("$.content[?(@.id == " + testProduct.getId() + ")].mergedProductId",
+                            contains(nullValue())));
         }
     }
 }

@@ -65,7 +65,7 @@ class EmailServiceShipmentTest {
                 new BigDecimal("100.00"), "customer@example.com", "Иван", "+79001234567",
                 LocalDateTime.now(), List.of(), "CARRIER_TERMINAL", "CARD", null, null, "B2C",
                 null, null, null, null, null, carrier, terminal, terminal == null ? null : "ул. Складская, 5",
-                shipments);
+                null, shipments);
     }
 
     private String renderStatus(OrderEvent event) {

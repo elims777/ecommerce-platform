@@ -105,6 +105,7 @@ public class EmailService {
         model.put("carrierName", event.carrierName());
         model.put("terminalName", event.terminalName());
         model.put("terminalAddress", event.terminalAddress());
+        model.put("shippingWarehouseCity", event.shippingWarehouseCity());
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
         model.put("trackUrl", frontendUrl + "/orders");
@@ -135,6 +136,7 @@ public class EmailService {
         model.put("carrierName", event.carrierName());
         model.put("terminalName", event.terminalName());
         model.put("terminalAddress", event.terminalAddress());
+        model.put("shippingWarehouseCity", event.shippingWarehouseCity());
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
         model.put("adminUrl", frontendUrl + "/admin/orders");
@@ -534,7 +536,7 @@ public class EmailService {
         return switch (deliveryMethod) {
             case "PICKUP" -> "Самовывоз";
             case "SUPPLIER_DELIVERY" -> "Доставка поставщиком";
-            case "CARRIER_ADDRESS" -> "Доставка до адреса (ТК)";
+            case "CARRIER_ADDRESS" -> "Доставка ТК до двери";
             case "CARRIER_TERMINAL" -> "Доставка до терминала (ТК)";
             default -> deliveryMethod;
         };

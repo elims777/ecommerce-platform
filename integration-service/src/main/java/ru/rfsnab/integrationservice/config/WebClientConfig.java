@@ -44,10 +44,12 @@ public class WebClientConfig {
     }
 
     @Bean
-    public RestTemplate productServiceRestTemplate(@Value("${internal.secret}") String internalSecret) {
+    public RestTemplate productServiceRestTemplate(
+            @Value("${internal.secret}") String internalSecret,
+            @Value("${integration.product-service.read-timeout-ms:60000}") int readTimeoutMs) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5000);
-        factory.setReadTimeout(10000);
+        factory.setReadTimeout(readTimeoutMs);
 
         RestTemplate template = new RestTemplate(factory);
         template.getInterceptors().add((request, body, execution) -> {

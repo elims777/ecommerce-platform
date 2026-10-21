@@ -413,8 +413,8 @@ public class CatalogImportService {
      * Отправляет один chunk в product-service через WebClient.
      * block() внутри virtual thread — ок: не блокирует platform thread.
      */
-    private BatchImportResponse sendChunk(List<ProductImportItemDto> chunk) {
-        BatchImportRequest request = new BatchImportRequest(chunk);
+    BatchImportResponse sendChunk(List<ProductImportItemDto> chunk) {
+        BatchImportRequest request = new BatchImportRequest(chunk, properties.getCommerceml().getWarehouseCode());
         String url = properties.getProductService().getUrl() + BATCH_IMPORT_URI;
         try {
             ResponseEntity<BatchImportResponse> response = productServiceRestTemplate.postForEntity(

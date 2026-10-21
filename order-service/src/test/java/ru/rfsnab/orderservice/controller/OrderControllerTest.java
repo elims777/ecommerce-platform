@@ -104,6 +104,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     {
                         "paymentMethod": "CARD",
                         "deliveryMethod": "SUPPLIER_DELIVERY",
+                        "shippingWarehouseId": 1,
                         "deliveryAddress": {
                             "city": "Сыктывкар",
                             "street": "Октябрьский проспект",
@@ -140,6 +141,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     {
                         "paymentMethod": "CASH_ON_DELIVERY",
                         "deliveryMethod": "PICKUP",
+                        "shippingWarehouseId": 1,
                         "warehousePointId": 1
                     }
                     """;
@@ -271,6 +273,7 @@ class OrderControllerTest extends BaseIntegrationTest {
                     {
                         "paymentMethod": "SBP",
                         "deliveryMethod": "SUPPLIER_DELIVERY",
+                        "shippingWarehouseId": 1,
                         "deliveryAddress": {
                             "city": "Сыктывкар",
                             "street": "Октябрьский проспект",

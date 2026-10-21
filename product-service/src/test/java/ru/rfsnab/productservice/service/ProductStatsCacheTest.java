@@ -73,6 +73,9 @@ class ProductStatsCacheTest {
     @MockBean
     private ProductAttributeRepository attributeRepository;
 
+    @MockBean
+    private ProductStockService productStockService;
+
     @BeforeEach
     void setUp() {
         cacheManager.getCache(CacheConfig.PRODUCT_STATS_CACHE).clear();

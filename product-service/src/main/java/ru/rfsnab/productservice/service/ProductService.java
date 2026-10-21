@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.productservice.configuration.CacheConfig;
 import ru.rfsnab.productservice.dto.FacetDto;
+import ru.rfsnab.productservice.dto.ProductResponse;
+import ru.rfsnab.productservice.dto.ProductStockResponse;
 import ru.rfsnab.productservice.dto.ProductStatsResponse;
 import ru.rfsnab.productservice.exception.BusinessException;
 import ru.rfsnab.productservice.exception.CategoryNotFoundException;
@@ -42,6 +44,7 @@ public class ProductService {
     private final CategoryService categoryService;
     private final SlugGeneratorService slugGenerator;
     private final ProductAttributeRepository attributeRepository;
+    private final ProductStockService stockService;
 
     /***
      * Подсчет товаров в категории
@@ -119,10 +122,12 @@ public class ProductService {
         existing.setMaterial(updatedProduct.getMaterial());
         existing.setPrice(updatedProduct.getPrice());
         existing.setWholesalePrice(updatedProduct.getWholesalePrice());
-        existing.setStockQuantity(updatedProduct.getStockQuantity());
         existing.setSku(updatedProduct.getSku());
         existing.setUnitOfMeasure(updatedProduct.getUnitOfMeasure());
         existing.setVatRate(updatedProduct.getVatRate());
+        if (Boolean.TRUE.equals(updatedProduct.getIsActive()) && !Boolean.TRUE.equals(existing.getIsActive())) {
+            requireNotMerged(existing);
+        }
         existing.setIsActive(updatedProduct.getIsActive());
         existing.setIsFeatured(updatedProduct.getIsFeatured());
         existing.setIsSale(Boolean.TRUE.equals(updatedProduct.getIsSale()));
@@ -167,6 +172,36 @@ public class ProductService {
     public Product getProductById(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException(id));
+    }
+
+    /** Остатки по складам и Ид 1С для товара и его вариантов — два запроса на всю семью. */
+    @Transactional(readOnly = true)
+    public void fillStocks(ProductResponse response) {
+        List<ProductResponse> all = new ArrayList<>();
+        all.add(response);
+        all.addAll(response.getChildren());
+        List<Long> ids = all.stream().map(ProductResponse::getId).toList();
+        Map<Long, List<ProductStockResponse>> stocks = stockService.getStocks(ids);
+        Map<Long, String> oneCIds = productRepository.findByMergedIntoProductIdInOrderByIdAsc(ids).stream()
+                .collect(Collectors.toMap(Product::getMergedIntoProductId, Product::getExternalId, (a, b) -> a));
+        all.forEach(r -> {
+            r.setStocks(stocks.getOrDefault(r.getId(), List.of()));
+            r.setOneCExternalId(oneCIds.get(r.getId()));
+        });
+    }
+
+    /** Список админки: id склеенного товара 1С у главных товаров и вариантов — один запрос на страницу. */
+    @Transactional(readOnly = true)
+    public void fillMergedProductIds(List<ProductResponse> responses) {
+        List<ProductResponse> all = new ArrayList<>(responses);
+        responses.forEach(r -> all.addAll(r.getChildren()));
+        if (all.isEmpty()) {
+            return;
+        }
+        Map<Long, Long> mergedIds = productRepository
+                .findByMergedIntoProductIdInOrderByIdAsc(all.stream().map(ProductResponse::getId).toList()).stream()
+                .collect(Collectors.toMap(Product::getMergedIntoProductId, Product::getId, (a, b) -> a));
+        all.forEach(r -> r.setMergedProductId(mergedIds.get(r.getId())));
     }
 
     /**
@@ -280,8 +315,11 @@ public class ProductService {
      * иначе неактивный вариант под активным родителем не виден ни под одним фильтром.
      * Следствие: семья со смешанной активностью попадает в обе выдачи.
      */
-    public Page<Product> getAllProductsAdminPage(Long categoryId, Boolean isActive, Pageable pageable) {
+    public Page<Product> getAllProductsAdminPage(Long categoryId, Boolean isActive, Boolean unmatched, Pageable pageable) {
         pageable = withIdTiebreaker(pageable);
+        if (Boolean.TRUE.equals(unmatched)) {
+            return productRepository.findUnmatchedOneC(pageable);
+        }
         if (categoryId != null) {
             if (!categoryRepository.existsById(categoryId)) {
                 throw new CategoryNotFoundException(categoryId);
@@ -485,11 +523,20 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
 
+        requireNotMerged(product);
         product.setIsActive(true);
         Product saved = productRepository.save(product);
 
         log.info("Product activated id={}", productId);
         return saved;
+    }
+
+    /** Склеенный товар 1С скрыт намеренно — включить его можно только после отвязки. */
+    private void requireNotMerged(Product product) {
+        if (product.getMergedIntoProductId() != null) {
+            throw new BusinessException("Товар склеен с товаром id=" + product.getMergedIntoProductId()
+                    + " — сначала отвяжите");
+        }
     }
 
     /**
@@ -673,6 +720,10 @@ public class ProductService {
     public void batchUpdateActive(List<Long> productIds, Boolean isActive) {
         log.info("Массовое обновление isActive={} для {} товаров", isActive, productIds.size());
         List<Product> products = productRepository.findAllById(productIds);
+        // Склеенные товары 1С при массовом включении пропускаем, не роняя всю пачку
+        if (Boolean.TRUE.equals(isActive)) {
+            products = products.stream().filter(p -> p.getMergedIntoProductId() == null).toList();
+        }
         products.forEach(p -> p.setIsActive(isActive));
         productRepository.saveAll(products);
     }

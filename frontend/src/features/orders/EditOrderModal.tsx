@@ -4,6 +4,9 @@ import { DeleteOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { updateOrder } from '@/api/orders';
 import { getWarehousePoints } from '@/api/warehouse';
+import { getWarehouses } from '@/api/warehouses';
+import { getPaymentSettings } from '@/api/paymentSettings';
+import ShippingWarehouseField from '@/features/checkout/ShippingWarehouseField';
 import { CLIENT_DELIVERY_METHODS, DeliveryMethod, DeliveryMethodLabels, PaymentMethod, PaymentMethodLabels } from '@/types/order';
 import CarrierPicker from '@/features/checkout/CarrierPicker';
 import PointsPicker from '@/features/checkout/PointsPicker';
@@ -25,6 +28,7 @@ interface EditOrderModalProps {
 }
 
 interface EditOrderFormValues {
+    shippingWarehouseId: number;
     paymentMethod: PaymentMethod;
     deliveryMethod: DeliveryMethod;
     warehousePointId?: number;
@@ -49,9 +53,29 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
 
     const deliveryMethod = Form.useWatch('deliveryMethod', form);
 
+    // Как в оформлении: юрлицо — только счёт, физлицо — счёт и включённые в настройках онлайн-способы
+    const { data: paymentSettings } = useQuery({
+        queryKey: ['paymentSettings'],
+        queryFn: getPaymentSettings,
+        staleTime: 5 * 60 * 1000,
+    });
+    const isB2C = extractEnumCode(order.customerType) !== 'B2B';
+    const paymentMethods = [
+        PaymentMethod.INVOICE,
+        ...(isB2C && paymentSettings?.cardEnabled ? [PaymentMethod.CARD] : []),
+        ...(isB2C && paymentSettings?.sbpEnabled ? [PaymentMethod.SBP] : []),
+    ];
+
     const { data: warehousePoints = [] } = useQuery({
         queryKey: ['warehousePoints'],
         queryFn: getWarehousePoints,
+        staleTime: 5 * 60 * 1000,
+    });
+
+    const shippingWarehouseId = Form.useWatch('shippingWarehouseId', form);
+    const { data: warehouses = [] } = useQuery({
+        queryKey: ['warehouses'],
+        queryFn: getWarehouses,
         staleTime: 5 * 60 * 1000,
     });
 
@@ -69,6 +93,7 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
         form.setFieldsValue({
             paymentMethod: extractEnumCode(order.paymentMethod) as PaymentMethod,
             deliveryMethod: extractEnumCode(order.deliveryMethod) as DeliveryMethod,
+            shippingWarehouseId: order.shippingWarehouseId ?? undefined,
             warehousePointId: order.warehousePoint?.id,
             carrierCode: order.carrierCode ?? undefined,
             carrierTerminalId: order.carrierTerminalId ?? undefined,
@@ -89,6 +114,7 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
         mutationFn: (values: EditOrderFormValues) => updateOrder(order.id, {
             paymentMethod: values.paymentMethod,
             deliveryMethod: values.deliveryMethod,
+            shippingWarehouseId: values.shippingWarehouseId,
             warehousePointId: values.deliveryMethod === DeliveryMethod.PICKUP ? values.warehousePointId : undefined,
             carrierCode: (values.deliveryMethod === DeliveryMethod.CARRIER_ADDRESS
                 || values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL) ? values.carrierCode : undefined,
@@ -141,6 +167,7 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
     const methods = orderMethod === DeliveryMethod.SUPPLIER_DELIVERY
         ? [...CLIENT_DELIVERY_METHODS, DeliveryMethod.SUPPLIER_DELIVERY]
         : CLIENT_DELIVERY_METHODS;
+    const pickupAvailable = warehouses.find((w) => w.id === shippingWarehouseId)?.pickupAvailable !== false;
     const needsAddress = deliveryMethod === DeliveryMethod.CARRIER_ADDRESS
         || deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY;
 
@@ -158,15 +185,17 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
                 onFinish={handleSubmit}
             >
                 <Form.Item name="paymentMethod" label="Способ оплаты" rules={[{ required: true }]}>
-                    <Select options={Object.entries(PaymentMethodLabels).map(([value, label]) => ({ value, label }))} />
+                    <Select options={paymentMethods.map((value) => ({ value, label: PaymentMethodLabels[value] }))} />
                 </Form.Item>
+
+                <ShippingWarehouseField warehouses={warehouses} />
 
                 <Form.Item name="deliveryMethod" label="Способ доставки" rules={[{ required: true }]}>
                     <Radio.Group
                         style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
                         onChange={() => form.setFieldsValue({ carrierCode: undefined, carrierTerminalId: undefined })}
                     >
-                        {methods.map((method) => (
+                        {methods.filter((m) => m !== DeliveryMethod.PICKUP || pickupAvailable).map((method) => (
                             <Radio.Button key={method} value={method}>{DeliveryMethodLabels[method]}</Radio.Button>
                         ))}
                     </Radio.Group>

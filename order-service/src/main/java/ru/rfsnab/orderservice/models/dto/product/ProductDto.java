@@ -18,7 +18,9 @@ public record ProductDto(
         String unitOfMeasure,
         String categoryExternalId,
         Long parentProductId,
-        List<Attribute> attributes
+        List<Attribute> attributes,
+        /** Ид номенклатуры 1С для склеенного товара; null, если склейки нет. */
+        String oneCExternalId
 ) {
     public record Attribute(String attributeName, String attributeValue) {}
 }

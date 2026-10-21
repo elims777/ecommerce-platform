@@ -15,6 +15,7 @@ import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentLinkResponse;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
+import ru.rfsnab.orderservice.models.dto.product.WarehouseDto;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.PaymentMethodSettings;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
@@ -25,6 +26,7 @@ import ru.rfsnab.orderservice.repository.PaymentMethodSettingsRepository;
 import ru.rfsnab.orderservice.service.client.PaymentServiceClient;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -52,7 +54,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
 
     private static final ProductDto PRODUCT = new ProductDto(
             PRODUCT_ID, "Болт М8", new BigDecimal("50.00"),
-            new BigDecimal("40.00"), 500, true, "ext-005", null, null, null, null, null);
+            new BigDecimal("40.00"), 500, true, "ext-005", null, null, null, null, null, null);
 
     @BeforeEach
     void setUp() {
@@ -71,6 +73,8 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
 
         when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(PRODUCT_ID, PRODUCT));
         when(productServiceClient.getProduct(PRODUCT_ID)).thenReturn(PRODUCT);
+        when(productServiceClient.getActiveWarehouses())
+                .thenReturn(List.of(new WarehouseDto(1L, "PUSHKIN", "Склад Пушкин", "Пушкин", true)));
     }
 
     // ============================================================
@@ -347,7 +351,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
                 null, null, null, null,
                 "B2B".equals(clientType) ? "ООО Тест" : null,
                 "B2B".equals(clientType) ? "1234567890" : null,
-                null, null, CarrierCode.DELLIN);
+                null, null, CarrierCode.DELLIN, 1L);
         return orderService.createOrder(USER_ID, USER_EMAIL, clientType, request);
     }
 

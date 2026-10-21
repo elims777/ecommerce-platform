@@ -7,6 +7,8 @@ interface GetProductsParams {
     sort?: string;
     categoryId?: number;
     isActive?: boolean;
+    /** Только несклеенные товары 1С (админка) */
+    unmatched?: boolean;
     attr?: string[];
     q?: string;
 }
@@ -86,8 +88,9 @@ export const getAvailableProductsCount = async (): Promise<number> => {
 
 /** Получить все товары включая неактивные (для админки) */
 export const getAdminProducts = async (params: GetProductsParams = {}): Promise<Page<Product>> => {
-    const { page = 0, size = 20, sort = 'name,asc', categoryId, isActive } = params;
+    const { page = 0, size = 20, sort = 'name,asc', categoryId, isActive, unmatched } = params;
     const queryParams: Record<string, unknown> = { page, size, sort };
+    if (unmatched) queryParams.unmatched = true;
     if (categoryId !== undefined) queryParams.categoryId = categoryId;
     if (isActive !== undefined) queryParams.isActive = isActive;
     const { data } = await apiClient.get<Page<Product>>('/v1/products/admin', {

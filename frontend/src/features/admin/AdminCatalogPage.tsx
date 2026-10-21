@@ -239,6 +239,7 @@ const AdminCatalogPage = () => {
     const [showAllProducts, setShowAllProducts] = useState(!selectedCategoryId);
     const [draggingProductId, setDraggingProductId] = useState<number | null>(null);
     const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all');
+    const [unmatchedOnly, setUnmatchedOnly] = useState(false);
 
     const sortOrder = selectedCategoryId ? 'displayOrder,asc' : 'name,asc';
     const dndEnabled = !!selectedCategoryId && !searchQuery;
@@ -310,7 +311,7 @@ const AdminCatalogPage = () => {
         isLoading: productsLoading,
         refetch: refetchProducts,
     } = useQuery({
-        queryKey: ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder, isActive: isActiveParam }],
+        queryKey: ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder, isActive: isActiveParam, unmatched: unmatchedOnly }],
         queryFn: () =>
             getAdminProducts({
                 page: currentPage - 1,
@@ -318,6 +319,7 @@ const AdminCatalogPage = () => {
                 categoryId: selectedCategoryId,
                 sort: sortOrder,
                 isActive: isActiveParam,
+                unmatched: unmatchedOnly,
             }),
     });
 
@@ -503,7 +505,7 @@ const AdminCatalogPage = () => {
 
         // Оптимистичное обновление кэша — дети остаются внутри каждого родителя (spread ...p)
         queryClient.setQueryData<{ content: Product[]; totalElements: number }>(
-            ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder, isActive: isActiveParam }],
+            ['adminCatalogProducts', { page: currentPage, category: selectedCategoryId, size: pageSize, sort: sortOrder, isActive: isActiveParam, unmatched: unmatchedOnly }],
             (old) => {
                 if (!old) return old;
                 const newContent = reordered.map((p, i) => ({ ...p, displayOrder: i * 10 }));
@@ -1174,6 +1176,19 @@ const AdminCatalogPage = () => {
                                     </button>
                                 ))}
                             </div>
+                            <button
+                                onClick={() => { setUnmatchedOnly((v) => !v); setCurrentPage(1); setSelectedRowKeys([]); }}
+                                title="Товары 1С, не склеенные с товаром Факела"
+                                style={{
+                                    height: 26, padding: '0 10px', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-body)',
+                                    border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', cursor: 'pointer',
+                                    background: unmatchedOnly ? 'var(--brand-navy)' : 'var(--surface)',
+                                    color: unmatchedOnly ? '#fff' : 'var(--ink-2)',
+                                    fontWeight: unmatchedOnly ? 600 : 400,
+                                }}
+                            >
+                                Не сопоставлен
+                            </button>
                             {isPaginated && (activePage?.totalElements ?? 0) > 0 && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <select
@@ -1395,6 +1410,14 @@ const AdminCatalogPage = () => {
                                                                 <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 'var(--r-2)', background: 'var(--surface-3)', color: 'var(--ink-3)', flexShrink: 0 }}>
                                                                     вариант
                                                                 </span>
+                                                            )}
+                                                            {(product.mergedIntoProductId ?? product.mergedProductId) != null && (
+                                                                <Link
+                                                                    to={`/admin/products/${product.mergedIntoProductId ?? product.mergedProductId}/edit`}
+                                                                    style={{ fontSize: 10, padding: '1px 6px', borderRadius: 'var(--r-2)', background: 'var(--surface-3)', color: 'var(--brand-navy)', textDecoration: 'none', flexShrink: 0 }}
+                                                                >
+                                                                    Склеен → #{product.mergedIntoProductId ?? product.mergedProductId}
+                                                                </Link>
                                                             )}
                                                             {!product.isActive && (
                                                                 <span className="rf-badge rf-badge-neutral" style={{ fontSize: 10, height: 18 }}>

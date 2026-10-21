@@ -411,7 +411,7 @@ public class FtkImportService {
             try {
                 String url = properties.getProductService().getUrl() + BATCH_IMPORT_URI;
                 ResponseEntity<BatchImportResponse> resp = productServiceRestTemplate.postForEntity(
-                        url, new BatchImportRequest(chunk), BatchImportResponse.class);
+                        url, new BatchImportRequest(chunk, properties.getFtk().getWarehouseCode()), BatchImportResponse.class);
                 BatchImportResponse body = resp.getBody();
                 if (body != null) {
                     created += body.getCreated();

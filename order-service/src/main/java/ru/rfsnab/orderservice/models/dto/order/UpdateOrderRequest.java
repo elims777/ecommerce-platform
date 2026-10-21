@@ -38,6 +38,9 @@ public record UpdateOrderRequest(
 
         Long carrierTerminalId,
 
+        @NotNull(message = "Выберите город отгрузки")
+        Long shippingWarehouseId,
+
         @NotEmpty(message = "Список товаров обязателен")
         @Valid
         List<OrderItemDto> items,

@@ -18,4 +18,7 @@ import java.util.List;
 public class BatchImportRequest {
 
     private List<ProductImportItemDto> items;
+
+    /** Код склада, на который импортируются остатки (SYKTYVKAR / PUSHKIN) */
+    private String warehouseCode;
 }
