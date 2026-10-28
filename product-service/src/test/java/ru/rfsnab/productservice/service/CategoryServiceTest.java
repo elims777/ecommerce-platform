@@ -93,7 +93,7 @@ class CategoryServiceTest {
             assertThat(result.getId()).isEqualTo(3L);
             assertThat(result.getSlug()).isEqualTo("novaya-kategoriya");
             assertThat(result.getIsActive()).isTrue(); // default
-            assertThat(result.getDisplayOrder()).isEqualTo(0); // default
+            assertThat(result.getDisplayOrder()).isZero(); // default
         }
 
         @Test

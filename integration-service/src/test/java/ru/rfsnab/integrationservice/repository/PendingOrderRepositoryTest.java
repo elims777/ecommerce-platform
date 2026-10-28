@@ -45,8 +45,8 @@ class PendingOrderRepositoryTest extends BaseIntegrationTest {
 
         List<PendingOrder> result = pendingOrderRepository.findByExportedFalseOrderByCreatedAtAsc();
 
-        assertThat(result).hasSize(2);
-        assertThat(result).allMatch(o -> !o.isExported());
+        assertThat(result).hasSize(2)
+                .allMatch(o -> !o.isExported());
     }
 
     @Test

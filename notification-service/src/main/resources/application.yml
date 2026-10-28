@@ -1,6 +1,9 @@
 server:
   port: 8082
 
+internal:
+  secret: ${INTERNAL_SECRET}
+
 spring:
   application:
     name: notification-service

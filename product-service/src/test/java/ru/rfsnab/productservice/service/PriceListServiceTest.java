@@ -91,7 +91,7 @@ class PriceListServiceTest {
 
         @Test
         @DisplayName("успешно создаёт запрос и отправляет Kafka-событие")
-        void create_ValidRequest_Success() throws Exception {
+        void create_ValidRequest_Success() {
             when(categoryService.existsById(1L)).thenReturn(true);
             when(priceListRequestRepository.existsByUserIdAndStatus(10L, PriceListStatus.PENDING)).thenReturn(false);
             when(priceListRequestRepository.saveAndFlush(any(PriceListRequest.class))).thenAnswer(inv -> {
@@ -152,7 +152,7 @@ class PriceListServiceTest {
 
         @Test
         @DisplayName("при таймауте отправки в Kafka удаляет запись и выбрасывает 503")
-        void create_KafkaTimeout_DeletesRequestAndThrows503() throws Exception {
+        void create_KafkaTimeout_DeletesRequestAndThrows503() {
             when(categoryService.existsById(1L)).thenReturn(true);
             when(priceListRequestRepository.existsByUserIdAndStatus(10L, PriceListStatus.PENDING)).thenReturn(false);
             when(priceListRequestRepository.saveAndFlush(any(PriceListRequest.class))).thenAnswer(inv -> {

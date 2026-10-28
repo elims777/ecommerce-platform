@@ -1,19 +1,24 @@
 package ru.rfsnab.userservice.exceptions;
 
 import io.jsonwebtoken.JwtException;
-import ru.rfsnab.userservice.exceptions.LegalEntityAlreadyExistsException;
-import ru.rfsnab.userservice.exceptions.LegalEntityNotFoundException;
-import ru.rfsnab.userservice.exceptions.LegalEntityNotVerifiedException;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import ru.rfsnab.userservice.models.dto.ErrorResponse;
 
 import java.time.LocalDateTime;
@@ -21,8 +26,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final String CONFLICT = "Conflict";
+    private static final String FORBIDDEN = "Forbidden";
+    private static final String NOT_FOUND = "Not found";
+
     /**
      * Обработка ошибок валидации (@Valid)
      */
@@ -76,7 +87,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.NOT_FOUND.value())
-                .error("Not found")
+                .error(NOT_FOUND)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -91,7 +102,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.FORBIDDEN.value())
-                .error("Forbidden")
+                .error(FORBIDDEN)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -108,7 +119,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.FORBIDDEN.value())
-                .error("Forbidden")
+                .error(FORBIDDEN)
                 .message("Недостаточно прав для выполнения операции")
                 .path(request.getRequestURI())
                 .build();
@@ -142,6 +153,7 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request) {
 
+        log.error("Необработанная ошибка на {}", request.getRequestURI(), ex);
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
@@ -164,7 +176,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
+                .error(CONFLICT)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -183,12 +195,80 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.NOT_FOUND.value())
-                .error("Not found")
+                .error(NOT_FOUND)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(
+            NoResourceFoundException ex,
+            HttpServletRequest request) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error(NOT_FOUND)
+                .message("Ресурс не найден")
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * Параметр пути/запроса не приводится к нужному типу (например, нечисловой id)
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request) {
+        log.warn("Некорректный параметр на {}", request.getRequestURI());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Invalid Parameter")
+                .message("Некорректное значение параметра " + ex.getName())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * Не передан обязательный параметр запроса
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingParameter(
+            MissingServletRequestParameterException ex,
+            HttpServletRequest request) {
+        log.warn("Отсутствует параметр на {}: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Invalid Parameter")
+                .message("Отсутствует обязательный параметр " + ex.getParameterName())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * Нечитаемое тело запроса (битый JSON, неверный тип поля)
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleNotReadable(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request) {
+        log.warn("Некорректное тело запроса на {}", request.getRequestURI());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Malformed Request")
+                .message("Некорректное тело запроса")
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 
     @ExceptionHandler(UserNotFoundException.class)
@@ -198,7 +278,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.NOT_FOUND.value())
-                .error("Not found")
+                .error(NOT_FOUND)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -212,7 +292,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.NOT_FOUND.value())
-                .error("Not found")
+                .error(NOT_FOUND)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -226,7 +306,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
+                .error(CONFLICT)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -240,7 +320,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.FORBIDDEN.value())
-                .error("Forbidden")
+                .error(FORBIDDEN)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -254,7 +334,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
+                .error(CONFLICT)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -268,7 +348,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
+                .error(CONFLICT)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -296,7 +376,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
+                .error(CONFLICT)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
@@ -328,11 +408,70 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error("Conflict")
+                .error(CONFLICT)
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    @ExceptionHandler(InvalidUnsubscribeTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidUnsubscribeToken(
+            InvalidUnsubscribeTokenException ex,
+            HttpServletRequest request) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Invalid Token")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex,
+            HttpServletRequest request) {
+        log.warn("Метод не поддерживается на {}: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.METHOD_NOT_ALLOWED.value())
+                .error("Method Not Allowed")
+                .message("Метод " + ex.getMethod() + " не поддерживается")
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(errorResponse);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException ex,
+            HttpServletRequest request) {
+        log.warn("Тип содержимого не поддерживается на {}: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE.value())
+                .error("Unsupported Media Type")
+                .message("Тип содержимого не поддерживается")
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(errorResponse);
+    }
+
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ErrorResponse> handleMissingHeader(
+            MissingRequestHeaderException ex,
+            HttpServletRequest request) {
+        log.warn("Отсутствует заголовок на {}: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Invalid Header")
+                .message("Отсутствует обязательный заголовок " + ex.getHeaderName())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 }

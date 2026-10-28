@@ -191,8 +191,16 @@ public class FtkFtpClient {
 
     private void disconnect(FTPClient ftp) {
         if (ftp.isConnected()) {
-            try { ftp.logout(); } catch (Exception ignored) {}
-            try { ftp.disconnect(); } catch (Exception ignored) {}
+            try {
+                ftp.logout();
+            } catch (Exception e) {
+                log.debug("FTP logout: {}", e.getMessage());
+            }
+            try {
+                ftp.disconnect();
+            } catch (Exception e) {
+                log.debug("FTP disconnect: {}", e.getMessage());
+            }
         }
     }
 
@@ -213,11 +221,27 @@ public class FtkFtpClient {
 
         @Override
         public void close() {
-            try { stream.close(); } catch (Exception ignored) {}
-            try { ftp.completePendingCommand(); } catch (Exception ignored) {}
+            try {
+                stream.close();
+            } catch (Exception e) {
+                log.debug("FTP stream close: {}", e.getMessage());
+            }
+            try {
+                ftp.completePendingCommand();
+            } catch (Exception e) {
+                log.debug("FTP completePendingCommand: {}", e.getMessage());
+            }
             if (ftp.isConnected()) {
-                try { ftp.logout(); } catch (Exception ignored) {}
-                try { ftp.disconnect(); } catch (Exception ignored) {}
+                try {
+                    ftp.logout();
+                } catch (Exception e) {
+                    log.debug("FTP logout: {}", e.getMessage());
+                }
+                try {
+                    ftp.disconnect();
+                } catch (Exception e) {
+                    log.debug("FTP disconnect: {}", e.getMessage());
+                }
             }
         }
     }

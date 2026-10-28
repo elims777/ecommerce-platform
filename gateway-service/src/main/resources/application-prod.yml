@@ -86,7 +86,7 @@ spring:
             - id: auth-pages
               uri: http://auth-service:9000
               predicates:
-                - Path=/auth/**,/profile,/
+                - Path=/auth/**
               filters:
                 - name: RequestRateLimiter
                   args:
@@ -319,7 +319,7 @@ spring:
               predicates:
                 - Path=/api/v1/admin/integration/logs
               filters:
-                - RewritePath=/api/v1/admin/integration/logs, /1c-exchange/logs
+                - RewritePath=/api/v1/admin/integration/logs, /api/v1/integration/logs
 
             - id: integration-1c
               uri: http://integration-service:8085

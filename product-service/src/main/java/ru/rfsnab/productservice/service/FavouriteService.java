@@ -23,10 +23,10 @@ public class FavouriteService {
     private final ProductRepository productRepository;
 
     public List<Product> getFavouriteProducts(String userEmail) {
-        log.debug("Получение избранного для пользователя: {}", userEmail);
+        log.debug("Получение избранного");
         return favouriteRepository.findByUserEmail(userEmail).stream()
                 .map(UserFavourite::getProduct)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public Set<Long> getFavouriteIds(String userEmail) {
@@ -38,7 +38,7 @@ public class FavouriteService {
     @Transactional
     public void addFavourite(String userEmail, Long productId) {
         if (favouriteRepository.existsByUserEmailAndProductId(userEmail, productId)) {
-            log.debug("Товар {} уже в избранном у {}", productId, userEmail);
+            log.debug("Товар {} уже в избранном", productId);
             return;
         }
         Product product = productRepository.findById(productId)
@@ -49,13 +49,13 @@ public class FavouriteService {
                 .product(product)
                 .build();
         favouriteRepository.save(favourite);
-        log.info("Товар {} добавлен в избранное пользователя {}", productId, userEmail);
+        log.info("Товар {} добавлен в избранное", productId);
     }
 
     @Transactional
     public void removeFavourite(String userEmail, Long productId) {
         favouriteRepository.deleteByUserEmailAndProductId(userEmail, productId);
-        log.info("Товар {} удалён из избранного пользователя {}", productId, userEmail);
+        log.info("Товар {} удалён из избранного", productId);
     }
 
     public boolean isFavourite(String userEmail, Long productId) {

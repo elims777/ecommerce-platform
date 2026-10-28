@@ -14,6 +14,7 @@ import ru.rfsnab.orderservice.exception.ProductNotFoundException;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.entity.Cart;
 import ru.rfsnab.orderservice.models.entity.CartItem;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.service.CartService;
 import ru.rfsnab.orderservice.service.OrderService;
 import ru.rfsnab.orderservice.service.WarehousePointService;
@@ -55,6 +56,15 @@ class CartControllerTest extends BaseIntegrationTest {
     private static final Long USER_ID = 100L;
     private static final Long PRODUCT_ID = 1L;
 
+    @Test
+    @DisplayName("405 — неподдерживаемый HTTP-метод")
+    void shouldReturn405ForUnsupportedMethod() throws Exception {
+        mockMvc.perform(patch("/api/v1/cart")
+                        .with(csrf())
+                        .with(user("100")))
+                .andExpect(status().isMethodNotAllowed());
+    }
+
     // ==================== GET /api/v1/cart ====================
 
     @Nested
@@ -68,7 +78,7 @@ class CartControllerTest extends BaseIntegrationTest {
             Map<Long, ProductDto> products = Map.of(
                     PRODUCT_ID, buildProduct(PRODUCT_ID, "Доска обрезная", "1500.00"));
 
-            when(cartService.getCart(USER_ID)).thenReturn(cart);
+            when(cartService.getCart(USER_ID, CustomerType.B2C)).thenReturn(cart);
             when(cartService.fetchProductsForCart(cart)).thenReturn(products);
 
             mockMvc.perform(get("/api/v1/cart")
@@ -89,7 +99,7 @@ class CartControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — пустая корзина")
         void shouldReturnEmptyCart() throws Exception {
             Cart cart = emptyCart();
-            when(cartService.getCart(USER_ID)).thenReturn(cart);
+            when(cartService.getCart(USER_ID, CustomerType.B2C)).thenReturn(cart);
 
             mockMvc.perform(get("/api/v1/cart")
                             .with(user("100")))
@@ -121,7 +131,7 @@ class CartControllerTest extends BaseIntegrationTest {
             Map<Long, ProductDto> products = Map.of(
                     PRODUCT_ID, buildProduct(PRODUCT_ID, "Доска обрезная", "1500.00"));
 
-            when(cartService.addItemToCart(USER_ID, PRODUCT_ID, 5)).thenReturn(cart);
+            when(cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID, 5)).thenReturn(cart);
             when(cartService.fetchProductsForCart(cart)).thenReturn(products);
 
             String json = """
@@ -139,7 +149,7 @@ class CartControllerTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.items[0].quantity").value(5))
                     .andExpect(jsonPath("$.totalItems").value(5));
 
-            verify(cartService).addItemToCart(USER_ID, PRODUCT_ID, 5);
+            verify(cartService).addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID, 5);
         }
 
         @Test
@@ -195,7 +205,7 @@ class CartControllerTest extends BaseIntegrationTest {
         @Test
         @DisplayName("404 Not Found — товар не найден")
         void shouldReturn404WhenProductNotFound() throws Exception {
-            when(cartService.addItemToCart(eq(USER_ID), eq(999L), eq(1)))
+            when(cartService.addItemToCart(USER_ID, CustomerType.B2C, 999L, 1))
                     .thenThrow(new ProductNotFoundException("Product is not available: 999"));
 
             String json = """
@@ -215,7 +225,7 @@ class CartControllerTest extends BaseIntegrationTest {
         @Test
         @DisplayName("409 Conflict — недостаточно товара на складе")
         void shouldReturn409WhenInsufficientStock() throws Exception {
-            when(cartService.addItemToCart(eq(USER_ID), eq(PRODUCT_ID), eq(1000)))
+            when(cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID, 1000))
                     .thenThrow(new InsufficientStockException("Not enough stock"));
 
             String json = """
@@ -246,7 +256,7 @@ class CartControllerTest extends BaseIntegrationTest {
             Map<Long, ProductDto> products = Map.of(
                     PRODUCT_ID, buildProduct(PRODUCT_ID, "Доска обрезная", "1500.00"));
 
-            when(cartService.updateItemQuantity(USER_ID, PRODUCT_ID, 20)).thenReturn(cart);
+            when(cartService.updateItemQuantity(USER_ID, CustomerType.B2C, PRODUCT_ID, 20)).thenReturn(cart);
             when(cartService.fetchProductsForCart(cart)).thenReturn(products);
 
             String json = """
@@ -262,14 +272,14 @@ class CartControllerTest extends BaseIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.items[0].quantity").value(20));
 
-            verify(cartService).updateItemQuantity(USER_ID, PRODUCT_ID, 20);
+            verify(cartService).updateItemQuantity(USER_ID, CustomerType.B2C, PRODUCT_ID, 20);
         }
 
         @Test
         @DisplayName("200 OK — quantity=0 удаляет товар")
         void shouldRemoveItemWhenQuantityZero() throws Exception {
             Cart cart = emptyCart();
-            when(cartService.updateItemQuantity(USER_ID, PRODUCT_ID, 0)).thenReturn(cart);
+            when(cartService.updateItemQuantity(USER_ID, CustomerType.B2C, PRODUCT_ID, 0)).thenReturn(cart);
 
             String json = """
                     {
@@ -312,14 +322,14 @@ class CartControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — товар удалён")
         void shouldRemoveItem() throws Exception {
             Cart cart = emptyCart();
-            when(cartService.removeItem(USER_ID, PRODUCT_ID)).thenReturn(cart);
+            when(cartService.removeItem(USER_ID, CustomerType.B2C, PRODUCT_ID)).thenReturn(cart);
 
             mockMvc.perform(delete("/api/v1/cart/items/{productId}", PRODUCT_ID)
                             .with(user("100")).with(csrf()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.items").isEmpty());
 
-            verify(cartService).removeItem(USER_ID, PRODUCT_ID);
+            verify(cartService).removeItem(USER_ID, CustomerType.B2C, PRODUCT_ID);
         }
     }
 
@@ -336,7 +346,18 @@ class CartControllerTest extends BaseIntegrationTest {
                             .with(user("100")).with(csrf()))
                     .andExpect(status().isNoContent());
 
-            verify(cartService).clearCart(USER_ID);
+            verify(cartService).clearCart(USER_ID, CustomerType.B2C);
+        }
+
+        @Test
+        @DisplayName("204 No Content — заголовок X-Client-Type: B2B передаётся в сервис как B2B")
+        void shouldClearCartForB2b() throws Exception {
+            mockMvc.perform(delete("/api/v1/cart")
+                            .header("X-Client-Type", "B2B")
+                            .with(user("100")).with(csrf()))
+                    .andExpect(status().isNoContent());
+
+            verify(cartService).clearCart(eq(USER_ID), eq(CustomerType.B2B));
         }
     }
 
@@ -353,7 +374,7 @@ class CartControllerTest extends BaseIntegrationTest {
                             .with(user("100")).with(csrf()))
                     .andExpect(status().isNoContent());
 
-            verify(cartService).saveCartToDB(USER_ID);
+            verify(cartService).saveCartToDB(USER_ID, CustomerType.B2C);
         }
     }
 

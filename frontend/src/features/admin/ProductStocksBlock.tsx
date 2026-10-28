@@ -23,9 +23,9 @@ const ProductStocksBlock = ({ productId }: { productId: number }) => {
         onSuccess: (_, { warehouseId }) => {
             messageApi.success('Остаток сохранён');
             setEdits((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => Number(k) !== warehouseId)));
-            queryClient.invalidateQueries({ queryKey: ['adminOwnStocks', productId] });
-            queryClient.invalidateQueries({ queryKey: ['adminProduct', productId] });
-            queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminOwnStocks', productId] });
+            void queryClient.invalidateQueries({ queryKey: ['adminProduct', productId] });
+            void queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
         },
         onError: (err) => messageApi.error(
             (isAxiosError(err) && err.response?.data?.message) || 'Не удалось сохранить остаток'),

@@ -5,6 +5,8 @@ import ru.rfsnab.productservice.dto.ProductAttributeResponse;
 import ru.rfsnab.productservice.model.ProductAttribute;
 
 public class AttributeMapper {
+    private AttributeMapper() {
+    }
 
     public static ProductAttributeResponse mapToResponse(ProductAttribute attribute){
         return ProductAttributeResponse.builder()

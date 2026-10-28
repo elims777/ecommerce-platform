@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 public class CartMapper {
+    private CartMapper() {
+    }
 
     public static CartDto toDto(Cart cart, Map<Long, ProductDto> products, CustomerType customerType) {
         if (cart.getItems().isEmpty()) {

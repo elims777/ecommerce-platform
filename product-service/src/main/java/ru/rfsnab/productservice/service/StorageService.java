@@ -35,7 +35,7 @@ public class StorageService {
     );
 
     // Максимальный размер файла (16 MB)
-    private static final long MAX_FILE_SIZE = 16 * 1024 * 1024;
+    private static final long MAX_FILE_SIZE = 16L * 1024 * 1024;
 
     /**
      * Загрузить файл в Yandex Object Storage
@@ -85,7 +85,7 @@ public class StorageService {
      * @return публичный URL
      */
     public String getPublicUrl(String fileKey) {
-        return String.format("%s/%s/%s", endpoint, bucketName, fileKey);
+        return endpoint + "/" + bucketName + "/" + fileKey;
     }
 
     /**

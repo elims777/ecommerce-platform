@@ -15,7 +15,7 @@ public record CarrierUpdateRequest(
         @NotNull @Min(0) Integer sortOrder,
         Boolean terminalDeliveryEnabled,
         @Size(max = 500)
-        @Pattern(regexp = "^$|https?://.*[{]number[}].*", message = "Ссылка должна начинаться с http(s):// и содержать подстановку номера накладной")
+        @Pattern(regexp = "^$|https?://.*\\{number\\}.*", message = "Ссылка должна начинаться с http(s):// и содержать подстановку номера накладной")
         String trackingUrlTemplate
 ) {
 }

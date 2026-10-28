@@ -12,6 +12,7 @@ import ru.rfsnab.integrationservice.repository.PendingOrderRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -256,12 +257,12 @@ class OrderExportServiceTest extends BaseIntegrationTest {
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
             assertThat(result.count()).isEqualTo(2);
-            assertThat(result.xml()).contains("КоммерческаяИнформация");
-            assertThat(result.xml()).contains("uuid-001");
-            assertThat(result.xml()).contains("uuid-002");
-            assertThat(result.xml()).contains("ORD-00001");
-            assertThat(result.xml()).contains("Перчатки нитриловые L");
-            assertThat(result.xml()).contains("ext-001");
+            assertThat(result.xml()).contains("КоммерческаяИнформация")
+                    .contains("uuid-001")
+                    .contains("uuid-002")
+                    .contains("ORD-00001")
+                    .contains("Перчатки нитриловые L")
+                    .contains("ext-001");
         }
 
         @Test
@@ -285,8 +286,8 @@ class OrderExportServiceTest extends BaseIntegrationTest {
 
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            assertThat(result.xml()).contains("Контрагент");
-            assertThat(result.xml()).contains("<Наименование>Иванов Иван</Наименование>");
+            assertThat(result.xml()).contains("Контрагент")
+                    .contains("<Наименование>Иванов Иван</Наименование>");
         }
 
         @Test
@@ -296,12 +297,12 @@ class OrderExportServiceTest extends BaseIntegrationTest {
 
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            assertThat(result.xml()).contains("<АдресРегистрации>");
-            assertThat(result.xml()).contains("<Телефон>+79001234567</Телефон>");
-            assertThat(result.xml()).contains("<Контакты>");
-            assertThat(result.xml()).contains("<Тип>Почта</Тип>");
-            assertThat(result.xml()).contains("<Значение>test@email.com</Значение>");
-            assertThat(result.xml()).contains("<Тип>Телефон</Тип>");
+            assertThat(result.xml()).contains("<АдресРегистрации>")
+                    .contains("<Телефон>+79001234567</Телефон>")
+                    .contains("<Контакты>")
+                    .contains("<Тип>Почта</Тип>")
+                    .contains("<Значение>test@email.com</Значение>")
+                    .contains("<Тип>Телефон</Тип>");
         }
 
         @Test
@@ -321,10 +322,10 @@ class OrderExportServiceTest extends BaseIntegrationTest {
 
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            assertThat(result.xml()).contains("<Наименование>ООО Ромашка</Наименование>");
-            assertThat(result.xml()).contains("<ОфициальноеНаименование>ООО Ромашка</ОфициальноеНаименование>");
-            assertThat(result.xml()).contains("<ИНН>7701234567</ИНН>");
-            assertThat(result.xml()).doesNotContain("<Фамилия>");
+            assertThat(result.xml()).contains("<Наименование>ООО Ромашка</Наименование>")
+                    .contains("<ОфициальноеНаименование>ООО Ромашка</ОфициальноеНаименование>")
+                    .contains("<ИНН>7701234567</ИНН>")
+                    .doesNotContain("<Фамилия>");
         }
 
         @Test
@@ -386,10 +387,10 @@ class OrderExportServiceTest extends BaseIntegrationTest {
 
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            assertThat(result.xml()).contains("Способ доставки");
-            assertThat(result.xml()).contains("SUPPLIER_DELIVERY");
-            assertThat(result.xml()).contains("Способ оплаты");
-            assertThat(result.xml()).contains("CARD");
+            assertThat(result.xml()).contains("Способ доставки")
+                    .contains("SUPPLIER_DELIVERY")
+                    .contains("Способ оплаты")
+                    .contains("CARD");
         }
 
         @Test
@@ -397,9 +398,9 @@ class OrderExportServiceTest extends BaseIntegrationTest {
         void shouldReturnEmptyXmlWhenNoOrders() {
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            assertThat(result.count()).isEqualTo(0);
-            assertThat(result.xml()).contains("КоммерческаяИнформация");
-            assertThat(result.xml()).doesNotContain("Документ");
+            assertThat(result.count()).isZero();
+            assertThat(result.xml()).contains("КоммерческаяИнформация")
+                    .doesNotContain("Документ");
         }
 
         @Test
@@ -414,8 +415,8 @@ class OrderExportServiceTest extends BaseIntegrationTest {
 
             OrderExportService.OrderExportResult result = orderExportService.exportPendingOrders();
 
-            assertThat(result.xml()).doesNotContain("uuid-005");
-            assertThat(result.xml()).contains("uuid-006");
+            assertThat(result.xml()).doesNotContain("uuid-005")
+                    .contains("uuid-006");
         }
     }
 
@@ -462,7 +463,7 @@ class OrderExportServiceTest extends BaseIntegrationTest {
         @Test
         @DisplayName("success без предшествующего query ничего не помечает")
         void shouldMarkNothingWithoutQuery() {
-            ReflectionTestUtils.setField(orderExportService, "lastExportedSnapshot", null);
+            ((AtomicReference<?>) ReflectionTestUtils.getField(orderExportService, "lastExportedSnapshot")).set(null);
             savePendingOrder("uuid-011", "ORD-00011");
 
             int count = orderExportService.markOrdersAsExported();

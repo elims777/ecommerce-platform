@@ -13,6 +13,7 @@ import ru.rfsnab.productservice.repository.ProductRepository;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @RequiredArgsConstructor
@@ -21,17 +22,19 @@ public class CategoryService {
     /** Предохранитель от зацикливания при подъёме по родителям (данные могут быть битыми). */
     private static final int MAX_CATEGORY_DEPTH = 100;
 
+    private static final String CATEGORY_NOT_FOUND = "Категория не найдена: ";
+
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final SlugGeneratorService slugGenerator;
 
-    // Кэш дерева категорий (в памяти). volatile: пишется в synchronized refreshCategoryTree(),
+    // Кэш дерева категорий (в памяти). AtomicReference: пишется в synchronized refreshCategoryTree(),
     // читается запросами без синхронизации — нужна видимость новой ссылки другим потокам.
-    private volatile List<CategoryTreeDTO> cachedCategoryTree = new ArrayList<>();
+    private final AtomicReference<List<CategoryTreeDTO>> cachedCategoryTree = new AtomicReference<>(new ArrayList<>());
 
     // Кэш акционных процентов: categoryId -> процент. Наследуется вниз по дереву:
     // потомок без собственной метки берёт процент ближайшего отмеченного предка.
-    private volatile Map<Long, BigDecimal> cachedSaleMarkups = Map.of();
+    private final AtomicReference<Map<Long, BigDecimal>> cachedSaleMarkups = new AtomicReference<>(Map.of());
 
     /**
      * Инициализация дерева категорий при старте приложения
@@ -45,7 +48,7 @@ public class CategoryService {
      * Получить дерево категорий (из кэша)
      */
     public List<CategoryTreeDTO> getCategoryTree() {
-        return cachedCategoryTree;
+        return cachedCategoryTree.get();
     }
 
     /**
@@ -54,8 +57,8 @@ public class CategoryService {
     public synchronized void refreshCategoryTree() {
         List<Category> allCategories = categoryRepository.findAll();
         Map<Long, BigDecimal> saleMarkups = buildSaleMarkups(allCategories);
-        cachedCategoryTree = buildTree(allCategories, saleMarkups);
-        cachedSaleMarkups = saleMarkups;
+        cachedCategoryTree.set(buildTree(allCategories, saleMarkups));
+        cachedSaleMarkups.set(saleMarkups);
     }
 
     /**
@@ -63,14 +66,14 @@ public class CategoryService {
      * null — категория не акционная.
      */
     public BigDecimal getCategorySaleMarkup(Long categoryId) {
-        return categoryId != null ? cachedSaleMarkups.get(categoryId) : null;
+        return categoryId != null ? cachedSaleMarkups.get().get(categoryId) : null;
     }
 
     /**
      * Id всех категорий, попадающих в акцию (отмеченные + их потомки).
      */
     public Set<Long> getSaleCategoryIds() {
-        return cachedSaleMarkups.keySet();
+        return cachedSaleMarkups.get().keySet();
     }
 
     /**
@@ -203,7 +206,7 @@ public class CategoryService {
     @Transactional
     public Category updateCategory(Long id, Category updatedCategory) {
         Category existing = categoryRepository.findById(id)
-                .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена: " + id));
+                .orElseThrow(() -> new CategoryNotFoundException(CATEGORY_NOT_FOUND + id));
 
         if (updatedCategory.getName() != null) {
             existing.setName(updatedCategory.getName());
@@ -248,7 +251,7 @@ public class CategoryService {
     public void reorderCategories(Map<Long, Integer> orders) {
         orders.forEach((id, order) -> {
             Category cat = categoryRepository.findById(id)
-                    .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена: " + id));
+                    .orElseThrow(() -> new CategoryNotFoundException(CATEGORY_NOT_FOUND + id));
             cat.setDisplayOrder(order);
             categoryRepository.save(cat);
         });
@@ -288,7 +291,7 @@ public class CategoryService {
      */
     public Category getCategoryBySlug(String slug) {
         return categoryRepository.findBySlug(slug)
-                .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена: " + slug));
+                .orElseThrow(() -> new CategoryNotFoundException(CATEGORY_NOT_FOUND + slug));
     }
 
     /**
@@ -346,7 +349,7 @@ public class CategoryService {
      * Использует закэшированное дерево категорий.
      */
     public List<Long> getSubtreeCategoryIds(Long categoryId) {
-        CategoryTreeDTO node = findNodeById(cachedCategoryTree, categoryId);
+        CategoryTreeDTO node = findNodeById(cachedCategoryTree.get(), categoryId);
         if (node == null) {
             return List.of(categoryId);
         }
@@ -373,7 +376,7 @@ public class CategoryService {
      * Возвращает null, если категория не найдена в кэше.
      */
     public String getCategoryNameById(Long categoryId) {
-        CategoryTreeDTO node = findNodeById(cachedCategoryTree, categoryId);
+        CategoryTreeDTO node = findNodeById(cachedCategoryTree.get(), categoryId);
         return node != null ? node.getName() : null;
     }
 

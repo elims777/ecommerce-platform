@@ -22,6 +22,8 @@ import { useAuthStore } from '@/store/authStore';
 import { createOrder, confirmOrder } from '@/api/orders';
 import { pushEcommerce } from '@/lib/metrika';
 import { getWarehousePoints } from '@/api/warehouse';
+import { getLegalEntity } from '@/api/legalEntity';
+import { getProfile } from '@/api/profile';
 import { getWarehouses, getProductStocks } from '@/api/warehouses';
 import {
     getRecipients,
@@ -84,13 +86,21 @@ const CheckoutPage = () => {
     const [manualInput, setManualInput] = useState(false);
 
     useEffect(() => {
-        if (isAuthenticated) fetchCart();
+        if (isAuthenticated) void fetchCart();
     }, [isAuthenticated, fetchCart]);
 
     const { data: recipients = [], isLoading: recipientsLoading } = useQuery({
         queryKey: ['recipients'],
         queryFn: getRecipients,
         enabled: isAuthenticated,
+    });
+
+    // B2B: id в JWT = id юрлица; телефон заказчика берём из карточки юрлица
+    const isB2B = user?.clientType === 'B2B';
+    const { data: legalEntity } = useQuery({
+        queryKey: ['legal-entity', user?.id],
+        queryFn: () => getLegalEntity(user!.id),
+        enabled: isB2B && !!user,
     });
 
     const { data: addresses = [], isLoading: addressesLoading } = useQuery({
@@ -165,21 +175,22 @@ const createRecipientMutation = useMutation({
     const handleSubmit = async (values: CheckoutFormValues) => {
         setLoading(true);
         try {
-            // Определяем имя и телефон заказчика
-            let customerName: string | undefined;
-            let customerPhone: string | undefined;
-            if (user?.clientType === 'B2B') {
-                customerName = user.companyName ?? undefined;
-            } else if (manualInput) {
-                customerName = values.newRecipientName;
-                customerPhone = values.newRecipientPhone;
-            } else if (selectedRecipient) {
-                customerName = selectedRecipient.name;
-                customerPhone = selectedRecipient.phone;
-            }
-            if (!customerName && user) {
-                customerName = [user.firstname, user.lastname].filter(Boolean).join(' ') || undefined;
-            }
+            // Заказчик — всегда из профиля; получатель уходит в заказ отдельно
+            // B2C: после восстановления сессии в authStore ФИО/телефон пусты — берём из профиля
+            const profile = isB2B
+                ? undefined
+                : await queryClient.fetchQuery({ queryKey: ['profile'], queryFn: getProfile });
+            const customerName = isB2B
+                ? user?.companyName ?? undefined
+                : [profile?.firstname, profile?.lastname].filter(Boolean).join(' ') || undefined;
+            // fetchQuery берёт кэш useQuery, а если карточка ещё не загрузилась — дожидается её
+            const entity = isB2B
+                ? legalEntity ?? await queryClient.fetchQuery({
+                    queryKey: ['legal-entity', user?.id],
+                    queryFn: () => getLegalEntity(user!.id),
+                })
+                : undefined;
+            const customerPhone = (isB2B ? entity?.phone : profile?.phone) ?? undefined;
 
             const request: CreateOrderRequest = {
                 paymentMethod: PaymentMethod.INVOICE,
@@ -269,7 +280,7 @@ const createRecipientMutation = useMutation({
             await clearCart();
             messageApi.success('Заказ успешно оформлен!');
 
-            navigate('/orders');
+            void navigate('/orders');
         } catch (error) {
             if (handleProfileIncomplete(error, modal, navigate)) return;
             const axiosError = error as AxiosError<{ message?: string }>;

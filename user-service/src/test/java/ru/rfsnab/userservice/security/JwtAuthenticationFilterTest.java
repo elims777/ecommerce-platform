@@ -137,6 +137,27 @@ class JwtAuthenticationFilterTest {
         }
 
         @Test
+        @DisplayName("B2B-токен получает признак CLIENT_B2B")
+        void b2bToken_AddsClientB2bAuthority() throws ServletException, IOException {
+            SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+            String token = Jwts.builder()
+                    .subject("7")
+                    .claim("roles", List.of("ROLE_USER"))
+                    .claim("clientType", "B2B")
+                    .expiration(new Date(System.currentTimeMillis() + 3600000))
+                    .signWith(key)
+                    .compact();
+            request.addHeader("Authorization", "Bearer " + token);
+
+            filter.doFilterInternal(request, response, filterChain);
+
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            assertThat(auth.getAuthorities())
+                    .extracting(Object::toString)
+                    .containsExactlyInAnyOrder("ROLE_USER", LegalEntityAccessChecker.AUTHORITY_CLIENT_B2B);
+        }
+
+        @Test
         @DisplayName("не перезаписывает существующий Authentication")
         void validToken_DoesNotOverwriteExistingAuth() throws ServletException, IOException {
             // Предустановленная аутентификация

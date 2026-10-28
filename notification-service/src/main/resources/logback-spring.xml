@@ -51,18 +51,6 @@
         <appender-ref ref="FILE_ERROR"/>
     </logger>
 
-    <logger name="ru.rfsnab.notificationservice.service" level="DEBUG" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE_ALL"/>
-        <appender-ref ref="FILE_ERROR"/>
-    </logger>
-
-    <logger name="ru.rfsnab.notificationservice.aspect" level="DEBUG" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE_ALL"/>
-        <appender-ref ref="FILE_ERROR"/>
-    </logger>
-
     <logger name="ru.rfsnab.notificationservice.controller" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE_ALL"/>
@@ -71,6 +59,19 @@
 
     <logger name="org.springframework.web" level="INFO"/>
     <logger name="org.springframework.kafka" level="INFO"/>
+
+    <springProfile name="!prod">
+        <logger name="ru.rfsnab.notificationservice.service" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE_ALL"/>
+            <appender-ref ref="FILE_ERROR"/>
+        </logger>
+        <logger name="ru.rfsnab.notificationservice.aspect" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE_ALL"/>
+            <appender-ref ref="FILE_ERROR"/>
+        </logger>
+    </springProfile>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>

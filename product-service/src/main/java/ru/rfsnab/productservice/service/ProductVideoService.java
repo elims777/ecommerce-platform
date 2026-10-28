@@ -17,6 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductVideoService {
 
+    private static final String VIDEO_NOT_FOUND = "Видео не найдено";
+
     private final ProductVideoRepository videoRepository;
     private final ProductService productService;
 
@@ -57,7 +59,7 @@ public class ProductVideoService {
         log.info("Deleting video id={}", id);
 
         if(!videoRepository.existsById(id)){
-            throw new BusinessException("Видео не найдено");
+            throw new BusinessException(VIDEO_NOT_FOUND);
         }
         videoRepository.deleteById(id);
         log.info("Video deleted id={}",id);
@@ -73,7 +75,7 @@ public class ProductVideoService {
         log.info("Set isPrimary for video id={}", id);
 
         ProductVideo video = videoRepository.findById(id)
-                .orElseThrow(() -> new BusinessException("Видео не найдено"));
+                .orElseThrow(() -> new BusinessException(VIDEO_NOT_FOUND));
 
         Long productId = video.getProduct().getId();
 
@@ -103,7 +105,7 @@ public class ProductVideoService {
         }
 
         ProductVideo video = videoRepository.findById(videoId)
-                .orElseThrow(() -> new BusinessException("Видео не найдено"));
+                .orElseThrow(() -> new BusinessException(VIDEO_NOT_FOUND));
 
         video.setDisplayOrder(newOrder);
         ProductVideo saved = videoRepository.save(video);
@@ -124,18 +126,14 @@ public class ProductVideoService {
         log.info("Updating video info id={}", id);
 
         ProductVideo existing = videoRepository.findById(id)
-                .orElseThrow(() -> new BusinessException("Видео не найдено"));
+                .orElseThrow(() -> new BusinessException(VIDEO_NOT_FOUND));
 
-        existing.setProduct(updateVideo.getProduct());
         existing.setVideoUrl(updateVideo.getVideoUrl());
         existing.setTitle(updateVideo.getTitle());
         existing.setVideoType(updateVideo.getVideoType());
-        existing.setDisplayOrder(updateVideo.getDisplayOrder());
-        existing.setIsPrimary(updateVideo.getIsPrimary());
         existing.setDurationSeconds(updateVideo.getDurationSeconds());
         existing.setProvider(updateVideo.getProvider());
         existing.setThumbnailUrl(updateVideo.getThumbnailUrl());
-        existing.setProvider(updateVideo.getProvider());
 
         ProductVideo saved = videoRepository.save(existing);
         log.info("Video info updated id={}", id);
@@ -161,7 +159,7 @@ public class ProductVideoService {
     public ProductVideo getPrimaryVideo(Long productId){
         productService.getProductById(productId);
         return  videoRepository.findPrimaryByProduct(productId)
-                .orElseThrow(() -> new BusinessException("Видео не найдено"));
+                .orElseThrow(() -> new BusinessException(VIDEO_NOT_FOUND));
     }
 
     /**
@@ -171,6 +169,6 @@ public class ProductVideoService {
      */
     public ProductVideo getVideoById(long id){
         return videoRepository.findById(id)
-                .orElseThrow(()-> new BusinessException("Видео не найдено"));
+                .orElseThrow(()-> new BusinessException(VIDEO_NOT_FOUND));
     }
 }

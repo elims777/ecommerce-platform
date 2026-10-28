@@ -39,7 +39,7 @@ public class RegistrationController {
     @PostMapping(value = "/register",
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> registerJson(@Valid @RequestBody RegistrationRequest request) {
+    public ResponseEntity<Object> registerJson(@Valid @RequestBody RegistrationRequest request) {
         request.setPassword(passwordEncoder.encode(request.getPassword()));
         try {
             UserDtoResponse created =
@@ -69,7 +69,7 @@ public class RegistrationController {
     @PostMapping(value = "/register/legal",
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> registerLegal(@RequestBody Object request) {
+    public ResponseEntity<Object> registerLegal(@RequestBody Object request) {
         try {
             Object created = restTemplate.postForObject(
                     userServiceUrl + "/api/v1/legal-entities/register",

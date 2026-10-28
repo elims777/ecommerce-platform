@@ -12,8 +12,10 @@ export const formatNumber = (n: number, maxFractionDigits: number) => n.toLocale
 export const plural = (n: number, one: string, few: string, many: string) => [one, few, many][pluralIndex(n)];
 
 /** «Город, от терминала» / «Город, до адреса»; режим неизвестен — только город */
-export const routeLine = (city: string | null, address: boolean | null, prep: 'от' | 'до') =>
-    [city, address == null ? null : `${prep} ${address ? 'адреса' : 'терминала'}`].filter(Boolean).join(', ');
+export const routeLine = (city: string | null, address: boolean | null, prep: 'от' | 'до') => {
+    const target = address ? 'адреса' : 'терминала';
+    return [city, address == null ? null : `${prep} ${target}`].filter(Boolean).join(', ');
+};
 
 /** Сторона плательщика: по роли, затем по ИНН, затем по имени; иначе третье лицо */
 export const payerRole = (s: ShipmentDto, p: ShipmentPayerDto): PayerRole => {

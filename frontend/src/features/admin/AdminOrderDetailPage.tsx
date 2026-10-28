@@ -74,8 +74,8 @@ const AdminOrderDetailPage = () => {
     mutationFn: (newStatus: string) => changeOrderStatus(id!, newStatus),
     onSuccess: () => {
       messageApi.success('Статус обновлён');
-      queryClient.invalidateQueries({ queryKey: ['adminOrderDetail', id] });
-      queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
+      void queryClient.invalidateQueries({ queryKey: ['adminOrderDetail', id] });
+      void queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
     },
     onError: () => messageApi.error('Ошибка смены статуса'),
   });
@@ -93,7 +93,7 @@ const AdminOrderDetailPage = () => {
     mutationFn: () => uploadOrderDocument(id!, documentType!, pendingFile!),
     onSuccess: () => {
       messageApi.success('Документ загружен');
-      queryClient.invalidateQueries({ queryKey: ['adminOrderDocuments', id] });
+      void queryClient.invalidateQueries({ queryKey: ['adminOrderDocuments', id] });
       setDocumentType(null);
       setPendingFile(null);
     },
@@ -110,7 +110,7 @@ const AdminOrderDetailPage = () => {
     mutationFn: (docId: string) => deleteOrderDocument(id!, docId),
     onSuccess: () => {
       messageApi.success('Документ удалён');
-      queryClient.invalidateQueries({ queryKey: ['adminOrderDocuments', id] });
+      void queryClient.invalidateQueries({ queryKey: ['adminOrderDocuments', id] });
     },
     onError: () => messageApi.error('Не удалось удалить документ'),
   });
@@ -140,7 +140,7 @@ const AdminOrderDetailPage = () => {
     <div>
       {/* Back */}
       <NavLink to="/admin/orders" className="rf-admin-back">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
           <path d="M10 4L6 8l4 4"/>
         </svg>
         Заказы
@@ -223,10 +223,10 @@ const AdminOrderDetailPage = () => {
               <div className="rf-detail-value">
                 {order.terminalName}, {order.terminalCurrentAddress ?? order.terminalAddress}
                 {order.terminalClosed && (
-                  <Alert type="warning" showIcon style={{ marginTop: 8 }} message="Терминал закрыт ТК, уточните у клиента" />
+                  <Alert type="warning" showIcon style={{ marginTop: 8 }} title="Терминал закрыт ТК, уточните у клиента" />
                 )}
                 {order.terminalCurrentAddress && (
-                  <Alert type="warning" showIcon style={{ marginTop: 8 }} message={`Адрес терминала изменился, был: ${order.terminalAddress}`} />
+                  <Alert type="warning" showIcon style={{ marginTop: 8 }} title={`Адрес терминала изменился, был: ${order.terminalAddress}`} />
                 )}
               </div>
             </>

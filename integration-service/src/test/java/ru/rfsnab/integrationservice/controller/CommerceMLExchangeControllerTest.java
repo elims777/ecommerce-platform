@@ -61,6 +61,28 @@ class CommerceMLExchangeControllerTest extends BaseIntegrationTest {
         return lines[2]; // третья строка — значение cookie
     }
 
+    @Test
+    @DisplayName("неподдерживаемый HTTP-метод → 405 в формате failure")
+    void shouldReturn405ForUnsupportedMethod() throws Exception {
+        mockMvc.perform(post("/api/v1/integration/logs"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(content().string(org.hamcrest.Matchers.startsWith("failure\n")));
+    }
+
+    @Test
+    @DisplayName("логи больше не отдаются с публичного /1c-exchange/logs")
+    void shouldNotExposeLogsUnder1cExchange() throws Exception {
+        mockMvc.perform(get("/1c-exchange/logs"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("логи отдаются по /api/v1/integration/logs")
+    void shouldReturnLogsUnderIntegrationPath() throws Exception {
+        mockMvc.perform(get("/api/v1/integration/logs"))
+                .andExpect(status().isOk());
+    }
+
     @Nested
     @DisplayName("checkauth")
     class CheckAuthTests {
@@ -180,6 +202,22 @@ class CommerceMLExchangeControllerTest extends BaseIntegrationTest {
                             .param("type", "unknown")
                             .param("mode", "checkauth"))
                     .andExpect(status().isOk())
+                    .andExpect(content().string(org.hamcrest.Matchers.startsWith("failure")));
+        }
+
+        @Test
+        @DisplayName("без обязательного параметра type возвращает failure со статусом 400")
+        void shouldReturn400WithoutType() throws Exception {
+            mockMvc.perform(get("/1c-exchange").param("mode", "checkauth"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().string(org.hamcrest.Matchers.startsWith("failure")));
+        }
+
+        @Test
+        @DisplayName("несуществующий путь возвращает failure со статусом 404")
+        void shouldReturn404ForUnknownPath() throws Exception {
+            mockMvc.perform(get("/no-such-endpoint"))
+                    .andExpect(status().isNotFound())
                     .andExpect(content().string(org.hamcrest.Matchers.startsWith("failure")));
         }
 

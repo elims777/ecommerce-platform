@@ -114,7 +114,7 @@ public class ProductImportItem {
         private Integer stockQuantity;
         private String barcode;
         private String countryOfOrigin;
-        // {"Размер": "XL", "Рост": "170-176"}
+        // пример: Размер = XL, Рост = 170-176
         private Map<String, String> attributes;
     }
 

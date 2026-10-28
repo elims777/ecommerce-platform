@@ -6,13 +6,13 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
-import ru.rfsnab.orderservice.exception.InsufficientStockException;
 import ru.rfsnab.orderservice.exception.ProductNotFoundException;
 import ru.rfsnab.orderservice.exception.ProfileIncompleteException;
 import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.dto.user.ProfileCompletenessDto;
 import ru.rfsnab.orderservice.models.entity.Cart;
 import ru.rfsnab.orderservice.models.entity.CartItem;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.repository.CartRedisRepository;
 import ru.rfsnab.orderservice.repository.CartRepository;
 
@@ -25,6 +25,8 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -49,17 +51,16 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
     @Autowired
     private CartRepository cartRepository;
 
-//    @MockitoBean
-//    private ProductServiceClient productServiceClient;
-
     private static final Long USER_ID = 100L;
     private static final Long PRODUCT_ID_1 = 1L;
     private static final Long PRODUCT_ID_2 = 2L;
 
     @BeforeEach
     void cleanUp() {
-        cartRedisRepository.clearCart(USER_ID);
-        cartRepository.deleteByUserId(USER_ID);
+        cartRedisRepository.clearCart(USER_ID, CustomerType.B2C);
+        cartRedisRepository.clearCart(USER_ID, CustomerType.B2B);
+        cartRepository.deleteByUserIdAndCustomerType(USER_ID, CustomerType.B2B);
+        cartRepository.deleteByUserIdAndCustomerType(USER_ID, CustomerType.B2C);
         when(userServiceClient.getProfileCompleteness(USER_ID))
                 .thenReturn(new ProfileCompletenessDto(true, List.of()));
         doCallRealMethod().when(userServiceClient).requireCompleteProfile(USER_ID);
@@ -74,10 +75,10 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("возвращает корзину из Redis")
         void shouldReturnCartFromRedis() {
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 10);
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_2, 5);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 10);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_2, 5);
 
-            Cart cart = cartService.getCart(USER_ID);
+            Cart cart = cartService.getCart(USER_ID, CustomerType.B2C);
 
             assertThat(cart.getUserId()).isEqualTo(USER_ID);
             assertThat(cart.getItems()).hasSize(2);
@@ -93,20 +94,20 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             dbCart.getItems().add(item);
             cartRepository.save(dbCart);
 
-            Cart cart = cartService.getCart(USER_ID);
+            Cart cart = cartService.getCart(USER_ID, CustomerType.B2C);
 
             assertThat(cart.getItems()).hasSize(1);
             assertThat(cart.getItems().getFirst().getQuantity()).isEqualTo(7);
             // Данные должны быть скопированы в Redis
-            assertThat(cartRedisRepository.exists(USER_ID)).isTrue();
-            Map<Long, Integer> redisCart = cartRedisRepository.getCart(USER_ID);
+            assertThat(cartRedisRepository.exists(USER_ID, CustomerType.B2C)).isTrue();
+            Map<Long, Integer> redisCart = cartRedisRepository.getCart(USER_ID, CustomerType.B2C);
             assertThat(redisCart).containsEntry(PRODUCT_ID_1, 7);
         }
 
         @Test
         @DisplayName("возвращает пустую корзину если нет данных нигде")
         void shouldReturnEmptyCartWhenNoData() {
-            Cart cart = cartService.getCart(USER_ID);
+            Cart cart = cartService.getCart(USER_ID, CustomerType.B2C);
 
             assertThat(cart.getUserId()).isEqualTo(USER_ID);
             assertThat(cart.getItems()).isEmpty();
@@ -121,10 +122,10 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             dbCart.getItems().add(item);
             cartRepository.save(dbCart);
 
-            cartService.getCart(USER_ID);
+            cartService.getCart(USER_ID, CustomerType.B2C);
 
             // БД не очищена — backup остаётся
-            Optional<Cart> stillInDb = cartRepository.findByUserId(USER_ID);
+            Optional<Cart> stillInDb = cartRepository.findByUserIdAndCustomerType(USER_ID, CustomerType.B2C);
             assertThat(stillInDb).isPresent();
         }
     }
@@ -140,7 +141,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         void shouldAddNewItemToEmptyCart() {
             mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
 
-            Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 5);
+            Cart cart = cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 5);
 
             assertThat(cart.getItems()).hasSize(1);
             assertThat(cart.getItems().getFirst().getProductId()).isEqualTo(PRODUCT_ID_1);
@@ -151,9 +152,9 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @DisplayName("увеличивает количество существующего товара")
         void shouldIncrementExistingItemQuantity() {
             mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 10);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 10);
 
-            Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 5);
+            Cart cart = cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 5);
 
             assertThat(cart.getItems()).hasSize(1);
             assertThat(cart.getItems().getFirst().getQuantity()).isEqualTo(15);
@@ -173,7 +174,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartRepository.save(dbCart);
 
             // Добавляем второй товар — должна восстановить из БД + добавить
-            Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_2, 2);
+            Cart cart = cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_2, 2);
 
             assertThat(cart.getItems()).hasSize(2);
         }
@@ -184,7 +185,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             when(productServiceClient.getProduct(PRODUCT_ID_1))
                     .thenReturn(new ProductDto(PRODUCT_ID_1, "Доска", new BigDecimal("1500.00"), null, 100, false, "ext-001", null, null, null, null, null, null));
 
-            assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1))
+            assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 1))
                     .isInstanceOf(ProductNotFoundException.class);
         }
 
@@ -194,8 +195,19 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             when(userServiceClient.getProfileCompleteness(USER_ID))
                     .thenReturn(new ProfileCompletenessDto(false, List.of("Телефон")));
 
-            assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1))
+            assertThatThrownBy(() -> cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 1))
                     .isInstanceOf(ProfileIncompleteException.class);
+        }
+
+        @Test
+        @DisplayName("B2B: не проверяет заполненность профиля (userId — id юрлица)")
+        void shouldSkipProfileCheckForB2B() {
+            mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
+
+            Cart cart = cartService.addItemToCart(USER_ID, CustomerType.B2B, PRODUCT_ID_1, 5);
+
+            assertThat(cart.getItems()).hasSize(1);
+            verify(userServiceClient, never()).requireCompleteProfile(USER_ID);
         }
 
         @Test
@@ -203,7 +215,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         void shouldAddItemWhenProfileComplete() {
             mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
 
-            Cart cart = cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 5);
+            Cart cart = cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 5);
 
             assertThat(cart.getItems()).hasSize(1);
         }
@@ -219,9 +231,9 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @DisplayName("обновляет количество товара")
         void shouldUpdateQuantity() {
             mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 10);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 10);
 
-            Cart cart = cartService.updateItemQuantity(USER_ID, PRODUCT_ID_1, 20);
+            Cart cart = cartService.updateItemQuantity(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 20);
 
             assertThat(cart.getItems()).hasSize(1);
             assertThat(cart.getItems().getFirst().getQuantity()).isEqualTo(20);
@@ -230,12 +242,12 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("quantity=0 удаляет товар из корзины")
         void shouldRemoveItemWhenQuantityZero() {
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 10);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 10);
 
-            Cart cart = cartService.updateItemQuantity(USER_ID, PRODUCT_ID_1, 0);
+            Cart cart = cartService.updateItemQuantity(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 0);
 
             assertThat(cart.getItems()).isEmpty();
-            assertThat(cartRedisRepository.getCart(USER_ID)).isEmpty();
+            assertThat(cartRedisRepository.getCart(USER_ID, CustomerType.B2C)).isEmpty();
         }
     }
 
@@ -248,10 +260,10 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("удаляет товар, оставляя другие")
         void shouldRemoveSpecificItem() {
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 10);
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_2, 5);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 10);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_2, 5);
 
-            Cart cart = cartService.removeItem(USER_ID, PRODUCT_ID_1);
+            Cart cart = cartService.removeItem(USER_ID, CustomerType.B2C, PRODUCT_ID_1);
 
             assertThat(cart.getItems()).hasSize(1);
             assertThat(cart.getItems().getFirst().getProductId()).isEqualTo(PRODUCT_ID_2);
@@ -268,7 +280,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @DisplayName("очищает Redis и PostgreSQL")
         void shouldClearBothRedisAndDatabase() {
             // Данные в Redis
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 10);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 10);
             // Данные в PostgreSQL
             Cart dbCart = Cart.builder().userId(USER_ID).build();
             CartItem item = CartItem.builder()
@@ -276,10 +288,10 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             dbCart.getItems().add(item);
             cartRepository.save(dbCart);
 
-            cartService.clearCart(USER_ID);
+            cartService.clearCart(USER_ID, CustomerType.B2C);
 
-            assertThat(cartRedisRepository.getCart(USER_ID)).isEmpty();
-            assertThat(cartRepository.findByUserId(USER_ID)).isEmpty();
+            assertThat(cartRedisRepository.getCart(USER_ID, CustomerType.B2C)).isEmpty();
+            assertThat(cartRepository.findByUserIdAndCustomerType(USER_ID, CustomerType.B2C)).isEmpty();
         }
     }
 
@@ -292,15 +304,15 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("сохраняет корзину из Redis в PostgreSQL и очищает Redis")
         void shouldPersistCartAndClearRedis() {
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_1, 10);
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_2, 5);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 10);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_2, 5);
 
-            cartService.saveCartToDB(USER_ID);
+            cartService.saveCartToDB(USER_ID, CustomerType.B2C);
 
             // Redis очищен (afterCommit)
-            assertThat(cartRedisRepository.getCart(USER_ID)).isEmpty();
+            assertThat(cartRedisRepository.getCart(USER_ID, CustomerType.B2C)).isEmpty();
             // PostgreSQL содержит данные
-            Optional<Cart> dbCart = cartRepository.findByUserId(USER_ID);
+            Optional<Cart> dbCart = cartRepository.findByUserIdAndCustomerType(USER_ID, CustomerType.B2C);
             assertThat(dbCart).isPresent();
             assertThat(dbCart.get().getItems()).hasSize(2);
         }
@@ -316,11 +328,11 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             cartRepository.save(dbCart);
 
             // Новая корзина в Redis
-            cartRedisRepository.addItem(USER_ID, PRODUCT_ID_2, 7);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_2, 7);
 
-            cartService.saveCartToDB(USER_ID);
+            cartService.saveCartToDB(USER_ID, CustomerType.B2C);
 
-            Optional<Cart> updated = cartRepository.findByUserId(USER_ID);
+            Optional<Cart> updated = cartRepository.findByUserIdAndCustomerType(USER_ID, CustomerType.B2C);
             assertThat(updated).isPresent();
             // Должен быть только новый item (старый удалён через orphanRemoval)
             assertThat(updated.get().getItems()).hasSize(1);
@@ -332,9 +344,9 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
         @DisplayName("не сохраняет пустую корзину")
         void shouldNotPersistEmptyCart() {
             // Redis пуст
-            cartService.saveCartToDB(USER_ID);
+            cartService.saveCartToDB(USER_ID, CustomerType.B2C);
 
-            assertThat(cartRepository.findByUserId(USER_ID)).isEmpty();
+            assertThat(cartRepository.findByUserIdAndCustomerType(USER_ID, CustomerType.B2C)).isEmpty();
         }
     }
 
@@ -362,8 +374,7 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
 
             Map<Long, ProductDto> products = cartService.fetchProductsForCart(cart);
 
-            assertThat(products).hasSize(2);
-            assertThat(products).containsKeys(PRODUCT_ID_1, PRODUCT_ID_2);
+            assertThat(products).hasSize(2).containsKeys(PRODUCT_ID_1, PRODUCT_ID_2);
         }
     }
 
@@ -379,24 +390,62 @@ class CartServiceIntegrationTest extends BaseServiceIntegrationTest {
             mockProduct(PRODUCT_ID_1, "Доска", "1500.00", 100, "ext-001");
 
             // 1. Добавляем товар
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 10);
-            assertThat(cartRedisRepository.exists(USER_ID)).isTrue();
+            cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 10);
+            assertThat(cartRedisRepository.exists(USER_ID, CustomerType.B2C)).isTrue();
 
             // 2. Сохраняем в БД (имитация logout)
-            cartService.saveCartToDB(USER_ID);
-            assertThat(cartRedisRepository.getCart(USER_ID)).isEmpty();
-            assertThat(cartRepository.findByUserId(USER_ID)).isPresent();
+            cartService.saveCartToDB(USER_ID, CustomerType.B2C);
+            assertThat(cartRedisRepository.getCart(USER_ID, CustomerType.B2C)).isEmpty();
+            assertThat(cartRepository.findByUserIdAndCustomerType(USER_ID, CustomerType.B2C)).isPresent();
 
             // 3. Восстанавливаем (имитация нового входа)
-            Cart restored = cartService.getCart(USER_ID);
+            Cart restored = cartService.getCart(USER_ID, CustomerType.B2C);
             assertThat(restored.getItems()).hasSize(1);
             assertThat(restored.getItems().getFirst().getQuantity()).isEqualTo(10);
-            assertThat(cartRedisRepository.exists(USER_ID)).isTrue();
+            assertThat(cartRedisRepository.exists(USER_ID, CustomerType.B2C)).isTrue();
 
             // 4. Очищаем (имитация оформления заказа)
-            cartService.clearCart(USER_ID);
-            assertThat(cartRedisRepository.getCart(USER_ID)).isEmpty();
-            assertThat(cartRepository.findByUserId(USER_ID)).isEmpty();
+            cartService.clearCart(USER_ID, CustomerType.B2C);
+            assertThat(cartRedisRepository.getCart(USER_ID, CustomerType.B2C)).isEmpty();
+            assertThat(cartRepository.findByUserIdAndCustomerType(USER_ID, CustomerType.B2C)).isEmpty();
+        }
+    }
+
+    // ==================== Изоляция B2B / B2C ====================
+
+    @Nested
+    @DisplayName("Изоляция корзин B2B и B2C с одинаковым числовым id")
+    class CustomerTypeIsolationTests {
+
+        @Test
+        @DisplayName("Redis: корзины B2B и B2C с одним id независимы")
+        void shouldKeepSeparateRedisCarts() {
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 10);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2B, PRODUCT_ID_2, 3);
+
+            assertThat(cartService.getCart(USER_ID, CustomerType.B2C).getItems())
+                    .extracting(CartItem::getProductId).containsExactly(PRODUCT_ID_1);
+            assertThat(cartService.getCart(USER_ID, CustomerType.B2B).getItems())
+                    .extracting(CartItem::getProductId).containsExactly(PRODUCT_ID_2);
+
+            cartService.clearCart(USER_ID, CustomerType.B2B);
+            assertThat(cartRedisRepository.getCart(USER_ID, CustomerType.B2B)).isEmpty();
+            assertThat(cartRedisRepository.getCart(USER_ID, CustomerType.B2C)).containsKey(PRODUCT_ID_1);
+        }
+
+        @Test
+        @DisplayName("PostgreSQL: обе корзины с одним user_id сохраняются отдельно")
+        void shouldPersistSeparateDbCarts() {
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 10);
+            cartRedisRepository.addItem(USER_ID, CustomerType.B2B, PRODUCT_ID_2, 3);
+
+            cartService.saveCartToDB(USER_ID, CustomerType.B2C);
+            cartService.saveCartToDB(USER_ID, CustomerType.B2B);
+
+            assertThat(cartRepository.findByUserIdAndCustomerType(USER_ID, CustomerType.B2C).orElseThrow().getItems())
+                    .extracting(CartItem::getProductId).containsExactly(PRODUCT_ID_1);
+            assertThat(cartRepository.findByUserIdAndCustomerType(USER_ID, CustomerType.B2B).orElseThrow().getItems())
+                    .extracting(CartItem::getProductId).containsExactly(PRODUCT_ID_2);
         }
     }
 

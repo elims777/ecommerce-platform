@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Формирование XML заказов для выгрузки в 1С.
@@ -38,6 +39,9 @@ import java.util.Map;
 @Slf4j
 public class OrderExportService {
 
+    private static final String FIELD_CREATED_AT = "createdAt";
+    private static final String FIELD_COMMENT = "comment";
+
     private static final DateTimeFormatter DATETIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
 
     private final PendingOrderRepository repository;
@@ -47,7 +51,7 @@ public class OrderExportService {
     // ponytail: снимок (id → createdAt) заказов, попавших в XML последнего query, хранится в памяти,
     // подразумевается один экземпляр integration-service; рестарт между query и success →
     // ничего не помечается, заказы уйдут повторно (1С сопоставляет по Ид)
-    private volatile Map<Long, LocalDateTime> lastExportedSnapshot;
+    private final AtomicReference<Map<Long, LocalDateTime>> lastExportedSnapshot = new AtomicReference<>();
 
     /** Результат выгрузки заказов: XML для 1С + количество заказов. */
     public record OrderExportResult(String xml, int count) {}
@@ -63,7 +67,7 @@ public class OrderExportService {
 
         if(orders.isEmpty()){
             log.info("Нет заказов для выгрузки в 1С");
-            lastExportedSnapshot = Map.of();
+            lastExportedSnapshot.set(Map.of());
             return new OrderExportResult(buildEmptyResponse(), 0);
         }
 
@@ -86,7 +90,7 @@ public class OrderExportService {
             }
         }
         commerceInfo.setDocuments(documents);
-        lastExportedSnapshot = snapshot;
+        lastExportedSnapshot.set(snapshot);
         return new OrderExportResult(marshalToXml(commerceInfo), orders.size());
     }
 
@@ -97,7 +101,7 @@ public class OrderExportService {
      */
     @Transactional
     public int markOrdersAsExported() {
-        Map<Long, LocalDateTime> snapshot = lastExportedSnapshot;
+        Map<Long, LocalDateTime> snapshot = lastExportedSnapshot.get();
         if (snapshot == null) {
             log.warn("mode=success без предшествующего mode=query — заказы не помечаются");
             return 0;
@@ -115,7 +119,7 @@ public class OrderExportService {
                 count++;
             }
         }
-        lastExportedSnapshot = null;
+        lastExportedSnapshot.set(null);
         log.info("Помечено {} заказов как exported", count);
         return count;
     }
@@ -135,24 +139,24 @@ public class OrderExportService {
             doc.setRole("Покупатель");
 
             //Дата
-            if(json.has("createdAt") && !json.get("createdAt").isNull()){
-                String createdAt = json.get("createdAt").asText();
+            if(json.has(FIELD_CREATED_AT) && !json.get(FIELD_CREATED_AT).isNull()){
+                String createdAt = json.get(FIELD_CREATED_AT).asText();
                 doc.setDate(createdAt.substring(0,10)); //yyyy-MM-dd
             }
 
             doc.setOperation("Заказ товара");
             doc.setRate("1");
             // Время
-            if (json.has("createdAt") && !json.get("createdAt").isNull()) {
-                String createdAt = json.get("createdAt").asText();
+            if (json.has(FIELD_CREATED_AT) && !json.get(FIELD_CREATED_AT).isNull()) {
+                String createdAt = json.get(FIELD_CREATED_AT).asText();
                 if (createdAt.length() > 10) {
                     doc.setTime(createdAt.substring(11, 19)); // HH:mm:ss
                 }
             }
 
             //Комментарий
-            if(json.has("comment") && !json.get("comment").isNull()){
-                doc.setComment(json.get("comment").asText());
+            if(json.has(FIELD_COMMENT) && !json.get(FIELD_COMMENT).isNull()){
+                doc.setComment(json.get(FIELD_COMMENT).asText());
             }
 
             //Контрагент

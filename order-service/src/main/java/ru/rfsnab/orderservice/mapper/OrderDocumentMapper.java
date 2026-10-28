@@ -4,6 +4,8 @@ import ru.rfsnab.orderservice.models.dto.order.OrderDocumentDto;
 import ru.rfsnab.orderservice.models.entity.OrderDocument;
 
 public class OrderDocumentMapper {
+    private OrderDocumentMapper() {
+    }
 
     public static OrderDocumentDto toDto(OrderDocument document) {
         return new OrderDocumentDto(

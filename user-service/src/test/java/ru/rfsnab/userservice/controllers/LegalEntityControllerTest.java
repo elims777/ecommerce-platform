@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -60,6 +61,22 @@ class LegalEntityControllerTest {
                 "legalPostalCode": "167000"
             }
             """;
+
+    @Test
+    @DisplayName("PATCH /api/v1/legal-entities/{id} — 400 при наименовании длиннее 255 символов")
+    void updateShouldReturn400WhenFullNameTooLong() throws Exception {
+        String body = """
+                {"fullName": "%s", "director": "Иванов И.И.", "phone": "+79001112233",
+                 "legalCity": "Сыктывкар", "legalStreet": "Ленина", "legalBuilding": "1"}
+                """.formatted("О".repeat(256));
+
+        mockMvc.perform(patch("/api/v1/legal-entities/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+
+        verify(legalEntityService, never()).update(anyLong(), any());
+    }
 
     @Nested
     @DisplayName("POST /api/v1/legal-entities/register")
@@ -126,7 +143,7 @@ class LegalEntityControllerTest {
         @Test
         @DisplayName("200 HTML с meta-redirect → /login?legal_confirmed=error при невалидном токене")
         void shouldReturn404WhenTokenInvalid() throws Exception {
-            org.mockito.Mockito.doThrow(new LegalEntityNotFoundException("Токен не найден"))
+            doThrow(new LegalEntityNotFoundException("Токен не найден"))
                     .when(legalEntityService).confirmEmail("bad-token");
 
             mockMvc.perform(get("/api/v1/legal-entities/confirm-email")
@@ -159,7 +176,7 @@ class LegalEntityControllerTest {
         @DisplayName("404 Not Found — юрлицо не найдено")
         void shouldReturn404WhenNotFound() throws Exception {
             SetPasswordRequest request = new SetPasswordRequest("hash");
-            org.mockito.Mockito.doThrow(new LegalEntityNotFoundException("Юрлицо не найдено: 99"))
+            doThrow(new LegalEntityNotFoundException("Юрлицо не найдено: 99"))
                     .when(legalEntityService).setPasswordHash(99L, "hash");
 
             mockMvc.perform(put("/api/v1/legal-entities/99/password")

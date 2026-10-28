@@ -62,8 +62,8 @@ class ImageProcessingPoolTest extends BaseIntegrationTest {
             imageProcessingPool.enqueueImages(tempExchangeDir, "ext-001", imagePaths, "session-1");
 
             List<ImageProcessingTask> tasks = taskRepository.findAll();
-            assertThat(tasks).hasSize(2);
-            assertThat(tasks).allMatch(t -> t.getStatus() == TaskStatus.PENDING);
+            assertThat(tasks).hasSize(2)
+                    .allMatch(t -> t.getStatus() == TaskStatus.PENDING);
             assertThat(tasks).allMatch(t -> "ext-001".equals(t.getProductExternalId()));
             assertThat(tasks).allMatch(t -> "session-1".equals(t.getSessionId()));
         }

@@ -38,6 +38,8 @@ export interface LinkStatusResponse {
     linked: boolean;
     confirmed: boolean;
     legalEntityId: number | null;
+    fullName?: string;
+    inn?: string;
 }
 
 export interface RegisterLegalEntityRequest {

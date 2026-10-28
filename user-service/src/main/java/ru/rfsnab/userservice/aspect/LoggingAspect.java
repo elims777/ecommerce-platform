@@ -7,8 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-
 /**
  * Аспект для централизованного логирования вызовов методов в слоях приложения.
  * Логирует входы/выходы из методов контроллеров, сервисов и репозиториев.
@@ -67,9 +65,6 @@ public class LoggingAspect {
     @Around("serviceLayer() && !execution(* *..setPasswordHash(..))")
     public Object logAroundService(ProceedingJoinPoint joinPoint) throws Throwable {
         String methodName = joinPoint.getSignature().toShortString();
-        Object[] args = joinPoint.getArgs();
-
-        log.debug("==> Executing service: {} with args: {}", methodName, Arrays.toString(args));
 
         long startTime = System.currentTimeMillis();
         Object result = joinPoint.proceed();
@@ -86,18 +81,16 @@ public class LoggingAspect {
     @Before("repositoryLayer()")
     public void logBeforeRepository(JoinPoint joinPoint) {
         String methodName = joinPoint.getSignature().toShortString();
-        Object[] args = joinPoint.getArgs();
-        log.debug("--- DB query: {} with params: {}", methodName, Arrays.toString(args));
+        log.debug("--- DB query: {}", methodName);
     }
 
     /**
      * Логирование результатов из репозиториев
      */
-    @AfterReturning(pointcut = "repositoryLayer()", returning = "result")
-    public void logAfterRepository(JoinPoint joinPoint, Object result) {
+    @AfterReturning("repositoryLayer()")
+    public void logAfterRepository(JoinPoint joinPoint) {
         String methodName = joinPoint.getSignature().toShortString();
-        String resultType = result != null ? result.getClass().getSimpleName() : "null";
-        log.debug("--- DB result: {} returned: {}", methodName, resultType);
+        log.debug("--- DB result: {}", methodName);
     }
 
     /**
@@ -108,10 +101,9 @@ public class LoggingAspect {
         String methodName = joinPoint.getSignature().toShortString();
         Object[] args = joinPoint.getArgs();
 
-        if (args.length > 0 && args[0] instanceof Exception) {
-            Exception ex = (Exception) args[0];
-            log.warn(">>> Handling exception in: {} - Exception type: {} - Message: {}",
-                    methodName, ex.getClass().getSimpleName(), ex.getMessage());
+        if (args.length > 0 && args[0] instanceof Exception ex) {
+            log.warn(">>> Handling exception in: {} - Exception type: {}",
+                    methodName, ex.getClass().getSimpleName());
         }
     }
 

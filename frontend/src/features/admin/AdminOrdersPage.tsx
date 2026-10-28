@@ -128,7 +128,7 @@ const AdminOrdersPage = () => {
       changeOrderStatus(orderId, status),
     onSuccess: () => {
       messageApi.success('Статус обновлён');
-      queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
+      void queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
     },
     onError: () => messageApi.error('Ошибка смены статуса'),
   });
@@ -164,7 +164,7 @@ const AdminOrdersPage = () => {
       {/* Filter bar */}
       <div className="rf-admin-filterbar">
         <div className="rf-admin-search" style={{ width: 280 }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
             <circle cx="6" cy="6" r="4"/><path d="M10 10l2.5 2.5"/>
           </svg>
           <input
@@ -284,7 +284,7 @@ const AdminOrdersPage = () => {
                     </td>
                     <td>
                       <RowLink to={`/admin/orders/${o.id}`}>
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--ink-3)" strokeWidth="1.5">
+                        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--ink-3)" strokeWidth="1.5">
                           <path d="M6 4l4 4-4 4"/>
                         </svg>
                       </RowLink>

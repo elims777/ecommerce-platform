@@ -3,10 +3,9 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Не запускаем от root
-RUN addgroup -S spring && adduser -S spring -G spring
-
 # Создаём папку для логов и временных файлов обмена с 1С
-RUN mkdir -p /app/logs /app/1c-exchange && chown -R spring:spring /app/logs /app/1c-exchange
+RUN addgroup -S spring && adduser -S spring -G spring \
+    && mkdir -p /app/logs /app/1c-exchange && chown -R spring:spring /app/logs /app/1c-exchange
 
 USER spring:spring
 

@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
 import ru.rfsnab.orderservice.models.entity.Recipient;
 import ru.rfsnab.orderservice.models.entity.RecipientAddress;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.service.RecipientAddressService;
 
 import java.time.LocalDateTime;
@@ -82,7 +83,7 @@ class RecipientAddressControllerTest extends BaseIntegrationTest {
         @Test
         @DisplayName("200 OK — возвращает список адресов")
         void shouldReturnAddresses() throws Exception {
-            when(addressService.getByRecipientId(RECIPIENT_ID, USER_ID))
+            when(addressService.getByRecipientId(RECIPIENT_ID, USER_ID, CustomerType.B2C))
                     .thenReturn(List.of(buildAddress(1L, "Офис", true)));
 
             mockMvc.perform(get("/api/v1/recipients/{recipientId}/addresses", RECIPIENT_ID)
@@ -93,9 +94,23 @@ class RecipientAddressControllerTest extends BaseIntegrationTest {
         }
 
         @Test
+        @DisplayName("200 OK — заголовок X-Client-Type: B2B передаётся в сервис как B2B")
+        void shouldPassB2bCustomerType() throws Exception {
+            when(addressService.getByRecipientId(eq(RECIPIENT_ID), eq(USER_ID), eq(CustomerType.B2B)))
+                    .thenReturn(List.of());
+
+            mockMvc.perform(get("/api/v1/recipients/{recipientId}/addresses", RECIPIENT_ID)
+                            .header("X-Client-Type", "B2B")
+                            .with(jwtUser()))
+                    .andExpect(status().isOk());
+
+            verify(addressService).getByRecipientId(eq(RECIPIENT_ID), eq(USER_ID), eq(CustomerType.B2B));
+        }
+
+        @Test
         @DisplayName("200 OK — пустой список")
         void shouldReturnEmptyList() throws Exception {
-            when(addressService.getByRecipientId(RECIPIENT_ID, USER_ID)).thenReturn(List.of());
+            when(addressService.getByRecipientId(RECIPIENT_ID, USER_ID, CustomerType.B2C)).thenReturn(List.of());
 
             mockMvc.perform(get("/api/v1/recipients/{recipientId}/addresses", RECIPIENT_ID)
                             .with(jwtUser()))
@@ -112,7 +127,7 @@ class RecipientAddressControllerTest extends BaseIntegrationTest {
         @DisplayName("201 Created — адрес создан")
         void shouldCreateAddress() throws Exception {
             RecipientAddress address = buildAddress(1L, "Офис", false);
-            when(addressService.create(eq(RECIPIENT_ID), eq(USER_ID), any())).thenReturn(address);
+            when(addressService.create(eq(RECIPIENT_ID), eq(USER_ID), eq(CustomerType.B2C), any())).thenReturn(address);
 
             String json = """
                     {
@@ -134,7 +149,7 @@ class RecipientAddressControllerTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.label").value("Офис"))
                     .andExpect(jsonPath("$.city").value("Москва"));
 
-            verify(addressService).create(eq(RECIPIENT_ID), eq(USER_ID), any());
+            verify(addressService).create(eq(RECIPIENT_ID), eq(USER_ID), eq(CustomerType.B2C), any());
         }
 
         @Test
@@ -166,7 +181,7 @@ class RecipientAddressControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — адрес обновлён")
         void shouldUpdateAddress() throws Exception {
             RecipientAddress updated = buildAddress(1L, "Новый офис", false);
-            when(addressService.update(eq(1L), eq(RECIPIENT_ID), eq(USER_ID), any())).thenReturn(updated);
+            when(addressService.update(eq(1L), eq(RECIPIENT_ID), eq(USER_ID), eq(CustomerType.B2C), any())).thenReturn(updated);
 
             String json = """
                     {
@@ -198,7 +213,7 @@ class RecipientAddressControllerTest extends BaseIntegrationTest {
                             .with(jwtUser()).with(csrf()))
                     .andExpect(status().isNoContent());
 
-            verify(addressService).delete(1L, RECIPIENT_ID, USER_ID);
+            verify(addressService).delete(1L, RECIPIENT_ID, USER_ID, CustomerType.B2C);
         }
     }
 
@@ -210,7 +225,7 @@ class RecipientAddressControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — адрес установлен по умолчанию")
         void shouldSetDefault() throws Exception {
             RecipientAddress address = buildAddress(1L, "Офис", true);
-            when(addressService.setDefault(1L, RECIPIENT_ID, USER_ID)).thenReturn(address);
+            when(addressService.setDefault(1L, RECIPIENT_ID, USER_ID, CustomerType.B2C)).thenReturn(address);
 
             mockMvc.perform(patch("/api/v1/recipients/{recipientId}/addresses/1/default", RECIPIENT_ID)
                             .with(jwtUser()).with(csrf()))

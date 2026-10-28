@@ -44,6 +44,8 @@ import static ru.rfsnab.orderservice.delivery.client.CarrierJson.text;
 @Component
 public class CdekClient implements CarrierClient {
 
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private static final String HTTPS_SCHEME = "https";
     private static final int PAGE_SIZE = 1000;
     private static final int MAX_PAGES = 200;
@@ -105,7 +107,7 @@ public class CdekClient implements CarrierClient {
 
     @Override
     public Optional<List<TerminalData>> fetchTerminals() {
-        String bearer = "Bearer " + fetchToken();
+        String bearer = BEARER_PREFIX + fetchToken();
         List<TerminalData> result = new ArrayList<>();
         int totalPages = 1;
         for (int page = 0; page < totalPages && page < MAX_PAGES; page++) {
@@ -133,7 +135,7 @@ public class CdekClient implements CarrierClient {
      */
     @Override
     public Map<String, CarrierShipmentStatus> fetchStatuses(List<String> waybills) {
-        String bearer = "Bearer " + fetchToken();
+        String bearer = BEARER_PREFIX + fetchToken();
         Map<String, CarrierShipmentStatus> result = new HashMap<>();
         for (String waybill : waybills) {
             fetchStatus(bearer, waybill).ifPresent(status -> result.put(waybill, status));
@@ -185,7 +187,7 @@ public class CdekClient implements CarrierClient {
             throw new CarrierApiException("Ссылка на документ СДЭК ведёт на чужой хост или не https");
         }
         byte[] body = http.get().uri(uri)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + fetchToken())
+                .header(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + fetchToken())
                 .retrieve().body(byte[].class);
         if (body == null || body.length == 0) {
             throw new CarrierApiException("СДЭК вернул пустой документ");
@@ -209,7 +211,9 @@ public class CdekClient implements CarrierClient {
                 BigDecimal width = decimal(node, "width");
                 BigDecimal height = decimal(node, "height");
                 packages.add(new ShipmentPackage(text(node, "number"), kg, length, width, height));
-                weightKg = kg == null ? weightKg : weightKg == null ? kg : weightKg.add(kg);
+                if (kg != null) {
+                    weightKg = weightKg == null ? kg : weightKg.add(kg);
+                }
                 if (length != null && width != null && height != null) {
                     BigDecimal volume = length.multiply(width).multiply(height).divide(CM3_IN_M3);
                     volumeM3 = volumeM3 == null ? volume : volumeM3.add(volume);

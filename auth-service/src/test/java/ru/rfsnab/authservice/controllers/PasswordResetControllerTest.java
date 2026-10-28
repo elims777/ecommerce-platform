@@ -18,6 +18,7 @@ import ru.rfsnab.authservice.service.PasswordResetService;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -101,7 +102,7 @@ class PasswordResetControllerTest {
                                 new ResetPasswordRequest("valid-token", "short"))))
                 .andExpect(status().isBadRequest());
 
-        verify(passwordResetService, org.mockito.Mockito.never()).reset(anyString(), anyString());
+        verify(passwordResetService, never()).reset(anyString(), anyString());
     }
 
     @Test

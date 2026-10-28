@@ -7,8 +7,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,9 +20,11 @@ import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.authservice.models.dto.RegistrationRequest;
 import ru.rfsnab.authservice.models.dto.RoleEntity;
 import ru.rfsnab.authservice.models.dto.UserDtoResponse;
+import ru.rfsnab.authservice.service.OAuth2CodeService;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +32,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,22 +66,26 @@ class OAuth2LoginSuccessHandlerTest {
     private OAuth2User oAuth2User;
 
     private OAuth2LoginSuccessHandler handler;
+    private OAuth2CodeService codeService;
     private ObjectMapper objectMapper;
 
-    private final static String USER_SERVICE_URL = "http://localhost:8081";
+    private static final String USER_SERVICE_URL = "http://localhost:8081";
 
     @BeforeEach
     void setUp(){
         objectMapper = new ObjectMapper();
+        codeService = new OAuth2CodeService(Clock.systemUTC());
 
         handler = new OAuth2LoginSuccessHandler(
                 restTemplate,
                 jwtService,
                 passwordEncoder,
                 objectMapper,
-                roleExtractor
+                roleExtractor,
+                codeService
         );
         ReflectionTestUtils.setField(handler, "userServiceUrl", USER_SERVICE_URL);
+        ReflectionTestUtils.setField(handler, "internalSecret", "secret");
     }
 
     @Test
@@ -91,11 +100,6 @@ class OAuth2LoginSuccessHandlerTest {
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
         when(request.getSession(false)).thenReturn(null);
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
-        when(oAuth2User.getAttributes()).thenReturn(Map.of(
-                "default_email", email,
-                "first_name", firstName,
-                "last_name", lastName
-        ));
         when(oAuth2User.getAttribute("default_email")).thenReturn(email);
         when(oAuth2User.getAttribute("first_name")).thenReturn(firstName);
         when(oAuth2User.getAttribute("last_name")).thenReturn(lastName);
@@ -112,7 +116,7 @@ class OAuth2LoginSuccessHandlerTest {
         when(passwordEncoder.encode(anyString())).thenReturn("hashed_password");
         when(restTemplate.postForEntity(
                 eq(USER_SERVICE_URL+"/v1/users/oauth2-login"),
-                any(RegistrationRequest.class),
+                any(HttpEntity.class),
                 eq(UserDtoResponse.class)
         )).thenReturn(ResponseEntity.ok(user));
         when(roleExtractor.extractRoles(user)).thenReturn(List.of("ROLE_USER"));
@@ -121,7 +125,13 @@ class OAuth2LoginSuccessHandlerTest {
 
         handler.onAuthenticationSuccess(request, response, authentication);
 
-        verify(response).sendRedirect(contains("/oauth2/success?data="));
+        ArgumentCaptor<String> redirect = ArgumentCaptor.forClass(String.class);
+        verify(response).sendRedirect(redirect.capture());
+        assertThat(redirect.getValue()).contains("/oauth2/success?code=").doesNotContain(accessToken).doesNotContain(refreshToken);
+        String code = redirect.getValue().substring(redirect.getValue().indexOf("code=") + "code=".length());
+        assertThat(codeService.exchange(code))
+                .containsEntry("access_token", accessToken)
+                .containsEntry("refresh_token", refreshToken);
         verify(jwtService).generateToken(user.getId(), email, List.of("ROLE_USER"));
         verify(jwtService).generateRefreshToken(user.getId(), email, List.of("ROLE_USER"));
     }
@@ -132,7 +142,6 @@ class OAuth2LoginSuccessHandlerTest {
         // Given
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
-        when(oAuth2User.getAttributes()).thenReturn(Map.of());
         when(oAuth2User.getAttribute("default_email")).thenReturn(null);
 
         // When & Then
@@ -152,7 +161,6 @@ class OAuth2LoginSuccessHandlerTest {
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
         when(request.getSession(false)).thenReturn(null);
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
-        when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
         when(oAuth2User.getAttribute("default_email")).thenReturn(email);
         when(oAuth2User.getAttribute("first_name")).thenReturn(null);
         when(oAuth2User.getAttribute("last_name")).thenReturn(null);
@@ -181,7 +189,6 @@ class OAuth2LoginSuccessHandlerTest {
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
         when(request.getSession(false)).thenReturn(null);
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
-        when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
         when(oAuth2User.getAttribute("default_email")).thenReturn(email);
         when(oAuth2User.getAttribute("first_name")).thenReturn("Test");
         when(oAuth2User.getAttribute("last_name")).thenReturn("User");
@@ -210,7 +217,6 @@ class OAuth2LoginSuccessHandlerTest {
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
         when(request.getSession(false)).thenReturn(null);
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
-        when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
         when(oAuth2User.getAttribute("default_email")).thenReturn(email);
         when(oAuth2User.getAttribute("first_name")).thenReturn(null); // нет имени
         when(oAuth2User.getAttribute("last_name")).thenReturn(null);  // нет фамилии
@@ -227,7 +233,7 @@ class OAuth2LoginSuccessHandlerTest {
         user.setRoles(Set.of(userRole));
 
         when(passwordEncoder.encode(anyString())).thenReturn("hashed_password");
-        when(restTemplate.postForEntity(anyString(), any(RegistrationRequest.class), eq(UserDtoResponse.class)))
+        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(UserDtoResponse.class)))
                 .thenReturn(ResponseEntity.ok(user));
 
         when(roleExtractor.extractRoles(user)).thenReturn(List.of("ROLE_USER"));
@@ -238,11 +244,13 @@ class OAuth2LoginSuccessHandlerTest {
         handler.onAuthenticationSuccess(request, response, authentication);
 
         // Then
-        verify(response).sendRedirect(contains("/oauth2/success?data="));
+        verify(response).sendRedirect(contains("/oauth2/success?code="));
         verify(restTemplate).postForEntity(
                 eq(USER_SERVICE_URL + "/v1/users/oauth2-login"),
-                argThat((RegistrationRequest req) ->
-                        "Гость".equals(req.getFirstname()) && "Фамилия".equals(req.getLastname())),
+                argThat((HttpEntity<RegistrationRequest> req) ->
+                        "secret".equals(req.getHeaders().getFirst("X-Internal-Token"))
+                                && "Гость".equals(req.getBody().getFirstname())
+                                && "Фамилия".equals(req.getBody().getLastname())),
                 eq(UserDtoResponse.class)
         );
     }
@@ -254,7 +262,6 @@ class OAuth2LoginSuccessHandlerTest {
 
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
-        when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
         when(oAuth2User.getAttribute("default_email")).thenReturn(email);
         when(oAuth2User.getAttribute("first_name")).thenReturn("Test");
         when(oAuth2User.getAttribute("last_name")).thenReturn("User");
@@ -267,7 +274,7 @@ class OAuth2LoginSuccessHandlerTest {
         user.setRoles(Set.of(userRole));
 
         when(passwordEncoder.encode(anyString())).thenReturn("hashed_password");
-        when(restTemplate.postForEntity(anyString(), any(RegistrationRequest.class), eq(UserDtoResponse.class)))
+        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(UserDtoResponse.class)))
                 .thenReturn(ResponseEntity.ok(user));
         when(roleExtractor.extractRoles(user)).thenReturn(List.of("ROLE_USER"));
         when(jwtService.generateToken(anyLong(), anyString(), anyList())).thenReturn("access.token");
@@ -277,7 +284,7 @@ class OAuth2LoginSuccessHandlerTest {
 
         verify(restTemplate).postForEntity(
                 eq(USER_SERVICE_URL + "/v1/users/oauth2-login"),
-                argThat((RegistrationRequest req) -> "79001234567".equals(req.getPhone())),
+                argThat((HttpEntity<RegistrationRequest> req) -> "79001234567".equals(req.getBody().getPhone())),
                 eq(UserDtoResponse.class)
         );
     }
@@ -286,13 +293,12 @@ class OAuth2LoginSuccessHandlerTest {
     @DisplayName("onAuthenticationSuccess() - регистрация без телефона → редирект на ошибку, user-service не вызывается")
     void onAuthenticationSuccess_RegisterNoPhone_RedirectsToError() throws Exception {
         String email = "oauth@example.com";
-        jakarta.servlet.http.HttpSession session = org.mockito.Mockito.mock(jakarta.servlet.http.HttpSession.class);
+        jakarta.servlet.http.HttpSession session = mock(jakarta.servlet.http.HttpSession.class);
 
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
         when(request.getSession(false)).thenReturn(session);
         when(session.getAttribute("oauth2_action")).thenReturn("register");
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
-        when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
         when(oAuth2User.getAttribute("default_email")).thenReturn(email);
         when(oAuth2User.getAttribute("first_name")).thenReturn("Test");
         when(oAuth2User.getAttribute("last_name")).thenReturn("User");
@@ -312,7 +318,6 @@ class OAuth2LoginSuccessHandlerTest {
         when(request.getRequestURI()).thenReturn("/login/oauth2/code/yandex");
         when(request.getSession(false)).thenReturn(null);
         when(authentication.getPrincipal()).thenReturn(oAuth2User);
-        when(oAuth2User.getAttributes()).thenReturn(Map.of("default_email", email));
         when(oAuth2User.getAttribute("default_email")).thenReturn(email);
         when(oAuth2User.getAttribute("first_name")).thenReturn("Test");
         when(oAuth2User.getAttribute("last_name")).thenReturn("User");
@@ -325,7 +330,7 @@ class OAuth2LoginSuccessHandlerTest {
         user.setRoles(Set.of(userRole));
 
         when(passwordEncoder.encode(anyString())).thenReturn("hashed_password");
-        when(restTemplate.postForEntity(anyString(), any(RegistrationRequest.class), eq(UserDtoResponse.class)))
+        when(restTemplate.postForEntity(anyString(), any(HttpEntity.class), eq(UserDtoResponse.class)))
                 .thenReturn(ResponseEntity.ok(user));
         when(roleExtractor.extractRoles(user)).thenReturn(List.of("ROLE_USER"));
         when(jwtService.generateToken(anyLong(), anyString(), anyList())).thenReturn("access.token");
@@ -335,7 +340,7 @@ class OAuth2LoginSuccessHandlerTest {
 
         verify(restTemplate).postForEntity(
                 eq(USER_SERVICE_URL + "/v1/users/oauth2-login"),
-                argThat((RegistrationRequest req) -> "00000000000".equals(req.getPhone())),
+                argThat((HttpEntity<RegistrationRequest> req) -> "00000000000".equals(req.getBody().getPhone())),
                 eq(UserDtoResponse.class)
         );
     }

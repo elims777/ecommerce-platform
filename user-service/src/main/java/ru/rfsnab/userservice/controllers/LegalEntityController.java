@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import ru.rfsnab.userservice.mappers.LegalEntityMapper;
 import ru.rfsnab.userservice.models.dto.SetPasswordRequest;
@@ -25,6 +26,11 @@ import java.util.Map;
 @RequestMapping("/api/v1/legal-entities")
 @RequiredArgsConstructor
 public class LegalEntityController {
+
+    private static final String KEY_CONFIRMED = "confirmed";
+    private static final String KEY_LINKED = "linked";
+    private static final String CAN_ACCESS_LEGAL_ENTITY = "@legalEntityAccess.canAccessLegalEntity(authentication, #id)";
+    private static final String CAN_ACCESS_USER = "@legalEntityAccess.canAccessUser(authentication, #userId)";
 
     private final LegalEntityService legalEntityService;
 
@@ -64,11 +70,13 @@ public class LegalEntityController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize(CAN_ACCESS_LEGAL_ENTITY)
     public ResponseEntity<LegalEntityDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(LegalEntityMapper.toDto(legalEntityService.getById(id)));
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize(CAN_ACCESS_LEGAL_ENTITY)
     public ResponseEntity<LegalEntityDto> update(
             @PathVariable Long id,
             @Valid @RequestBody UpdateLegalEntityRequest request) {
@@ -76,6 +84,7 @@ public class LegalEntityController {
     }
 
     @GetMapping("/{id}/addresses")
+    @PreAuthorize(CAN_ACCESS_LEGAL_ENTITY)
     public ResponseEntity<List<LegalEntityAddressDto>> getAddresses(@PathVariable Long id) {
         return ResponseEntity.ok(
                 legalEntityService.getAddresses(id).stream()
@@ -83,6 +92,7 @@ public class LegalEntityController {
     }
 
     @PostMapping("/{id}/addresses")
+    @PreAuthorize(CAN_ACCESS_LEGAL_ENTITY)
     public ResponseEntity<LegalEntityAddressDto> addAddress(
             @PathVariable Long id,
             @Valid @RequestBody SaveLegalEntityAddressRequest request) {
@@ -91,12 +101,14 @@ public class LegalEntityController {
     }
 
     @DeleteMapping("/{id}/addresses/{addressId}")
+    @PreAuthorize(CAN_ACCESS_LEGAL_ENTITY)
     public ResponseEntity<Void> deleteAddress(@PathVariable Long id, @PathVariable Long addressId) {
         legalEntityService.deleteAddress(id, addressId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/bank-accounts")
+    @PreAuthorize(CAN_ACCESS_LEGAL_ENTITY)
     public ResponseEntity<List<BankAccountDto>> getBankAccounts(@PathVariable Long id) {
         return ResponseEntity.ok(
                 legalEntityService.getBankAccounts(id).stream()
@@ -104,6 +116,7 @@ public class LegalEntityController {
     }
 
     @PostMapping("/{id}/bank-accounts")
+    @PreAuthorize(CAN_ACCESS_LEGAL_ENTITY)
     public ResponseEntity<BankAccountDto> addBankAccount(
             @PathVariable Long id,
             @Valid @RequestBody SaveBankAccountRequest request) {
@@ -112,18 +125,21 @@ public class LegalEntityController {
     }
 
     @DeleteMapping("/{id}/bank-accounts/{accountId}")
+    @PreAuthorize(CAN_ACCESS_LEGAL_ENTITY)
     public ResponseEntity<Void> deleteBankAccount(@PathVariable Long id, @PathVariable Long accountId) {
         legalEntityService.deleteBankAccount(id, accountId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/authenticate")
+    @PreAuthorize("hasRole('INTERNAL')")
     public ResponseEntity<LegalEntityAuthResponse> authenticate(
             @RequestBody LegalEntityAuthRequest request) {
         return ResponseEntity.ok(legalEntityService.authenticate(request.login(), request.password()));
     }
 
     @GetMapping("/link-status/{userId}")
+    @PreAuthorize(CAN_ACCESS_USER)
     public ResponseEntity<Map<String, Object>> getLinkStatusByUser(@PathVariable Long userId) {
         List<ru.rfsnab.userservice.models.UserLegalEntity> links =
                 legalEntityService.getConfirmedLinksForUser(userId);
@@ -133,33 +149,39 @@ public class LegalEntityController {
             List<ru.rfsnab.userservice.models.UserLegalEntity> allLinks =
                     legalEntityService.getAllLinksForUser(userId);
             if (allLinks.isEmpty()) {
-                return ResponseEntity.ok(Map.of("linked", false, "confirmed", false));
+                return ResponseEntity.ok(Map.of(KEY_LINKED, false, KEY_CONFIRMED, false));
             }
             ru.rfsnab.userservice.models.UserLegalEntity link = allLinks.get(0);
             return ResponseEntity.ok(Map.of(
-                    "linked", true,
-                    "confirmed", false,
-                    "legalEntityId", link.getLegalEntity().getId()
+                    KEY_LINKED, true,
+                    KEY_CONFIRMED, false,
+                    "legalEntityId", link.getLegalEntity().getId(),
+                    "fullName", link.getLegalEntity().getFullName(),
+                    "inn", link.getLegalEntity().getInn()
             ));
         }
 
         ru.rfsnab.userservice.models.UserLegalEntity link = links.get(0);
         return ResponseEntity.ok(Map.of(
-                "linked", true,
-                "confirmed", true,
-                "legalEntityId", link.getLegalEntity().getId()
+                KEY_LINKED, true,
+                KEY_CONFIRMED, true,
+                "legalEntityId", link.getLegalEntity().getId(),
+                "fullName", link.getLegalEntity().getFullName(),
+                "inn", link.getLegalEntity().getInn()
         ));
     }
 
     @GetMapping("/link-status/{userId}/{legalEntityId}")
+    @PreAuthorize(CAN_ACCESS_USER)
     public ResponseEntity<Map<String, Boolean>> getLinkStatus(
             @PathVariable Long userId,
             @PathVariable Long legalEntityId) {
         boolean confirmed = legalEntityService.isLinkConfirmed(userId, legalEntityId);
-        return ResponseEntity.ok(Map.of("confirmed", confirmed));
+        return ResponseEntity.ok(Map.of(KEY_CONFIRMED, confirmed));
     }
 
     @PutMapping("/{id}/password")
+    @PreAuthorize("hasRole('INTERNAL')")
     public ResponseEntity<Void> setPassword(@PathVariable Long id, @Valid @RequestBody SetPasswordRequest request) {
         legalEntityService.setPasswordHash(id, request.passwordHash());
         return ResponseEntity.ok().build();

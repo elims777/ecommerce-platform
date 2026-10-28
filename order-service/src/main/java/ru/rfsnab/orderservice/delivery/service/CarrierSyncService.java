@@ -49,6 +49,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CarrierSyncService {
 
+    private static final String CARRIERS_NOT_INITIALIZED = "carriers not initialized: ";
+
     /** Сколько пропущенных записей попадает в отчёт, остальные — счётчиком. */
     public static final int MAX_SKIPPED_ITEMS = 50;
 
@@ -75,7 +77,7 @@ public class CarrierSyncService {
      */
     public CarrierSyncReport syncManually(CarrierCode code) {
         Carrier carrier = carrierRepository.findById(code)
-                .orElseThrow(() -> new IllegalStateException("carriers not initialized: " + code));
+                .orElseThrow(() -> new IllegalStateException(CARRIERS_NOT_INITIALIZED + code));
         CarrierSyncReport report = sync(carrier);
         publish(SyncTrigger.MANUAL, List.of(report));
         return report;
@@ -150,7 +152,7 @@ public class CarrierSyncService {
     /** Сохраняет точки и итог ТК; вызывается внутри транзакции. */
     private CarrierSyncReport persist(CarrierCode code, List<TerminalData> data, Instant started) {
         Carrier carrier = carrierRepository.findById(code)
-                .orElseThrow(() -> new IllegalStateException("carriers not initialized: " + code));
+                .orElseThrow(() -> new IllegalStateException(CARRIERS_NOT_INITIALIZED + code));
         List<CarrierTerminal> existing = terminalRepository.findAllByCarrierCode(code);
         Map<String, CarrierTerminal> byExternalId = existing.stream()
                 .collect(Collectors.toMap(CarrierTerminal::getExternalId, Function.identity()));
@@ -217,7 +219,7 @@ public class CarrierSyncService {
     /** Записывает итог в carriers.last_sync_report; вызывается внутри транзакции. */
     private void storeReport(CarrierCode code, CarrierSyncReport report, boolean markSynced) {
         Carrier carrier = carrierRepository.findById(code)
-                .orElseThrow(() -> new IllegalStateException("carriers not initialized: " + code));
+                .orElseThrow(() -> new IllegalStateException(CARRIERS_NOT_INITIALIZED + code));
         carrier.setLastSyncReport(toJson(report));
         if (markSynced) {
             carrier.setTerminalsSyncedAt(Instant.now());

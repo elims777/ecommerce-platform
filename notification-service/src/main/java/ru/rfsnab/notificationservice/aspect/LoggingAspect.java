@@ -6,8 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-
 /**
  * Аспект для централизованного логирования вызовов методов в слоях приложения.
  * Логирует входы/выходы из методов Kafka consumers, сервисов.
@@ -60,9 +58,6 @@ public class LoggingAspect {
     @Around("serviceLayer()")
     public Object logAroundService(ProceedingJoinPoint joinPoint) throws Throwable {
         String methodName = joinPoint.getSignature().toShortString();
-        Object[] args = joinPoint.getArgs();
-
-        log.debug("==> Executing service: {} with args: {}", methodName, Arrays.toString(args));
 
         long startTime = System.currentTimeMillis();
         Object result = joinPoint.proceed();

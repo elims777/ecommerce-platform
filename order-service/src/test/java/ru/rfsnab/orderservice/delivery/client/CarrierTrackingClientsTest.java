@@ -545,7 +545,7 @@ class CarrierTrackingClientsTest {
             assertThat(result.get("800").code()).isEqualTo(ShipmentStatusCode.CANCELLED);
             assertThat(result.get("900").code()).isEqualTo(ShipmentStatusCode.DELIVERED);
             assertThat(result.get("900").rawText()).isEqualTo("Выдан");
-            assertThat(result.get("MY-1")).isEqualTo(result.get("900"));
+            assertThat(result).containsEntry("MY-1", result.get("900"));
             assertThat(client.supportsStatusTracking()).isTrue();
             assertThat(client.supportsJournal()).isTrue();
             server.verify();
@@ -1006,7 +1006,7 @@ class CarrierTrackingClientsTest {
             Map<String, CarrierShipmentStatus> result = client.fetchStatuses(List.of("B0", "B1", "B2", "B3", "B4"));
 
             assertThat(result).containsOnlyKeys("B0", "B1", "B2", "B3");
-            assertThat(result.get("B0")).isEqualTo(new CarrierShipmentStatus(
+            assertThat(result).containsEntry("B0", new CarrierShipmentStatus(
                     ShipmentStatusCode.IN_TRANSIT, "Груз принят к перевозке.", "Москва", "Тверь", null));
             assertThat(result.get("B1").code()).isEqualTo(ShipmentStatusCode.IN_TRANSIT);
             assertThat(result.get("B2").code()).isEqualTo(ShipmentStatusCode.ARRIVED_AT_TERMINAL);

@@ -12,6 +12,7 @@ import ru.rfsnab.userservice.exceptions.LegalEntityAlreadyExistsException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotFoundException;
 import ru.rfsnab.userservice.exceptions.LegalEntityNotVerifiedException;
 import ru.rfsnab.userservice.exceptions.ResendTooSoonException;
+import ru.rfsnab.userservice.utils.LogMasker;
 import ru.rfsnab.userservice.models.*;
 import ru.rfsnab.userservice.models.dto.legal.LegalEntityAuthResponse;
 import ru.rfsnab.userservice.models.dto.legal.RegisterLegalEntityRequest;
@@ -127,7 +128,7 @@ public class LegalEntityService {
                 null, LocalDateTime.now(), null
         ));
 
-        log.info("Legal entity verified: id={} by {}", id, managerEmail);
+        log.info("Legal entity verified: id={} by {}", id, LogMasker.maskEmail(managerEmail));
         return entity;
     }
 
@@ -146,7 +147,7 @@ public class LegalEntityService {
                 reason, LocalDateTime.now(), null
         ));
 
-        log.info("Legal entity rejected: id={} by {}, reason: {}", id, managerEmail, reason);
+        log.info("Legal entity rejected: id={} by {}, reason: {}", id, LogMasker.maskEmail(managerEmail), reason);
         return entity;
     }
 

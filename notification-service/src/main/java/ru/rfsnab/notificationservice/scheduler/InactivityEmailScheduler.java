@@ -1,9 +1,13 @@
 package ru.rfsnab.notificationservice.scheduler;
 
+import ru.rfsnab.notificationservice.utils.LogMasker;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,6 +23,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class InactivityEmailScheduler {
 
+    private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
+
     private final EmailService emailService;
     private final RestTemplate restTemplate;
 
@@ -28,6 +34,9 @@ public class InactivityEmailScheduler {
     @Value("${app.frontend-url:http://localhost:5173}")
     private String frontendUrl;
 
+    @Value("${internal.secret}")
+    private String internalSecret;
+
     @Scheduled(cron = "0 0 10 * * *")
     public void sendInactivityEmails() {
         log.info("Запуск задачи рассылки писем о неактивности");
@@ -36,7 +45,7 @@ public class InactivityEmailScheduler {
             ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
                     userServiceUrl + "/v1/users/inactive",
                     HttpMethod.GET,
-                    null,
+                    internalRequest(),
                     new ParameterizedTypeReference<>() {}
             );
 
@@ -55,17 +64,17 @@ public class InactivityEmailScheduler {
                     String firstname = (String) user.get("firstname");
                     String unsubscribeToken = (String) user.get("unsubscribeToken");
 
-                    String unsubscribeUrl = userServiceUrl + "/v1/users/unsubscribe?token=" + unsubscribeToken;
+                    String unsubscribeUrl = frontendUrl + "/api/v1/users/unsubscribe?token=" + unsubscribeToken;
                     String catalogUrl = frontendUrl + "/catalog";
 
                     emailService.sendInactivityEmail(email, firstname, catalogUrl, unsubscribeUrl);
 
                     restTemplate.postForEntity(
                             userServiceUrl + "/v1/users/" + userId + "/inactivity-email-sent",
-                            null, Void.class
+                            internalRequest(), Void.class
                     );
 
-                    log.info("Письмо о неактивности отправлено: userId={}, email={}", userId, email);
+                    log.info("Письмо о неактивности отправлено: userId={}, email={}", userId, LogMasker.maskEmail(email));
                 } catch (Exception e) {
                     log.error("Ошибка отправки письма пользователю {}: {}", user.get("id"), e.getMessage());
                 }
@@ -73,5 +82,11 @@ public class InactivityEmailScheduler {
         } catch (Exception e) {
             log.error("Ошибка выполнения задачи рассылки: {}", e.getMessage(), e);
         }
+    }
+
+    private HttpEntity<Void> internalRequest() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(INTERNAL_TOKEN_HEADER, internalSecret);
+        return new HttpEntity<>(headers);
     }
 }

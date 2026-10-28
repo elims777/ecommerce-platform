@@ -38,6 +38,19 @@
             </p>
 
             <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Заказчик:</strong> <span th:text="${customerName} ?: '—'"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Телефон:</strong> <span th:text="${customerPhone} ?: '—'"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
+                <strong>Email:</strong> <span th:text="${customerEmail} ?: '—'"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${companyName}">
+                <strong>Организация:</strong> <span th:text="${companyName}"></span>
+                <span th:if="${inn}" th:text="' (ИНН ' + ${inn} + ')'"></span>
+            </p>
+            <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;">
                 <strong>Способ доставки:</strong> <span th:text="${deliveryMethod}"></span>
             </p>
             <p style="color:#1A1A1A; font-size:14px; margin:0 0 8px;" th:if="${shippingWarehouseCity}">

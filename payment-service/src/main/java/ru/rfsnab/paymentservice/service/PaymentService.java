@@ -117,8 +117,9 @@ public class PaymentService {
 
     public void updateStatusFromTochka(Payment payment) {
         TochkaStatusResponse tochkaStatus = tochkaApiClient.getPaymentStatus(payment.getOperationId());
-        var operations = tochkaStatus.data() != null ? tochkaStatus.data().operation() : null;
-        if (operations == null || operations.isEmpty()) return;
+        var data = tochkaStatus.data();
+        if (data == null || data.operation() == null || data.operation().isEmpty()) return;
+        var operations = data.operation();
         PaymentStatus mapped = mapTochkaStatus(operations.get(0).status());
 
         if (mapped == null) {

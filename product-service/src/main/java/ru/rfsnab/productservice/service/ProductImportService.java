@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -217,7 +218,7 @@ public class ProductImportService {
 
             boolean childrenChanged = false;
             if (hasVariants) {
-                childrenChanged = upsertChildVariants(savedProduct, item.getVariants(), existingProducts,
+                childrenChanged = upsertChildVariants(savedProduct, item.getVariants(),
                         reservedSlugs, importCategory, warehouse);
             }
 
@@ -307,13 +308,12 @@ public class ProductImportService {
      */
     private boolean upsertChildVariants(Product parent,
                                      List<ProductImportItem.VariantImportItem> variantItems,
-                                     Map<String, Product> existingProducts,
                                      Set<String> reservedSlugs,
                                      Category importCategory,
                                      Warehouse warehouse) {
         List<String> externalIds = variantItems.stream()
                 .map(ProductImportItem.VariantImportItem::getExternalId)
-                .filter(id -> id != null)
+                .filter(Objects::nonNull)
                 .toList();
 
         Map<String, Product> existingChildren = externalIds.isEmpty()
@@ -426,7 +426,7 @@ public class ProductImportService {
                     .map(e -> new ProductImportItem.ProductAttributeImportItem(e.getKey(), e.getValue()))
                     .toList();
         }
-        return null;
+        return List.of();
     }
 
     /**
@@ -470,10 +470,10 @@ public class ProductImportService {
             return false;
         }
         Set<String> currentPairs = product.getAttributes().stream()
-                .map(a -> a.getAttributeName() + " " + a.getAttributeValue())
+                .map(a -> a.getAttributeName() + "\u0000" + a.getAttributeValue())
                 .collect(Collectors.toSet());
         Set<String> newPairs = attrItems.stream()
-                .map(a -> a.getName() + " " + a.getValue())
+                .map(a -> a.getName() + "\u0000" + a.getValue())
                 .collect(Collectors.toSet());
         return !currentPairs.equals(newPairs);
     }
@@ -530,7 +530,10 @@ public class ProductImportService {
     }
 
     private BatchProductImportResponse buildResponse(int totalReceived, List<ImportItemResult> results) {
-        int created = 0, updated = 0, unchanged = 0, failed = 0;
+        int created = 0;
+        int updated = 0;
+        int unchanged = 0;
+        int failed = 0;
         for (ImportItemResult result : results) {
             switch (result.getAction()) {
                 case CREATED -> created++;

@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
@@ -25,6 +25,7 @@ import ru.rfsnab.productservice.repository.projection.ProductStatsProjection;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -58,22 +59,22 @@ class ProductStatsCacheTest {
     @Autowired
     private CacheManager cacheManager;
 
-    @MockBean
+    @MockitoBean
     private ProductRepository productRepository;
 
-    @MockBean
+    @MockitoBean
     private CategoryRepository categoryRepository;
 
-    @MockBean
+    @MockitoBean
     private CategoryService categoryService;
 
-    @MockBean
+    @MockitoBean
     private SlugGeneratorService slugGeneratorService;
 
-    @MockBean
+    @MockitoBean
     private ProductAttributeRepository attributeRepository;
 
-    @MockBean
+    @MockitoBean
     private ProductStockService productStockService;
 
     @BeforeEach
@@ -81,7 +82,7 @@ class ProductStatsCacheTest {
         cacheManager.getCache(CacheConfig.PRODUCT_STATS_CACHE).clear();
         Mockito.reset(productRepository);
 
-        ProductStatsProjection projection = Mockito.mock(ProductStatsProjection.class);
+        ProductStatsProjection projection = mock(ProductStatsProjection.class);
         when(projection.getTotal()).thenReturn(10L);
         when(projection.getUniqueProducts()).thenReturn(6L);
         when(projection.getFtk()).thenReturn(7L);

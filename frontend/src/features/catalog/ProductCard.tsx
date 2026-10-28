@@ -13,13 +13,13 @@ const sortImages = (images: ProductImage[]): ProductImage[] =>
     });
 
 const HeartIcon = ({ filled }: { filled?: boolean }) => (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>
     </svg>
 );
 
 const CartIcon = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 4h2.5l2 13.5h11l2-9h-14"/><circle cx="9" cy="20.5" r="1.4"/><circle cx="18" cy="20.5" r="1.4"/>
     </svg>
 );
@@ -126,8 +126,8 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             intervalRef.current = setInterval(() => {
                 setCurrentImageIndex((prev) => (prev + 1) % sortedImages.length);
             }, 1200);
-        } else {
-            if (intervalRef.current) clearInterval(intervalRef.current);
+        } else if (intervalRef.current) {
+            clearInterval(intervalRef.current);
         }
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
@@ -176,7 +176,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             {/* Кнопка избранного */}
             <button
                 type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavourite(product.id); }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); void toggleFavourite(product.id); }}
                 style={{
                     position: 'absolute', top: 10, right: 10, zIndex: 2,
                     width: 30, height: 30, borderRadius: 'var(--r-full)', border: 0,

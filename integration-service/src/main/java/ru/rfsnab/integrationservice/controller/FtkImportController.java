@@ -30,6 +30,8 @@ import java.util.Map;
 @Tag(name = "FTK Import", description = "Импорт каталога ФТК")
 public class FtkImportController {
 
+    private static final String ERROR_KEY = "error";
+
     private final FtkImportService ftkImportService;
 
     // ──────────────────────────────────────────────────────────────
@@ -64,18 +66,18 @@ public class FtkImportController {
      * POST /api/v1/integration/ftk/import
      * @deprecated Используй /import-xml. XLS делался для другого клиента ФТК.
      */
-    @Deprecated
+    @Deprecated(since = "2026-06-11")
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Импорт каталога ФТК из XLS файла (устарел)")
     public ResponseEntity<Map<String, Object>> importXls(
             @RequestParam("file") MultipartFile file
     ) {
         if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Файл не передан"));
+            return ResponseEntity.badRequest().body(Map.of(ERROR_KEY, "Файл не передан"));
         }
         String originalFilename = file.getOriginalFilename();
         if (originalFilename != null && !originalFilename.toLowerCase().endsWith(".xls")) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Ожидается файл .xls (HSSF формат)"));
+            return ResponseEntity.badRequest().body(Map.of(ERROR_KEY, "Ожидается файл .xls (HSSF формат)"));
         }
         log.info("ФТК XLS импорт запущен: файл='{}', размер={} байт", originalFilename, file.getSize());
         try {
@@ -84,11 +86,11 @@ public class FtkImportController {
         } catch (IOException e) {
             log.error("Ошибка чтения XLS файла ФТК: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Ошибка чтения XLS: " + e.getMessage()));
+                    .body(Map.of(ERROR_KEY, "Ошибка чтения XLS: " + e.getMessage()));
         } catch (Exception e) {
             log.error("Непредвиденная ошибка импорта ФТК", e);
             return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "Внутренняя ошибка: " + e.getMessage()));
+                    .body(Map.of(ERROR_KEY, "Внутренняя ошибка: " + e.getMessage()));
         }
     }
 

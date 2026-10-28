@@ -19,9 +19,9 @@ export interface DownloadedFile {
 
 const parseFileNameFromContentDisposition = (contentDisposition?: string): string | null => {
     if (!contentDisposition) return null;
-    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
     if (utf8Match) return decodeURIComponent(utf8Match[1]);
-    const plainMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+    const plainMatch = /filename="?([^";]+)"?/i.exec(contentDisposition);
     return plainMatch ? plainMatch[1] : null;
 };
 

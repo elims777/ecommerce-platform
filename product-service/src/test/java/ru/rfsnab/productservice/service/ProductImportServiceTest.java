@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 
@@ -400,7 +401,7 @@ class ProductImportServiceTest {
             run(item);
 
             org.mockito.ArgumentCaptor<Product> captor = org.mockito.ArgumentCaptor.forClass(Product.class);
-            verify(mergeService, org.mockito.Mockito.times(2)).autoMergeFtk(captor.capture());
+            verify(mergeService, times(2)).autoMergeFtk(captor.capture());
             assertThat(captor.getAllValues()).extracting(Product::getExternalId)
                     .containsExactly("FTK-3.001", "FTK-3.002");
         }

@@ -18,6 +18,8 @@ import java.util.Locale;
 /** Спецификации журнала отправлений. */
 public final class ShipmentSpecifications {
 
+    private static final String CARRIER_STATUS_CODE = "carrierStatusCode";
+
     private static final char LIKE_ESCAPE = '\\';
 
     /**
@@ -39,7 +41,7 @@ public final class ShipmentSpecifications {
                 predicates.add(cb.equal(root.get("direction"), filter.direction()));
             }
             if (filter.statusCode() != null) {
-                predicates.add(cb.equal(root.get("carrierStatusCode"), filter.statusCode()));
+                predicates.add(cb.equal(root.get(CARRIER_STATUS_CODE), filter.statusCode()));
             }
             if (filter.city() != null && !filter.city().isBlank()) {
                 String pattern = "%" + escapeLike(filter.city().trim().toLowerCase(Locale.ROOT)) + "%";
@@ -64,7 +66,7 @@ public final class ShipmentSpecifications {
                 // явный sort из Pageable Spring Data ставит поверх; без него — сначала активные, затем завершённые
                 // (DELIVERED/CANCELLED), внутри групп свежие отгрузки сверху
                 var finished = cb.<Integer>selectCase()
-                        .when(root.get("carrierStatusCode").in(ShipmentStatusCode.DELIVERED, ShipmentStatusCode.CANCELLED), 1)
+                        .when(root.get(CARRIER_STATUS_CODE).in(ShipmentStatusCode.DELIVERED, ShipmentStatusCode.CANCELLED), 1)
                         .otherwise(0);
                 query.orderBy(cb.asc(finished), cb.desc(date), cb.desc(root.get("id")));
             }
@@ -75,10 +77,10 @@ public final class ShipmentSpecifications {
                 predicates.add(cb.lessThan(date, filter.to()));
             }
             if (filter.problem()) {
-                predicates.add(cb.equal(root.get("carrierStatusCode"), ShipmentStatusCode.PROBLEM));
+                predicates.add(cb.equal(root.get(CARRIER_STATUS_CODE), ShipmentStatusCode.PROBLEM));
             }
             if (filter.notFound()) {
-                predicates.add(cb.equal(root.get("carrierStatusCode"), ShipmentStatusCode.NOT_FOUND));
+                predicates.add(cb.equal(root.get(CARRIER_STATUS_CODE), ShipmentStatusCode.NOT_FOUND));
             }
             if (filter.stale()) {
                 predicates.add(cb.isTrue(root.get("pollingStopped")));

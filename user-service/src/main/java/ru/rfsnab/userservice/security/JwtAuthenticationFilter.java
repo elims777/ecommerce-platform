@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -14,9 +15,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -24,6 +27,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String CLIENT_TYPE_B2B = "B2B";
 
     @Override
     protected void doFilterInternal(
@@ -52,9 +56,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     List<String> roles = jwtService.extractRolesFromToken(jwt);
 
                     // Преобразуем роли в GrantedAuthority
-                    List<SimpleGrantedAuthority> authorities = roles.stream()
+                    List<SimpleGrantedAuthority> authorities = new ArrayList<>(roles.stream()
                             .map(SimpleGrantedAuthority::new)
-                            .toList();
+                            .toList());
+                    // В B2B-токене sub = id юрлица, а не пользователя — без этого признака id неразличимы
+                    if (CLIENT_TYPE_B2B.equals(jwtService.extractClientType(jwt))) {
+                        authorities.add(new SimpleGrantedAuthority(LegalEntityAccessChecker.AUTHORITY_CLIENT_B2B));
+                    }
 
                     // Создаём Authentication token
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
@@ -70,7 +78,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e){
-            System.out.println(e.getMessage());
+            log.debug("Ошибка аутентификации по JWT: {}", e.getMessage());
         }
         filterChain.doFilter(request, response);
     }

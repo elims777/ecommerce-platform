@@ -28,7 +28,7 @@ public class RegistrationRequest {
     private String surname;
 
     @NotBlank(message = "Телефон обязателен")
-    @Pattern(regexp = "^\\+?[0-9]{11}$", message = "Телефон должен содержать 11 цифр")
+    @Pattern(regexp = "^\\+?\\d{11}$", message = "Телефон должен содержать 11 цифр")
     private String phone;
 
     @Builder.Default

@@ -348,7 +348,7 @@ class FtkImportServiceTest {
 
             verify(imageDownloader, times(2)).downloadAndUpload(anyString(), eq("FTK-111"));
             assertThat(result.imagesOk()).isEqualTo(2);
-            assertThat(result.imagesFailed()).isEqualTo(0);
+            assertThat(result.imagesFailed()).isZero();
         }
 
         @Test
@@ -363,7 +363,7 @@ class FtkImportServiceTest {
             FtkImportService.FtkImportResult result = service.importFromXls(InputStream.nullInputStream());
 
             verify(imageDownloader, never()).downloadAndUpload(anyString(), anyString());
-            assertThat(result.imagesOk()).isEqualTo(0);
+            assertThat(result.imagesOk()).isZero();
         }
     }
 
@@ -378,8 +378,8 @@ class FtkImportServiceTest {
 
             FtkImportService.FtkImportResult result = service.importFromXls(InputStream.nullInputStream());
 
-            assertThat(result.totalProducts()).isEqualTo(0);
-            assertThat(result.created()).isEqualTo(0);
+            assertThat(result.totalProducts()).isZero();
+            assertThat(result.created()).isZero();
             verify(productServiceRestTemplate, never()).postForEntity(anyString(), any(), any());
         }
 
@@ -395,7 +395,7 @@ class FtkImportServiceTest {
             FtkImportService.FtkImportResult result = service.importFromXls(InputStream.nullInputStream());
 
             assertThat(result.failed()).isEqualTo(1);
-            assertThat(result.created()).isEqualTo(0);
+            assertThat(result.created()).isZero();
         }
     }
 
@@ -432,10 +432,10 @@ class FtkImportServiceTest {
         private void mockFullPart(int part, List<FtkProduct> partProducts) throws Exception {
             String goodsDir = "/webdata/000000003/goods/" + part + "/";
             when(ftpClient.getGoodsDir(part)).thenReturn(goodsDir);
-            when(ftpClient.findFileByPrefix(eq(goodsDir), eq("import___"))).thenReturn(goodsDir + "import___1.xml");
-            when(ftpClient.findFileByPrefix(eq(goodsDir), eq("offers___"))).thenReturn(goodsDir + "offers___1.xml");
-            when(ftpClient.findFileByPrefix(eq(goodsDir), eq("prices___"))).thenReturn(goodsDir + "prices___1.xml");
-            when(ftpClient.findFileByPrefix(eq(goodsDir), eq("rests___"))).thenReturn(goodsDir + "rests___1.xml");
+            when(ftpClient.findFileByPrefix(goodsDir, "import___")).thenReturn(goodsDir + "import___1.xml");
+            when(ftpClient.findFileByPrefix(goodsDir, "offers___")).thenReturn(goodsDir + "offers___1.xml");
+            when(ftpClient.findFileByPrefix(goodsDir, "prices___")).thenReturn(goodsDir + "prices___1.xml");
+            when(ftpClient.findFileByPrefix(goodsDir, "rests___")).thenReturn(goodsDir + "rests___1.xml");
 
             when(ftpClient.openStream(goodsDir + "import___1.xml")).thenReturn(stream());
             when(ftpClient.openStream(goodsDir + "offers___1.xml")).thenReturn(stream());
@@ -510,7 +510,7 @@ class FtkImportServiceTest {
 
             verify(imageDownloader, never()).downloadAndUpload(anyString(), anyString());
             assertThat(result.imagesSkipped()).isEqualTo(1);
-            assertThat(result.imagesOk()).isEqualTo(0);
+            assertThat(result.imagesOk()).isZero();
         }
 
         @Test
@@ -561,7 +561,7 @@ class FtkImportServiceTest {
             // Порция 2: import___ не найден на FTP
             String goodsDir2 = "/webdata/000000003/goods/2/";
             when(ftpClient.getGoodsDir(2)).thenReturn(goodsDir2);
-            when(ftpClient.findFileByPrefix(eq(goodsDir2), eq("import___"))).thenReturn(null);
+            when(ftpClient.findFileByPrefix(goodsDir2, "import___")).thenReturn(null);
 
             mockFullPart(1, List.of(partProduct("1", 1)));
             mockFullPart(3, List.of(partProduct("3", 3)));
@@ -611,8 +611,8 @@ class FtkImportServiceTest {
             assertThat(message).contains("Корневой import___.xml не найден на FTP");
             // место падения — первый кадр стектрейса, т.е. там, где исключение реально возникло
             // (в тесте его бросает мок FtkFtpClient, в бою — та же точка внутри FTP-клиента)
-            assertThat(message).contains("FtkFtpClient.findFileByPrefix");
-            assertThat(message).contains(".java:");
+            assertThat(message).contains("FtkFtpClient.findFileByPrefix")
+                    .contains(".java:");
         }
 
         @Test
@@ -620,8 +620,8 @@ class FtkImportServiceTest {
         void stacktrace_IsPublished() throws IOException {
             FtkImportCompletedEvent event = captureEventAfterFailure();
 
-            assertThat(event.errorStacktrace()).contains("java.io.IOException");
-            assertThat(event.errorStacktrace()).contains("FtkImportService.doImportFromFtp");
+            assertThat(event.errorStacktrace()).contains("java.io.IOException")
+                    .contains("FtkImportService.doImportFromFtp");
         }
 
         @Test
@@ -651,8 +651,8 @@ class FtkImportServiceTest {
             FtkImportCompletedEvent event = (FtkImportCompletedEvent) captor.getValue();
 
             assertThat(event.errors().get(0).message()).contains("Ошибка обмена с ФТК");
-            assertThat(event.rootCause()).contains("value too long for character varying(255)");
-            assertThat(event.rootCause()).contains(".java:");
+            assertThat(event.rootCause()).contains("value too long for character varying(255)")
+                    .contains(".java:");
         }
 
         @Test
@@ -673,9 +673,9 @@ class FtkImportServiceTest {
             FtkImportCompletedEvent event = (FtkImportCompletedEvent) captor.getValue();
 
             String message = event.errors().get(0).message();
-            assertThat(message).doesNotContain("null");
-            assertThat(message).contains("NullPointerException (без сообщения)");
-            assertThat(message).contains(".java:");
+            assertThat(message).doesNotContain("null")
+                    .contains("NullPointerException (без сообщения)")
+                    .contains(".java:");
         }
     }
 }

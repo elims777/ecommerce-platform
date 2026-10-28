@@ -6,14 +6,6 @@ spring:
           yandex:
             redirect-uri: "${OAUTH2_REDIRECT_URI:http://72.56.14.213/login/oauth2/code/yandex}"
 
-  datasource:
-    url: jdbc:postgresql://user-db:5432/${POSTGRES_DB}
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
-
-  jpa:
-    show-sql: false
-
 logging:
   level:
     org.springframework.security: WARN

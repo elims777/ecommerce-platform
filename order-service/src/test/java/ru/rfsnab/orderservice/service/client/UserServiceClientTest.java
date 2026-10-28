@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.orderservice.exception.ProfileIncompleteException;
@@ -18,6 +19,7 @@ import ru.rfsnab.orderservice.models.dto.user.ProfileCompletenessDto;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -54,6 +56,44 @@ class UserServiceClientTest {
 
         assertThatThrownBy(() -> client.getProfileCompleteness(USER_ID))
                 .isInstanceOf(ServiceUnavailableException.class);
+    }
+
+    @Test
+    @DisplayName("getProfileCompleteness — 404 от user-service → InvalidOrderStateException, не 503")
+    void getProfileCompleteness_notFound_throwsInvalidOrderState() {
+        when(restTemplate.exchange(
+                eq(USER_SERVICE_URL + "/v1/users/{id}/profile-completeness"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(ProfileCompletenessDto.class),
+                eq(USER_ID)
+        )).thenThrow(HttpClientErrorException.create(
+                org.springframework.http.HttpStatus.NOT_FOUND, "Not Found",
+                new org.springframework.http.HttpHeaders(), new byte[0], null));
+
+        assertThatThrownBy(() -> client.getProfileCompleteness(USER_ID))
+                .isInstanceOf(ru.rfsnab.orderservice.exception.InvalidOrderStateException.class);
+    }
+
+    @Test
+    @DisplayName("getProfileCompleteness — 401/403 от user-service (неверный internal secret) → ServiceUnavailableException")
+    void getProfileCompleteness_unauthorizedOrForbidden_throwsServiceUnavailable() {
+        for (org.springframework.http.HttpStatus status : List.of(
+                org.springframework.http.HttpStatus.UNAUTHORIZED, org.springframework.http.HttpStatus.FORBIDDEN)) {
+            when(restTemplate.exchange(
+                    eq(USER_SERVICE_URL + "/v1/users/{id}/profile-completeness"),
+                    eq(HttpMethod.GET),
+                    any(HttpEntity.class),
+                    eq(ProfileCompletenessDto.class),
+                    eq(USER_ID)
+            )).thenThrow(HttpClientErrorException.create(
+                    status, status.getReasonPhrase(),
+                    new org.springframework.http.HttpHeaders(), new byte[0], null));
+
+            assertThatThrownBy(() -> client.getProfileCompleteness(USER_ID))
+                    .isInstanceOf(ServiceUnavailableException.class)
+                    .hasMessage("User service unavailable");
+        }
     }
 
     @Test
@@ -99,7 +139,7 @@ class UserServiceClientTest {
                 eq(USER_ID)
         )).thenReturn(ResponseEntity.ok(dto));
 
-        client.requireCompleteProfile(USER_ID);
+        assertThatCode(() -> client.requireCompleteProfile(USER_ID)).doesNotThrowAnyException();
     }
 
     @Test

@@ -25,8 +25,8 @@ const WarehousesTab = () => {
             id ? updateWarehouse(id, values) : createWarehouse(values),
         onSuccess: () => {
             messageApi.success('Склад сохранён');
-            queryClient.invalidateQueries({ queryKey: ['adminWarehouses'] });
-            queryClient.invalidateQueries({ queryKey: ['warehouses'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminWarehouses'] });
+            void queryClient.invalidateQueries({ queryKey: ['warehouses'] });
             setOpen(false);
         },
         onError: (err) => messageApi.error(

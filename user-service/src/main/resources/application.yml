@@ -9,6 +9,9 @@ server:
 spring:
   application:
     name: user-service
+  # нет своего UserDetailsService — иначе Spring создаёт дефолтного юзера и пишет его пароль в лог
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   profiles:
     active: dev
 

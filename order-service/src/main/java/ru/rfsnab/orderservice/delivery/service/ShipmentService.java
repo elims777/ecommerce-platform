@@ -68,6 +68,8 @@ public class ShipmentService {
     /** Сколько накладная должна быть не найдена в ТК, чтобы менеджеру ушло письмо. */
     public static final Duration NOT_FOUND_NOTIFY_AFTER = Duration.ofHours(24);
 
+    private static final String SHIPMENT_NOT_FOUND = "Отправление не найдено: ";
+
     private final ShipmentRepository shipmentRepository;
     private final CarrierRepository carrierRepository;
     private final OrderRepository orderRepository;
@@ -112,7 +114,7 @@ public class ShipmentService {
         transactionTemplate.executeWithoutResult(status -> {
             Shipment shipment = shipmentRepository.findWithOrderById(shipmentId)
                     .filter(s -> s.getOrder() != null && s.getOrder().getId().equals(orderId))
-                    .orElseThrow(() -> new ShipmentNotFoundException("Отправление не найдено: " + shipmentId));
+                    .orElseThrow(() -> new ShipmentNotFoundException(SHIPMENT_NOT_FOUND + shipmentId));
             Order order = shipment.getOrder();
             shipment.setOrder(null);
             shipmentRepository.save(shipment);
@@ -165,6 +167,7 @@ public class ShipmentService {
     }
 
     /** Отправления одного заказа. */
+    @Transactional(readOnly = true)
     public List<ShipmentDto> getByOrderId(UUID orderId) {
         return getByOrderIds(List.of(orderId)).getOrDefault(orderId, List.of());
     }
@@ -178,7 +181,7 @@ public class ShipmentService {
      */
     public ShipmentDto refresh(Long shipmentId) {
         Shipment shipment = shipmentRepository.findWithOrderById(shipmentId)
-                .orElseThrow(() -> new ShipmentNotFoundException("Отправление не найдено: " + shipmentId));
+                .orElseThrow(() -> new ShipmentNotFoundException(SHIPMENT_NOT_FOUND + shipmentId));
         CarrierClient client = clientFor(shipment.getCarrierCode());
         if (!client.supportsStatusTracking()) {
             throw new InvalidOrderStateException("Опрос статусов этой транспортной компании не поддерживается");
@@ -196,7 +199,7 @@ public class ShipmentService {
      */
     public DocumentFile downloadDocument(Long shipmentId, String code) {
         Shipment shipment = shipmentRepository.findById(shipmentId)
-                .orElseThrow(() -> new ShipmentNotFoundException("Отправление не найдено: " + shipmentId));
+                .orElseThrow(() -> new ShipmentNotFoundException(SHIPMENT_NOT_FOUND + shipmentId));
         ShipmentDocument doc = Optional.ofNullable(shipment.getDocuments()).orElse(List.of()).stream()
                 .filter(d -> d.code().equals(code)).findFirst()
                 .orElseThrow(() -> new ShipmentNotFoundException("Документ не найден: " + code));
@@ -218,7 +221,7 @@ public class ShipmentService {
     public ShipmentDto link(Long shipmentId, String orderNumber) {
         Long id = transactionTemplate.execute(status -> {
             Shipment shipment = shipmentRepository.findWithOrderById(shipmentId)
-                    .orElseThrow(() -> new ShipmentNotFoundException("Отправление не найдено: " + shipmentId));
+                    .orElseThrow(() -> new ShipmentNotFoundException(SHIPMENT_NOT_FOUND + shipmentId));
             Order order = orderRepository.findByOrderNumber(orderNumber.trim())
                     .orElseThrow(() -> new OrderNotFoundException("Заказ не найден по номеру: " + orderNumber.trim()));
             if (shipment.getOrder() != null && !shipment.getOrder().getId().equals(order.getId())) {
@@ -245,7 +248,7 @@ public class ShipmentService {
     public ShipmentDto applyPolled(Long shipmentId, Optional<CarrierShipmentStatus> status, boolean manual) {
         Shipment saved = transactionTemplate.execute(tx -> {
             Shipment shipment = shipmentRepository.findWithOrderById(shipmentId)
-                    .orElseThrow(() -> new ShipmentNotFoundException("Отправление не найдено: " + shipmentId));
+                    .orElseThrow(() -> new ShipmentNotFoundException(SHIPMENT_NOT_FOUND + shipmentId));
             Instant now = Instant.now();
             shipment.setPolledAt(now);
             boolean changed = status.map(s -> applyFound(shipment, s, now)).orElseGet(() -> applyNotFound(shipment, now));
@@ -259,7 +262,7 @@ public class ShipmentService {
             }
             return shipment;
         });
-        return toDto(saved);
+        return toDto(Objects.requireNonNull(saved, "Транзакция applyPolled вернула null"));
     }
 
     /**
@@ -360,7 +363,10 @@ public class ShipmentService {
             changed = true;
         }
         // неизвестный сырой статус код не меняет; но пометка «не найдена» с накладной снимается в любом случае
-        ShipmentStatusCode code = status.code() != null ? status.code() : (was == ShipmentStatusCode.NOT_FOUND ? null : was);
+        ShipmentStatusCode code = status.code();
+        if (code == null && was != ShipmentStatusCode.NOT_FOUND) {
+            code = was;
+        }
         if (code != was) {
             shipment.setCarrierStatusCode(code);
             changed = true;

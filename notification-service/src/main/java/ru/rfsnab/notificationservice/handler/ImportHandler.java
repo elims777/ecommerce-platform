@@ -35,7 +35,7 @@ public class ImportHandler implements NotificationHandler {
             emailService.sendImportReportEmail(event);
             log.info("Import report email sent: status={}, failed={}", event.status(), event.failed());
         } catch (Exception e) {
-            log.error("Ошибка обработки события импорта: {}", eventJson, e);
+            log.error("Ошибка обработки события импорта", e);
         }
     }
 }

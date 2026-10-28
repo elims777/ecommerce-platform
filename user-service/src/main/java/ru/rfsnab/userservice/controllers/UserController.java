@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,6 +27,7 @@ import ru.rfsnab.userservice.models.dto.RegistrationRequest;
 import ru.rfsnab.userservice.models.dto.SetPasswordRequest;
 import ru.rfsnab.userservice.models.dto.SimpleAuthRequest;
 import ru.rfsnab.userservice.models.dto.UpdateUserAdminRequest;
+import ru.rfsnab.userservice.models.dto.UpdateUserRequest;
 import ru.rfsnab.userservice.models.dto.UserDto;
 import ru.rfsnab.userservice.services.LegalEntityService;
 import ru.rfsnab.userservice.services.UserService;
@@ -43,6 +43,10 @@ import java.util.Optional;
 public class UserController {
     private static final String ACCOUNT_TYPE_USER = "USER";
     private static final String ACCOUNT_TYPE_LEGAL = "LEGAL";
+    private static final String INTERNAL_ONLY = "hasRole('INTERNAL')";
+    private static final String ADMIN_ONLY = "hasAuthority('ROLE_ADMIN')";
+    private static final String NOT_B2B = "!hasAuthority('CLIENT_B2B')";
+    private static final String CAN_ACCESS_USER = "@legalEntityAccess.canAccessUser(authentication, #id)";
 
     private final UserService userService;
     private final LegalEntityService legalEntityService;
@@ -54,6 +58,7 @@ public class UserController {
      * Если не существует - создаёт нового с временным паролем
      */
     @PostMapping("/oauth2-login")
+    @PreAuthorize(INTERNAL_ONLY)
     public ResponseEntity<RegAuthResponse> oauth2LoginOrRegister(@Valid @RequestBody RegistrationRequest request) {
         Optional<UserEntity> existingUser = userService.findUserByEmail(request.getEmail());
 
@@ -92,7 +97,8 @@ public class UserController {
      * Аутентификация пользователей через логин, пароль
      */
     @PostMapping("/authenticate")
-    public ResponseEntity<?> authenticate(@Valid @RequestBody SimpleAuthRequest authRequest){
+    @PreAuthorize(INTERNAL_ONLY)
+    public ResponseEntity<UserDto> authenticate(@Valid @RequestBody SimpleAuthRequest authRequest){
         UserEntity user = userService.findUserByEmail(authRequest.getEmail())
                 .orElseThrow(() -> new BadCredentialsException("Неверный email или пароль"));
 
@@ -110,13 +116,13 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserDto> updateUser(@PathVariable("id") Long id, @RequestBody UserDto userDto){
-        return ResponseEntity.ok(
-                UserMapper.mapToUserDto(
-                        userService.updateUser(id, UserMapper.mapToUserEntity(userDto))));
+    @PreAuthorize(CAN_ACCESS_USER)
+    public ResponseEntity<UserDto> updateUser(@PathVariable("id") Long id, @Valid @RequestBody UpdateUserRequest request){
+        return ResponseEntity.ok(UserMapper.mapToUserDto(userService.updateUser(id, request)));
     }
 
     @GetMapping("/all")
+    @PreAuthorize(ADMIN_ONLY)
     public ResponseEntity<List<UserDto>> getAllUsers(){
         return ResponseEntity.ok(
                 userService.findAllUsers()
@@ -126,6 +132,7 @@ public class UserController {
     }
 
     @GetMapping("/me")
+    @PreAuthorize(NOT_B2B)
     public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
 
@@ -136,6 +143,7 @@ public class UserController {
     }
 
     @PutMapping("/{userId}/verify")
+    @PreAuthorize(INTERNAL_ONLY)
     public ResponseEntity<String> verifyUser(@PathVariable Long userId) {
         userService.verifyUser(userId);
         return ResponseEntity.ok("User verified successfully");
@@ -164,6 +172,7 @@ public class UserController {
     }
 
     @GetMapping("/inactive")
+    @PreAuthorize(INTERNAL_ONLY)
     public ResponseEntity<List<InactiveUserDto>> getInactiveUsers() {
         LocalDateTime threshold = LocalDateTime.now().minusDays(14);
         List<InactiveUserDto> result = userService.findInactiveUsers(threshold, threshold).stream()
@@ -173,6 +182,7 @@ public class UserController {
     }
 
     @PostMapping("/{id}/inactivity-email-sent")
+    @PreAuthorize(INTERNAL_ONLY)
     public ResponseEntity<Void> markInactivityEmailSent(@PathVariable Long id) {
         userService.markInactivityEmailSent(id);
         return ResponseEntity.noContent().build();
@@ -194,6 +204,7 @@ public class UserController {
     }
 
     @PostMapping("/me/resend-verification")
+    @PreAuthorize(NOT_B2B)
     public ResponseEntity<Void> resendVerification(Authentication authentication) {
         Long userId = Long.parseLong(authentication.getName());
         userService.resendVerification(userId);
@@ -201,12 +212,14 @@ public class UserController {
     }
 
     @GetMapping("/{id}/profile-completeness")
+    @PreAuthorize(INTERNAL_ONLY)
     public ResponseEntity<ProfileCompletenessDto> getProfileCompleteness(@PathVariable Long id) {
         List<String> missing = userService.getMissingProfileFields(id);
         return ResponseEntity.ok(new ProfileCompletenessDto(missing.isEmpty(), missing));
     }
 
     @GetMapping("/account-by-email")
+    @PreAuthorize(INTERNAL_ONLY)
     public ResponseEntity<AccountByEmailResponse> getAccountByEmail(@RequestParam String email) {
         Optional<UserEntity> user = userService.findUserByEmail(email);
         if (user.isPresent()) {
@@ -224,6 +237,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}/password")
+    @PreAuthorize(INTERNAL_ONLY)
     public ResponseEntity<Void> setPassword(@PathVariable Long id, @Valid @RequestBody SetPasswordRequest request) {
         userService.setPasswordHash(id, request.passwordHash());
         return ResponseEntity.ok().build();

@@ -95,11 +95,11 @@ spring:
               predicates:
                 - Path=/login/oauth2/**
 
-            # Веб-страницы (Thymeleaf)
+            # Регистрация через Яндекс (/auth/oauth2/register/yandex)
             - id: auth-pages
               uri: http://localhost:9000
               predicates:
-                - Path=/auth/**,/profile,/
+                - Path=/auth/**
               filters:
                 - name: RequestRateLimiter
                   args:
@@ -334,7 +334,7 @@ spring:
               predicates:
                 - Path=/api/v1/admin/integration/logs
               filters:
-                - RewritePath=/api/v1/admin/integration/logs, /1c-exchange/logs
+                - RewritePath=/api/v1/admin/integration/logs, /api/v1/integration/logs
             - id: integration-1c
               uri: http://localhost:8085
               predicates:

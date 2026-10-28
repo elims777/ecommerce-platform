@@ -2,6 +2,7 @@ package ru.rfsnab.orderservice.models.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -24,6 +25,10 @@ public class Recipient {
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "customer_type", nullable = false, length = 10)
+    private CustomerType customerType;
 
     @Column(nullable = false, length = 200)
     private String name;

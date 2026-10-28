@@ -8,6 +8,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public class OrderItemMapper {
+    private OrderItemMapper() {
+    }
 
     /**
      * OrderItem → OrderItemDto.

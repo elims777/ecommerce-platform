@@ -46,9 +46,7 @@ public class FtkXlsParser {
     private static final int COL_NAME      = 0;   // A-C (merged) — наименование / группа / характеристика
     private static final int COL_ARTICLE   = 3;   // D — артикул
     private static final int COL_PRICE     = 4;   // E — цена
-    private static final int COL_PRINT     = 6;   // G-H (merged) — наименование для печати
     private static final int COL_DESC      = 8;   // I — текстовое описание
-    private static final int COL_MATERIAL  = 9;   // J — основной материал
     private static final int COL_IMAGE     = 12;  // M — ссылка на изображение
 
     public List<FtkProduct> parse(InputStream xls) throws IOException {
@@ -57,11 +55,6 @@ public class FtkXlsParser {
         try (var workbook = WorkbookFactory.create(xls)) {
             Sheet sheet = workbook.getSheetAt(0);
             log.info("Парсинг XLS ФТК: {} строк", sheet.getLastRowNum());
-
-            // Стек категорий: индекс = уровень (1-based), значение = название
-            // categoryStack[0] не используется; [1] = уровень1, [2] = уровень2, [3] = уровень3
-            String[] categoryStack = new String[10];
-            int currentDepth = 0;
 
             BuildContext ctx = null;
 
@@ -82,12 +75,6 @@ public class FtkXlsParser {
                     }
                     int depth = detectCategoryDepth(nameCell);
                     String catName = stripPrefix(nameCell);
-                    categoryStack[depth] = catName;
-                    // Обнуляем все уровни глубже текущего
-                    for (int i = depth + 1; i < categoryStack.length; i++) {
-                        categoryStack[i] = null;
-                    }
-                    currentDepth = depth;
                     log.debug("Категория уровень {}: {}", depth, catName);
                     continue;
                 }
@@ -107,7 +94,7 @@ public class FtkXlsParser {
                 if (ctx != null) {
                     result.add(ctx.build());
                 }
-                ctx = parseProductRow(row, articleCell, nameCell, buildCategoryPath(categoryStack, currentDepth));
+                ctx = parseProductRow(row, articleCell, nameCell);
             }
 
             if (ctx != null) {
@@ -140,15 +127,7 @@ public class FtkXlsParser {
         return nameCell.replaceFirst("^[\\d.]+\\s*", "").trim();
     }
 
-    private String buildCategoryPath(String[] stack, int depth) {
-        List<String> parts = new ArrayList<>();
-        for (int i = 1; i <= depth; i++) {
-            if (stack[i] != null) parts.add(stack[i]);
-        }
-        return String.join(" > ", parts);
-    }
-
-    private BuildContext parseProductRow(Row row, String article, String name, String categoryPath) {
+    private BuildContext parseProductRow(Row row, String article, String name) {
         BigDecimal price   = parseBigDecimal(getStringValue(row, COL_PRICE), article);
         String description = getStringValue(row, COL_DESC).trim();
         String imagePath   = getStringValue(row, COL_IMAGE).trim();
@@ -157,7 +136,6 @@ public class FtkXlsParser {
                 article,
                 name,
                 description.isEmpty() ? null : description,
-                categoryPath,
                 price,
                 imagePath.isEmpty() ? null : imagePath
         );
@@ -219,7 +197,7 @@ public class FtkXlsParser {
     private BigDecimal parseBigDecimal(String value, String context) {
         if (value == null || value.isBlank()) return null;
         try {
-            return new BigDecimal(value.trim().replace(",", ".").replace(" ", "").replace(" ", ""));
+            return new BigDecimal(value.trim().replace(",", ".").replace(" ", "").replace("\u00A0", ""));
         } catch (NumberFormatException e) {
             log.warn("Невалидная цена '{}' для {}", value, context);
             return null;
@@ -235,7 +213,7 @@ public class FtkXlsParser {
         private final List<FtkVariant> variants = new ArrayList<>();
 
         BuildContext(String article, String name, String description,
-                     String categoryPath, BigDecimal price, String imagePath) {
+                     BigDecimal price, String imagePath) {
             this.article     = article;
             this.name        = name;
             this.description = description;

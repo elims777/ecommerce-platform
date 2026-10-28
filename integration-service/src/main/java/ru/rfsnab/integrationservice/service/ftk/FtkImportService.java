@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -204,7 +205,7 @@ public class FtkImportService {
             // 8. Маппинг и batch-импорт
             List<ProductImportItemDto> dtos = limited.stream()
                     .map(this::mapToDto)
-                    .filter(dto -> dto != null)
+                    .filter(Objects::nonNull)
                     .toList();
 
             BatchImportResult batchResult = sendBatch(dtos);
@@ -218,7 +219,9 @@ public class FtkImportService {
                     .toList();
             Map<String, Set<String>> existingFileKeysByProduct = imageDownloader.getExistingFileKeysBatch(externalIdsWithImages);
 
-            int imagesOk = 0, imagesFailed = 0, imagesSkipped = 0;
+            int imagesOk = 0;
+            int imagesFailed = 0;
+            int imagesSkipped = 0;
             for (FtkProduct p : limited) {
                 if (p.getImagePaths().isEmpty()) continue;
                 String externalId = buildProductExternalId(p.getArticle());
@@ -282,7 +285,10 @@ public class FtkImportService {
     // Устаревший метод: XLS
     // ══════════════════════════════════════════════════════════════
 
-    @Deprecated
+    /**
+     * @deprecated XLS делался для другого клиента ФТК; используйте XML-импорт.
+     */
+    @Deprecated(since = "2026-06-11")
     public FtkImportResult importFromXls(InputStream xls) throws IOException {
         LocalDateTime startedAt = LocalDateTime.now();
         IntegrationProperties.FtkProperties cfg = properties.getFtk();
@@ -299,14 +305,15 @@ public class FtkImportService {
 
             List<ProductImportItemDto> importItems = products.stream()
                     .map(this::mapToDto)
-                    .filter(dto -> dto != null)
+                    .filter(Objects::nonNull)
                     .toList();
 
             BatchImportResult batchResult = sendBatch(importItems);
             log.info("ФТК XLS batch-импорт: created={}, updated={}, unchanged={}, failed={}",
                     batchResult.created(), batchResult.updated(), batchResult.unchanged(), batchResult.failed());
 
-            int imagesOk = 0, imagesFailed = 0;
+            int imagesOk = 0;
+            int imagesFailed = 0;
             for (FtkProduct p : products) {
                 String externalId = buildProductExternalId(p.getArticle());
                 for (String imagePath : p.getImagePaths()) {
@@ -339,13 +346,13 @@ public class FtkImportService {
 
         BigDecimal basePrice = p.getVariants().stream()
                 .map(FtkVariant::getPrice)
-                .filter(pr -> pr != null)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
 
         Integer vatRate = p.getVariants().stream()
                 .map(FtkVariant::getVatRate)
-                .filter(v -> v != null)
+                .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(null);
 
@@ -366,7 +373,7 @@ public class FtkImportService {
 
         if (!p.getVariants().isEmpty()) {
             List<VariantImportItemDto> variantDtos = p.getVariants().stream()
-                    .map(v -> mapVariant(v, externalId))
+                    .map(this::mapVariant)
                     .toList();
             dto.setVariants(variantDtos);
         }
@@ -374,7 +381,7 @@ public class FtkImportService {
         return dto;
     }
 
-    private VariantImportItemDto mapVariant(FtkVariant v, String parentExternalId) {
+    private VariantImportItemDto mapVariant(FtkVariant v) {
         return VariantImportItemDto.builder()
                 .externalId(buildVariantExternalId(v.getArticle()))
                 .sku(v.getArticle())
@@ -403,7 +410,10 @@ public class FtkImportService {
         if (items.isEmpty()) return new BatchImportResult(0, 0, 0, 0, List.of());
 
         int chunkSize = properties.getImportConfig().getChunkSize();
-        int created = 0, updated = 0, unchanged = 0, failed = 0;
+        int created = 0;
+        int updated = 0;
+        int unchanged = 0;
+        int failed = 0;
         List<ImportItemResult> errors = new ArrayList<>();
 
         for (int i = 0; i < items.size(); i += chunkSize) {
@@ -521,7 +531,7 @@ public class FtkImportService {
         if (errors == null || errors.isEmpty()) return null;
 
         List<ImportItemResult> origin = errors.stream().filter(e -> !e.isCascade()).toList();
-        long cascadeCount = errors.size() - origin.size();
+        long cascadeCount = (long) errors.size() - origin.size();
 
         StringBuilder sb = new StringBuilder();
         sb.append("Исходных ошибок: ").append(origin.size())

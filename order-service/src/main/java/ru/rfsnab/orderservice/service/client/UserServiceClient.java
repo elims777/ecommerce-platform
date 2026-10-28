@@ -6,7 +6,9 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
 import ru.rfsnab.orderservice.exception.ProfileIncompleteException;
 import ru.rfsnab.orderservice.exception.ServiceUnavailableException;
 import ru.rfsnab.orderservice.models.dto.user.ProfileCompletenessDto;
@@ -40,6 +42,13 @@ public class UserServiceClient {
                     ProfileCompletenessDto.class,
                     userId
             ).getBody();
+        } catch (HttpClientErrorException.NotFound e) {
+            log.warn("User service: profile not found for userId={}", userId);
+            throw new InvalidOrderStateException("Профиль пользователя не найден или недоступен");
+        } catch (HttpClientErrorException e) {
+            // 401/403 — как правило неверный INTERNAL_SECRET, должно быть заметно в логах
+            log.error("User service rejected profile-completeness for userId={}: {}", userId, e.getStatusCode());
+            throw new ServiceUnavailableException("User service unavailable");
         } catch (Exception e) {
             log.error("User service unavailable: {}", e.getMessage());
             throw new ServiceUnavailableException("User service unavailable");

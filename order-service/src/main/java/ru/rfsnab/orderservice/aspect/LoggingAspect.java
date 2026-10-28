@@ -7,8 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-
 /**
  * Аспект для централизованного логирования вызовов методов.
  * Controller — INFO (входящие запросы и ответы)
@@ -40,10 +38,8 @@ public class LoggingAspect {
     @Before("controllerLayer()")
     public void logBeforeController(JoinPoint joinPoint) {
         String methodName = joinPoint.getSignature().toShortString();
-        Object[] args = joinPoint.getArgs();
 
-        log.info(">>> Incoming request: {} with args: {}",
-                methodName, Arrays.toString(args));
+        log.info(">>> Incoming request: {}", methodName);
     }
 
     @AfterReturning(pointcut = "controllerLayer()", returning = "result")
@@ -60,10 +56,8 @@ public class LoggingAspect {
     @Around("serviceLayer()")
     public Object logAroundService(ProceedingJoinPoint joinPoint) throws Throwable {
         String methodName = joinPoint.getSignature().toShortString();
-        Object[] args = joinPoint.getArgs();
 
-        log.debug("==> Executing service: {} with args: {}",
-                methodName, Arrays.toString(args));
+        log.debug("==> Executing service: {}", methodName);
 
         long startTime = System.currentTimeMillis();
         Object result = joinPoint.proceed();
@@ -80,10 +74,8 @@ public class LoggingAspect {
     @Before("repositoryLayer()")
     public void logBeforeRepository(JoinPoint joinPoint) {
         String methodName = joinPoint.getSignature().toShortString();
-        Object[] args = joinPoint.getArgs();
 
-        log.debug("--- DB query: {} with params: {}",
-                methodName, Arrays.toString(args));
+        log.debug("--- DB query: {}", methodName);
     }
 
     @AfterReturning(pointcut = "repositoryLayer()", returning = "result")
@@ -104,17 +96,16 @@ public class LoggingAspect {
         // Извлекаем исключение из аргументов
         Throwable exception = null;
         for (Object arg : args) {
-            if (arg instanceof Throwable) {
-                exception = (Throwable) arg;
+            if (arg instanceof Throwable throwable) {
+                exception = throwable;
                 break;
             }
         }
 
         if (exception != null) {
-            log.warn(">>> Handling exception in: {} - Exception type: {} - Message: {}",
+            log.warn(">>> Handling exception in: {} - Exception type: {}",
                     methodName,
-                    exception.getClass().getSimpleName(),
-                    exception.getMessage());
+                    exception.getClass().getSimpleName());
         }
 
         Object result = joinPoint.proceed();

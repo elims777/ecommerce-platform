@@ -38,7 +38,7 @@ public class ShipmentNotFoundHandler implements NotificationHandler {
             emailService.sendShipmentNotFoundEmail(event);
             log.info("Shipment not found email sent: order={}, carrier={}", event.orderNumber(), event.carrierName());
         } catch (Exception e) {
-            log.error("Ошибка обработки события SHIPMENT_NOT_FOUND: {}", eventJson, e);
+            log.error("Ошибка обработки события SHIPMENT_NOT_FOUND", e);
         }
     }
 }

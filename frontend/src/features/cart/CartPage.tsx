@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { App, Grid } from 'antd';
+import { App, Grid, Modal } from 'antd';
 import { NavLink } from '@/components/navigation';
 import { useCartStore } from '@/store/cartStore';
 import type { CartItemDto } from '@/api/cart';
@@ -7,51 +7,39 @@ import { formatPriceOrPlaceholder, isPriceAvailable } from '@/utils/priceUtils';
 
 // ── Icons ─────────────────────────────────────────────────────
 const TrashIcon = () => (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
     </svg>
 );
 const MinusIcon = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <line x1="5" y1="12" x2="19" y2="12"/>
     </svg>
 );
 const PlusIcon = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
     </svg>
 );
 const CartEmptyIcon = () => (
-    <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 4h2.5l2 13.5h11l2-9h-14"/><circle cx="9" cy="20.5" r="1.4"/><circle cx="18" cy="20.5" r="1.4"/>
     </svg>
 );
 const ArrRight = () => (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 12h14M13 6l6 6-6 6"/>
     </svg>
 );
 
 const formatPrice = formatPriceOrPlaceholder;
 
-// ── Confirm dialog (нативный) ─────────────────────────────────
+// ── Confirm dialog (antd Modal: role=dialog, focus trap, Escape) ──
 const ConfirmDialog = ({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) => (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' }}
-        onClick={onCancel}>
-        <div style={{ background: 'var(--surface)', borderRadius: 'var(--r-5)', padding: '24px 28px', width: 340, boxShadow: 'var(--shadow-pop)' }}
-            onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--ink-1)', marginBottom: 8 }}>Подтверждение</div>
-            <div style={{ fontSize: 13.5, color: 'var(--ink-2)', marginBottom: 20 }}>{message}</div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button onClick={onCancel} style={{ height: 'var(--btn-h-md)', padding: '0 16px', border: '1px solid var(--line-2)', background: 'transparent', color: 'var(--ink-2)', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                    Отмена
-                </button>
-                <button onClick={onConfirm} style={{ height: 'var(--btn-h-md)', padding: '0 16px', background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-base)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
-                    Удалить
-                </button>
-            </div>
-        </div>
-    </div>
+    <Modal open centered width={340} title="Подтверждение" okText="Удалить" cancelText="Отмена"
+        okButtonProps={{ danger: true }} onOk={onConfirm} onCancel={onCancel}>
+        {message}
+    </Modal>
 );
 
 // ── CartItemRow ───────────────────────────────────────────────
@@ -166,7 +154,7 @@ const CartPage = () => {
     // Тот же порог, что у CartItemRow: ниже него строки — карточки, шапка таблицы не нужна.
     const isNarrow = screens.md === false;
 
-    useEffect(() => { fetchCart(); }, [fetchCart]);
+    useEffect(() => { void fetchCart(); }, [fetchCart]);
 
     const handleRemove = async (item: CartItemDto) => {
         try {
@@ -246,7 +234,7 @@ const CartPage = () => {
             {/* Breadcrumbs */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 12 }}>
                 <NavLink to="/" style={{ cursor: 'pointer' }}>Главная</NavLink>
-                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                 <span style={{ color: 'var(--ink-1)', fontWeight: 500 }}>Корзина</span>
             </div>
 

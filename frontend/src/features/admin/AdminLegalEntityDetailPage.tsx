@@ -40,8 +40,8 @@ const AdminLegalEntityDetailPage = () => {
     });
 
     const invalidate = () => {
-        queryClient.invalidateQueries({ queryKey: ['adminLegalEntity', legalId] });
-        queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] });
+        void queryClient.invalidateQueries({ queryKey: ['adminLegalEntity', legalId] });
+        void queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] });
     };
 
     const verifyMutation = useMutation({
@@ -84,7 +84,7 @@ const AdminLegalEntityDetailPage = () => {
     return (
         <div>
             <NavLink to="/admin/users?tab=legal" className="rf-admin-back">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M10 4L6 8l4 4"/>
                 </svg>
                 Клиенты

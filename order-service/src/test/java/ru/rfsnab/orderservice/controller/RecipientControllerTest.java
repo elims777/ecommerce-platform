@@ -1,6 +1,5 @@
 package ru.rfsnab.orderservice.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,7 +13,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import ru.rfsnab.orderservice.BaseIntegrationTest;
+import ru.rfsnab.orderservice.exception.BusinessException;
 import ru.rfsnab.orderservice.models.entity.Recipient;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.service.RecipientService;
 
 import java.time.LocalDateTime;
@@ -40,9 +41,6 @@ class RecipientControllerTest extends BaseIntegrationTest {
     @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @MockitoBean
     private RecipientService recipientService;
@@ -77,7 +75,7 @@ class RecipientControllerTest extends BaseIntegrationTest {
         @Test
         @DisplayName("200 OK — возвращает список получателей")
         void shouldReturnRecipients() throws Exception {
-            when(recipientService.getByUserId(USER_ID))
+            when(recipientService.getByUserId(USER_ID, CustomerType.B2C))
                     .thenReturn(List.of(buildRecipient(1L, "Иванов Иван", true)));
 
             mockMvc.perform(get("/api/v1/recipients").with(jwtUser()))
@@ -87,9 +85,22 @@ class RecipientControllerTest extends BaseIntegrationTest {
         }
 
         @Test
+        @DisplayName("200 OK — заголовок X-Client-Type: B2B передаётся в сервис как B2B")
+        void shouldPassB2bCustomerType() throws Exception {
+            when(recipientService.getByUserId(eq(USER_ID), eq(CustomerType.B2B))).thenReturn(List.of());
+
+            mockMvc.perform(get("/api/v1/recipients")
+                            .header("X-Client-Type", "B2B")
+                            .with(jwtUser()))
+                    .andExpect(status().isOk());
+
+            verify(recipientService).getByUserId(eq(USER_ID), eq(CustomerType.B2B));
+        }
+
+        @Test
         @DisplayName("200 OK — пустой список")
         void shouldReturnEmptyList() throws Exception {
-            when(recipientService.getByUserId(USER_ID)).thenReturn(List.of());
+            when(recipientService.getByUserId(USER_ID, CustomerType.B2C)).thenReturn(List.of());
 
             mockMvc.perform(get("/api/v1/recipients").with(jwtUser()))
                     .andExpect(status().isOk())
@@ -105,7 +116,7 @@ class RecipientControllerTest extends BaseIntegrationTest {
         @DisplayName("201 Created — получатель создан")
         void shouldCreateRecipient() throws Exception {
             Recipient recipient = buildRecipient(1L, "Иванов Иван", false);
-            when(recipientService.create(eq(USER_ID), any())).thenReturn(recipient);
+            when(recipientService.create(eq(USER_ID), eq(CustomerType.B2C), any())).thenReturn(recipient);
 
             String json = """
                     {
@@ -123,7 +134,7 @@ class RecipientControllerTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.name").value("Иванов Иван"))
                     .andExpect(jsonPath("$.phone").value("+79001234567"));
 
-            verify(recipientService).create(eq(USER_ID), any());
+            verify(recipientService).create(eq(USER_ID), eq(CustomerType.B2C), any());
         }
 
         @Test
@@ -171,7 +182,7 @@ class RecipientControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — получатель обновлён")
         void shouldUpdateRecipient() throws Exception {
             Recipient updated = buildRecipient(1L, "Новое имя", false);
-            when(recipientService.update(eq(1L), eq(USER_ID), any())).thenReturn(updated);
+            when(recipientService.update(eq(1L), eq(USER_ID), eq(CustomerType.B2C), any())).thenReturn(updated);
 
             String json = """
                     {
@@ -201,7 +212,7 @@ class RecipientControllerTest extends BaseIntegrationTest {
                             .with(jwtUser()).with(csrf()))
                     .andExpect(status().isNoContent());
 
-            verify(recipientService).delete(1L, USER_ID);
+            verify(recipientService).delete(1L, USER_ID, CustomerType.B2C);
         }
     }
 
@@ -213,12 +224,29 @@ class RecipientControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — получатель установлен по умолчанию")
         void shouldSetDefault() throws Exception {
             Recipient recipient = buildRecipient(1L, "Иванов Иван", true);
-            when(recipientService.setDefault(1L, USER_ID)).thenReturn(recipient);
+            when(recipientService.setDefault(1L, USER_ID, CustomerType.B2C)).thenReturn(recipient);
 
             mockMvc.perform(patch("/api/v1/recipients/1/default")
                             .with(jwtUser()).with(csrf()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.isDefault").value(true));
+        }
+    }
+
+    @Nested
+    @DisplayName("404 Not Found — получатель не найден")
+    class NotFoundTests {
+
+        @Test
+        @DisplayName("404 — сервис бросает BusinessException")
+        void shouldReturn404WhenRecipientNotFound() throws Exception {
+            when(recipientService.setDefault(99L, USER_ID, CustomerType.B2C))
+                    .thenThrow(new BusinessException("Получатель не найден"));
+
+            mockMvc.perform(patch("/api/v1/recipients/99/default")
+                            .with(jwtUser()).with(csrf()))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("Получатель не найден"));
         }
     }
 

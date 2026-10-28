@@ -38,26 +38,23 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/v1/users/signup",
-                                "/v1/users/authenticate",
                                 "/v1/users/unsubscribe",
-                                "/v1/users/inactive",
-                                "/v1/users/*/inactivity-email-sent",
-                                "/v1/users/oauth2-login",
                                 "/actuator/health",
-                                "/v1/users/*/verify",
                                 "/api/v1/legal-entities/register",
                                 "/api/v1/legal-entities/confirm-email",
                                 "/api/v1/legal-entities/confirm-link",
-                                "/api/v1/legal-entities/authenticate",
-                                "/api/v1/legal-entities/link-status/**",
-                                "/v1/legal-entities/authenticate",
                                 "/swagger-ui/**",
                                 "/api-docs/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET,
-                                "/api/v1/legal-entities/*"
-                        ).permitAll()
+                        .requestMatchers(
+                                "/v1/users/inactive",
+                                "/v1/users/*/inactivity-email-sent",
+                                "/v1/users/*/verify",
+                                "/v1/users/authenticate",
+                                "/v1/users/oauth2-login",
+                                "/api/v1/legal-entities/authenticate"
+                        ).hasRole("INTERNAL")
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/v1/users/*/profile-completeness",
                                 "/v1/users/account-by-email"

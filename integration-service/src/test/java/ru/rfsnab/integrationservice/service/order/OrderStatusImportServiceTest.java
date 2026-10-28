@@ -42,7 +42,7 @@ class OrderStatusImportServiceTest extends BaseIntegrationTest {
             Files.walk(tempDir)
                     .filter(Files::isRegularFile)
                     .forEach(f -> {
-                        try { Files.deleteIfExists(f); } catch (IOException ignored) {}
+                        try { Files.deleteIfExists(f); } catch (IOException ignored) { /* best-effort cleanup temp-файлов */ }
                     });
         } else {
             Files.createDirectories(tempDir);
@@ -110,7 +110,7 @@ class OrderStatusImportServiceTest extends BaseIntegrationTest {
                     """);
 
             // order-service замокан без настройки → упадёт, но лог запишется
-            String result = orderStatusImportService.processStatusUpdate();
+            orderStatusImportService.processStatusUpdate();
 
             assertThat(importLogRepository.count()).isEqualTo(1);
             ImportLog log = importLogRepository.findAll().getFirst();

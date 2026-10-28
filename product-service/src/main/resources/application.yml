@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: product-service
+  # нет своего UserDetailsService — иначе Spring создаёт дефолтного юзера и пишет его пароль в лог
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
 
   datasource:
     url: jdbc:postgresql://localhost:${PRODUCT_DB_PORT}/ecommerce_products

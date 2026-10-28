@@ -9,11 +9,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 import ru.rfsnab.orderservice.exception.InvalidDocumentException;
-import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
+import ru.rfsnab.orderservice.exception.OrderNotFoundException;
 import ru.rfsnab.orderservice.exception.OrderDocumentNotFoundException;
 import ru.rfsnab.orderservice.kafka.OrderKafkaProducer;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.OrderDocument;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.OrderDocumentType;
 import ru.rfsnab.orderservice.repository.OrderDocumentRepository;
 
@@ -134,10 +135,10 @@ class OrderDocumentServiceTest {
         @Test
         @DisplayName("listForUser с чужим заказом приводит к 404 (OrderDocumentNotFoundException), не к 400")
         void shouldDenyListForUserOnForeignOrder() {
-            when(orderService.getOrderByIdAndUser(ORDER_ID, OTHER_USER_ID))
-                    .thenThrow(new InvalidOrderStateException("Нет доступа к заказу: " + ORDER_ID));
+            when(orderService.getOrderByIdAndUser(ORDER_ID, OTHER_USER_ID, CustomerType.B2C))
+                    .thenThrow(new OrderNotFoundException("Заказ не найден: " + ORDER_ID));
 
-            assertThatThrownBy(() -> orderDocumentService.listForUser(ORDER_ID, OTHER_USER_ID))
+            assertThatThrownBy(() -> orderDocumentService.listForUser(ORDER_ID, OTHER_USER_ID, CustomerType.B2C))
                     .isInstanceOf(OrderDocumentNotFoundException.class);
 
             verify(orderDocumentRepository, never()).findByOrderIdOrderByUploadedAtDesc(any());
@@ -146,12 +147,12 @@ class OrderDocumentServiceTest {
         @Test
         @DisplayName("downloadForUser с чужим заказом приводит к 404 (OrderDocumentNotFoundException), не к 400")
         void shouldDenyDownloadForUserOnForeignOrder() {
-            when(orderService.getOrderByIdAndUser(ORDER_ID, OTHER_USER_ID))
-                    .thenThrow(new InvalidOrderStateException("Нет доступа к заказу: " + ORDER_ID));
+            when(orderService.getOrderByIdAndUser(ORDER_ID, OTHER_USER_ID, CustomerType.B2C))
+                    .thenThrow(new OrderNotFoundException("Заказ не найден: " + ORDER_ID));
 
             UUID docId = UUID.randomUUID();
 
-            assertThatThrownBy(() -> orderDocumentService.downloadForUser(ORDER_ID, docId, OTHER_USER_ID))
+            assertThatThrownBy(() -> orderDocumentService.downloadForUser(ORDER_ID, docId, OTHER_USER_ID, CustomerType.B2C))
                     .isInstanceOf(OrderDocumentNotFoundException.class);
 
             verify(orderDocumentRepository, never()).findByIdAndOrderId(any(), any());
@@ -159,10 +160,23 @@ class OrderDocumentServiceTest {
         }
 
         @Test
+        @DisplayName("тип клиента передаётся в проверку владельца: B2B-заказ B2C-пользователя (и наоборот) даёт 404")
+        void shouldPassCustomerTypeToOwnershipCheck() {
+            when(orderService.getOrderByIdAndUser(ORDER_ID, OTHER_USER_ID, CustomerType.B2B))
+                    .thenThrow(new OrderNotFoundException("Заказ не найден: " + ORDER_ID));
+
+            assertThatThrownBy(() -> orderDocumentService.listForUser(ORDER_ID, OTHER_USER_ID, CustomerType.B2B))
+                    .isInstanceOf(OrderDocumentNotFoundException.class);
+
+            verify(orderService).getOrderByIdAndUser(ORDER_ID, OTHER_USER_ID, CustomerType.B2B);
+            verify(orderService, never()).getOrderByIdAndUser(ORDER_ID, OTHER_USER_ID, CustomerType.B2C);
+        }
+
+        @Test
         @DisplayName("listForUser для владельца возвращает документы заказа")
         void shouldReturnDocumentsForOwner() {
             Order order = buildOrder();
-            when(orderService.getOrderByIdAndUser(ORDER_ID, OWNER_USER_ID)).thenReturn(order);
+            when(orderService.getOrderByIdAndUser(ORDER_ID, OWNER_USER_ID, CustomerType.B2C)).thenReturn(order);
 
             OrderDocument document = OrderDocument.builder()
                     .id(UUID.randomUUID())
@@ -175,7 +189,7 @@ class OrderDocumentServiceTest {
             when(orderDocumentRepository.findByOrderIdOrderByUploadedAtDesc(ORDER_ID))
                     .thenReturn(List.of(document));
 
-            List<OrderDocument> result = orderDocumentService.listForUser(ORDER_ID, OWNER_USER_ID);
+            List<OrderDocument> result = orderDocumentService.listForUser(ORDER_ID, OWNER_USER_ID, CustomerType.B2C);
 
             assertThat(result).containsExactly(document);
         }

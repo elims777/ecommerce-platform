@@ -45,10 +45,11 @@
         </rollingPolicy>
     </appender>
 
-    <logger name="ru.rfsnab.orderservice" level="DEBUG"/>
-    <logger name="ru.rfsnab.orderservice.aspect" level="DEBUG"/>
+    <springProfile name="!prod">
+        <logger name="ru.rfsnab.orderservice" level="DEBUG"/>
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+    </springProfile>
     <logger name="org.springframework" level="INFO"/>
-    <logger name="org.hibernate.SQL" level="DEBUG"/>
     <logger name="org.apache.kafka" level="WARN"/>
 
     <springProfile name="test">

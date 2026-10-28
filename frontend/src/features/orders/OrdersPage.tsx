@@ -15,16 +15,16 @@ import { deliveryDateLabel } from '@/utils/deliveryDate';
 import EditOrderModal from './EditOrderModal';
 
 /** Статусы, в которых заказ ещё можно отменить (до отгрузки) */
-const CANCELLABLE_STATUSES: OrderStatus[] = [
+const CANCELLABLE_STATUSES = new Set<OrderStatus>([
     OrderStatus.CREATED,
     OrderStatus.PROCESSING,
     OrderStatus.INVOICE_SENT,
     OrderStatus.PENDING_PAYMENT,
     OrderStatus.PAYMENT_FAILED,
-];
+]);
 
 /** Статусы, в которых клиент может редактировать заказ (PROCESSING — с повторной отправкой в 1С) */
-const EDITABLE_STATUSES: OrderStatus[] = [OrderStatus.CREATED, OrderStatus.PROCESSING];
+const EDITABLE_STATUSES = new Set<OrderStatus>([OrderStatus.CREATED, OrderStatus.PROCESSING]);
 
 const formatPrice = formatPriceOrPlaceholder;
 
@@ -130,7 +130,7 @@ const OrdersPage = () => {
                     const updated = await cancelOrder(orderId);
                     setExpandedOrderDetails((prev) => ({ ...prev, [orderId]: updated }));
                     message.success('Заказ отменён');
-                    queryClient.invalidateQueries({ queryKey: ['myOrders'] });
+                    void queryClient.invalidateQueries({ queryKey: ['myOrders'] });
                 } catch {
                     message.error('Не удалось отменить заказ. Попробуйте позже.');
                 } finally {
@@ -375,9 +375,9 @@ const OrdersPage = () => {
                         )}
                     </div>
                 )}
-                {CANCELLABLE_STATUSES.includes(extractEnumCode(order.status) as OrderStatus) && (
+                {CANCELLABLE_STATUSES.has(extractEnumCode(order.status) as OrderStatus) && (
                     <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                        {EDITABLE_STATUSES.includes(extractEnumCode(order.status) as OrderStatus) && (
+                        {EDITABLE_STATUSES.has(extractEnumCode(order.status) as OrderStatus) && (
                             <Button onClick={() => setEditingOrder(order)}>
                                 Редактировать заказ
                             </Button>
@@ -524,7 +524,7 @@ const OrdersPage = () => {
                     expandable={{
                         expandedRowRender,
                         expandRowByClick: true,
-                        onExpand: (expanded, record) => { if (expanded) loadOrderDetails(record.id); },
+                        onExpand: (expanded, record) => { if (expanded) void loadOrderDetails(record.id); },
                     }}
                 />
             </div>

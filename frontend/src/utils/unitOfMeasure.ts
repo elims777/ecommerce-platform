@@ -29,7 +29,7 @@ const UNIT_PLURAL_MAP: Record<string, [string, string, string]> = {
 
 // Убирает хвост "(2 шт.)" у уже импортированных значений ("пара (2 шт.)" → "пара").
 const stripPackSuffix = (unit: string): string =>
-    unit.replace(/\s*\(\d+\s*шт\.?\)\s*$/i, '').trim();
+    unit.trim().replace(/\(\d+\s*шт\.?\)$/i, '').trim();
 
 export const unitShort = (unit: string | null | undefined): string => {
     if (!unit) return 'шт';

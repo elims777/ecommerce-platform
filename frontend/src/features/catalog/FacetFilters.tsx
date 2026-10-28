@@ -42,7 +42,7 @@ const FacetFilters = ({ categoryId, selected, onChange, onReset }: FacetFiltersP
                     Фильтры
                 </span>
                 {hasSelection && (
-                    <span onClick={onReset} style={{ fontSize: 12, color: 'var(--brand-red)', fontWeight: 500, cursor: 'pointer' }}>
+                    <span onClick={onReset} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onReset(); } }} style={{ fontSize: 12, color: 'var(--brand-red)', fontWeight: 500, cursor: 'pointer' }}>
                         Сбросить
                     </span>
                 )}

@@ -92,7 +92,7 @@ const ResetPasswordPage = () => {
         try {
             await resetPassword(token, values.newPassword);
             messageApi.success('Пароль изменён. Войдите с новым паролем.');
-            navigate('/login');
+            void navigate('/login');
         } catch {
             setValidation('invalid');
             messageApi.error('Ссылка недействительна или устарела');
@@ -150,14 +150,14 @@ const ResetPasswordPage = () => {
 
                             <Form<ResetPasswordFormValues> layout="vertical" onFinish={handleSubmit} autoComplete="off">
                                 <div style={{ marginBottom: 14 }}>
-                                    <label style={labelStyle}>Новый пароль</label>
+                                    <label htmlFor="newPassword" style={labelStyle}>Новый пароль</label>
                                     <Form.Item name="newPassword" noStyle rules={[{ required: true, message: 'Введите пароль' }, { min: 8, message: 'Минимум 8 символов' }]}>
                                         <Input.Password style={inputStyle} placeholder="••••••••" />
                                     </Form.Item>
                                 </div>
 
                                 <div style={{ marginBottom: 14 }}>
-                                    <label style={labelStyle}>Повторите пароль</label>
+                                    <label htmlFor="confirmPassword" style={labelStyle}>Повторите пароль</label>
                                     <Form.Item name="confirmPassword" noStyle dependencies={['newPassword']} rules={[
                                         { required: true, message: 'Повторите пароль' },
                                         ({ getFieldValue }) => ({ validator(_, value) { if (!value || getFieldValue('newPassword') === value) return Promise.resolve(); return Promise.reject(new Error('Пароли не совпадают')); } }),

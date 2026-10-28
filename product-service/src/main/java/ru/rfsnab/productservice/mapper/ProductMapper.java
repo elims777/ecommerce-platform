@@ -14,9 +14,10 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class ProductMapper {
+    private ProductMapper() {
+    }
 
     public static Product mapToEntity(ProductRequest productRequest) {
         return Product.builder()
@@ -76,7 +77,7 @@ public class ProductMapper {
         // Варианты лежат в той же категории — процент им достаётся тот же, цены тоже базовые
         response.setChildren(children.stream()
                 .map(child -> mapForAdmin(child, List.of(), categoryMarkup))
-                .collect(Collectors.toList()));
+                .toList());
         return response;
     }
 
@@ -84,7 +85,7 @@ public class ProductMapper {
         // Варианты лежат в той же категории, что и родитель, — процент им достаётся тот же
         List<ProductResponse> childResponses = children.stream()
                 .map(child -> mapToResponse(child, List.of(), categoryMarkup))
-                .collect(Collectors.toList());
+                .toList();
 
         BigDecimal markup = SalePriceCalculator.resolveMarkup(product, categoryMarkup);
         BigDecimal salePrice = SalePriceCalculator.apply(product.getPrice(), markup);

@@ -288,5 +288,13 @@ class NewsControllerTest {
             mockMvc.perform(delete("/api/v1/admin/news/9999"))
                     .andExpect(status().isNotFound());
         }
+
+        @Test
+        @WithMockUser(authorities = "ROLE_ADMIN")
+        @DisplayName("неподдерживаемый HTTP-метод → 405, а не 500")
+        void unsupportedMethodReturns405() throws Exception {
+            mockMvc.perform(patch("/api/v1/admin/news"))
+                    .andExpect(status().isMethodNotAllowed());
+        }
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import ru.rfsnab.orderservice.BaseServiceIntegrationTest;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
+import ru.rfsnab.orderservice.exception.OrderNotFoundException;
 import ru.rfsnab.orderservice.models.dto.order.AddressDto;
 import ru.rfsnab.orderservice.models.dto.order.CreateOrderRequest;
 import ru.rfsnab.orderservice.models.dto.payment.PaymentInitiationResponse;
@@ -18,6 +19,7 @@ import ru.rfsnab.orderservice.models.dto.product.ProductDto;
 import ru.rfsnab.orderservice.models.dto.product.WarehouseDto;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.PaymentMethodSettings;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
@@ -59,7 +61,8 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
     @BeforeEach
     void setUp() {
         orderRepository.deleteAll();
-        cartService.clearCart(USER_ID);
+        cartService.clearCart(USER_ID, CustomerType.B2C);
+        cartService.clearCart(USER_ID, CustomerType.B2B);
 
         PaymentMethodSettings settings = paymentMethodSettingsRepository.findById(1L)
                 .orElseGet(() -> {
@@ -93,7 +96,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
             when(paymentServiceClient.createPayment(any()))
                     .thenReturn(new PaymentLinkResponse("https://pay.link/card", "op-1", "PENDING"));
 
-            PaymentInitiationResponse resp = orderService.pay(order.getId(), USER_ID);
+            PaymentInitiationResponse resp = orderService.pay(order.getId(), USER_ID, order.getCustomerType());
 
             assertThat(resp.paymentLink()).isEqualTo("https://pay.link/card");
             assertThat(resp.paymentMode()).isEqualTo(PaymentMethod.CARD);
@@ -110,7 +113,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
             when(paymentServiceClient.createPayment(any()))
                     .thenReturn(new PaymentLinkResponse("https://pay.link/card", "op-1", "PENDING"));
 
-            orderService.pay(order.getId(), USER_ID);
+            orderService.pay(order.getId(), USER_ID, order.getCustomerType());
 
             ArgumentCaptor<Order> captor = ArgumentCaptor.forClass(Order.class);
             verify(paymentServiceClient).createPayment(captor.capture());
@@ -124,8 +127,8 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
             when(paymentServiceClient.createPayment(any()))
                     .thenReturn(new PaymentLinkResponse("https://pay.link/card", "op-1", "PENDING"));
 
-            orderService.pay(order.getId(), USER_ID); // PROCESSING → PENDING_PAYMENT
-            orderService.pay(order.getId(), USER_ID); // уже PENDING_PAYMENT — только createPayment
+            orderService.pay(order.getId(), USER_ID, order.getCustomerType()); // PROCESSING → PENDING_PAYMENT
+            orderService.pay(order.getId(), USER_ID, order.getCustomerType()); // уже PENDING_PAYMENT — только createPayment
 
             verify(paymentServiceClient, times(2)).createPayment(any());
             Order saved = orderRepository.findById(order.getId()).orElseThrow();
@@ -148,7 +151,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
             when(paymentServiceClient.createPayment(any()))
                     .thenReturn(new PaymentLinkResponse("https://pay.link/sbp", "op-sbp", "PENDING"));
 
-            PaymentInitiationResponse resp = orderService.pay(order.getId(), USER_ID);
+            PaymentInitiationResponse resp = orderService.pay(order.getId(), USER_ID, order.getCustomerType());
 
             assertThat(resp.paymentLink()).isEqualTo("https://pay.link/sbp");
             assertThat(resp.paymentMode()).isEqualTo(PaymentMethod.SBP);
@@ -172,7 +175,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
         void cod_doesNotCallPaymentService_paymentLinkNull() {
             Order order = createAndConfirmOrder(PaymentMethod.CASH_ON_DELIVERY, "B2C");
 
-            PaymentInitiationResponse resp = orderService.pay(order.getId(), USER_ID);
+            PaymentInitiationResponse resp = orderService.pay(order.getId(), USER_ID, order.getCustomerType());
 
             verifyNoInteractions(paymentServiceClient);
             assertThat(resp.paymentLink()).isNull();
@@ -185,7 +188,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
         void cod_setsOrderStatusToPendingPayment() {
             Order order = createAndConfirmOrder(PaymentMethod.CASH_ON_DELIVERY, "B2C");
 
-            orderService.pay(order.getId(), USER_ID);
+            orderService.pay(order.getId(), USER_ID, order.getCustomerType());
 
             Order saved = orderRepository.findById(order.getId()).orElseThrow();
             assertThat(saved.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
@@ -206,7 +209,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
             Order order = createOrder(PaymentMethod.CARD, "B2C");
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.pay(orderId, USER_ID))
+            assertThatThrownBy(() -> orderService.pay(orderId, USER_ID, CustomerType.B2C))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessageContaining("невозможна");
         }
@@ -217,7 +220,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
             Order order = createOrder(PaymentMethod.CARD, "B2B");
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.pay(orderId, USER_ID))
+            assertThatThrownBy(() -> orderService.pay(orderId, USER_ID, CustomerType.B2B))
                     .isInstanceOf(InvalidOrderStateException.class);
         }
 
@@ -230,7 +233,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
             when(paymentServiceClient.createPayment(any()))
                     .thenReturn(new PaymentLinkResponse("https://pay.link/b2b", "op-b2b", "PENDING"));
 
-            PaymentInitiationResponse resp = orderService.pay(order.getId(), USER_ID);
+            PaymentInitiationResponse resp = orderService.pay(order.getId(), USER_ID, order.getCustomerType());
             assertThat(resp.paymentMode()).isEqualTo(PaymentMethod.CARD);
         }
 
@@ -241,7 +244,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
             orderService.updateStatus(order.getId(), OrderStatus.INVOICE_SENT);
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.pay(orderId, USER_ID))
+            assertThatThrownBy(() -> orderService.pay(orderId, USER_ID, CustomerType.B2C))
                     .isInstanceOf(InvalidOrderStateException.class);
         }
 
@@ -255,7 +258,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
             when(paymentServiceClient.createPayment(any()))
                     .thenReturn(new PaymentLinkResponse("https://pay.link/retry", "op-retry", "PENDING"));
 
-            PaymentInitiationResponse resp = orderService.pay(order.getId(), USER_ID);
+            PaymentInitiationResponse resp = orderService.pay(order.getId(), USER_ID, order.getCustomerType());
             assertThat(resp.paymentLink()).isEqualTo("https://pay.link/retry");
         }
 
@@ -265,9 +268,18 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
             Order order = createAndConfirmOrder(PaymentMethod.CARD, "B2C");
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.pay(orderId, 999L))
-                    .isInstanceOf(InvalidOrderStateException.class)
-                    .hasMessageContaining("Нет доступа");
+            assertThatThrownBy(() -> orderService.pay(orderId, 999L, CustomerType.B2C))
+                    .isInstanceOf(OrderNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("Заказ B2C того же userId недоступен для pay() под B2B")
+        void b2cOrder_payAsB2b_throws() {
+            Order order = createAndConfirmOrder(PaymentMethod.CARD, "B2C");
+
+            UUID orderId = order.getId();
+            assertThatThrownBy(() -> orderService.pay(orderId, USER_ID, CustomerType.B2B))
+                    .isInstanceOf(OrderNotFoundException.class);
         }
     }
 
@@ -283,7 +295,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("CASH_ON_DELIVERY PENDING_PAYMENT → PAID, вызывает recordCashPayment")
         void cod_pendingPayment_setsPaid() {
             Order order = createAndConfirmOrder(PaymentMethod.CASH_ON_DELIVERY, "B2C");
-            orderService.pay(order.getId(), USER_ID);
+            orderService.pay(order.getId(), USER_ID, order.getCustomerType());
 
             Order confirmed = orderService.confirmCashPayment(order.getId());
 
@@ -342,7 +354,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
     // ============================================================
 
     private Order createOrder(PaymentMethod paymentMethod, String clientType) {
-        cartService.addItemToCart(USER_ID, PRODUCT_ID, 2);
+        cartService.addItemToCart(USER_ID, PriceSelector.parseCustomerType(clientType), PRODUCT_ID, 2);
         CreateOrderRequest request = new CreateOrderRequest(
                 paymentMethod, DeliveryMethod.CARRIER_ADDRESS,
                 AddressDto.builder()
@@ -357,7 +369,7 @@ class OrderPaymentServiceTest extends BaseServiceIntegrationTest {
 
     private Order createAndConfirmOrder(PaymentMethod paymentMethod, String clientType) {
         Order order = createOrder(paymentMethod, clientType);
-        return orderService.confirmOrder(order.getId(), USER_ID);
+        return orderService.confirmOrder(order.getId(), USER_ID, order.getCustomerType());
     }
 }
 

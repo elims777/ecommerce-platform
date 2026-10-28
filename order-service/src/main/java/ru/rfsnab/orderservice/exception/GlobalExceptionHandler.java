@@ -7,11 +7,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import ru.rfsnab.orderservice.delivery.exception.CarrierApiException;
 import ru.rfsnab.orderservice.delivery.exception.ShipmentAlreadyExistsException;
@@ -71,7 +77,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleNotReadable(
             HttpMessageNotReadableException ex, HttpServletRequest request) {
-        log.warn("Некорректное тело запроса на {}: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Некорректное тело запроса на {}", request.getRequestURI());
         return buildResponse(HttpStatus.BAD_REQUEST, "Malformed Request", "Некорректное тело запроса", request);
     }
 
@@ -81,7 +87,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(
             MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
-        log.warn("Некорректный параметр на {}: {}", request.getRequestURI(), ex.getMessage());
+        log.warn("Некорректный параметр на {}", request.getRequestURI());
         return buildResponse(HttpStatus.BAD_REQUEST, "Invalid Parameter",
                 "Некорректное значение параметра " + ex.getName(), request);
     }
@@ -107,6 +113,26 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Не передан обязательный заголовок запроса.
+     */
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ErrorResponse> handleMissingHeader(
+            MissingRequestHeaderException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Missing Header",
+                "Не передан заголовок " + ex.getHeaderName(), request);
+    }
+
+    /**
+     * Не передана обязательная часть multipart-запроса.
+     */
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPart(
+            MissingServletRequestPartException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Missing Part",
+                "Не передана часть запроса " + ex.getRequestPartName(), request);
+    }
+
+    /**
      * Невалидный файл документа заказа (тип, размер, пустой файл).
      */
     @ExceptionHandler(InvalidDocumentException.class)
@@ -124,7 +150,40 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Waybill Not Found In Carrier", ex.getMessage(), request);
     }
 
+    // ==================== 405 / 415 ====================
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, "Method Not Allowed",
+                "Метод " + ex.getMethod() + " не поддерживается", request);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported Media Type",
+                "Неподдерживаемый тип содержимого", request);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(
+            MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.PAYLOAD_TOO_LARGE, "Payload Too Large",
+                "Файл слишком большой", request);
+    }
+
     // ==================== 404 Not Found ====================
+
+    /**
+     * Несуществующий путь.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(
+            NoResourceFoundException ex, HttpServletRequest request) {
+        log.warn("Ресурс не найден: {}", request.getRequestURI());
+        return buildResponse(HttpStatus.NOT_FOUND, "Not Found", "Ресурс не найден", request);
+    }
 
     /**
      * Заказ не найден.
@@ -133,6 +192,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleOrderNotFound(
             OrderNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, "Order Not Found", ex.getMessage(), request);
+    }
+
+    /**
+     * Получатель или адрес получателя не найден (в том числе чужой).
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusiness(
+            BusinessException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(), request);
     }
 
     /**

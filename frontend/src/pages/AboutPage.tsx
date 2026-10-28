@@ -65,7 +65,7 @@ const AboutPage = () => {
                 {advantages.map((item) => (
                     <Col xs={24} sm={12} key={item.title}>
                         <Card hoverable style={{ height: '100%', borderRadius: 12 }}>
-                            <Space direction="vertical" align="center" style={{ width: '100%', textAlign: 'center' }}>
+                            <Space orientation="vertical" align="center" style={{ width: '100%', textAlign: 'center' }}>
                                 {item.icon}
                                 <Title level={5} style={{ marginTop: 12, marginBottom: 4 }}>
                                     {item.title}
@@ -101,7 +101,7 @@ const AboutPage = () => {
                     № 426-ФЗ «О специальной оценке условий труда» в ООО «МСВ» проведена
                     специальная оценка условий труда (СОУТ) на рабочих местах.
                 </Paragraph>
-                <Space direction="vertical">
+                <Space orientation="vertical">
                     <a href="/sout-svodnaya-vedomost-2026.pdf" target="_blank" rel="noopener">
                         <FilePdfOutlined /> Сводная ведомость результатов проведения специальной оценки условий труда, 2026 г.
                     </a>

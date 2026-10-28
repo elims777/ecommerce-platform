@@ -1,27 +1,21 @@
 package ru.rfsnab.authservice.controllers;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletResponse;
+import io.jsonwebtoken.JwtException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 import ru.rfsnab.authservice.models.dto.AuthResponse;
-import ru.rfsnab.authservice.models.dto.ErrorResponse;
 import ru.rfsnab.authservice.models.dto.LegalAuthRequest;
+import ru.rfsnab.authservice.models.dto.OAuth2ExchangeRequest;
+import ru.rfsnab.authservice.models.dto.RefreshTokenRequest;
 import ru.rfsnab.authservice.models.dto.SimpleAuthRequest;
 import ru.rfsnab.authservice.models.dto.SwitchContextRequest;
 import ru.rfsnab.authservice.models.dto.UserDtoResponse;
 import ru.rfsnab.authservice.service.AuthService;
+import ru.rfsnab.authservice.service.OAuth2CodeService;
 
-import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
@@ -30,12 +24,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
-    private final ObjectMapper objectMapper;
-    private final RestTemplate restTemplate;
+    private static final String BEARER_PREFIX = "Bearer ";
 
-    @Value("${user.service.url}")
-    private String userServiceUrl;
+    private final AuthService authService;
+    private final OAuth2CodeService oAuth2CodeService;
 
     /**
      * REST API endpoint для login (возвращает JSON)
@@ -48,31 +40,11 @@ public class AuthController {
     }
 
     /**
-     * HTML form login endpoint (делает redirect на страницу успеха)
-     * Используется когда login идёт через HTML форму в браузере
-     * Проверяем Accept header: если там text/html - делаем redirect
-     */
-    @PostMapping(value = "/login",
-            consumes = MediaType.APPLICATION_JSON_VALUE,
-            produces = MediaType.TEXT_HTML_VALUE)
-    public void loginHtml(@Valid @RequestBody SimpleAuthRequest authRequest,
-                          HttpServletResponse response) throws IOException {
-
-        Map<String, Object> authData = authService.authenticateWithUserData(authRequest);
-
-        // Формируем URL с данными для страницы успеха
-        String dataJson = objectMapper.writeValueAsString(authData);
-        String encodedData = URLEncoder.encode(dataJson, StandardCharsets.UTF_8);
-
-        response.sendRedirect("/oauth2/success?data=" + encodedData);
-    }
-
-    /**
      * Обновление access token через refresh token
      */
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(@RequestParam String refreshToken) {
-        return ResponseEntity.ok(authService.refresh(refreshToken));
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refresh(request.refreshToken()));
     }
 
     /**
@@ -80,119 +52,34 @@ public class AuthController {
      * Проксирует запрос в user-service с JWT токеном.
      */
     @GetMapping("me")
-    public ResponseEntity<?> getCurrentUser(@RequestHeader(value = "Authorization", required = false) String authHeader){
-        try {
-            // Проверка наличия заголовка
-            if (authHeader == null || authHeader.isBlank()) {
-                log.warn("Missing Authorization header in /me request");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ErrorResponse.builder()
-                                .timestamp(LocalDateTime.now())
-                                .status(HttpStatus.UNAUTHORIZED.value())
-                                .error("Unauthorized")
-                                .message("Требуется аутентификация. Токен не предоставлен")
-                                .path("/v1/auth/me")
-                                .build());
-            }
-
-            // Проверка формата Bearer
-            if (!authHeader.startsWith("Bearer ")) {
-                log.warn("Invalid Authorization header format in /me request");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ErrorResponse.builder()
-                                .timestamp(LocalDateTime.now())
-                                .status(HttpStatus.UNAUTHORIZED.value())
-                                .error("Unauthorized")
-                                .message("Неверный формат токена. Ожидается: Bearer <token>")
-                                .path("/v1/auth/me")
-                                .build());
-            }
-
-            // Подготовка заголовков для user-service
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", authHeader);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
-
-            // Запрос к user-service
-            ResponseEntity<UserDtoResponse> response = restTemplate.exchange(
-                    userServiceUrl + "/v1/users/me",
-                    HttpMethod.GET,
-                    requestEntity,
-                    UserDtoResponse.class
-            );
-
-            return ResponseEntity.ok(response.getBody());
-
-        } catch (HttpClientErrorException.Unauthorized e) {
-            log.warn("Unauthorized request to /me: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ErrorResponse.builder()
-                            .timestamp(LocalDateTime.now())
-                            .status(HttpStatus.UNAUTHORIZED.value())
-                            .error("Unauthorized")
-                            .message("Токен недействителен или истёк. Пожалуйста, войдите снова")
-                            .path("/v1/auth/me")
-                            .build());
-
-        } catch (HttpClientErrorException.Forbidden e) {
-            log.warn("Forbidden request to /me: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ErrorResponse.builder()
-                            .timestamp(LocalDateTime.now())
-                            .status(HttpStatus.FORBIDDEN.value())
-                            .error("Forbidden")
-                            .message("Доступ запрещён")
-                            .path("/v1/auth/me")
-                            .build());
-
-        } catch (HttpClientErrorException.NotFound e) {
-            log.warn("User not found in /me request");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ErrorResponse.builder()
-                            .timestamp(LocalDateTime.now())
-                            .status(HttpStatus.NOT_FOUND.value())
-                            .error("Not Found")
-                            .message("Пользователь не найден")
-                            .path("/v1/auth/me")
-                            .build());
-
-        } catch (HttpClientErrorException e) {
-            log.error("Client error in /me request: {}", e.getMessage());
-            return ResponseEntity.status(e.getStatusCode())
-                    .body(ErrorResponse.builder()
-                            .timestamp(LocalDateTime.now())
-                            .status(e.getStatusCode().value())
-                            .error(e.getStatusText())
-                            .message("Ошибка при получении данных пользователя")
-                            .path("/v1/auth/me")
-                            .build());
-
-        } catch (Exception e) {
-            log.error("Unexpected error in /me request", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ErrorResponse.builder()
-                            .timestamp(LocalDateTime.now())
-                            .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                            .error("Internal Server Error")
-                            .message("Внутренняя ошибка сервера")
-                            .path("/v1/auth/me")
-                            .build());
+    public ResponseEntity<UserDtoResponse> getCurrentUser(@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader) {
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
+            throw new JwtException("Отсутствует или некорректен заголовок Authorization");
         }
+        return ResponseEntity.ok(authService.getCurrentUser(authHeader.substring(BEARER_PREFIX.length())));
     }
-
 
     @PostMapping("/login/legal")
     public ResponseEntity<AuthResponse> loginLegal(@RequestBody LegalAuthRequest request) {
         return ResponseEntity.ok(authService.authenticateLegalEntity(request));
     }
 
+    /**
+     * Обмен одноразового кода OAuth2 на токены (код выдаётся в редиректе OAuth2LoginSuccessHandler)
+     */
+    @PostMapping("/oauth2/exchange")
+    public ResponseEntity<Map<String, Object>> exchangeOAuth2Code(@Valid @RequestBody OAuth2ExchangeRequest request) {
+        return ResponseEntity.ok(oAuth2CodeService.exchange(request.code()));
+    }
+
     @PostMapping("/switch-context")
     public ResponseEntity<AuthResponse> switchContext(
-            @RequestHeader("Authorization") String authHeader,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
             @RequestBody SwitchContextRequest request) {
-        String token = authHeader.substring(7);
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
+            throw new JwtException("Отсутствует или некорректен заголовок Authorization");
+        }
+        String token = authHeader.substring(BEARER_PREFIX.length());
         return ResponseEntity.ok(authService.switchContext(token, request));
     }
 

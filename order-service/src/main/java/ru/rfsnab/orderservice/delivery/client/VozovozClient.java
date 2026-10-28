@@ -41,6 +41,17 @@ import static ru.rfsnab.orderservice.delivery.client.CarrierJson.text;
 @Component
 public class VozovozClient implements CarrierClient {
 
+    private static final String FIELD_DISPATCH = "dispatch";
+    private static final String FIELD_COMPANY_NAME = "companyName";
+    private static final String FIELD_NUMBER = "number";
+    private static final String FIELD_CREATED = "created";
+    private static final String FIELD_DATES = "dates";
+    private static final String FIELD_DESTINATION = "destination";
+    private static final String FIELD_POINT = "point";
+    private static final String FIELD_COMPANY = "company";
+    private static final String FIELD_GATEWAY = "gateway";
+    private static final String FIELD_CUSTOMER = "customer";
+
     private static final String HTTPS_SCHEME = "https";
     /** Документы отдаются только с доменов Возовоза. */
     private static final String DOCUMENT_DOMAIN = "vozovoz.ru";
@@ -99,9 +110,9 @@ public class VozovozClient implements CarrierClient {
             return Map.of();
         }
         Map<String, CarrierShipmentStatus> result = new HashMap<>();
-        for (JsonNode order : fetchAll("order", Map.of("filters", Map.of("number", waybills)))) {
+        for (JsonNode order : fetchAll("order", Map.of("filters", Map.of(FIELD_NUMBER, waybills)))) {
             CarrierShipmentStatus status = toStatus(order);
-            for (String key : new String[]{text(order, "number"), text(order, "id"), text(order, "customId")}) {
+            for (String key : new String[]{text(order, FIELD_NUMBER), text(order, "id"), text(order, "customId")}) {
                 if (key != null && waybills.contains(key)) {
                     result.put(key, status);
                 }
@@ -116,17 +127,17 @@ public class VozovozClient implements CarrierClient {
         Map<String, Object> created = Map.of("from", LocalDate.ofInstant(since, ZoneOffset.UTC).toString(),
                 "to", LocalDate.now(ZoneOffset.UTC).toString());
         List<JournalItem> result = new ArrayList<>();
-        for (JsonNode order : fetchAll("order", Map.of("filters", Map.of("dates", Map.of("created", created))))) {
-            String waybill = text(order, "number");
+        for (JsonNode order : fetchAll("order", Map.of("filters", Map.of(FIELD_DATES, Map.of(FIELD_CREATED, created))))) {
+            String waybill = text(order, FIELD_NUMBER);
             if (waybill != null) {
-                JsonNode dispatch = order.path("gateway").path("dispatch");
-                JsonNode destination = order.path("gateway").path("destination");
-                JsonNode dates = order.path("dates");
+                JsonNode dispatch = order.path(FIELD_GATEWAY).path(FIELD_DISPATCH);
+                JsonNode destination = order.path(FIELD_GATEWAY).path(FIELD_DESTINATION);
+                JsonNode dates = order.path(FIELD_DATES);
                 result.add(new JournalItem(waybill,
-                        text(dispatch.path("customer"), "company", "companyName", "name"), text(dispatch.path("customer"), "inn"),
-                        text(destination.path("customer"), "company", "companyName", "name"), text(destination.path("customer"), "inn"),
+                        text(dispatch.path(FIELD_CUSTOMER), FIELD_COMPANY, FIELD_COMPANY_NAME, "name"), text(dispatch.path(FIELD_CUSTOMER), "inn"),
+                        text(destination.path(FIELD_CUSTOMER), FIELD_COMPANY, FIELD_COMPANY_NAME, "name"), text(destination.path(FIELD_CUSTOMER), "inn"),
                         cityOf(dispatch), cityOf(destination),
-                        instant(dates, "shipped", "taken", "created", "create"), instant(destination.path("point"), "date"),
+                        instant(dates, "shipped", "taken", FIELD_CREATED, "create"), instant(destination.path(FIELD_POINT), "date"),
                         text(order, "customId"), toStatus(order), toCargo(order)));
             }
         }
@@ -151,7 +162,10 @@ public class VozovozClient implements CarrierClient {
                 // сообщение исключения содержит URL с токеном — наружу его не отдаём
                 throw new CarrierApiException("Возовоз недоступен: " + e.getClass().getSimpleName());
             }
-            String error = body == null ? null : text(body.path("error"), "message");
+            if (body == null) {
+                throw new CarrierApiException("Возовоз вернул пустой ответ");
+            }
+            String error = text(body.path("error"), "message");
             if (error != null) {
                 throw new CarrierApiException("Возовоз: " + error);
             }
@@ -174,7 +188,7 @@ public class VozovozClient implements CarrierClient {
     private static CarrierShipmentStatus toStatus(JsonNode order) {
         JsonNode status = order.get("status");
         String raw = status != null && status.isObject() ? text(status, "message", "code") : text(order, "status");
-        JsonNode dates = order.path("dates");
+        JsonNode dates = order.path(FIELD_DATES);
         ShipmentStatusCode code = null;
         if (raw != null && raw.toLowerCase(Locale.ROOT).contains(CANCELLED_MARK)) {
             code = ShipmentStatusCode.CANCELLED;
@@ -184,29 +198,29 @@ public class VozovozClient implements CarrierClient {
             code = ShipmentStatusCode.ARRIVED_AT_TERMINAL;
         } else if (text(dates, "taken", "shipped") != null) {
             code = ShipmentStatusCode.IN_TRANSIT;
-        } else if (text(dates, "create", "created") != null) {
+        } else if (text(dates, "create", FIELD_CREATED) != null) {
             code = ShipmentStatusCode.CREATED;
         }
         if (code == null) {
             log.warn("Возовоз: статус накладной не определён, код не меняется: {}", raw);
         }
-        return new CarrierShipmentStatus(code, raw, cityOf(order.path("gateway").path("dispatch")),
-                cityOf(order.path("gateway").path("destination")), toCargo(order));
+        return new CarrierShipmentStatus(code, raw, cityOf(order.path(FIELD_GATEWAY).path(FIELD_DISPATCH)),
+                cityOf(order.path(FIELD_GATEWAY).path(FIELD_DESTINATION)), toCargo(order));
     }
 
     /** Груз из order.get; isPaid в ответе есть, хотя в документации его нет. */
     private static ShipmentCargo toCargo(JsonNode order) {
         JsonNode dimension = order.path("cargo").path("dimension");
-        JsonNode gateway = order.path("gateway");
+        JsonNode gateway = order.path(FIELD_GATEWAY);
         return new ShipmentCargo(decimal(dimension, "weight"), decimal(dimension, "volume"), integer(dimension, "quantity"),
-                decimal(order, "price"), bool(order, "isPaid"), isAddress(gateway.path("dispatch").path("point")),
-                isAddress(gateway.path("destination").path("point")), instant(order.path("dates"), "given"),
+                decimal(order, "price"), bool(order, "isPaid"), isAddress(gateway.path(FIELD_DISPATCH).path(FIELD_POINT)),
+                isAddress(gateway.path(FIELD_DESTINATION).path(FIELD_POINT)), instant(order.path(FIELD_DATES), "given"),
                 documentsOf(order.get("documentList")), null, payerOf(order.path("payer")));
     }
 
     /** Плательщик: название — company/companyName; name в ответе — контактное лицо, берём его лишь в крайнем случае. */
     private static List<ShipmentPayer> payerOf(JsonNode payer) {
-        String name = text(payer, "company", "companyName", "name");
+        String name = text(payer, FIELD_COMPANY, FIELD_COMPANY_NAME, "name");
         String inn = text(payer, "inn");
         return payer.isObject() && (name != null || inn != null) ? List.of(new ShipmentPayer(name, inn, null)) : null;
     }
@@ -256,7 +270,7 @@ public class VozovozClient implements CarrierClient {
     }
 
     private static String cityOf(JsonNode gatewaySide) {
-        return text(gatewaySide.path("point").path("location"), "name");
+        return text(gatewaySide.path(FIELD_POINT).path("location"), "name");
     }
 
     private static TerminalData toTerminal(JsonNode item) {

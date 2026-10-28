@@ -23,21 +23,4 @@ public class UserMapper {
                 .build();
     }
 
-    public static UserEntity mapToUserEntity(UserDto userDto){
-        return UserEntity.builder()
-                .id(userDto.getId())
-                .email(userDto.getEmail())
-                .password(userDto.getPassword())
-                .firstname(userDto.getFirstname())
-                .lastname(userDto.getLastname())
-                .surname(userDto.getSurname())
-                .phone(userDto.getPhone())
-                .createdAt(userDto.getCreatedAt())
-                .updatedAt(userDto.getUpdatedAt())
-                .emailVerified(userDto.isEmailVerified())
-                .active(userDto.isActive())
-                .roles(userDto.getRoles())
-                .build();
-    }
-
 }

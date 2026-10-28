@@ -145,7 +145,7 @@ public class FtkCategoryMapper {
         normalized = transliterate(normalized);
         normalized = normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
         return NON_ALNUM.matcher(normalized).replaceAll("-").replaceAll("-{2,}", "-")
-                .replaceAll("^-|-$", "");
+                .replaceAll("(?:^-)|(?:-$)", "");
     }
 
     private static String transliterate(String s) {

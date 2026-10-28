@@ -10,10 +10,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 import ru.rfsnab.authservice.exceptions.InvalidResetTokenException;
 import ru.rfsnab.authservice.models.dto.AccountByEmailResponse;
 import ru.rfsnab.authservice.models.dto.PasswordResetConsumeResponse;
 
+import java.net.URI;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.Map;
@@ -42,8 +44,14 @@ public class PasswordResetService {
     public void forgot(String email) {
         try {
             HttpEntity<Void> internalRequest = new HttpEntity<>(internalHeaders());
+            // encode() + переменная шаблона: строгое кодирование, иначе "+" в email сервер прочитает как пробел
+            URI uri = UriComponentsBuilder.fromUriString(userServiceUrl + "/v1/users/account-by-email")
+                    .queryParam("email", "{email}")
+                    .encode()
+                    .buildAndExpand(email)
+                    .toUri();
             AccountByEmailResponse account = restTemplate.exchange(
-                    userServiceUrl + "/v1/users/account-by-email?email=" + email,
+                    uri,
                     HttpMethod.GET,
                     internalRequest,
                     AccountByEmailResponse.class

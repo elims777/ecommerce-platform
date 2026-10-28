@@ -36,7 +36,7 @@ export const useFavouritesStore = create<FavouritesState>((set, get) => ({
             set({ ids: new Set([...ids, productId]) });
             await addFavourite(productId);
         }
-        queryClient.invalidateQueries({ queryKey: ['favourites', 'products'] });
+        void queryClient.invalidateQueries({ queryKey: ['favourites', 'products'] });
     },
 
     isFavourite: (productId) => get().ids.has(productId),

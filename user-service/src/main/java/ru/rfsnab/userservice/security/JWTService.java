@@ -5,13 +5,15 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+import java.time.Instant;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class JWTService {
@@ -38,7 +40,7 @@ public class JWTService {
                     .parseSignedClaims(token);
             return true;
         } catch (JwtException | IllegalArgumentException e){
-            System.out.println("JWT validation failed: "+ e.getMessage());
+            log.debug("JWT validation failed: {}", e.getMessage());
             return false;
         }
     }
@@ -78,12 +80,19 @@ public class JWTService {
     }
 
     /**
+     * Тип клиента из токена (B2C/B2B); у старых токенов claim может отсутствовать
+     */
+    public String extractClientType(String token) {
+        return extractClaims(token).get("clientType", String.class);
+    }
+
+    /**
      * Проверка, истек ли токен
      */
     public boolean isTokenExpired(String token){
         try{
-            Date expiration = extractClaims(token).getExpiration();
-            return expiration.before(new Date());
+            Instant expiration = extractClaims(token).getExpiration().toInstant();
+            return expiration.isBefore(Instant.now());
         } catch (JwtException e){
             return true;
         }

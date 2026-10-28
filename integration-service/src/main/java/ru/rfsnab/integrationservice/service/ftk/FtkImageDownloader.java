@@ -35,8 +35,8 @@ import java.util.Set;
 /**
  * Скачивает изображение с FTP/HTTP URL ФТК, конвертирует в WebP и загружает в product-service.
  *
- * URL изображений ФТК содержит только путь к файлу — хост, порт и учётные данные
- * берутся из конфигурации (env-переменные FTK_FTP_*).
+ * Для ftp:// из URL берётся только путь к файлу — хост, порт и учётные данные
+ * берутся из конфигурации (env-переменные FTK_FTP_*). http(s) качается по URL как есть.
  */
 @Component
 @RequiredArgsConstructor
@@ -98,7 +98,7 @@ public class FtkImageDownloader {
             } else if (isSafeToDecode(imageBytes)) {
                 webpBytes = convertToWebP(imageBytes);
             } else {
-                log.warn("Неизвестный формат изображения, пропускаем: externalId={}, url={}", externalId, imageUrl);
+                log.warn("Неизвестный формат изображения, пропускаем: externalId={}, path={}", externalId, extractFtpPath(imageUrl));
                 return false;
             }
             String fileName = buildFileName(imageUrl, externalId);
@@ -107,6 +107,10 @@ public class FtkImageDownloader {
             log.debug("Изображение загружено: externalId={}, size={}KB", externalId, webpBytes.length / 1024);
             return true;
 
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Загрузка изображения прервана: externalId={}", externalId);
+            return false;
         } catch (Exception e) {
             log.warn("Ошибка загрузки изображения: externalId={}: {}", externalId, e.getMessage());
             return false;
@@ -176,8 +180,16 @@ public class FtkImageDownloader {
             }
         } finally {
             if (ftp.isConnected()) {
-                try { ftp.logout(); } catch (Exception ignored) {}
-                try { ftp.disconnect(); } catch (Exception ignored) {}
+                try {
+                    ftp.logout();
+                } catch (Exception e) {
+                    log.debug("FTP logout: {}", e.getMessage());
+                }
+                try {
+                    ftp.disconnect();
+                } catch (Exception e) {
+                    log.debug("FTP disconnect: {}", e.getMessage());
+                }
             }
         }
     }
@@ -206,9 +218,8 @@ public class FtkImageDownloader {
         if ((b[0] & 0xFF) == 0x89 && b[1] == 'P' && b[2] == 'N' && b[3] == 'G') return true;      // PNG
         if (b[0] == 'G' && b[1] == 'I' && b[2] == 'F' && b[3] == '8') return true;                // GIF
         if (b[0] == 'B' && b[1] == 'M') return true;                                              // BMP
-        if ((b[0] == 'I' && b[1] == 'I' && b[2] == 42 && b[3] == 0)
-                || (b[0] == 'M' && b[1] == 'M' && b[2] == 0 && b[3] == 42)) return true;          // TIFF
-        return false;
+        return (b[0] == 'I' && b[1] == 'I' && b[2] == 42 && b[3] == 0)
+                || (b[0] == 'M' && b[1] == 'M' && b[2] == 0 && b[3] == 42);                       // TIFF
     }
 
     byte[] convertToWebP(byte[] imageBytes) throws IOException {

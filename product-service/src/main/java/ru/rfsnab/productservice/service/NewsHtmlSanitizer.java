@@ -95,9 +95,13 @@ public class NewsHtmlSanitizer {
         if (!matcher.find()) {
             return null;
         }
-        String url = matcher.group(2) != null ? matcher.group(2)
-                : matcher.group(3) != null ? matcher.group(3)
-                : matcher.group(4);
+        String url = matcher.group(2);
+        if (url == null) {
+            url = matcher.group(3);
+        }
+        if (url == null) {
+            url = matcher.group(4);
+        }
 
         if (url == null || url.isBlank() || UNSAFE_URL.matcher(url).find()) {
             return null;

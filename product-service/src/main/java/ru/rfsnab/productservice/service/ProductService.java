@@ -39,6 +39,10 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ProductService {
+
+    private static final String CATEGORY_ID_PREFIX = "Категория с id ";
+    private static final String NOT_FOUND_SUFFIX = " не найдена.";
+
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
@@ -96,8 +100,8 @@ public class ProductService {
 
         if(product.getCategory() != null){
             product.setCategory(categoryRepository.findById(product.getCategory().getId())
-                    .orElseThrow(()-> new CategoryNotFoundException("Категория с id " + product.getCategory().getId() +
-                            " не найдена.")));
+                    .orElseThrow(()-> new CategoryNotFoundException(CATEGORY_ID_PREFIX + product.getCategory().getId() +
+                            NOT_FOUND_SUFFIX)));
         }
 
         Product saved = productRepository.save(product);
@@ -111,7 +115,7 @@ public class ProductService {
      */
     @Transactional
     public Product updateProduct(Long id, Product updatedProduct){
-        log.info("Обновление продукта с id=", id);
+        log.info("Обновление продукта с id={}", id);
 
         Product existing = productRepository.findById(id)
                 .orElseThrow(()-> new ProductNotFoundException("Продукт с id=" + id+ " не найден"));
@@ -140,8 +144,8 @@ public class ProductService {
         if (updatedProduct.getCategory() != null) {
             Category category = categoryRepository.findById(updatedProduct.getCategory().getId())
                     .orElseThrow(()->
-                            new CategoryNotFoundException("Категория с id " + updatedProduct.getCategory().getId() +
-                    " не найдена."));
+                            new CategoryNotFoundException(CATEGORY_ID_PREFIX + updatedProduct.getCategory().getId() +
+                    NOT_FOUND_SUFFIX));
             existing.setCategory(category);
         } else {
             existing.setCategory(null);
@@ -568,7 +572,7 @@ public class ProductService {
 
         if (categoryId != null) {
             Category category = categoryRepository.findById(categoryId)
-                    .orElseThrow(()-> new CategoryNotFoundException("Категория с id " + categoryId + " не найдена."));
+                    .orElseThrow(()-> new CategoryNotFoundException(CATEGORY_ID_PREFIX + categoryId + NOT_FOUND_SUFFIX));
 
             // Валидация: категория должна быть leaf (без детей)
             if (categoryRepository.existsByParentId(categoryId)) {
@@ -627,7 +631,7 @@ public class ProductService {
     public void batchUpdateCategory(List<Long> productIds, Long categoryId) {
         Category category = categoryId != null
                 ? categoryRepository.findById(categoryId).orElseThrow(
-                        ()-> new CategoryNotFoundException("Категория с id " + categoryId + " не найдена."))
+                        ()-> new CategoryNotFoundException(CATEGORY_ID_PREFIX + categoryId + NOT_FOUND_SUFFIX))
                 : null;
 
         productRepository.findAllById(productIds).forEach(product -> {
@@ -650,7 +654,7 @@ public class ProductService {
         } else {
             Product parent = productRepository.findById(parentProductId)
                     .orElseThrow(() -> new ProductNotFoundException(parentProductId));
-            if (parent.getIsVariantChild()) {
+            if (Boolean.TRUE.equals(parent.getIsVariantChild())) {
                 throw new BusinessException("Нельзя назначить дочерний товар родителем");
             }
             if (parentProductId.equals(productId)) {

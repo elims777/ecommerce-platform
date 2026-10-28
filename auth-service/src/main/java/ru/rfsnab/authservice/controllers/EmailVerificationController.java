@@ -3,6 +3,9 @@ package ru.rfsnab.authservice.controllers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +19,8 @@ import ru.rfsnab.authservice.models.dto.VerificationResponse;
 @RequiredArgsConstructor
 public class EmailVerificationController {
 
+    private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
+
     private final RestTemplate restTemplate;
 
     @Value("${notification.service.url}")
@@ -27,10 +32,13 @@ public class EmailVerificationController {
     @Value("${user.service.verify}")
     private String userServiceVerifyUrl;
 
+    @Value("${internal.secret}")
+    private String internalSecret;
+
 
     @GetMapping("/verify-email")
     public ResponseEntity<String> verifyEmail(@RequestParam String token){
-        log.info("Received verification request for token: {}", token);
+        log.info("Received email verification request");
 
         try {
             // 1. Проверяем токен в notification-service
@@ -53,7 +61,9 @@ public class EmailVerificationController {
             // 2. Обновляем статус пользователя в user-service
             Long userId = verificationResponse.getBody().getUserId();
             String userServiceUrl = userServiceVerifyUrl + userId + "/verify";
-            restTemplate.put(userServiceUrl, null);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set(INTERNAL_TOKEN_HEADER, internalSecret);
+            restTemplate.exchange(userServiceUrl, HttpMethod.PUT, new HttpEntity<>(headers), Void.class);
 
             log.info("Email verified successfully for user: {}", userId);
 

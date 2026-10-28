@@ -220,12 +220,12 @@ const ProductPage = () => {
         <div style={{ paddingTop: 20, paddingBottom: 60 }}>
             {/* Хлебные крошки */}
             <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--ink-3)', marginBottom: 16 }}>
-                <span onClick={() => navigate('/catalog')} style={{ cursor: 'pointer' }}>Каталог</span>
+                <span onClick={() => navigate('/catalog')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void navigate('/catalog'); } }} style={{ cursor: 'pointer' }}>Каталог</span>
                 {product.categoryName && (
                     <>
                         <span style={{ opacity: 0.5 }}>›</span>
                         <span
-                            onClick={() => navigate(`/catalog?category=${product.categoryId}`)}
+                            onClick={() => navigate(`/catalog?category=${product.categoryId}`)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void navigate(`/catalog?category=${product.categoryId}`); } }}
                             style={{ cursor: 'pointer', color: 'var(--ink-2)', fontWeight: 500 }}
                         >
                             {product.categoryName}
@@ -267,7 +267,7 @@ const ProductPage = () => {
                                         <Image
                                             src={img.fileUrl}
                                             alt={img.altText || product.name}
-                                            wrapperStyle={{ width: '100%', height: '100%' }}
+                                            styles={{ root: { width: '100%', height: '100%' } }}
                                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                         />
                                     </div>
@@ -432,12 +432,13 @@ const ProductPage = () => {
                                                         {inStockV ? `${v.stockQuantity} ${unitPlural(v.stockQuantity, product.unitOfMeasure)}` : 'под заказ'}
                                                     </td>
                                                     <td style={{ padding: '7px 0 7px 4px' }}>
-                                                        <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', height: 28, alignItems: 'center', width: 68 }}>
+                                                        <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', height: 28, alignItems: 'center', width: 80 }}>
                                                             <button
                                                                 onClick={() => setVariantQty(v.id, Math.max(0, qty - 1))}
                                                                 style={{ width: 22, height: 26, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                                                             >−</button>
                                                             <input
+                                                                className="rf-qty-input"
                                                                 type="number"
                                                                 min={0}
                                                                 value={qty === 0 ? '' : qty}
@@ -462,13 +463,13 @@ const ProductPage = () => {
                             </div>
                         ) : (
                             <div style={{ marginBottom: 14 }}>
-                                <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}>Количество</label>
+                                <label htmlFor="product-quantity" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-2)', marginBottom: 6 }}>Количество</label>
                                 <div style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', height: 'var(--input-h-lg)', alignItems: 'center' }}>
                                     <button
                                         onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                                         style={{ width: 40, height: 42, border: 0, background: 'transparent', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                     >−</button>
-                                    <input
+                                    <input id="product-quantity" className="rf-qty-input"
                                         type="number"
                                         min={1}
                                         value={quantity}

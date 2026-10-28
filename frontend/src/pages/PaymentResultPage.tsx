@@ -7,8 +7,8 @@ import { getPaymentStatus } from '@/api/orders';
 const PaymentResultPage = () => {
     const [searchParams] = useSearchParams();
     const orderId = searchParams.get('orderId');
-    const [fetchedStatus, setStatus] = useState<string | null>(null);
-    const [fetching, setLoading] = useState(true);
+    const [fetchedStatus, setFetchedStatus] = useState<string | null>(null);
+    const [fetching, setFetching] = useState(true);
 
     const status = orderId ? fetchedStatus : 'error';
     const loading = orderId ? fetching : false;
@@ -16,9 +16,9 @@ const PaymentResultPage = () => {
     useEffect(() => {
         if (!orderId) return;
         getPaymentStatus(orderId)
-            .then(({ status: s }) => setStatus(s))
-            .catch(() => setStatus('error'))
-            .finally(() => setLoading(false));
+            .then(({ status: s }) => setFetchedStatus(s))
+            .catch(() => setFetchedStatus('error'))
+            .finally(() => setFetching(false));
     }, [orderId]);
 
     if (loading) {

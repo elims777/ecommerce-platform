@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: order-service
+  # нет своего UserDetailsService — иначе Spring создаёт дефолтного юзера и пишет его пароль в лог
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
 
   datasource:
     url: jdbc:postgresql://localhost:${ORDER_DB_PORT:5435}/${ORDER_DB_NAME:order_db}

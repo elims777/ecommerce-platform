@@ -56,8 +56,8 @@ const CarriersTab = () => {
             trackingUrlTemplate: carrier.trackingUrlTemplate ?? undefined,
         }),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['adminCarriers'] });
-            queryClient.invalidateQueries({ queryKey: ['carriers'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminCarriers'] });
+            void queryClient.invalidateQueries({ queryKey: ['carriers'] });
         },
         onError: (error) => {
             messageApi.error((isAxiosError(error) && error.response?.data?.message) || 'Не удалось сохранить настройки ТК');
@@ -68,10 +68,10 @@ const CarriersTab = () => {
     const syncMutation = useMutation({
         mutationFn: (code: CarrierDto['code']) => syncCarrierTerminals(code),
         onSuccess: (report) => {
-            queryClient.invalidateQueries({ queryKey: ['adminCarriers'] });
-            queryClient.invalidateQueries({ queryKey: ['carriers'] });
-            queryClient.invalidateQueries({ queryKey: ['deliveryCities'] });
-            queryClient.invalidateQueries({ queryKey: ['deliveryTerminals'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminCarriers'] });
+            void queryClient.invalidateQueries({ queryKey: ['carriers'] });
+            void queryClient.invalidateQueries({ queryKey: ['deliveryCities'] });
+            void queryClient.invalidateQueries({ queryKey: ['deliveryTerminals'] });
             if (report.status === 'OK') messageApi.success(`${report.carrierName}: терминалы обновлены`);
             else messageApi.warning(`${report.carrierName}: ${report.message ?? SYNC_STATUS_TAGS[report.status].label}`);
         },

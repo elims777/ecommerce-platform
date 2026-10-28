@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { CategoryTree } from '@/types/product';
 
 const ChevRight = () => (
-    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <path d="m9 18 6-6-6-6"/>
     </svg>
 );
@@ -56,7 +56,7 @@ const CategoryColumn = ({ categories, onNavigate, depth }: CategoryColumnProps) 
                     return leaf ? (
                         <div
                             key={category.id}
-                            onClick={() => onNavigate(category.id)}
+                            onClick={() => onNavigate(category.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate(category.id); } }}
                             onMouseEnter={() => setHoveredId(category.id)}
                             style={commonStyle}
                         >
@@ -89,7 +89,7 @@ const CatalogMegaMenu = ({ categories, onClose }: CatalogMegaMenuProps) => {
     const navigate = useNavigate();
 
     const handleNavigate = (id: number) => {
-        navigate(`/catalog?category=${id}`);
+        void navigate(`/catalog?category=${id}`);
         onClose();
     };
 

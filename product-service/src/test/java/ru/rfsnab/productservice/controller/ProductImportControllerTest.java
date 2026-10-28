@@ -50,7 +50,6 @@ class ProductImportControllerTest {
 
     private static final String WAREHOUSE_CODE = "SYKTYVKAR";
 
-    private Category importCategory;
     private Warehouse warehouse;
 
     private BatchProductImportRequest batch(List<ProductImportItem> items) {
@@ -67,7 +66,7 @@ class ProductImportControllerTest {
         warehouse = warehouseRepository.save(Warehouse.builder()
                 .code(WAREHOUSE_CODE).name("Основной склад").city("Сыктывкар").pickupAvailable(true).sortOrder(1).build());
 
-        importCategory = categoryRepository.save(Category.builder()
+        categoryRepository.save(Category.builder()
                 .name("import-1c")
                 .slug("import-1c")
                 .isActive(true)

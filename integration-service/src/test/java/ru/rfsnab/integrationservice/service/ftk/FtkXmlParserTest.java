@@ -125,9 +125,9 @@ class FtkXmlParserTest {
             ClassifierData data = parser.parseClassifier(toStream(xml));
 
             assertThat(data.groupPaths()).containsKey("UUID-ROOT").containsKey("UUID-CHILD");
-            assertThat(data.groupPaths().get("UUID-ROOT")).isEqualTo("Спецодежда");
-            assertThat(data.groupPaths().get("UUID-CHILD")).isEqualTo("Спецодежда > Летняя");
-            assertThat(data.groupParents().get("UUID-CHILD")).isEqualTo("UUID-ROOT");
+            assertThat(data.groupPaths()).containsEntry("UUID-ROOT", "Спецодежда");
+            assertThat(data.groupPaths()).containsEntry("UUID-CHILD", "Спецодежда > Летняя");
+            assertThat(data.groupParents()).containsEntry("UUID-CHILD", "UUID-ROOT");
             assertThat(data.groupParents().get("UUID-ROOT")).isNull();
             assertThat(data.propertyDefs()).containsKey("PROP-001");
             assertThat(data.propertyDefs().get("PROP-001").name()).isEqualTo("Размер");

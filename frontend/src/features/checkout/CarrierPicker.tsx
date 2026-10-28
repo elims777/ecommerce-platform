@@ -32,7 +32,7 @@ const CarrierPicker = ({ mode }: CarrierPickerProps) => {
         return (
             <>
                 <Alert type="warning" showIcon style={{ marginBottom: 8 }}
-                       message={`Доставка ${mode === 'address' ? 'до адреса' : 'до терминала'} временно недоступна, выберите другой способ`} />
+                       title={`Доставка ${mode === 'address' ? 'до адреса' : 'до терминала'} временно недоступна, выберите другой способ`} />
                 <Form.Item name="carrierCode" rules={[{ required: true, message: 'Выберите другой способ доставки' }]}>
                     <input type="hidden" />
                 </Form.Item>

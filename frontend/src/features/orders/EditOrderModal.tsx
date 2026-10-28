@@ -136,7 +136,7 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
         }),
         onSuccess: (updated) => {
             message.success('Заказ обновлён');
-            queryClient.invalidateQueries({ queryKey: ['myOrders'] });
+            void queryClient.invalidateQueries({ queryKey: ['myOrders'] });
             onSuccess(updated);
             onClose();
         },

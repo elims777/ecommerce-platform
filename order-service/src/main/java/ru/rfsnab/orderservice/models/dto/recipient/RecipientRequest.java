@@ -10,7 +10,7 @@ public record RecipientRequest(
         String name,
 
         @NotBlank(message = "Телефон обязателен")
-        @Pattern(regexp = "^\\+?[0-9]{11}$", message = "Телефон должен содержать 11 цифр")
+        @Pattern(regexp = "^\\+?\\d{11}$", message = "Телефон должен содержать 11 цифр")
         String phone,
 
         boolean isDefault

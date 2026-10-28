@@ -4,6 +4,8 @@ import ru.rfsnab.productservice.dto.ProductImageResponse;
 import ru.rfsnab.productservice.model.ProductImage;
 
 public class ImageMapper {
+    private ImageMapper() {
+    }
 
     public static ProductImageResponse mapToResponse(ProductImage image){
         return ProductImageResponse.builder()

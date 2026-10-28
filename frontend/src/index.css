@@ -22,7 +22,8 @@ html {
 }
 
 :focus-visible {
-  outline: none;
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 .ant-layout {
@@ -175,3 +176,8 @@ h5.ant-typography,
   border-radius: var(--r-3);
   overflow-x: auto;
 }
+
+/* Узкое поле количества варианта: нативные стрелки number съедают цифры */
+.rf-qty-input { -moz-appearance: textfield; appearance: textfield; padding: 0; }
+.rf-qty-input::-webkit-inner-spin-button,
+.rf-qty-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }

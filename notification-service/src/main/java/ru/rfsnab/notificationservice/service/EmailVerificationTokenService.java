@@ -1,5 +1,7 @@
 package ru.rfsnab.notificationservice.service;
 
+import ru.rfsnab.notificationservice.utils.LogMasker;
+
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +54,7 @@ public class EmailVerificationTokenService {
         token.setVerified(true);
         tokenRepository.save(token);
         log.info("Token verified successfully for userId: {}, email: {}",
-                token.getUserId(), token.getEmail());
+                token.getUserId(), LogMasker.maskEmail(token.getEmail()));
     }
 
     public boolean existsByToken(String token) {

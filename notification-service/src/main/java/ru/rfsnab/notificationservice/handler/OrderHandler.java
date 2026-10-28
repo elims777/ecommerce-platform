@@ -1,5 +1,7 @@
 package ru.rfsnab.notificationservice.handler;
 
+import ru.rfsnab.notificationservice.utils.LogMasker;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,14 +46,14 @@ public class OrderHandler implements NotificationHandler{
                 default -> log.warn("Неизвестный order eventType: {}", event.eventType());
             }
         } catch (Exception e){
-            log.error("Ошибка обработки order-event: {}", eventJson, e);
+            log.error("Ошибка обработки order-event", e);
         }
     }
 
     private void handleOrderCreated(OrderEvent event) {
         emailService.sendOrderCreatedEmail(event);
         emailService.sendManagerOrderNotification(event);
-        log.info("Order created email: order={}, customer={}", event.orderNumber(), event.customerEmail());
+        log.info("Order created email: order={}, customer={}", event.orderNumber(), LogMasker.maskEmail(event.customerEmail()));
     }
 
     private void handleOrderPaid(OrderEvent event){
@@ -61,7 +63,7 @@ public class OrderHandler implements NotificationHandler{
                 event.totalAmount()
         );
         log.info("Order paid email: order={}, email={}",
-                event.orderNumber(), event.customerEmail());
+                event.orderNumber(), LogMasker.maskEmail(event.customerEmail()));
     }
 
     private void handleOrderCancelled(OrderEvent event){
@@ -70,7 +72,7 @@ public class OrderHandler implements NotificationHandler{
                 event.orderNumber()
         );
         log.info("Order cancelled email: order={}, email={}",
-                event.orderNumber(), event.customerEmail());
+                event.orderNumber(), LogMasker.maskEmail(event.customerEmail()));
     }
 
     private void handleDocumentAdded(OrderEvent event){
@@ -80,7 +82,7 @@ public class OrderHandler implements NotificationHandler{
                 event.documentType()
         );
         log.info("Order document added email: order={}, documentType={}, email={}",
-                event.orderNumber(), event.documentType(), event.customerEmail());
+                event.orderNumber(), event.documentType(), LogMasker.maskEmail(event.customerEmail()));
     }
 
     private void handleStatusChanged(OrderEvent event){
@@ -89,16 +91,16 @@ public class OrderHandler implements NotificationHandler{
         switch (event.status()) {
             case "Счёт выставлен" -> {
                 emailService.sendInvoiceSentEmail(event.customerEmail(), event.orderNumber());
-                log.info("Invoice sent email: order={}, email={}", event.orderNumber(), event.customerEmail());
+                log.info("Invoice sent email: order={}, email={}", event.orderNumber(), LogMasker.maskEmail(event.customerEmail()));
             }
             case "Ожидает подтверждения" -> {
                 emailService.sendAwaitingConfirmationEmail(event.customerEmail(), event.orderNumber());
-                log.info("Awaiting confirmation email: order={}, email={}", event.orderNumber(), event.customerEmail());
+                log.info("Awaiting confirmation email: order={}, email={}", event.orderNumber(), LogMasker.maskEmail(event.customerEmail()));
             }
             default -> {
                 emailService.sendOrderStatusChangedEmail(event);
                 log.info("Order status changed email: order={}, status={}, email={}",
-                        event.orderNumber(), event.status(), event.customerEmail());
+                        event.orderNumber(), event.status(), LogMasker.maskEmail(event.customerEmail()));
             }
         }
     }

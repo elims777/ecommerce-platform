@@ -31,10 +31,10 @@ const ProductMergeBlock = ({ product }: { product: Product }) => {
     });
 
     const onChanged = () => {
-        queryClient.invalidateQueries({ queryKey: ['adminMerged', product.id] });
-        queryClient.invalidateQueries({ queryKey: ['adminMergeCandidates'] });
-        queryClient.invalidateQueries({ queryKey: ['adminProduct', product.id] });
-        queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
+        void queryClient.invalidateQueries({ queryKey: ['adminMerged', product.id] });
+        void queryClient.invalidateQueries({ queryKey: ['adminMergeCandidates'] });
+        void queryClient.invalidateQueries({ queryKey: ['adminProduct', product.id] });
+        void queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
     };
     const onError = (fallback: string) => (err: unknown) =>
         messageApi.error((isAxiosError(err) && err.response?.data?.message) || fallback);

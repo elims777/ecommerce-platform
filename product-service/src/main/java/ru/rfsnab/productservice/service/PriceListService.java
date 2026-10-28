@@ -69,6 +69,8 @@ import java.util.concurrent.TimeoutException;
 @RequiredArgsConstructor
 public class PriceListService {
 
+    private static final String STYLE_CONTACT = "contact";
+
     public static final String TOPIC_PRICE_LIST_REQUESTS = "price-list-requests";
 
     private static final long KAFKA_SEND_TIMEOUT_SECONDS = 5L;
@@ -269,11 +271,6 @@ public class PriceListService {
         });
     }
 
-    private void writeCell(Row row, int column, String value) {
-        Cell cell = row.createCell(column);
-        cell.setCellValue(value != null ? value : "");
-    }
-
     private void writeCell(Row row, int column, String value, CellStyle style) {
         Cell cell = row.createCell(column);
         cell.setCellValue(value != null ? value : "");
@@ -359,7 +356,7 @@ public class PriceListService {
 
         Map<String, CellStyle> styles = new LinkedHashMap<>();
         styles.put("headerBand", headerBandStyle);
-        styles.put("contact", contactStyle);
+        styles.put(STYLE_CONTACT, contactStyle);
         styles.put("accent", accentStyle);
         styles.put("tableHeader", tableHeaderStyle);
         styles.put("category", categoryStyle);
@@ -393,13 +390,13 @@ public class PriceListService {
         }
 
         Row contactRow0 = sheet.getRow(0);
-        writeCell(contactRow0, COL_UNIT, COMPANY_NAME, styles.get("contact"));
+        writeCell(contactRow0, COL_UNIT, COMPANY_NAME, styles.get(STYLE_CONTACT));
         Row contactRow1 = sheet.getRow(1);
-        writeCell(contactRow1, COL_UNIT, COMPANY_PHONE, styles.get("contact"));
+        writeCell(contactRow1, COL_UNIT, COMPANY_PHONE, styles.get(STYLE_CONTACT));
         Row contactRow2 = sheet.getRow(2);
-        writeCell(contactRow2, COL_UNIT, COMPANY_EMAIL_SITE, styles.get("contact"));
+        writeCell(contactRow2, COL_UNIT, COMPANY_EMAIL_SITE, styles.get(STYLE_CONTACT));
         Row contactRow3 = sheet.getRow(3);
-        writeCell(contactRow3, COL_UNIT, COMPANY_ADDRESS, styles.get("contact"));
+        writeCell(contactRow3, COL_UNIT, COMPANY_ADDRESS, styles.get(STYLE_CONTACT));
 
         // Объединяем ячейки под логотип: A1:B4 (строки 0-3 включ., колонки A-B / 0-1 включ.)
         sheet.addMergedRegion(new CellRangeAddress(0, 3, 0, 1));

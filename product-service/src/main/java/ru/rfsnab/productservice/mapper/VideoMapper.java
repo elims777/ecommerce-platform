@@ -5,6 +5,8 @@ import ru.rfsnab.productservice.dto.ProductVideoResponse;
 import ru.rfsnab.productservice.model.ProductVideo;
 
 public class VideoMapper {
+    private VideoMapper() {
+    }
 
     public static ProductVideoResponse mapToResponse(ProductVideo video){
         return ProductVideoResponse.builder()

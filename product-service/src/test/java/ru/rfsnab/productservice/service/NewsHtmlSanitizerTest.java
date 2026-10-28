@@ -17,8 +17,8 @@ class NewsHtmlSanitizerTest {
     void removesScriptTagWithContent() {
         String result = sanitizer.sanitize("<p>До</p><script>alert('xss')</script><p>После</p>");
 
-        assertThat(result).doesNotContain("script", "alert");
-        assertThat(result).contains("До", "После");
+        assertThat(result).doesNotContain("script", "alert")
+                .contains("До", "После");
     }
 
     @Test
@@ -26,8 +26,8 @@ class NewsHtmlSanitizerTest {
     void removesUnclosedScriptTag() {
         String result = sanitizer.sanitize("<p>Текст</p><script src=\"http://evil.com/x.js\">");
 
-        assertThat(result).doesNotContain("script", "evil.com");
-        assertThat(result).contains("Текст");
+        assertThat(result).doesNotContain("script", "evil.com")
+                .contains("Текст");
     }
 
     @ParameterizedTest
@@ -36,8 +36,8 @@ class NewsHtmlSanitizerTest {
     void removesDangerousBlocks(String tag) {
         String result = sanitizer.sanitize("<p>ок</p><" + tag + ">начинка</" + tag + ">");
 
-        assertThat(result).doesNotContain(tag, "начинка");
-        assertThat(result).contains("ок");
+        assertThat(result).doesNotContain(tag, "начинка")
+                .contains("ок");
     }
 
     @Test
@@ -45,8 +45,8 @@ class NewsHtmlSanitizerTest {
     void removesEventHandlers() {
         String result = sanitizer.sanitize("<img src=\"/a.png\" onerror=\"alert(1)\">");
 
-        assertThat(result).doesNotContain("onerror", "alert");
-        assertThat(result).contains("src=\"/a.png\"");
+        assertThat(result).doesNotContain("onerror", "alert")
+                .contains("src=\"/a.png\"");
     }
 
     @Test
@@ -54,8 +54,8 @@ class NewsHtmlSanitizerTest {
     void removesOnClickFromLink() {
         String result = sanitizer.sanitize("<a href=\"/catalog\" onclick=\"steal()\">Каталог</a>");
 
-        assertThat(result).doesNotContain("onclick", "steal");
-        assertThat(result).contains("href=\"/catalog\"", "Каталог");
+        assertThat(result).doesNotContain("onclick", "steal")
+                .contains("href=\"/catalog\"", "Каталог");
     }
 
     @ParameterizedTest
@@ -77,8 +77,8 @@ class NewsHtmlSanitizerTest {
 
         String result = sanitizer.sanitize(html);
 
-        assertThat(result).contains("<h2>", "<strong>", "<em>", "<ul>", "<li>", "<blockquote>");
-        assertThat(result).contains("Заголовок", "Жирный", "курсив", "Пункт", "Цитата");
+        assertThat(result).contains("<h2>", "<strong>", "<em>", "<ul>", "<li>", "<blockquote>")
+                .contains("Заголовок", "Жирный", "курсив", "Пункт", "Цитата");
     }
 
     @Test
@@ -86,9 +86,9 @@ class NewsHtmlSanitizerTest {
     void keepsSafeLinkAndAddsNoopener() {
         String result = sanitizer.sanitize("<a href=\"https://rfsnab.ru/catalog\">Каталог</a>");
 
-        assertThat(result).contains("href=\"https://rfsnab.ru/catalog\"");
-        assertThat(result).contains("rel=\"noopener noreferrer\"");
-        assertThat(result).contains("target=\"_blank\"");
+        assertThat(result).contains("href=\"https://rfsnab.ru/catalog\"")
+                .contains("rel=\"noopener noreferrer\"")
+                .contains("target=\"_blank\"");
     }
 
     @Test
@@ -106,8 +106,8 @@ class NewsHtmlSanitizerTest {
     void unwrapsUnknownTagKeepingText() {
         String result = sanitizer.sanitize("<marquee>Бегущая строка</marquee>");
 
-        assertThat(result).doesNotContain("marquee");
-        assertThat(result).contains("Бегущая строка");
+        assertThat(result).doesNotContain("marquee")
+                .contains("Бегущая строка");
     }
 
     @Test
@@ -115,8 +115,8 @@ class NewsHtmlSanitizerTest {
     void dropsForeignAttributes() {
         String result = sanitizer.sanitize("<p class=\"evil\" style=\"position:fixed\">Текст</p>");
 
-        assertThat(result).doesNotContain("class", "style", "evil");
-        assertThat(result).contains("<p>", "Текст");
+        assertThat(result).doesNotContain("class", "style", "evil")
+                .contains("<p>", "Текст");
     }
 
     @Test

@@ -84,8 +84,8 @@ const AdminUserDetailPage = () => {
   });
 
   const invalidateUser = () => {
-    queryClient.invalidateQueries({ queryKey: ['adminUser', userId] });
-    queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+    void queryClient.invalidateQueries({ queryKey: ['adminUser', userId] });
+    void queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
   };
 
   const roleMutation = useMutation({
@@ -114,7 +114,7 @@ const AdminUserDetailPage = () => {
     mutationFn: (legalEntityId: number) => verifyLegalEntity(legalEntityId, adminEmail),
     onSuccess: () => {
       messageApi.success('Организация верифицирована');
-      queryClient.invalidateQueries({ queryKey: ['adminUserLegalEntities', userId] });
+      void queryClient.invalidateQueries({ queryKey: ['adminUserLegalEntities', userId] });
     },
     onError: () => messageApi.error('Ошибка верификации'),
   });
@@ -123,7 +123,7 @@ const AdminUserDetailPage = () => {
     mutationFn: (legalEntityId: number) => detachLegalEntity(legalEntityId, userId),
     onSuccess: () => {
       messageApi.success('Организация отвязана');
-      queryClient.invalidateQueries({ queryKey: ['adminUserLegalEntities', userId] });
+      void queryClient.invalidateQueries({ queryKey: ['adminUserLegalEntities', userId] });
     },
     onError: () => messageApi.error('Ошибка отвязки организации'),
   });
@@ -152,13 +152,13 @@ const AdminUserDetailPage = () => {
     return <div style={{ textAlign: 'center', padding: 120, color: 'var(--ink-3)' }}>Загрузка…</div>;
   }
 
-  const currentRole = user.roles[0]?.name ?? 'USER';
+  const currentRole = user.roles[0]?.name ?? 'ROLE_USER';
 
   return (
     <div>
       {/* Back */}
       <NavLink to="/admin/users" className="rf-admin-back">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
           <path d="M10 4L6 8l4 4"/>
         </svg>
         Пользователи
@@ -234,8 +234,8 @@ const AdminUserDetailPage = () => {
               disabled={roleMutation.isPending}
               style={{ fontSize: 13, padding: '3px 8px', borderRadius: 'var(--r-2)', border: '1px solid var(--line-2)', background: 'var(--surface)', color: 'var(--ink-1)' }}
             >
-              <option value="USER">USER</option>
-              <option value="ADMIN">ADMIN</option>
+              <option value="ROLE_USER">USER</option>
+              <option value="ROLE_ADMIN">ADMIN</option>
             </select>
           </div>
 

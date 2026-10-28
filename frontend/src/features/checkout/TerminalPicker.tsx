@@ -114,7 +114,7 @@ const TerminalPicker = ({ current }: TerminalPickerProps) => {
 
             {isLoading && <div style={{ textAlign: 'center', padding: 16 }}><Spin /></div>}
             {city && !isLoading && terminals.length === 0 && (
-                <Alert type="info" showIcon style={{ marginBottom: 8 }} message="В этом городе нет доступных точек выбранной ТК" />
+                <Alert type="info" showIcon style={{ marginBottom: 8 }} title="В этом городе нет доступных точек выбранной ТК" />
             )}
 
             <Form.Item name="carrierTerminalId" rules={[{ required: true, message: 'Выберите терминал' }]}>
@@ -142,7 +142,7 @@ const TerminalPicker = ({ current }: TerminalPickerProps) => {
                 label="Телефон получателя"
                 rules={[
                     { required: true, message: 'Укажите телефон' },
-                    { pattern: /^\+?[0-9]{11}$/, message: 'Введите 11 цифр' },
+                    { pattern: /^\+?\d{11}$/, message: 'Введите 11 цифр' },
                 ]}
             >
                 <Input placeholder="+79001234567" />

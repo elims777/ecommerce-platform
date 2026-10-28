@@ -5,8 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.exception.InvalidDocumentException;
-import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
+import ru.rfsnab.orderservice.exception.OrderNotFoundException;
 import ru.rfsnab.orderservice.exception.OrderDocumentNotFoundException;
 import ru.rfsnab.orderservice.kafka.OrderKafkaProducer;
 import ru.rfsnab.orderservice.models.entity.Order;
@@ -81,8 +82,8 @@ public class OrderDocumentService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderDocument> listForUser(UUID orderId, Long userId) {
-        requireOwnedOrder(orderId, userId);
+    public List<OrderDocument> listForUser(UUID orderId, Long userId, CustomerType customerType) {
+        requireOwnedOrder(orderId, userId, customerType);
         return orderDocumentRepository.findByOrderIdOrderByUploadedAtDesc(orderId);
     }
 
@@ -94,22 +95,21 @@ public class OrderDocumentService {
     }
 
     @Transactional(readOnly = true)
-    public DownloadResult downloadForUser(UUID orderId, UUID documentId, Long userId) {
-        requireOwnedOrder(orderId, userId);
+    public DownloadResult downloadForUser(UUID orderId, UUID documentId, Long userId, CustomerType customerType) {
+        requireOwnedOrder(orderId, userId, customerType);
         OrderDocument document = getDocumentOrThrow(documentId, orderId);
         return new DownloadResult(orderDocumentStorage.downloadStream(document.getFileKey()), document);
     }
 
     /**
      * Проверка владельца заказа для клиентских (не админских) файловых эндпоинтов.
-     * getOrderByIdAndUser на чужом заказе бросает InvalidOrderStateException (400) —
-     * здесь намеренно переводим её в 404, иначе сам факт "400, а не 404" косвенно
-     * подтверждает клиенту, что такой orderId вообще существует (утечка через файловый API).
+     * getOrderByIdAndUser на чужом заказе бросает OrderNotFoundException (404) —
+     * здесь переводим её в OrderDocumentNotFoundException, чтобы файловый API отвечал единообразно.
      */
-    private void requireOwnedOrder(UUID orderId, Long userId) {
+    private void requireOwnedOrder(UUID orderId, Long userId, CustomerType customerType) {
         try {
-            orderService.getOrderByIdAndUser(orderId, userId);
-        } catch (InvalidOrderStateException e) {
+            orderService.getOrderByIdAndUser(orderId, userId, customerType);
+        } catch (OrderNotFoundException e) {
             throw new OrderDocumentNotFoundException("Заказ не найден: " + orderId);
         }
     }

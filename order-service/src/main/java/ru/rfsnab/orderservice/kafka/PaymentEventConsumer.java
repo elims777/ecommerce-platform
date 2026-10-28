@@ -26,13 +26,14 @@ public class PaymentEventConsumer {
             groupId = "${spring.kafka.consumer.group-id}"
     )
     @Transactional
-    public void onPaymentEvent(ConsumerRecord<String, String> record) {
+    public void onPaymentEvent(ConsumerRecord<String, String> consumerRecord) {
         try {
-            PaymentEvent event = objectMapper.readValue(record.value(), PaymentEvent.class);
+            PaymentEvent event = objectMapper.readValue(consumerRecord.value(), PaymentEvent.class);
             log.info("PaymentEvent received: orderId={}, status={}", event.orderId(), event.status());
             processPaymentEvent(event);
         } catch (Exception e) {
-            log.error("Failed to process payment event: {}", record.value(), e);
+            log.error("Failed to process payment event: topic={}, key={}, offset={}",
+                    consumerRecord.topic(), consumerRecord.key(), consumerRecord.offset(), e);
         }
     }
 

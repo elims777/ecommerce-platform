@@ -59,14 +59,14 @@ const IntegrationPage = () => {
         try {
             await apiClient.post('/v1/integration/ftk/import-xml');
             setFtkStarted(true);
-            fetchLogsRef.current?.();
+            void fetchLogsRef.current?.();
 
             // Поллим логи каждые 30с в течение 10 минут, чтобы таблица сама обновилась
             if (ftkPollIntervalRef.current) clearInterval(ftkPollIntervalRef.current);
             let attempts = 0;
             ftkPollIntervalRef.current = setInterval(() => {
                 attempts += 1;
-                fetchLogsRef.current?.();
+                void fetchLogsRef.current?.();
                 if (attempts >= 20) {
                     clearInterval(ftkPollIntervalRef.current!);
                     ftkPollIntervalRef.current = null;
@@ -88,10 +88,10 @@ const IntegrationPage = () => {
         };
         fetchLogsRef.current = fetchLogs;
 
-        fetchLogs(true);
+        void fetchLogs(true);
 
         const interval = setInterval(() => {
-            if (document.visibilityState === 'visible') fetchLogs();
+            if (document.visibilityState === 'visible') void fetchLogs();
         }, 10000);
 
         return () => {
@@ -107,7 +107,7 @@ const IntegrationPage = () => {
             </h2>
 
             <div style={{ background: 'var(--navy-tint)', border: '1px solid var(--brand-navy)', borderRadius: 'var(--r-3)', padding: '14px 18px', marginBottom: 24, display: 'flex', gap: 12, alignItems: 'flex-start', color: 'var(--brand-navy)', fontSize: 'var(--text-base)' }}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
                     <circle cx="8" cy="8" r="7.5" stroke="currentColor"/>
                     <path d="M8 7v4M8 5.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                 </svg>
@@ -117,7 +117,7 @@ const IntegrationPage = () => {
             {/* Импорт ФТК */}
             <div className="rf-card" style={{ marginBottom: 24 }}>
                 <div className="rf-card-header">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ marginRight: 6 }}>
+                    <svg aria-hidden="true" width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ marginRight: 6 }}>
                         <path d="M7.5 13V3M3 7l4.5-4.5L12 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                     <h3>Импорт каталога ФТК (Факел)</h3>
@@ -158,7 +158,7 @@ const IntegrationPage = () => {
 
             <div className="rf-card" style={{ marginBottom: 24 }}>
                 <div className="rf-card-header">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ marginRight: 6 }}>
+                    <svg aria-hidden="true" width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ marginRight: 6 }}>
                         <path d="M7.5 1C4 1 1 4 1 7.5S4 14 7.5 14 14 11 14 7.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                         <path d="M11 1l1.5 1.5L11 4M12.5 2.5H9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
@@ -175,7 +175,7 @@ const IntegrationPage = () => {
                             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: 'var(--ink-3)', fontSize: 'var(--text-sm)' }}
                             title="Скопировать"
                         >
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
                                 <rect x="4.5" y="4.5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
                                 <path d="M2.5 9.5H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h6.5a1 1 0 0 1 1 1v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
                             </svg>
@@ -198,7 +198,7 @@ const IntegrationPage = () => {
             {/* История обменов */}
             <div className="rf-card" style={{ marginBottom: 24 }}>
                 <div className="rf-card-header">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ marginRight: 6 }}>
+                    <svg aria-hidden="true" width="15" height="15" viewBox="0 0 15 15" fill="none" style={{ marginRight: 6 }}>
                         <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" strokeWidth="1.4"/>
                         <path d="M7.5 4v3.5l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                     </svg>

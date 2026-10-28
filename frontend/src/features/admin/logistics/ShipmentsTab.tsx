@@ -63,7 +63,7 @@ const ShipmentsTab = () => {
     useEffect(() => {
         const running = importStatus?.running ?? false;
         if (wasRunning.current && !running) {
-            queryClient.invalidateQueries({ queryKey: ['adminShipments'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminShipments'] });
             messageApi.success('Импорт завершён');
         }
         wasRunning.current = running;
@@ -79,8 +79,8 @@ const ShipmentsTab = () => {
         mutationFn: () => linkShipment(linking!.id, orderNumber.trim()),
         onSuccess: () => {
             messageApi.success('Отправление привязано к заказу');
-            queryClient.invalidateQueries({ queryKey: ['adminShipments'] });
-            queryClient.invalidateQueries({ queryKey: ['adminOrderDetail'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminShipments'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminOrderDetail'] });
             setLinking(null);
             setOrderNumber('');
         },
@@ -93,7 +93,7 @@ const ShipmentsTab = () => {
         onSuccess: () => {
             messageApi.success('Импорт запущен');
             wasRunning.current = true; // даже если импорт закончится до первого опроса — таблица обновится
-            queryClient.invalidateQueries({ queryKey: ['shipmentImportStatus'] });
+            void queryClient.invalidateQueries({ queryKey: ['shipmentImportStatus'] });
         },
         onError: (error) => {
             messageApi.error(
@@ -101,7 +101,7 @@ const ShipmentsTab = () => {
                     ? 'Импорт уже идёт'
                     : (isAxiosError(error) && error.response?.data?.message) || 'Не удалось запустить импорт');
             if (isAxiosError(error) && error.response?.status === 409) {
-                queryClient.invalidateQueries({ queryKey: ['shipmentImportStatus'] });
+                void queryClient.invalidateQueries({ queryKey: ['shipmentImportStatus'] });
             }
         },
     });

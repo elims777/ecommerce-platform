@@ -13,6 +13,7 @@ import ru.rfsnab.orderservice.mapper.RecipientAddressMapper;
 import ru.rfsnab.orderservice.models.dto.recipient.RecipientAddressRequest;
 import ru.rfsnab.orderservice.models.dto.recipient.RecipientAddressResponse;
 import ru.rfsnab.orderservice.models.entity.RecipientAddress;
+import ru.rfsnab.orderservice.service.PriceSelector;
 import ru.rfsnab.orderservice.service.RecipientAddressService;
 
 import java.util.List;
@@ -34,8 +35,9 @@ public class RecipientAddressController {
     @Operation(summary = "Список адресов получателя")
     public ResponseEntity<List<RecipientAddressResponse>> getAll(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable Long recipientId) {
-        List<RecipientAddress> addresses = addressService.getByRecipientId(recipientId, getCurrentUserId(authentication));
+        List<RecipientAddress> addresses = addressService.getByRecipientId(recipientId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.ok(addresses.stream().map(addressMapper::toResponse).toList());
     }
 
@@ -43,9 +45,10 @@ public class RecipientAddressController {
     @Operation(summary = "Создать адрес получателя")
     public ResponseEntity<RecipientAddressResponse> create(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable Long recipientId,
             @Valid @RequestBody RecipientAddressRequest request) {
-        RecipientAddress address = addressService.create(recipientId, getCurrentUserId(authentication), request);
+        RecipientAddress address = addressService.create(recipientId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(addressMapper.toResponse(address));
     }
 
@@ -53,10 +56,11 @@ public class RecipientAddressController {
     @Operation(summary = "Обновить адрес получателя")
     public ResponseEntity<RecipientAddressResponse> update(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable Long recipientId,
             @PathVariable Long id,
             @Valid @RequestBody RecipientAddressRequest request) {
-        RecipientAddress address = addressService.update(id, recipientId, getCurrentUserId(authentication), request);
+        RecipientAddress address = addressService.update(id, recipientId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType), request);
         return ResponseEntity.ok(addressMapper.toResponse(address));
     }
 
@@ -64,9 +68,10 @@ public class RecipientAddressController {
     @Operation(summary = "Удалить адрес получателя")
     public ResponseEntity<Void> delete(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable Long recipientId,
             @PathVariable Long id) {
-        addressService.delete(id, recipientId, getCurrentUserId(authentication));
+        addressService.delete(id, recipientId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.noContent().build();
     }
 
@@ -74,9 +79,10 @@ public class RecipientAddressController {
     @Operation(summary = "Установить адрес по умолчанию")
     public ResponseEntity<RecipientAddressResponse> setDefault(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable Long recipientId,
             @PathVariable Long id) {
-        RecipientAddress address = addressService.setDefault(id, recipientId, getCurrentUserId(authentication));
+        RecipientAddress address = addressService.setDefault(id, recipientId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.ok(addressMapper.toResponse(address));
     }
 

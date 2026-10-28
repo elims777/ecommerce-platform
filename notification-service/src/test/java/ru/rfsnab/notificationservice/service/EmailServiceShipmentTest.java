@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -28,6 +27,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -50,7 +50,7 @@ class EmailServiceShipmentTest {
         resolver.setPrefix("templates/");
         resolver.setSuffix(".html");
         resolver.setCharacterEncoding("UTF-8");
-        engine = Mockito.spy(new SpringTemplateEngine());
+        engine = spy(new SpringTemplateEngine());
         engine.setTemplateResolver(resolver);
 
         emailService = new EmailService(mailSender, engine);
@@ -112,19 +112,19 @@ class EmailServiceShipmentTest {
 
         ArgumentCaptor<MimeMessage> msg = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(msg.capture());
-        assertThat(msg.getValue().getRecipients(Message.RecipientType.TO)[0].toString()).isEqualTo(MANAGER_EMAIL);
+        assertThat(msg.getValue().getRecipients(Message.RecipientType.TO)[0]).hasToString(MANAGER_EMAIL);
         assertThat(msg.getValue().getSubject()).contains("123456", "СДЭК", "ORD-7");
 
         ArgumentCaptor<Context> ctx = ArgumentCaptor.forClass(Context.class);
         verify(engine).process(eq("mail/shipment-not-found"), ctx.capture());
         String html = engine.process("mail/shipment-not-found", ctx.getValue());
-        assertThat(html).contains("123456", "СДЭК", "ORD-7", "проверьте номер", "12.10.2026 06:00");
-        assertThat(html).doesNotContain("2026-10-12T03:00:00Z");
+        assertThat(html).contains("123456", "СДЭК", "ORD-7", "проверьте номер", "12.10.2026 06:00")
+                .doesNotContain("2026-10-12T03:00:00Z");
     }
 
     @Test
     @DisplayName("shipment-not-found: нераспознанная строка времени показывается как есть")
-    void shipmentNotFound_InvalidTimeShownAsIs() throws Exception {
+    void shipmentNotFound_InvalidTimeShownAsIs() {
         emailService.sendShipmentNotFoundEmail(new ShipmentNotFoundEvent(
                 "SHIPMENT_NOT_FOUND", "ORD-7", "СДЭК", "123456", "вчера вечером"));
 
