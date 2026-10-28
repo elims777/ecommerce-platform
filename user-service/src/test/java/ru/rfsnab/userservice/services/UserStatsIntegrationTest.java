@@ -1,5 +1,6 @@
 package ru.rfsnab.userservice.services;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -59,6 +60,14 @@ class UserStatsIntegrationTest {
 
         userRole = roleRepository.save(RoleEntity.builder().name("ROLE_USER").build());
         adminRole = roleRepository.save(RoleEntity.builder().name("ROLE_ADMIN").build());
+    }
+
+    // H2 общая для всех @SpringBootTest — не оставлять юрлица с ИНН, которые используют другие тесты
+    @AfterEach
+    void tearDown() {
+        userLegalEntityRepository.deleteAll();
+        userRepository.deleteAll();
+        legalEntityRepository.deleteAll();
     }
 
     private UserEntity saveUser(String email, boolean emailVerified, boolean active, Set<RoleEntity> roles) {
