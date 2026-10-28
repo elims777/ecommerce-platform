@@ -37,7 +37,12 @@ final class CarrierJson {
             if (value == null || value.isNull()) {
                 continue;
             }
-            String result = value.isObject() ? text(value, NESTED_NAME_FIELDS) : value.isValueNode() ? value.asText().trim() : null;
+            String result = null;
+            if (value.isObject()) {
+                result = text(value, NESTED_NAME_FIELDS);
+            } else if (value.isValueNode()) {
+                result = value.asText().trim();
+            }
             if (result != null && !result.isEmpty()) {
                 return result;
             }

@@ -59,7 +59,7 @@ const PriceListModal = ({ open, onClose }: PriceListModalProps) => {
         mutationFn: (categoryIds: number[]) => createPriceList(categoryIds),
         onSuccess: () => {
             reachGoal('price_list_request');
-            queryClient.invalidateQueries({ queryKey: ['priceLists'] });
+            void queryClient.invalidateQueries({ queryKey: ['priceLists'] });
             setCheckedKeys([]);
             onClose();
             messageApi.success('Прайс формируется, файл появится в разделе «Прайс-листы» в личном кабинете. Это займёт некоторое время.');
@@ -74,7 +74,7 @@ const PriceListModal = ({ open, onClose }: PriceListModalProps) => {
     });
 
     const handleSubmit = () => {
-        const ids = topLevelIds(checkedKeys.map((k) => Number(k)), parentMap);
+        const ids = topLevelIds(checkedKeys.map(Number), parentMap);
         mutation.mutate(ids);
     };
 
@@ -84,6 +84,7 @@ const PriceListModal = ({ open, onClose }: PriceListModalProps) => {
             open={open}
             onCancel={onClose}
             okText="Сформировать"
+            cancelText="Отмена"
             onOk={handleSubmit}
             okButtonProps={{ disabled: checkedKeys.length === 0, loading: mutation.isPending }}
             confirmLoading={mutation.isPending}

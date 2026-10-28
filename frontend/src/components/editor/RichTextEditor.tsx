@@ -146,7 +146,7 @@ const RichTextEditor = ({ value, onChange }: Props) => {
                 style={{ display: 'none' }}
                 onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) handleImageSelected(file);
+                    if (file) void handleImageSelected(file);
                     e.target.value = '';
                 }}
             />

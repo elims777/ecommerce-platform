@@ -401,7 +401,7 @@ class CarrierClientsTest {
         void pagesUntilEmptyWhenTotalMissing() {
             String item = "{\"guid\":\"v%d\",\"location_name\":\"Город\",\"name\":\"N\",\"address\":\"a\","
                     + "\"coordinates\":{\"latitude\":\"55.9\",\"longitude\":\"37.5\"}}";
-            String cappedPage = java.util.stream.IntStream.range(0, 100).mapToObj(i -> item.formatted(i))
+            String cappedPage = java.util.stream.IntStream.range(0, 100).mapToObj(item::formatted)
                     .collect(java.util.stream.Collectors.joining(",", "{\"response\":{\"data\":[", "]}}"));
             server.expect(requestTo("https://vozovoz.ru/api/?token=tok"))
                     .andExpect(content().string(containsString("\"offset\":0")))

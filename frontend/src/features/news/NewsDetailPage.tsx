@@ -24,7 +24,7 @@ const NewsDetailPage = () => {
     }
 
     if (isError || !news) {
-        return <Alert type="error" message="Новость не найдена" showIcon />;
+        return <Alert type="error" title="Новость не найдена" showIcon />;
     }
 
     return (

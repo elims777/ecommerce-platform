@@ -34,8 +34,8 @@ class RoleExtractorTest {
 
         List<String> roles = roleExtractor.extractRoles(user);
 
-        assertThat(roles).hasSize(2);
-        assertThat(roles).containsExactlyInAnyOrder("ROLE_ADMIN", "ROLE_USER");
+        assertThat(roles).hasSize(2)
+                .containsExactlyInAnyOrder("ROLE_ADMIN", "ROLE_USER");
     }
 
     @Test

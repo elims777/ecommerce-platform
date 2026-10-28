@@ -9,14 +9,17 @@ import java.util.Map;
  */
 public final class OkeiUnits {
 
+    private static final String PIECE_NAME = "Штука";
+    private static final String SET_SHORT_NAME = "компл";
+
     private OkeiUnits() {}
 
     /** Единица по умолчанию, если в товаре не указана или неизвестна. */
-    private static final BaseUnit DEFAULT = unit("796", "Штука", "PCE", "шт");
+    private static final BaseUnit DEFAULT = unit("796", PIECE_NAME, "PCE", "шт");
 
     private static final Map<String, BaseUnit> UNITS = Map.ofEntries(
-            Map.entry("шт", unit("796", "Штука", "PCE", "шт")),
-            Map.entry("шт.", unit("796", "Штука", "PCE", "шт")),
+            Map.entry("шт", unit("796", PIECE_NAME, "PCE", "шт")),
+            Map.entry("шт.", unit("796", PIECE_NAME, "PCE", "шт")),
             Map.entry("кг", unit("166", "Килограмм", "KGM", "кг")),
             Map.entry("г", unit("163", "Грамм", "GRM", "г")),
             Map.entry("т", unit("168", "Тонна", "TNE", "т")),
@@ -27,8 +30,8 @@ public final class OkeiUnits {
             Map.entry("пог.м", unit("018", "Погонный метр", "018", "пог.м")),
             Map.entry("упак", unit("778", "Упаковка", "NMP", "упак")),
             Map.entry("упак.", unit("778", "Упаковка", "NMP", "упак")),
-            Map.entry("компл", unit("839", "Комплект", "SET", "компл")),
-            Map.entry("компл.", unit("839", "Комплект", "SET", "компл")),
+            Map.entry(SET_SHORT_NAME, unit("839", "Комплект", "SET", SET_SHORT_NAME)),
+            Map.entry("компл.", unit("839", "Комплект", "SET", SET_SHORT_NAME)),
             Map.entry("пара", unit("715", "Пара", "PR", "пара")),
             Map.entry("рулон", unit("736", "Рулон", "RO", "рулон")),
             Map.entry("лист", unit("625", "Лист", "625", "лист")),

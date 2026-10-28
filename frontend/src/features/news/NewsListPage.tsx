@@ -24,7 +24,7 @@ const NewsListPage = () => {
     }
 
     if (isError) {
-        return <Alert type="error" message="Не удалось загрузить новости" showIcon />;
+        return <Alert type="error" title="Не удалось загрузить новости" showIcon />;
     }
 
     const news = data?.content ?? [];

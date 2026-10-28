@@ -29,8 +29,8 @@ import java.time.LocalDateTime;
 /**
  * Обработчик одной задачи обработки изображения.
  * Pipeline: читаем файл с диска → resize (max 1200px) → конвертация в WebP (quality 80%)
- * → multipart POST в product-service /api/v1/products/external/{externalId}/images
- * → удаляем оригинал с диска.
+ * → multipart POST в product-service /api/v1/products/external/{externalId}/images.
+ * Оригинал на диске не удаляется — чистится по расписанию в CatalogFileService.
  * Используем RestTemplate вместо WebClient — Apache HttpClient резолвит DNS
  * корректно в Docker окружении без проблем с кэшированием IP.
  */
@@ -190,14 +190,6 @@ public class ImageProcessingWorker {
         }
         if (!Files.isReadable(sourceFile)) {
             throw new IllegalStateException("Нет доступа к файлу: " + sourceFile);
-        }
-    }
-
-    private void deleteOriginal(Path sourceFile) {
-        try {
-            Files.deleteIfExists(sourceFile);
-        } catch (IOException e) {
-            log.warn("Не удалось удалить оригинал: {}", sourceFile, e);
         }
     }
 

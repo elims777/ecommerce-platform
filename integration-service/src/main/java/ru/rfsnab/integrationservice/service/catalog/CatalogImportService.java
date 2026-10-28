@@ -60,6 +60,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class CatalogImportService {
 
+    private static final String EXCHANGE_TYPE_CATALOG = "CATALOG";
+
     private static final String IMPORT_XML = "import.xml";
     private static final String OFFERS_XML = "offers.xml";
     private static final String BATCH_IMPORT_URI = "/api/v1/products/import/batch";
@@ -88,18 +90,18 @@ public class CatalogImportService {
      */
     public String processImport(Path exchangeDir, String sessionId) {
         LocalDateTime startedAt = LocalDateTime.now();
-        log.info("Начало импорта каталога. Session: {}, dir: {}", sessionId, exchangeDir);
+        log.info("Начало импорта каталога, dir: {}", exchangeDir);
 
         try {
             // 1. Parse XML файлы
-            logReceivedFiles(exchangeDir, sessionId);
+            logReceivedFiles(exchangeDir);
             CommerceInfo importInfo = parseXmlFile(exchangeDir.resolve(IMPORT_XML));
             CommerceInfo offersInfo = parseOffersIfExists(exchangeDir.resolve(OFFERS_XML));
 
             List<CmlProduct> products = extractProducts(importInfo);
             if (products.isEmpty()) {
-                log.warn("import.xml не содержит товаров. Session: {}", sessionId);
-                saveImportLog(sessionId, "CATALOG", ImportStatus.SUCCESS,
+                log.warn("import.xml не содержит товаров");
+                saveImportLog(sessionId, EXCHANGE_TYPE_CATALOG, ImportStatus.SUCCESS,
                         0, 0, 0, 0, 0, null, startedAt);
                 return "success";
             }
@@ -108,8 +110,8 @@ public class CatalogImportService {
             categoryMapper.resetCache();
             ClassifierData classifierData = buildClassifierData(importInfo.getClassifier());
             categoryMapper.loadClassifier(classifierData, CATALOG_ROOT_SLUG);
-            log.info("Загружен классификатор 1С: {} групп. Session: {}",
-                    classifierData.groupPaths().size(), sessionId);
+            log.info("Загружен классификатор 1С: {} групп",
+                    classifierData.groupPaths().size());
 
             // 2. Merge: товары + цены/остатки по externalId
             Map<String, Offer> offersById = indexOffers(offersInfo);
@@ -117,12 +119,12 @@ public class CatalogImportService {
                     ? offersInfo.getOffersPackage().getPriceTypes()
                     : Collections.emptyList();
             List<ProductImportItemDto> importItems = mergeAndMap(products, offersById, priceTypes);
-            log.info("Подготовлено {} товаров для импорта. Session: {}", importItems.size(), sessionId);
+            log.info("Подготовлено {} товаров для импорта", importItems.size());
 
             // 3. Chunk + parallel send
             int chunkSize = properties.getImportConfig().getChunkSize();
             List<List<ProductImportItemDto>> chunks = partition(importItems, chunkSize);
-            log.info("Разбито на {} chunk(ов) по {}. Session: {}", chunks.size(), chunkSize, sessionId);
+            log.info("Разбито на {} chunk(ов) по {}", chunks.size(), chunkSize);
 
             ImportResult result = sendChunksInParallel(chunks);
             categoryMapper.resetCache();
@@ -132,18 +134,18 @@ public class CatalogImportService {
 
             // 5. Log
             ImportStatus status = resolveStatus(result);
-            ImportLog logEntry = saveImportLog(sessionId, "CATALOG", status, result.totalItems(),
+            ImportLog logEntry = saveImportLog(sessionId, EXCHANGE_TYPE_CATALOG, status, result.totalItems(),
                     result.createdCount(), result.updatedCount(), result.unchangedCount(), result.failedCount(),
                     result.errors().isEmpty() ? null : String.join("; ", result.errors()),
                     startedAt);
 
-            log.info("Импорт завершён. Status: {}, created: {}, updated: {}, unchanged: {}, failed: {}. Session: {}",
-                    status, result.createdCount(), result.updatedCount(), result.unchangedCount(), result.failedCount(), sessionId);
+            log.info("Импорт завершён. Status: {}, created: {}, updated: {}, unchanged: {}, failed: {}",
+                    status, result.createdCount(), result.updatedCount(), result.unchangedCount(), result.failedCount());
 
             // 6. Ожидание картинок в отдельном virtual thread (не блокирует ответ 1С)
             if (enqueuedImages > 0 && logEntry != null) {
                 Long logId = logEntry.getId();
-                scheduleImageCounterUpdate(logId, sessionId, enqueuedImages);
+                scheduleImageCounterUpdate(logId, sessionId);
             }
 
             return status == ImportStatus.FAILED
@@ -151,8 +153,8 @@ public class CatalogImportService {
                     : "success";
 
         } catch (Exception e) {
-            log.error("Критическая ошибка импорта каталога. Session: {}", sessionId, e);
-            saveImportLog(sessionId, "CATALOG", ImportStatus.FAILED,
+            log.error("Критическая ошибка импорта каталога", e);
+            saveImportLog(sessionId, EXCHANGE_TYPE_CATALOG, ImportStatus.FAILED,
                     0, 0, 0, 0, 0, e.getMessage(), startedAt);
             return "failure\n" + e.getMessage();
         }
@@ -160,7 +162,7 @@ public class CatalogImportService {
 
     // ==================== XML Parsing ====================
 
-    private void logReceivedFiles(Path exchangeDir, String sessionId) {
+    private void logReceivedFiles(Path exchangeDir) {
         try {
             Path importXml = exchangeDir.resolve(IMPORT_XML);
             Path offersXml = exchangeDir.resolve(OFFERS_XML);
@@ -168,15 +170,14 @@ public class CatalogImportService {
             boolean hasImport = Files.exists(importXml);
             boolean hasOffers = Files.exists(offersXml);
 
-            log.info("Файлы обмена. Session: {}. import.xml: {} ({}), offers.xml: {} ({})",
-                    sessionId,
+            log.info("Файлы обмена. import.xml: {} ({}), offers.xml: {} ({})",
                     hasImport ? "есть" : "ОТСУТСТВУЕТ",
                     hasImport ? Files.size(importXml) + " байт" : "-",
                     hasOffers ? "есть" : "ОТСУТСТВУЕТ",
                     hasOffers ? Files.size(offersXml) + " байт" : "-");
 
             if (!hasOffers) {
-                log.warn("offers.xml не получен от 1С — цены и остатки обновлены не будут. Session: {}", sessionId);
+                log.warn("offers.xml не получен от 1С — цены и остатки обновлены не будут");
             }
 
             // Лог картинок (import_files/)
@@ -184,11 +185,11 @@ public class CatalogImportService {
             if (Files.exists(imagesDir)) {
                 try (var stream = Files.walk(imagesDir)) {
                     long imageCount = stream.filter(Files::isRegularFile).count();
-                    log.info("Получено файлов изображений: {}. Session: {}", imageCount, sessionId);
+                    log.info("Получено файлов изображений: {}", imageCount);
                 }
             }
         } catch (IOException e) {
-            log.warn("Не удалось прочитать список файлов обмена. Session: {}", sessionId, e);
+            log.warn("Не удалось прочитать список файлов обмена", e);
         }
     }
 
@@ -510,8 +511,8 @@ public class CatalogImportService {
             }
         }
         if (enqueued > 0 || skipped > 0) {
-            log.info("Создано {} задач на обработку изображений, пропущено {} (уже загружены). Session: {}",
-                    enqueued, skipped, sessionId);
+            log.info("Создано {} задач на обработку изображений, пропущено {} (уже загружены)",
+                    enqueued, skipped);
         }
         return enqueued;
     }
@@ -521,12 +522,12 @@ public class CatalogImportService {
      * и обновляет запись import_log счётчиками images_processed / images_failed.
      * Максимальное ожидание — 10 минут, затем фиксирует таймаут в errorMessage.
      */
-    private void scheduleImageCounterUpdate(Long logId, String sessionId, int enqueuedImages) {
+    private void scheduleImageCounterUpdate(Long logId, String sessionId) {
         List<TaskStatus> pendingStatuses = List.of(TaskStatus.PENDING, TaskStatus.PROCESSING);
         // картинки обрабатываются асинхронно; при рестарте JVM поток теряется,
         // лог останется с imagesProcessed=0 — приемлемо для admin-статистики
         Thread.ofVirtual()
-                .name("img-counter-" + sessionId)
+                .name("img-counter")
                 .start(() -> {
                     try {
                         long deadline = System.currentTimeMillis() + IMAGE_WAIT_TIMEOUT_MS;
@@ -548,15 +549,15 @@ public class CatalogImportService {
                                 entry.setErrorMessage(existing != null ? existing + "; " + timeout : timeout);
                             }
                             importLogRepository.save(entry);
-                            log.info("import_log id={} обновлён: imagesProcessed={}, imagesFailed={}. Session: {}",
-                                    logId, completed + failed, failed, sessionId);
+                            log.info("import_log id={} обновлён: imagesProcessed={}, imagesFailed={}",
+                                    logId, completed + failed, failed);
                         });
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
-                        log.warn("Прервано ожидание обработки картинок. Session: {}", sessionId);
+                        log.warn("Прервано ожидание обработки картинок");
                     } catch (Exception e) {
-                        log.error("Ошибка обновления import_log счётчиков картинок. Session: {}: {}",
-                                sessionId, e.getMessage());
+                        log.error("Ошибка обновления import_log счётчиков картинок. {}",
+                                e.getMessage());
                     }
                 });
     }
@@ -594,7 +595,7 @@ public class CatalogImportService {
             return importLogRepository.save(logEntry);
         } catch (Exception e) {
             // Ошибка записи лога не должна ломать основной процесс
-            log.error("Не удалось сохранить import_log. Session: {}", sessionId, e);
+            log.error("Не удалось сохранить import_log", e);
             return null;
         }
     }

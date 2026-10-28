@@ -36,6 +36,12 @@ import java.util.Map;
 @Slf4j
 public class FtkXmlParser {
 
+    private static final String TAG_NAME = "Наименование";
+    private static final String TAG_VALUE = "Значение";
+    private static final String TAG_GROUPS = "Группы";
+    private static final String TAG_PROPERTY_VALUES = "ЗначенияСвойств";
+    private static final String TAG_OFFER = "Предложение";
+
     private static final String RETAIL_PRICE_UUID = "fdf5831f-8b8c-11e9-80f4-005056912b25";
 
     // ──────────────────────────────────────────────────────────────────────
@@ -112,7 +118,7 @@ public class FtkXmlParser {
 
         Map<String, String> groupPaths   = new LinkedHashMap<>();
         Map<String, String> groupParents = new HashMap<>();
-        Element groups = firstChild(classifier, "Группы");
+        Element groups = firstChild(classifier, TAG_GROUPS);
         if (groups != null) {
             walkGroups(groups, null, "", groupPaths, groupParents, 0);
         }
@@ -133,14 +139,14 @@ public class FtkXmlParser {
             if (!(nodes.item(i) instanceof Element g) || !g.getTagName().equals("Группа")) continue;
 
             String uuid = text(g, "Ид");
-            String name = text(g, "Наименование");
+            String name = text(g, TAG_NAME);
             if (uuid == null || uuid.isBlank()) continue;
 
             String path = parentPath.isBlank() ? name : parentPath + " > " + name;
             paths.put(uuid, path);
             parents.put(uuid, parentUuid);
 
-            Element sub = firstChild(g, "Группы");
+            Element sub = firstChild(g, TAG_GROUPS);
             if (sub != null) walkGroups(sub, uuid, path, paths, parents, depth + 1);
         }
     }
@@ -156,7 +162,7 @@ public class FtkXmlParser {
             if (!prop.getTagName().equals("Свойство") && !prop.getTagName().equals("СвойствоНоменклатуры")) continue;
 
             String uuid = text(prop, "Ид");
-            String name = text(prop, "Наименование");
+            String name = text(prop, TAG_NAME);
             if (uuid == null) continue;
 
             Map<String, String> values = new HashMap<>();
@@ -166,7 +172,7 @@ public class FtkXmlParser {
                 for (int j = 0; j < vList.getLength(); j++) {
                     if (!(vList.item(j) instanceof Element v)) continue;
                     String vid = text(v, "ИдЗначения");
-                    String vval = text(v, "Значение");
+                    String vval = text(v, TAG_VALUE);
                     if (vid != null && vval != null) values.put(vid, vval);
                 }
             }
@@ -185,7 +191,7 @@ public class FtkXmlParser {
             if (!(list.item(i) instanceof Element u)) continue;
             String code = text(u, "Код");
             String name = text(u, "НаименованиеПолное");
-            if (name == null) name = text(u, "Наименование");
+            if (name == null) name = text(u, TAG_NAME);
             if (code != null && name != null) result.put(code, cleanUnitName(name));
         }
         return result;
@@ -224,7 +230,7 @@ public class FtkXmlParser {
 
             String uuid    = text(товар, "Ид");
             String article = text(товар, "Артикул");
-            String name    = text(товар, "Наименование");
+            String name    = text(товар, TAG_NAME);
             if (uuid == null || uuid.isBlank()) continue;
 
             boolean deletionMark = "true".equalsIgnoreCase(text(товар, "ПометкаУдаления"));
@@ -256,7 +262,7 @@ public class FtkXmlParser {
     }
 
     private String extractFirstGroupUuid(Element товар) {
-        Element groups = firstChild(товар, "Группы");
+        Element groups = firstChild(товар, TAG_GROUPS);
         if (groups == null) return null;
         NodeList ids = groups.getChildNodes();
         for (int i = 0; i < ids.getLength(); i++) {
@@ -279,14 +285,14 @@ public class FtkXmlParser {
 
     private Map<String, String> extractProperties(Element товар, Map<String, PropertyDef> defs) {
         Map<String, String> result = new LinkedHashMap<>();
-        Element значения = firstChild(товар, "ЗначенияСвойств");
+        Element значения = firstChild(товар, TAG_PROPERTY_VALUES);
         if (значения == null) return result;
 
         NodeList list = значения.getChildNodes();
         for (int i = 0; i < list.getLength(); i++) {
             if (!(list.item(i) instanceof Element зн)) continue;
             String propId  = text(зн, "Ид");
-            String valueId = text(зн, "Значение");
+            String valueId = text(зн, TAG_VALUE);
             if (propId == null || valueId == null) continue;
 
             PropertyDef def = defs.get(propId);
@@ -318,7 +324,7 @@ public class FtkXmlParser {
         Map<String, OfferData> result = new LinkedHashMap<>();
         NodeList list = предложения.getChildNodes();
         for (int i = 0; i < list.getLength(); i++) {
-            if (!(list.item(i) instanceof Element offer) || !offer.getTagName().equals("Предложение")) continue;
+            if (!(list.item(i) instanceof Element offer) || !offer.getTagName().equals(TAG_OFFER)) continue;
 
             String fullId = text(offer, "Ид");
             if (fullId == null || fullId.isBlank()) continue;
@@ -338,25 +344,25 @@ public class FtkXmlParser {
     }
 
     private String extractArticle(Element offer) {
-        Element props = firstChild(offer, "ЗначенияСвойств");
+        Element props = firstChild(offer, TAG_PROPERTY_VALUES);
         if (props == null) return null;
         NodeList items = props.getChildNodes();
         for (int i = 0; i < items.getLength(); i++) {
             if (!(items.item(i) instanceof Element prop)) continue;
             String id = text(prop, "Ид");
-            if ("FK_CML2_ARTICLE".equals(id)) return text(prop, "Значение");
+            if ("FK_CML2_ARTICLE".equals(id)) return text(prop, TAG_VALUE);
         }
         return null;
     }
 
     private String extractOfferProperty(Element offer, String propId) {
-        Element props = firstChild(offer, "ЗначенияСвойств");
+        Element props = firstChild(offer, TAG_PROPERTY_VALUES);
         if (props == null) return null;
         NodeList items = props.getChildNodes();
         for (int i = 0; i < items.getLength(); i++) {
             if (!(items.item(i) instanceof Element prop)) continue;
             String id = text(prop, "Ид");
-            if (propId.equalsIgnoreCase(id)) return text(prop, "Значение");
+            if (propId.equalsIgnoreCase(id)) return text(prop, TAG_VALUE);
         }
         return null;
     }
@@ -367,11 +373,15 @@ public class FtkXmlParser {
         NodeList items = taxes.getChildNodes();
         for (int i = 0; i < items.getLength(); i++) {
             if (!(items.item(i) instanceof Element tax)) continue;
-            String name = text(tax, "Наименование");
+            String name = text(tax, TAG_NAME);
             if ("НДС".equals(name)) {
                 String rate = text(tax, "Ставка");
                 if (rate != null && !rate.isBlank()) {
-                    try { return Integer.parseInt(rate.trim()); } catch (NumberFormatException ignored) {}
+                    try {
+                        return Integer.parseInt(rate.trim());
+                    } catch (NumberFormatException e) {
+                        log.debug("Невалидная ставка НДС '{}'", rate);
+                    }
                 }
             }
         }
@@ -385,8 +395,8 @@ public class FtkXmlParser {
         NodeList items = chars.getChildNodes();
         for (int i = 0; i < items.getLength(); i++) {
             if (!(items.item(i) instanceof Element char_)) continue;
-            String name  = text(char_, "Наименование");
-            String value = text(char_, "Значение");
+            String name  = text(char_, TAG_NAME);
+            String value = text(char_, TAG_VALUE);
             if (name != null && !name.isBlank() && value != null && !value.isBlank()) {
                 attrs.put(name, value);
             }
@@ -420,9 +430,9 @@ public class FtkXmlParser {
                     String tag = localName(reader);
                     textBuf.setLength(0);
                     switch (tag) {
-                        case "Предложение" -> { currentOfferId = null; insidePrice = false; }
+                        case TAG_OFFER -> { currentOfferId = null; insidePrice = false; }
                         case "Цена"        -> { insidePrice = true; currentTypeId = null; currentValue = null; }
-                        default -> {}
+                        default -> { /* остальные теги не нужны */ }
                     }
                 }
                 case XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA -> textBuf.append(reader.getText());
@@ -444,9 +454,10 @@ public class FtkXmlParser {
                             }
                             insidePrice = false;
                         }
-                        default -> {}
+                        default -> { /* остальные теги не нужны */ }
                     }
                 }
+                default -> { /* остальные события StAX не нужны */ }
             }
         }
         reader.close();
@@ -476,7 +487,7 @@ public class FtkXmlParser {
         Map<String, RestData> result = new HashMap<>();
         NodeList list = предложения.getChildNodes();
         for (int i = 0; i < list.getLength(); i++) {
-            if (!(list.item(i) instanceof Element offer) || !offer.getTagName().equals("Предложение")) continue;
+            if (!(list.item(i) instanceof Element offer) || !offer.getTagName().equals(TAG_OFFER)) continue;
             String uuid = text(offer, "Ид");
             if (uuid == null || uuid.isBlank()) continue;
 
@@ -498,7 +509,11 @@ public class FtkXmlParser {
             if (!(items.item(i) instanceof Element остаток)) continue;
             String qty = text(остаток, "Количество");
             if (qty != null && !qty.isBlank()) {
-                try { return Integer.parseInt(qty.trim()); } catch (NumberFormatException ignored) {}
+                try {
+                    return Integer.parseInt(qty.trim());
+                } catch (NumberFormatException e) {
+                    log.debug("Невалидное количество '{}'", qty);
+                }
             }
         }
         return 0;
@@ -510,8 +525,8 @@ public class FtkXmlParser {
         NodeList items = реквизиты.getChildNodes();
         for (int i = 0; i < items.getLength(); i++) {
             if (!(items.item(i) instanceof Element req)) continue;
-            String name = text(req, "Наименование");
-            if (propId.equalsIgnoreCase(name)) return text(req, "Значение");
+            String name = text(req, TAG_NAME);
+            if (propId.equalsIgnoreCase(name)) return text(req, TAG_VALUE);
         }
         return null;
     }

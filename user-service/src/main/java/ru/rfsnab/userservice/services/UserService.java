@@ -6,11 +6,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.rfsnab.userservice.exceptions.EmailAlreadyVerifiedException;
+import ru.rfsnab.userservice.exceptions.InvalidUnsubscribeTokenException;
 import ru.rfsnab.userservice.exceptions.ResendTooSoonException;
 import ru.rfsnab.userservice.exceptions.UserAlreadyExistsException;
 import ru.rfsnab.userservice.exceptions.UserNotFoundException;
 import ru.rfsnab.userservice.models.RoleEntity;
 import ru.rfsnab.userservice.models.UserEntity;
+import ru.rfsnab.userservice.models.dto.UpdateUserRequest;
 import ru.rfsnab.userservice.models.dto.UserStatsResponse;
 import ru.rfsnab.userservice.models.kafka.UserEvent;
 import ru.rfsnab.userservice.repository.UserRepository;
@@ -25,6 +27,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+    private static final String USER_NOT_FOUND_FORMAT = "User with id = %s not found";
     private static final int NEW_USER_WINDOW_DAYS = 30;
 
     private final UserRepository userRepository;
@@ -91,22 +95,18 @@ public class UserService {
         return savedUser;
     }
 
-    public UserEntity updateUser(Long id,UserEntity user){
-        return userRepository.findById(id)
-                .map(
-                        userEntity -> {
-                            userEntity.setEmail(user.getEmail());
-                            if (user.getPassword() != null && !user.getPassword().isBlank()) {
-                                userEntity.setPassword(passwordEncoder.encode(user.getPassword()));
-                            }
-                            userEntity.setFirstname(user.getFirstname());
-                            userEntity.setLastname(user.getLastname());
-                            userEntity.setSurname(user.getSurname());
-                            userEntity.setPhone(user.getPhone());
-                            userEntity.setRoles(user.getRoles());
-                            return userRepository.save(userEntity);
-                        }
-                ).orElseThrow(()->new RuntimeException(String.format("User with id = %s not found", id)));
+    @Transactional
+    public UserEntity updateUser(Long id, UpdateUserRequest request) {
+        UserEntity user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(String.format(USER_NOT_FOUND_FORMAT, id)));
+        if (userRepository.existsByPhoneAndIdNot(request.phone(), id)) {
+            throw new UserAlreadyExistsException("Пользователь с таким номером телефона уже существует");
+        }
+        user.setFirstname(request.firstname());
+        user.setLastname(request.lastname());
+        user.setSurname(request.surname());
+        user.setPhone(request.phone());
+        return userRepository.save(user);
     }
 
     public void deleteUser(Long id){
@@ -121,14 +121,14 @@ public class UserService {
     @Transactional
     public void verifyUser(Long userId) {
         UserEntity user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(String.format(USER_NOT_FOUND_FORMAT, userId)));
 
         user.setEmailVerified(true);
         userRepository.save(user);
     }
 
     public UserEntity findById(Long userId) {
-        return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        return userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(String.format(USER_NOT_FOUND_FORMAT, userId)));
     }
 
     @Transactional
@@ -165,7 +165,7 @@ public class UserService {
     @Transactional
     public void unsubscribeByToken(String token) {
         UserEntity user = userRepository.findByUnsubscribeToken(token)
-                .orElseThrow(() -> new RuntimeException("Недействительная ссылка отписки"));
+                .orElseThrow(() -> new InvalidUnsubscribeTokenException("Недействительная ссылка отписки"));
         user.setNewsletterConsent(false);
         userRepository.save(user);
     }
@@ -184,7 +184,12 @@ public class UserService {
         UserEntity user = findById(id);
         if (firstname != null) user.setFirstname(firstname);
         if (lastname != null) user.setLastname(lastname);
-        if (phone != null) user.setPhone(phone);
+        if (phone != null && !phone.isBlank()) {
+            if (userRepository.existsByPhoneAndIdNot(phone, id)) {
+                throw new UserAlreadyExistsException("Пользователь с таким номером телефона уже существует");
+            }
+            user.setPhone(phone);
+        }
         return userRepository.save(user);
     }
 
@@ -222,14 +227,14 @@ public class UserService {
     @Transactional
     public void setPasswordHash(Long id, String passwordHash) {
         UserEntity user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(String.format("User with id = %s not found", id)));
+                .orElseThrow(() -> new UserNotFoundException(String.format(USER_NOT_FOUND_FORMAT, id)));
         user.setPassword(passwordHash);
         userRepository.save(user);
     }
 
     public List<String> getMissingProfileFields(Long userId) {
         UserEntity user = findUserById(userId)
-                .orElseThrow(() -> new UserNotFoundException(String.format("User with id = %s not found", userId)));
+                .orElseThrow(() -> new UserNotFoundException(String.format(USER_NOT_FOUND_FORMAT, userId)));
 
         List<String> missing = new ArrayList<>();
         if (isBlank(user.getFirstname())) missing.add("Имя");

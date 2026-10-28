@@ -98,7 +98,7 @@ const AppRoutes = () => {
   const location = useLocation();
 
   useEffect(() => {
-    restoreSession();
+    void restoreSession();
   }, [restoreSession]);
 
   useEffect(() => {

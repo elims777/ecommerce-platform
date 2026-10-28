@@ -112,8 +112,8 @@ class EmailServiceImportReportTest {
 
             String subject = emailService.importSubject(event);
 
-            assertThat(subject).doesNotContain("успешно");
-            assertThat(subject).contains("12");
+            assertThat(subject).doesNotContain("успешно")
+                    .contains("12");
         }
 
         @Test
@@ -139,10 +139,10 @@ class EmailServiceImportReportTest {
 
             String text = emailService.buildImportReportFile(event);
 
-            assertThat(text).contains("=== ПРИЧИНА СБОЯ ===");
-            assertThat(text).contains("Не удалось распарсить XML");
-            assertThat(text).contains("=== СТЕКТРЕЙС ===");
-            assertThat(text).contains("java.lang.RuntimeException: boom");
+            assertThat(text).contains("=== ПРИЧИНА СБОЯ ===")
+                    .contains("Не удалось распарсить XML")
+                    .contains("=== СТЕКТРЕЙС ===")
+                    .contains("java.lang.RuntimeException: boom");
         }
 
         @Test
@@ -166,9 +166,9 @@ class EmailServiceImportReportTest {
 
             // ни одна строка отчёта не должна быть голым "null"
             assertThat(text.lines()).noneMatch(line -> line.trim().equals("null"));
-            assertThat(text).contains("см. стектрейс ниже");
-            assertThat(text).contains("=== СТЕКТРЕЙС ===");
-            assertThat(text).contains("FtkImportService.java:124");
+            assertThat(text).contains("см. стектрейс ниже")
+                    .contains("=== СТЕКТРЕЙС ===")
+                    .contains("FtkImportService.java:124");
         }
 
         @Test
@@ -181,8 +181,8 @@ class EmailServiceImportReportTest {
 
             String text = emailService.buildImportReportFile(event);
 
-            assertThat(text).contains("Первопричина: value too long for character varying(255)");
-            assertThat(text).contains("ProductImportService.java:210");
+            assertThat(text).contains("Первопричина: value too long for character varying(255)")
+                    .contains("ProductImportService.java:210");
         }
 
         @Test
@@ -265,8 +265,8 @@ class EmailServiceImportReportTest {
                     .containsExactly("ftk-import-20260813-0300.txt");
 
             String report = emailService.buildImportReportFile(event);
-            assertThat(report).contains("Ошибка подключения к FTP");
-            assertThat(report).contains("stacktrace-details");
+            assertThat(report).contains("Ошибка подключения к FTP")
+                    .contains("stacktrace-details");
         }
 
         @Test

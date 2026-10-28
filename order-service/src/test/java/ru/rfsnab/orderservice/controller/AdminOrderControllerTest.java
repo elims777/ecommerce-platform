@@ -32,11 +32,11 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -135,7 +135,7 @@ class AdminOrderControllerTest extends BaseIntegrationTest {
         void shouldChangeStatus() throws Exception {
             Order order = buildOrder();
             order.setStatus(OrderStatus.PROCESSING);
-            when(orderService.updateStatus(eq(ORDER_ID), eq(OrderStatus.PROCESSING))).thenReturn(order);
+            when(orderService.updateStatus(ORDER_ID, OrderStatus.PROCESSING)).thenReturn(order);
 
             mockMvc.perform(patch("/api/v1/admin/orders/{id}/status", ORDER_ID)
                             .with(jwtAdmin()).with(csrf())

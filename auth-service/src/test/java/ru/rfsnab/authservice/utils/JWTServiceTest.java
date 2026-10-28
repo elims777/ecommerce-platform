@@ -36,8 +36,7 @@ class JWTServiceTest {
         // ИЗМЕНЕНО: добавлен userId
         String token = jwtService.generateToken(USER_ID, USER_EMAIL, ADMIN_ROLES);
 
-        assertThat(token).isNotNull();
-        assertThat(token).isNotBlank();
+        assertThat(token).isNotNull().isNotBlank();
         assertThat(token.split("\\.")).hasSize(3); // header.payload.signature
     }
 
@@ -77,8 +76,7 @@ class JWTServiceTest {
         // ИЗМЕНЕНО: добавлен userId
         String refreshToken = jwtService.generateRefreshToken(USER_ID, USER_EMAIL, USER_ROLES);
 
-        assertThat(refreshToken).isNotNull();
-        assertThat(refreshToken).isNotBlank();
+        assertThat(refreshToken).isNotNull().isNotBlank();
         assertThat(jwtService.validateToken(refreshToken)).isTrue();
     }
 
@@ -140,16 +138,6 @@ class JWTServiceTest {
     }
 
     @Test
-    @DisplayName("extractEmail() - извлекает email из токена")
-    void extractEmail_ValidToken_ReturnsEmail() {
-        String token = jwtService.generateToken(USER_ID, USER_EMAIL, USER_ROLES);
-
-        String extractedEmail = jwtService.extractEmail(token);
-
-        assertThat(extractedEmail).isEqualTo(USER_EMAIL);
-    }
-
-    @Test
     @DisplayName("extractRolesFromToken() - извлекает роли из токена")
     void extractRolesFromToken_ValidToken_ReturnsRoles() {
         String token = jwtService.generateToken(USER_ID, USER_EMAIL, ADMIN_ROLES);
@@ -181,5 +169,24 @@ class JWTServiceTest {
         boolean isExpired = expiredJwtService.isTokenExpired(token);
 
         assertThat(isExpired).isTrue();
+    }
+
+    @Test
+    @DisplayName("B2B токен - round-trip: companyName (кириллица), inn, clientType, id и email читаются обратно")
+    void generateToken_B2b_RoundTripsClaims() {
+        String companyName = "ООО «Ромашка»";
+        String inn = "1234567890";
+
+        String access = jwtService.generateToken(5L, "company@example.com", "B2B", companyName, inn);
+        String refresh = jwtService.generateRefreshToken(5L, "company@example.com", "B2B", companyName, inn);
+
+        for (String token : List.of(access, refresh)) {
+            assertThat(jwtService.validateToken(token)).isTrue();
+            assertThat(jwtService.extractClientType(token)).isEqualTo("B2B");
+            assertThat(jwtService.extractCompanyName(token)).isEqualTo(companyName);
+            assertThat(jwtService.extractInn(token)).isEqualTo(inn);
+            assertThat(jwtService.extractUserId(token)).isEqualTo(5L);
+            assertThat(jwtService.extractEmail(token)).isEqualTo("company@example.com");
+        }
     }
 }

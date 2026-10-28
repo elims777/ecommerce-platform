@@ -29,8 +29,8 @@ const WarehousePointsTab = () => {
             editing ? updateWarehousePoint(editing.id, values) : createWarehousePoint(values),
         onSuccess: () => {
             messageApi.success('Точка сохранена');
-            queryClient.invalidateQueries({ queryKey: ['adminWarehousePoints'] });
-            queryClient.invalidateQueries({ queryKey: ['warehousePoints'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminWarehousePoints'] });
+            void queryClient.invalidateQueries({ queryKey: ['warehousePoints'] });
             setOpen(false);
         },
         onError: (err) => messageApi.error(

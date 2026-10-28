@@ -39,7 +39,7 @@ public class CarrierSyncHandler implements NotificationHandler {
             log.info("Carrier sync report email sent: trigger={}, carriers={}", event.trigger(),
                     event.reports() == null ? 0 : event.reports().size());
         } catch (Exception e) {
-            log.error("Ошибка обработки события синхронизации ТК: {}", eventJson, e);
+            log.error("Ошибка обработки события синхронизации ТК", e);
         }
     }
 }

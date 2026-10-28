@@ -60,8 +60,8 @@ class FavouriteServiceTest {
 
             List<Product> result = favouriteService.getFavouriteProducts(USER_EMAIL);
 
-            assertThat(result).hasSize(2);
-            assertThat(result).containsExactly(product1, product2);
+            assertThat(result).hasSize(2)
+                    .containsExactly(product1, product2);
         }
 
         @Test

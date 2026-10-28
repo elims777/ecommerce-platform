@@ -19,9 +19,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 1С обмен — своя авторизация через cookie
                         .requestMatchers("/1c-exchange/**").permitAll()
-                        // Логи обменов — для admin-панели (авторизация на стороне gateway)
-                        .requestMatchers("/1c-exchange/logs").permitAll()
-                        // FTK импорт — авторизация на стороне gateway (ROLE_ADMIN)
+                        // FTK импорт и логи обменов — авторизация на стороне gateway (ROLE_ADMIN)
                         .requestMatchers("/api/v1/integration/**").permitAll()
                         // Swagger — только для dev
                         .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()

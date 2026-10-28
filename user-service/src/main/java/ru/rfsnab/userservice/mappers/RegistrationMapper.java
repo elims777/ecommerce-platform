@@ -5,6 +5,8 @@ import ru.rfsnab.userservice.models.dto.RegistrationRequest;
 import ru.rfsnab.userservice.models.dto.RegAuthResponse;
 
 public class RegistrationMapper {
+    private RegistrationMapper() {
+    }
 
     public static UserEntity mapToUserEntity(RegistrationRequest request){
         return UserEntity.builder()

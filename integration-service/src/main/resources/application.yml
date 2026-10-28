@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: integration-service
+  # нет своего UserDetailsService — иначе Spring создаёт дефолтного юзера и пишет его пароль в лог
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
 
   datasource:
     url: jdbc:postgresql://${INTEGRATION_DB_HOST:localhost}:${INTEGRATION_DB_PORT:5437}/${INTEGRATION_DB_NAME:integration_db}

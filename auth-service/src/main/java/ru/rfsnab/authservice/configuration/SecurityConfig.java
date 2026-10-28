@@ -85,13 +85,11 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/",
-                                "/auth/**",
-                                "/profile",
+                        .requestMatchers("/auth/**",
                                 "/swagger-ui/**",
                                 "/verify-email",
                                 "/api-docs/**",
-                                "/swagger-ui.html").permitAll()  // Разрешаем главную страницу и auth pages
+                                "/swagger-ui.html").permitAll()  // /auth/** — регистрация через Яндекс
                         .anyRequest().authenticated()
                 );
 

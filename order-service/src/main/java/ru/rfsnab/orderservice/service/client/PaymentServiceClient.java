@@ -22,6 +22,8 @@ import java.util.UUID;
 @Service
 public class PaymentServiceClient {
 
+    private static final String PAYMENT_UNAVAILABLE_LOG = "Payment service unavailable: {}";
+
     private final RestTemplate restTemplate;
     private final String paymentServiceUrl;
     private final String internalSecret;
@@ -47,7 +49,7 @@ public class PaymentServiceClient {
                     PaymentLinkResponse.class
             ).getBody();
         } catch (Exception e) {
-            log.error("Payment service unavailable: {}", e.getMessage());
+            log.error(PAYMENT_UNAVAILABLE_LOG, e.getMessage());
             throw new ServiceUnavailableException("Payment service unavailable");
         }
     }
@@ -62,7 +64,7 @@ public class PaymentServiceClient {
                     orderId
             ).getBody();
         } catch (Exception e) {
-            log.error("Payment service unavailable: {}", e.getMessage());
+            log.error(PAYMENT_UNAVAILABLE_LOG, e.getMessage());
             throw new ServiceUnavailableException("Payment service unavailable");
         }
     }
@@ -78,7 +80,7 @@ public class PaymentServiceClient {
                     orderId
             );
         } catch (Exception e) {
-            log.error("Payment service unavailable: {}", e.getMessage());
+            log.error(PAYMENT_UNAVAILABLE_LOG, e.getMessage());
             throw new ServiceUnavailableException("Payment service unavailable");
         }
     }
@@ -93,7 +95,7 @@ public class PaymentServiceClient {
                     orderId
             );
         } catch (Exception e) {
-            log.error("Payment service unavailable: {}", e.getMessage());
+            log.error(PAYMENT_UNAVAILABLE_LOG, e.getMessage());
             throw new ServiceUnavailableException("Payment service unavailable");
         }
     }

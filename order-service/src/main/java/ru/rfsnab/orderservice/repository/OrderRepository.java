@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import ru.rfsnab.orderservice.models.entity.Order;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.repository.projection.OrderStatsProjection;
 
@@ -22,19 +23,15 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     @EntityGraph(attributePaths = "items")
     Optional<Order> findByOrderNumber(String orderNumber);
 
-    Page<Order> findByUserId(Long userId, Pageable pageable);
-
-    List<Order> findByUserIdAndStatus(Long userId, OrderStatus status);
-
     boolean existsByOrderNumber(String orderNumber);
 
-    long countByUserId(Long userId);
+    long countByUserIdAndCustomerType(Long userId, CustomerType customerType);
 
-    long countByUserIdAndStatusNotIn(Long userId, List<OrderStatus> excludedStatuses);
+    long countByUserIdAndCustomerTypeAndStatusNotIn(Long userId, CustomerType customerType, List<OrderStatus> excludedStatuses);
 
     long countByInnAndStatusNotIn(String inn, List<OrderStatus> excludedStatuses);
 
-    Page<Order> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    Page<Order> findByUserIdAndCustomerTypeOrderByCreatedAtDesc(Long userId, CustomerType customerType, Pageable pageable);
 
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
 

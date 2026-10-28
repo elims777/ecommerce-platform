@@ -54,7 +54,7 @@ public class SlugGeneratorService {
         result = result.replaceAll("[^a-z0-9]+", "-");
 
         // 4. Убираем дефисы в начале и конце
-        result = result.replaceAll("^-+|-+$", "");
+        result = result.replaceAll("(?:^-+)|(?:-+$)", "");
 
         // 5. Заменяем множественные дефисы на один
         result = result.replaceAll("-{2,}", "-");

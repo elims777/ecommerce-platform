@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import type { User, ClientType } from '@/types/auth';
+import type { User, ClientType, LoginRequest } from '@/types/auth';
 import * as authApi from '@/api/auth';
-import type { LoginRequest } from '@/types/auth';
 import { getLegalEntity } from '@/api/legalEntity';
+import { queryClient } from '@/lib/queryClient';
+import { useCartStore } from '@/store/cartStore';
 
 interface AuthState {
     user: User | null;
@@ -13,7 +14,7 @@ interface AuthState {
     loginLegal: (login: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     restoreSession: () => Promise<void>;
-    switchContext: (targetType: ClientType, password?: string) => Promise<void>;
+    switchContext: (targetType: ClientType) => Promise<void>;
 }
 
 /**
@@ -49,6 +50,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         const tokens = await authApi.login(request);
         localStorage.setItem('accessToken', tokens.access_token);
         localStorage.setItem('refreshToken', tokens.refresh_token);
+        localStorage.removeItem('clientType');
+        localStorage.removeItem('userId');
+        queryClient.clear();
+        useCartStore.getState().resetCart();
         set({ user: tokens.user, isAuthenticated: true });
     },
 
@@ -58,6 +63,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         localStorage.setItem('refreshToken', tokens.refresh_token);
         localStorage.setItem('clientType', 'B2B');
         localStorage.setItem('userId', String(tokens.user.id));
+        queryClient.clear();
+        useCartStore.getState().resetCart();
         set({ user: tokens.user, isAuthenticated: true });
     },
 
@@ -71,6 +78,8 @@ export const useAuthStore = create<AuthState>((set) => ({
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('clientType');
             localStorage.removeItem('userId');
+            queryClient.clear();
+            useCartStore.getState().resetCart();
             set({ user: null, isAuthenticated: false });
         }
     },
@@ -89,6 +98,8 @@ export const useAuthStore = create<AuthState>((set) => ({
             if (!refreshToken || isTokenExpired(refreshToken)) {
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
+                localStorage.removeItem('clientType');
+                localStorage.removeItem('userId');
                 set({ user: null, isAuthenticated: false, isLoading: false });
                 return;
             }
@@ -97,13 +108,16 @@ export const useAuthStore = create<AuthState>((set) => ({
                 const tokens = await authApi.refreshTokens(refreshToken);
                 localStorage.setItem('accessToken', tokens.access_token);
                 localStorage.setItem('refreshToken', tokens.refresh_token);
-                set({ user: tokens.user, isAuthenticated: true, isLoading: false });
+                // tokens.user — заглушка из JWT (пустые ФИО/телефон), поэтому user не ставим:
+                // реальные данные загрузит код ниже уже с новым токеном
             } catch {
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
+                localStorage.removeItem('clientType');
+                localStorage.removeItem('userId');
                 set({ user: null, isAuthenticated: false, isLoading: false });
+                return;
             }
-            return;
         }
 
         // Токен валидный — загружаем данные пользователя из БД
@@ -120,7 +134,7 @@ export const useAuthStore = create<AuthState>((set) => ({
                         firstname: '',
                         lastname: '',
                         surname: null,
-                        phone: null,
+                        phone: entity.phone,
                         emailVerified: true,
                         roles: [{ id: 0, name: 'ROLE_USER' }],
                         createdAt: entity.createdAt,
@@ -148,14 +162,21 @@ export const useAuthStore = create<AuthState>((set) => ({
         } catch {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
+            localStorage.removeItem('clientType');
+            localStorage.removeItem('userId');
             set({ user: null, isAuthenticated: false, isLoading: false });
         }
     },
 
-    switchContext: async (targetType, password) => {
-        const tokens = await authApi.switchContext(targetType, password);
+    switchContext: async (targetType) => {
+        const tokens = await authApi.switchContext(targetType);
         localStorage.setItem('accessToken', tokens.access_token);
         localStorage.setItem('refreshToken', tokens.refresh_token);
+        localStorage.setItem('clientType', 'B2B');
+        localStorage.setItem('userId', String(tokens.user.id));
+        useCartStore.getState().resetCart();
         set({ user: tokens.user });
+        // Кэш чистим без рефетча (старые ключи); страницы перемонтируются по key Outlet в ClientLayout
+        queryClient.removeQueries();
     },
 }));

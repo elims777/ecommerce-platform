@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -15,8 +17,10 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import ru.rfsnab.authservice.exceptions.AuthServiceException;
 import ru.rfsnab.authservice.models.dto.RegistrationRequest;
 import ru.rfsnab.authservice.models.dto.UserDtoResponse;
+import ru.rfsnab.authservice.service.OAuth2CodeService;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -34,15 +38,21 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
     private final RoleExtractor roleExtractor;
+    private final OAuth2CodeService oAuth2CodeService;
 
     @Value("${user.service.url}")
     private String userServiceUrl;
+
+    @Value("${internal.secret}")
+    private String internalSecret;
 
     @Value("${app.frontend-url:http://localhost:5173}")
     private String frontendUrl;
 
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
     private static final int TEMP_PASSWORD_LENGTH = 16;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
     private static final String PLACEHOLDER_PHONE = "00000000000";
 
     @Override
@@ -54,7 +64,6 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         log.info("Request URI: {}", request.getRequestURI());
 
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-        log.info("OAuth2User attributes: {}", oAuth2User.getAttributes());
 
         // Извлекаем данные пользователя из Yandex
         String email = extractEmail(oAuth2User);
@@ -62,10 +71,10 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         String lastName = extractLastName(oAuth2User);
         String phone = extractPhone(oAuth2User);
 
-        log.info("OAuth2 login для email: {}, firstname: {}, lastname: {}", email, firstName, lastName);
+        log.info("OAuth2 login для email: {}", EmailMasker.mask(email));
 
         if (phone == null && isRegisterAction(request)) {
-            log.warn("OAuth2 регистрация без доступа к телефону — отказ для email: {}", email);
+            log.warn("OAuth2 регистрация без доступа к телефону — отказ для email: {}", EmailMasker.mask(email));
             response.sendRedirect(frontendUrl + "/oauth2/error?reason=phone_required");
             return;
         }
@@ -89,20 +98,11 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             tokens.put("user", user);
 
             log.info("Токены сгенерированы успешно");
-            log.info("Access token: {}...", accessToken.substring(0, Math.min(20, accessToken.length())));
-
-            // ВРЕМЕННО: Возвращаем JSON напрямую для тестирования
-//            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-//            response.setStatus(HttpServletResponse.SC_OK);
-//            response.getWriter().write(objectMapper.writeValueAsString(tokens));
 
 
-             String tokensJson = objectMapper.writeValueAsString(tokens);
-             String redirectUrl = frontendUrl + "/oauth2/success?data=" +
-                 java.net.URLEncoder.encode(tokensJson, java.nio.charset.StandardCharsets.UTF_8);
-             log.info("Редирект на: {}", redirectUrl);
-             response.sendRedirect(redirectUrl);
-
+            String redirectUrl = frontendUrl + "/oauth2/success?code=" + oAuth2CodeService.issue(tokens);
+            log.info("Редирект на: {}/oauth2/success", frontendUrl);
+            response.sendRedirect(redirectUrl);
         } catch (Exception e) {
             log.error("=== Ошибка в OAuth2LoginSuccessHandler ===");
             log.error("Ошибка при обработке OAuth2 login: {}", e.getMessage(), e);
@@ -140,7 +140,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         try {
             ResponseEntity<UserDtoResponse> response = restTemplate.postForEntity(
                     oauth2Url,
-                    request,
+                    internalRequest(request),
                     UserDtoResponse.class
             );
 
@@ -149,24 +149,29 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                 throw new IllegalStateException("Не удалось получить данные пользователя");
             }
 
-            log.info("OAuth2 login/register успешен для: {}", email);
+            log.info("OAuth2 login/register успешен для: {}", EmailMasker.mask(email));
             return user;
 
         } catch (HttpClientErrorException e) {
             log.error("Ошибка при OAuth2 login/register: {} - {}", e.getStatusCode(), e.getMessage());
-            throw new RuntimeException("Не удалось выполнить OAuth2 аутентификацию: " + e.getMessage());
+            throw new AuthServiceException("Не удалось выполнить OAuth2 аутентификацию");
         }
+    }
+
+    private HttpEntity<RegistrationRequest> internalRequest(RegistrationRequest body) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(INTERNAL_TOKEN_HEADER, internalSecret);
+        return new HttpEntity<>(body, headers);
     }
 
     /**
      * Генерирует криптографически стойкий временный пароль
      */
     private String generateTemporaryPassword() {
-        SecureRandom random = new SecureRandom();
         StringBuilder password = new StringBuilder(TEMP_PASSWORD_LENGTH);
 
         for (int i = 0; i < TEMP_PASSWORD_LENGTH; i++) {
-            password.append(CHARACTERS.charAt(random.nextInt(CHARACTERS.length())));
+            password.append(CHARACTERS.charAt(SECURE_RANDOM.nextInt(CHARACTERS.length())));
         }
 
         return password.toString();

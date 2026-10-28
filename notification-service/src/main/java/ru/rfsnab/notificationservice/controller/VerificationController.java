@@ -20,7 +20,7 @@ public class VerificationController {
 
     @PostMapping("/verify")
     public ResponseEntity<VerificationResponse> verify(@RequestParam String token){
-        log.info("Verifying token: {}", token);
+        log.info("Verifying email token");
 
         VerificationResponse response = tokenService.verifyToken(token);
 

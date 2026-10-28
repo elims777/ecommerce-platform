@@ -24,6 +24,13 @@ import java.time.LocalDateTime;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    private static final String ROLE_MANAGER = "ROLE_MANAGER";
+    private static final String ROLE_ADMIN = "ROLE_ADMIN";
+    private static final String ROLE_INTERNAL = "INTERNAL";
+    private static final String CATEGORIES_PATH = "/api/v1/categories/**";
+    private static final String PRODUCTS_PATH = "/api/v1/products/**";
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final InternalTokenFilter internalTokenFilter;
 
@@ -37,34 +44,34 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Управление новостями — только ADMIN и MANAGER.
                         // Идёт ДО публичного GET /api/v1/news/**, иначе permitAll перехватил бы админские чтения
-                        .requestMatchers("/api/v1/admin/news/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
+                        .requestMatchers("/api/v1/admin/news/**").hasAnyAuthority(ROLE_ADMIN, ROLE_MANAGER)
 
                         // Админские чтения каталога: список товаров (базовые цены, неактивные,
                         // варианты) и сводка. Идут ДО публичного GET /api/v1/products/**,
                         // иначе permitAll перехватил бы их
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/admin", "/api/v1/products/stats",
                                 "/api/v1/products/admin/**")
-                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
+                        .hasAnyAuthority(ROLE_ADMIN, ROLE_MANAGER)
 
                         // Публичные endpoints (только чтение)
                         .requestMatchers(HttpMethod.GET, "/api/v1/news/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/import/batch").hasRole("INTERNAL")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/external/**").hasRole("INTERNAL")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/categories/upsert-by-external-id").hasRole("INTERNAL")
+                        .requestMatchers(HttpMethod.GET, CATEGORIES_PATH).permitAll()
+                        .requestMatchers(HttpMethod.GET, PRODUCTS_PATH).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/import/batch").hasRole(ROLE_INTERNAL)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/external/**").hasRole(ROLE_INTERNAL)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/categories/upsert-by-external-id").hasRole(ROLE_INTERNAL)
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
 
                         // Управление категориями - только ADMIN и MANAGER
-                        .requestMatchers(HttpMethod.POST, "/api/v1/categories/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/categories/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/categories/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
+                        .requestMatchers(HttpMethod.POST, CATEGORIES_PATH).hasAnyAuthority(ROLE_ADMIN, ROLE_MANAGER)
+                        .requestMatchers(HttpMethod.PUT, CATEGORIES_PATH).hasAnyAuthority(ROLE_ADMIN, ROLE_MANAGER)
+                        .requestMatchers(HttpMethod.DELETE, CATEGORIES_PATH).hasAnyAuthority(ROLE_ADMIN, ROLE_MANAGER)
 
                         // Управление товарами - только ADMIN и MANAGER
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/products/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_MANAGER")
+                        .requestMatchers(HttpMethod.POST, PRODUCTS_PATH).hasAnyAuthority(ROLE_ADMIN, ROLE_MANAGER)
+                        .requestMatchers(HttpMethod.PUT, PRODUCTS_PATH).hasAnyAuthority(ROLE_ADMIN, ROLE_MANAGER)
+                        .requestMatchers(HttpMethod.DELETE, PRODUCTS_PATH).hasAnyAuthority(ROLE_ADMIN, ROLE_MANAGER)
 
                         // Все остальные запросы требуют аутентификации
                         .anyRequest().authenticated()

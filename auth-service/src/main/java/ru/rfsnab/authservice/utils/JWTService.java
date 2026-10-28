@@ -19,6 +19,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JWTService {
 
+    private static final String CLAIM_COMPANY_NAME = "companyName";
+    private static final String CLAIM_ROLES = "roles";
+    private static final String CLAIM_CLIENT_TYPE = "clientType";
+    private static final String ROLE_USER = "ROLE_USER";
+    private static final String CLAIM_EMAIL = "email";
+
     private final JWTProperties jwtProperties;
 
     /**
@@ -35,9 +41,9 @@ public class JWTService {
     public String generateToken(Long userId, String email, List<String> roles){
         return Jwts.builder()
                 .subject(String.valueOf(userId))
-                .claim("email", email)
-                .claim("roles", roles)
-                .claim("clientType", "B2C")
+                .claim(CLAIM_EMAIL, email)
+                .claim(CLAIM_ROLES, roles)
+                .claim(CLAIM_CLIENT_TYPE, "B2C")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis()+jwtProperties.getExpirationMs()))
                 .signWith(getSignedKey())
@@ -50,9 +56,9 @@ public class JWTService {
     public String generateRefreshToken(Long userId, String email, List<String> roles){
         return Jwts.builder()
                 .subject(String.valueOf(userId))
-                .claim("email", email)
-                .claim("roles", roles)
-                .claim("clientType", "B2C")
+                .claim(CLAIM_EMAIL, email)
+                .claim(CLAIM_ROLES, roles)
+                .claim(CLAIM_CLIENT_TYPE, "B2C")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis()+jwtProperties.getRefreshExpirationMs()))
                 .signWith(getSignedKey())
@@ -62,9 +68,9 @@ public class JWTService {
     public String generateToken(Long id, String email, String clientType) {
         return Jwts.builder()
                 .subject(String.valueOf(id))
-                .claim("email", email)
-                .claim("clientType", clientType)
-                .claim("roles", List.of("ROLE_USER"))
+                .claim(CLAIM_EMAIL, email)
+                .claim(CLAIM_CLIENT_TYPE, clientType)
+                .claim(CLAIM_ROLES, List.of(ROLE_USER))
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtProperties.getExpirationMs()))
                 .signWith(getSignedKey())
@@ -74,9 +80,9 @@ public class JWTService {
     public String generateRefreshToken(Long id, String email, String clientType) {
         return Jwts.builder()
                 .subject(String.valueOf(id))
-                .claim("email", email)
-                .claim("clientType", clientType)
-                .claim("roles", List.of("ROLE_USER"))
+                .claim(CLAIM_EMAIL, email)
+                .claim(CLAIM_CLIENT_TYPE, clientType)
+                .claim(CLAIM_ROLES, List.of(ROLE_USER))
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpirationMs()))
                 .signWith(getSignedKey())
@@ -87,12 +93,12 @@ public class JWTService {
                                 String companyName, String inn) {
         var builder = Jwts.builder()
                 .subject(String.valueOf(id))
-                .claim("email", email)
-                .claim("clientType", clientType)
-                .claim("roles", List.of("ROLE_USER"))
+                .claim(CLAIM_EMAIL, email)
+                .claim(CLAIM_CLIENT_TYPE, clientType)
+                .claim(CLAIM_ROLES, List.of(ROLE_USER))
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtProperties.getExpirationMs()));
-        if (companyName != null) builder.claim("companyName", companyName);
+        if (companyName != null) builder.claim(CLAIM_COMPANY_NAME, companyName);
         if (inn != null) builder.claim("inn", inn);
         return builder.signWith(getSignedKey()).compact();
     }
@@ -101,22 +107,22 @@ public class JWTService {
                                        String companyName, String inn) {
         var builder = Jwts.builder()
                 .subject(String.valueOf(id))
-                .claim("email", email)
-                .claim("clientType", clientType)
-                .claim("roles", List.of("ROLE_USER"))
+                .claim(CLAIM_EMAIL, email)
+                .claim(CLAIM_CLIENT_TYPE, clientType)
+                .claim(CLAIM_ROLES, List.of(ROLE_USER))
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpirationMs()));
-        if (companyName != null) builder.claim("companyName", companyName);
+        if (companyName != null) builder.claim(CLAIM_COMPANY_NAME, companyName);
         if (inn != null) builder.claim("inn", inn);
         return builder.signWith(getSignedKey()).compact();
     }
 
     public String extractClientType(String token) {
-        return extractClaims(token).get("clientType", String.class);
+        return extractClaims(token).get(CLAIM_CLIENT_TYPE, String.class);
     }
 
     public String extractCompanyName(String token) {
-        return extractClaims(token).get("companyName", String.class);
+        return extractClaims(token).get(CLAIM_COMPANY_NAME, String.class);
     }
 
     public String extractInn(String token) {
@@ -163,7 +169,7 @@ public class JWTService {
      */
     public String extractEmail(String token) {
 
-        return extractClaims(token).get("email", String.class);
+        return extractClaims(token).get(CLAIM_EMAIL, String.class);
     }
 
     /**
@@ -171,7 +177,7 @@ public class JWTService {
      */
     @SuppressWarnings("unchecked")
     public List<String> extractRolesFromToken(String token) {
-        return extractClaims(token).get("roles", List.class);
+        return extractClaims(token).get(CLAIM_ROLES, List.class);
     }
 
     /**

@@ -113,7 +113,7 @@ const ForgotPasswordPage = () => {
                     ) : (
                         <Form<ForgotPasswordFormValues> layout="vertical" onFinish={handleSubmit} autoComplete="off">
                             <div style={{ marginBottom: 14 }}>
-                                <label style={labelStyle}>E-mail</label>
+                                <label htmlFor="email" style={labelStyle}>E-mail</label>
                                 <Form.Item name="email" noStyle rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный формат email' }]}>
                                     <Input style={inputStyle} placeholder="ivan@mail.ru" />
                                 </Form.Item>

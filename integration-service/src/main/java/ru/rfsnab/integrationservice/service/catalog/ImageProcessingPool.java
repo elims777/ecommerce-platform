@@ -220,13 +220,13 @@ public class ImageProcessingPool {
 
             // Защита от path traversal
             if (!absolutePath.startsWith(exchangeDir)) {
-                log.warn("Path traversal attempt: {} (session: {})", relativePath, sessionId);
+                log.warn("Path traversal attempt: {}", relativePath);
                 continue;
             }
 
             if (!Files.exists(absolutePath)) {
-                log.warn("Файл изображения не найден: {} (product: {}, session: {})",
-                        absolutePath, productExternalId, sessionId);
+                log.warn("Файл изображения не найден: {} (product: {})",
+                        absolutePath, productExternalId);
                 continue;
             }
 

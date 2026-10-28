@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import type { CSSProperties, MouseEvent } from 'react';
-import { Dropdown, Drawer, Grid } from 'antd';
+import { App, Dropdown, Drawer, Grid } from 'antd';
 import { company } from '@/config/company';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/navigation';
@@ -8,11 +8,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { getAvailableProductsCount } from '@/api/products';
 import { getCategoryTree } from '@/api/categories';
+import { getLinkStatus } from '@/api/legalEntity';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { useFavouritesStore } from '@/store/favouritesStore';
 import { isAdmin } from '@/types/auth';
-import type { ClientType } from '@/types/auth';
 import type { MenuProps } from 'antd';
 import CatalogMegaMenu from '@/features/catalog/CatalogMegaMenu';
 import PriceListModal from '@/components/PriceListModal';
@@ -40,150 +40,102 @@ const footerLinkHover = {
 };
 
 const SearchIcon = () => (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
     </svg>
 );
 const XIcon = () => (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 6 6 18M6 6l12 12"/>
     </svg>
 );
 const CartIcon = () => (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 4h2.5l2 13.5h11l2-9h-14"/><circle cx="9" cy="20.5" r="1.4"/><circle cx="18" cy="20.5" r="1.4"/>
     </svg>
 );
 const UserIcon = () => (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.6 4.2-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/>
     </svg>
 );
 const HeartIcon = () => (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>
     </svg>
 );
 const PhoneIcon = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 6 6L15 14l5 2v3a2 2 0 0 1-2 2A15 15 0 0 1 3 6a2 2 0 0 1 2-2z"/>
     </svg>
 );
 const TruckIcon = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M2 6h12v10H2zM14 10h4l3 3v3h-7"/><circle cx="6.5" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/>
     </svg>
 );
 const PinIcon = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>
     </svg>
 );
 const MenuIcon = () => (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
         <path d="M4 7h16M4 12h16M4 17h16"/>
     </svg>
 );
 
 
 
-const ContextSwitcher = () => {
+const ContextSwitcher = ({ padded }: { padded?: boolean }) => {
     const { user, switchContext } = useAuthStore();
+    const { message: messageApi } = App.useApp();
     const fetchCart = useCartStore((s) => s.fetchCart);
+    const fetchFavouriteIds = useFavouritesStore((s) => s.fetchIds);
     const [loading, setLoading] = useState(false);
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    // /auth/me не отдаёт clientType — после перезагрузки у B2C-юзера он undefined
+    const isB2C = !!user && user.clientType !== 'B2B';
 
-    if (!user?.companyName) return null;
+    const { data: linkStatus } = useQuery({
+        queryKey: ['link-status', user?.id],
+        queryFn: () => getLinkStatus(user!.id),
+        enabled: isB2C,
+    });
 
-    const handleSwitch = async (target: ClientType) => {
-        if (target === user.clientType) return;
-        if (target === 'B2C') { setShowPasswordModal(true); return; }
+    if (!user || !isB2C || !linkStatus?.confirmed) return null;
+
+    const handleSwitch = async () => {
         setLoading(true);
         try {
             await switchContext('B2B');
             await fetchCart();
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handlePasswordSubmit = async () => {
-        if (!password) return;
-        setLoading(true);
-        setError('');
-        try {
-            await switchContext('B2C', password);
-            await fetchCart();
-            setShowPasswordModal(false);
-            setPassword('');
+            void fetchFavouriteIds();
         } catch {
-            setError('Неверный пароль');
+            messageApi.error('Не удалось переключить аккаунт');
         } finally {
             setLoading(false);
         }
     };
 
-    const active = user.clientType;
-
-    return (
-        <>
-            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)', overflow: 'hidden', opacity: loading ? 0.6 : 1 }}>
-                {(['B2C', 'B2B'] as const).map((type) => (
-                    <button key={type} onClick={() => handleSwitch(type)} disabled={loading} style={{
-                        padding: '4px 10px', fontSize: 'var(--text-sm)', fontWeight: 600, border: 'none',
-                        cursor: loading ? 'default' : 'pointer', fontFamily: 'var(--font-body)',
-                        background: active === type ? 'var(--brand-red)' : 'transparent',
-                        color: active === type ? '#fff' : 'var(--ink-2)',
-                        transition: 'background 0.15s, color 0.15s',
-                    }}>
-                        {type === 'B2C' ? 'Физлицо' : 'Организация'}
-                    </button>
-                ))}
-            </div>
-
-            {showPasswordModal && (
-                <div style={{ position: 'fixed', inset: 0, background: 'var(--overlay-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' }}
-                    onClick={() => { setShowPasswordModal(false); setPassword(''); setError(''); }}>
-                    <div style={{ background: 'var(--surface)', borderRadius: 'var(--r-5)', padding: 'var(--sp-10)', width: 360 }}
-                        onClick={(e) => e.stopPropagation()}>
-                        <div style={{ fontWeight: 600, fontSize: 'var(--text-xl)', marginBottom: 8 }}>Переключение на личный аккаунт</div>
-                        <div style={{ fontSize: 'var(--text-base)', color: 'var(--ink-3)', marginBottom: 16 }}>Введите пароль от личного аккаунта</div>
-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') handlePasswordSubmit(); }}
-                            placeholder="Пароль" autoFocus
-                            style={{
-                                width: '100%', height: 40, padding: '0 12px',
-                                border: `1px solid ${error ? 'var(--brand-red)' : 'var(--line-2)'}`,
-                                borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontFamily: 'var(--font-body)',
-                                outline: 'none', boxSizing: 'border-box', marginBottom: error ? 6 : 16,
-                            }} />
-                        {error && <div style={{ fontSize: 'var(--text-sm)', color: 'var(--brand-red)', marginBottom: 12 }}>{error}</div>}
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <button onClick={handlePasswordSubmit} disabled={loading || !password} style={{
-                                flex: 1, height: 38, background: 'var(--brand-red)', color: '#fff',
-                                border: 'none', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)', fontWeight: 500,
-                                cursor: loading || !password ? 'default' : 'pointer', fontFamily: 'var(--font-body)',
-                                opacity: !password ? 0.6 : 1,
-                            }}>{loading ? 'Проверка...' : 'Войти'}</button>
-                            <button onClick={() => { setShowPasswordModal(false); setPassword(''); setError(''); }} style={{
-                                height: 38, padding: '0 16px', border: '1px solid var(--line-2)',
-                                background: 'transparent', borderRadius: 'var(--r-3)', fontSize: 'var(--text-md)',
-                                cursor: 'pointer', fontFamily: 'var(--font-body)', color: 'var(--ink-2)',
-                            }}>Отмена</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </>
+    const button = (
+        <button onClick={handleSwitch} disabled={loading} style={{
+            padding: '4px 10px', fontSize: 'var(--text-sm)', fontWeight: 600,
+            border: '1px solid var(--line-2)', borderRadius: 'var(--r-3)',
+            cursor: loading ? 'default' : 'pointer', fontFamily: 'var(--font-body)',
+            background: 'transparent', color: 'var(--ink-2)', opacity: loading ? 0.6 : 1,
+        }}>
+            Войти как {linkStatus.fullName}
+        </button>
     );
+    return padded ? <div style={{ padding: '10px 12px' }}>{button}</div> : button;
 };
 
 const ClientLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { isAuthenticated, user, logout } = useAuthStore();
+    // B2C приходит то как 'B2C' (refresh/login), то как undefined (/auth/me) — нормализуем, иначе лишние перезагрузки
+    const contextKey = `${user?.id}:${user?.clientType ?? 'B2C'}`;
     const totalItems = useCartStore((state) => state.totalItems);
     const fetchCart = useCartStore((state) => state.fetchCart);
     const fetchFavouriteIds = useFavouritesStore((s) => s.fetchIds);
@@ -203,6 +155,12 @@ const ClientLayout = () => {
         queryKey: ['products', 'count-available'],
         queryFn: getAvailableProductsCount,
         staleTime: 5 * 60 * 1000,
+    });
+
+    const { data: linkStatus } = useQuery({
+        queryKey: ['link-status', user?.id],
+        queryFn: () => getLinkStatus(user!.id),
+        enabled: !!user && user.clientType !== 'B2B',
     });
 
     const { data: categoryTree = [] } = useQuery({
@@ -227,20 +185,20 @@ const ClientLayout = () => {
 
     useEffect(() => {
         if (isAuthenticated) {
-            fetchCart();
-            fetchFavouriteIds();
+            void fetchCart();
+            void fetchFavouriteIds();
         } else {
             clearFavourites();
         }
-    }, [isAuthenticated, fetchCart, fetchFavouriteIds, clearFavourites]);
+    }, [isAuthenticated, contextKey, fetchCart, fetchFavouriteIds, clearFavourites]);
 
     const handleLogout = async () => {
         await logout();
-        navigate('/');
+        void navigate('/');
     };
 
     const handlePriceListClick = () => {
-        if (!isAuthenticated) { navigate('/login'); return; }
+        if (!isAuthenticated) { void navigate('/login'); return; }
         setPriceListModalOpen(true);
     };
 
@@ -259,7 +217,7 @@ const ClientLayout = () => {
         { key: 'orders', label: <NavLink to="/orders">Мои заказы</NavLink> },
         { key: 'price-lists', label: <NavLink to="/price-lists">Прайс-листы</NavLink> },
         { key: 'profile', label: <NavLink to="/profile">Профиль</NavLink> },
-        ...(user && !user.companyName ? [
+        ...(user && !user.companyName && !linkStatus?.linked ? [
             { type: 'divider' as const },
             { key: 'connect-org', label: <NavLink to="/profile">Подключить организацию</NavLink> },
         ] : []),
@@ -296,7 +254,7 @@ const ClientLayout = () => {
                             <NavLink to="/about" style={{ opacity: 0.85, color: 'inherit', whiteSpace: 'nowrap' }}>О компании</NavLink>
                             <NavLink to="/contacts" style={{ opacity: 0.85, color: 'inherit', whiteSpace: 'nowrap' }}>Контакты</NavLink>
                             <span style={{ opacity: 0.35 }}>·</span>
-                            <span onClick={handlePriceListClick} style={{ opacity: 0.85, color: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>Прайс-лист</span>
+                            <span onClick={handlePriceListClick} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePriceListClick(); } }} style={{ opacity: 0.85, color: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }}>Прайс-лист</span>
                             <span style={{ opacity: 0.35 }}>·</span>
                         </>
                     )}
@@ -309,7 +267,7 @@ const ClientLayout = () => {
                 <div style={{
                     background: 'var(--surface)', borderBottom: '1px solid var(--line-1)',
                     height: isMobile ? MAIN_H_MOBILE : MAIN_H, display: 'flex', alignItems: 'center',
-                    padding: isMobile ? '0 16px' : '0 var(--page-pad-x)', gap: isMobile ? 12 : (isNarrowDesktop ? 12 : 28),
+                    padding: isMobile ? '0 16px' : '0 var(--page-pad-x)', gap: isMobile || isNarrowDesktop ? 12 : 28,
                 }}>
                     {isMobile && (
                         <button
@@ -362,7 +320,7 @@ const ClientLayout = () => {
                             onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--line-2)'; }}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && searchQuery.trim()) {
-                                    navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
+                                    void navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
                                 }
                             }}
                         />
@@ -387,7 +345,7 @@ const ClientLayout = () => {
                             )}
                             {isMobile ? (
                                 <button
-                                    onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
+                                    onClick={() => { if (searchQuery.trim()) void navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
                                     aria-label="Найти"
                                     style={{
                                         width: 32, height: 32,
@@ -400,7 +358,7 @@ const ClientLayout = () => {
                                 </button>
                             ) : (
                                 <button
-                                    onClick={() => { if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
+                                    onClick={() => { if (searchQuery.trim()) void navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}
                                     style={{
                                         height: 36, padding: '0 18px',
                                         background: 'var(--brand-red)', color: '#fff', border: 'none', borderRadius: 'var(--r-3)',
@@ -489,6 +447,13 @@ const ClientLayout = () => {
                             onMouseLeave={closeMegaMenuDelayed}
                         >
                             <div
+                                role="button"
+                                tabIndex={0}
+                                aria-expanded={megaMenuOpen}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMegaMenu(); }
+                                    else if (e.key === 'Escape') setMegaMenuOpen(false);
+                                }}
                                 style={{
                                     display: 'inline-flex', alignItems: 'center', gap: 8,
                                     height: 36, padding: '0 14px',
@@ -551,15 +516,13 @@ const ClientLayout = () => {
                         <>
                             <NavLink to="/orders" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Мои заказы</NavLink>
                             <NavLink to="/price-lists" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Прайс-листы</NavLink>
-                            <span onClick={() => { setMobileNavOpen(false); handlePriceListClick(); }} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)', cursor: 'pointer' }}>Заказать прайс-лист</span>
+                            <span onClick={() => { setMobileNavOpen(false); handlePriceListClick(); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMobileNavOpen(false); handlePriceListClick(); } }} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)', cursor: 'pointer' }}>Заказать прайс-лист</span>
                             <NavLink to="/profile" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Профиль</NavLink>
                             {user && isAdmin(user) && (
                                 <NavLink to="/admin" onClick={() => setMobileNavOpen(false)} style={{ padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)' }}>Админ-панель</NavLink>
                             )}
-                            <div style={{ padding: '10px 12px' }}>
-                                <ContextSwitcher />
-                            </div>
-                            <button onClick={() => { setMobileNavOpen(false); handleLogout(); }} style={{
+                            <ContextSwitcher padded />
+                            <button onClick={() => { setMobileNavOpen(false); void handleLogout(); }} style={{
                                 textAlign: 'left', padding: '10px 12px', fontSize: 'var(--text-md)', color: 'var(--ink-1)',
                                 background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)',
                             }}>Выйти</button>
@@ -595,7 +558,8 @@ const ClientLayout = () => {
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ duration: 0.2, ease: [0.25, 0, 0, 1] }}
                     >
-                        <Outlet />
+                        {/* key: перемонтируем страницу при смене контекста, чтобы запросы ушли с новым контекстом */}
+                        <Outlet key={contextKey} />
                     </motion.div>
                 </AnimatePresence>
             </main>

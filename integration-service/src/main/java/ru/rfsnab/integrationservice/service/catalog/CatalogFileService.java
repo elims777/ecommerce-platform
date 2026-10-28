@@ -79,7 +79,7 @@ public class CatalogFileService {
             }
             Files.createDirectories(archivePath.getParent());
             Files.copy(sourcePath, archivePath, StandardCopyOption.REPLACE_EXISTING);
-            log.info("Файл заархивирован: archive/{}/{}", sessionId, filename);
+            log.info("Файл заархивирован: {}", filename);
         } catch (IOException e) {
             log.warn("Не удалось заархивировать файл {}: {}", filename, e.getMessage());
         }
@@ -171,10 +171,10 @@ public class CatalogFileService {
                     Instant lastModified = Files.getLastModifiedTime(sessionDir).toInstant();
                     if (lastModified.isBefore(cutoff)) {
                         deleteDirectoryRecursively(sessionDir);
-                        log.info("Архив удалён (старше 14 дней): {}", sessionDir.getFileName());
+                        log.info("Архив удалён (старше 14 дней)");
                     }
                 } catch (IOException e) {
-                    log.warn("Не удалось удалить архивную папку {}: {}", sessionDir.getFileName(), e.getMessage());
+                    log.warn("Не удалось удалить архивную папку: {}", e.getMessage());
                 }
             });
         } catch (IOException e) {

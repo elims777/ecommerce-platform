@@ -29,7 +29,7 @@ const AdminSettingsPage = () => {
             messageApi.error('Не удалось сохранить настройки');
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['paymentSettings'] });
+            void queryClient.invalidateQueries({ queryKey: ['paymentSettings'] });
         },
     });
 

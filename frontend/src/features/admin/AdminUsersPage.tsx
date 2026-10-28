@@ -52,25 +52,25 @@ const AdminUsersPage = () => {
 
     const roleMutation = useMutation({
         mutationFn: ({ id, role }: { id: number; role: string }) => changeUserRole(id, role),
-        onSuccess: () => { messageApi.success('Роль обновлена'); queryClient.invalidateQueries({ queryKey: ['adminUsers'] }); },
+        onSuccess: () => { messageApi.success('Роль обновлена'); void queryClient.invalidateQueries({ queryKey: ['adminUsers'] }); },
         onError: () => messageApi.error('Ошибка смены роли'),
     });
 
     const statusMutation = useMutation({
         mutationFn: ({ id, active }: { id: number; active: boolean }) => changeUserStatus(id, active),
-        onSuccess: () => { messageApi.success('Статус обновлён'); queryClient.invalidateQueries({ queryKey: ['adminUsers'] }); },
+        onSuccess: () => { messageApi.success('Статус обновлён'); void queryClient.invalidateQueries({ queryKey: ['adminUsers'] }); },
         onError: () => messageApi.error('Ошибка смены статуса'),
     });
 
     const verifyMutation = useMutation({
         mutationFn: ({ id, managerEmail }: { id: number; managerEmail: string }) => verifyLegalEntity(id, managerEmail),
-        onSuccess: () => { messageApi.success('Верифицировано'); queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] }); },
+        onSuccess: () => { messageApi.success('Верифицировано'); void queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] }); },
         onError: () => messageApi.error('Ошибка верификации'),
     });
 
     const rejectMutation = useMutation({
         mutationFn: ({ id, managerEmail }: { id: number; managerEmail: string }) => rejectLegalEntity(id, managerEmail, ''),
-        onSuccess: () => { messageApi.success('Отклонено'); queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] }); },
+        onSuccess: () => { messageApi.success('Отклонено'); void queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] }); },
         onError: () => messageApi.error('Ошибка отклонения'),
     });
 
@@ -100,7 +100,7 @@ const AdminUsersPage = () => {
         mutationFn: (id: number) => deleteUser(id),
         onSuccess: () => {
             messageApi.success('Пользователь удалён');
-            queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
         },
         onError: (err) => messageApi.error(extractErrorMessage(err, 'Не удалось удалить пользователя')),
     });
@@ -109,7 +109,7 @@ const AdminUsersPage = () => {
         mutationFn: (id: number) => deleteLegalEntity(id),
         onSuccess: () => {
             messageApi.success('Юрлицо удалено');
-            queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminLegalEntities'] });
         },
         onError: (err) => messageApi.error(extractErrorMessage(err, 'Не удалось удалить юрлицо')),
     });
@@ -232,7 +232,7 @@ const AdminUsersPage = () => {
             {/* Фильтры */}
             <div className="rf-admin-filterbar">
                 <div className="rf-admin-search">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                    <svg aria-hidden="true" width="15" height="15" viewBox="0 0 15 15" fill="none">
                         <path d="M10 6.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Zm-.691 3.516a4.5 4.5 0 1 1 .707-.707l2.838 2.837a.5.5 0 0 1-.708.708L9.31 10.016Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
                     </svg>
                     <input
@@ -283,7 +283,7 @@ const AdminUsersPage = () => {
                     <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{source.length} записей</span>
                     <button className="rf-btn rf-btn-sm rf-btn-quiet"
                         onClick={() => tab === 'individuals' ? refetchUsers() : refetchLegal()}>
-                        <svg width="13" height="13" viewBox="0 0 15 15" fill="none" style={{ marginRight: 4 }}>
+                        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 15 15" fill="none" style={{ marginRight: 4 }}>
                             <path d="M1.85 7.5c0-2.835 2.21-5.15 4.98-5.38l-.37.37a.5.5 0 0 0 .707.708L8.854 1.51a.5.5 0 0 0 0-.707L7.167.116a.5.5 0 1 0-.707.707l.284.284C3.28 1.39.85 4.182.85 7.5c0 3.59 2.91 6.5 6.5 6.5s6.5-2.91 6.5-6.5a.5.5 0 0 0-1 0c0 3.038-2.462 5.5-5.5 5.5S1.85 10.538 1.85 7.5Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
                         </svg>
                         Обновить
@@ -377,7 +377,7 @@ const AdminUsersPage = () => {
                                                                     title="Удалить пользователя"
                                                                     onClick={() => confirmDeleteUser(record)}
                                                                 >
-                                                                    <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+                                                                    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 15 15" fill="none">
                                                                         <path d="M5.5 1a.5.5 0 0 0-.477.65l.486 1.55H3.5a.5.5 0 0 0 0 1H4l.706 8.353A1.5 1.5 0 0 0 6.2 14h2.6a1.5 1.5 0 0 0 1.494-1.447L11 4.2h.5a.5.5 0 0 0 0-1H9.49l.486-1.55A.5.5 0 0 0 9.5 1h-4Zm.654 2.2L5.84 2h3.32l-.314 1.2H6.154ZM5.005 4.2h4.99l-.7 8.27a.5.5 0 0 1-.5.43H6.2a.5.5 0 0 1-.5-.43L5.005 4.2Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
                                                                     </svg>
                                                                 </button>
@@ -480,7 +480,7 @@ const AdminUsersPage = () => {
                                                                 title="Удалить юрлицо"
                                                                 onClick={() => confirmDeleteLegalEntity(le)}
                                                             >
-                                                                <svg width="14" height="14" viewBox="0 0 15 15" fill="none">
+                                                                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 15 15" fill="none">
                                                                     <path d="M5.5 1a.5.5 0 0 0-.477.65l.486 1.55H3.5a.5.5 0 0 0 0 1H4l.706 8.353A1.5 1.5 0 0 0 6.2 14h2.6a1.5 1.5 0 0 0 1.494-1.447L11 4.2h.5a.5.5 0 0 0 0-1H9.49l.486-1.55A.5.5 0 0 0 9.5 1h-4Zm.654 2.2L5.84 2h3.32l-.314 1.2H6.154ZM5.005 4.2h4.99l-.7 8.27a.5.5 0 0 1-.5.43H6.2a.5.5 0 0 1-.5-.43L5.005 4.2Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"/>
                                                                 </svg>
                                                             </button>

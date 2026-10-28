@@ -42,8 +42,7 @@ public class LoggingAspect {
     @Before("controllerLayer()")
     public void logBeforeController(JoinPoint joinPoint){
         String methodName = joinPoint.getSignature().toShortString();
-        Object[] args = joinPoint.getArgs();
-        log.info(">>> Incoming request: {} with args: {}", methodName, args);
+        log.info(">>> Incoming request: {}", methodName);
     }
 
     /**
@@ -52,7 +51,7 @@ public class LoggingAspect {
     @AfterReturning(pointcut = "controllerLayer()", returning = "result")
     public void logAfterController(JoinPoint joinPoint, Object result){
         String methodName = joinPoint.getSignature().toShortString();
-        log.info("<<< Response from: {} with result type: {}", methodName, result);
+        log.info("<<< Response from: {}", methodName);
     }
 
     /**
@@ -70,9 +69,8 @@ public class LoggingAspect {
     @Around("serviceLayer()")
     public Object logAroundService(ProceedingJoinPoint joinPoint) throws Throwable{
         String methodName = joinPoint.getSignature().toShortString();
-        Object[] args = joinPoint.getArgs();
 
-        log.debug("==> Executing service: {} with args: {}", methodName, args);
+        log.debug("==> Executing service: {}", methodName);
 
         long startTime = System.currentTimeMillis();
 
@@ -94,8 +92,7 @@ public class LoggingAspect {
     @Before("repositoryLayer()")
     public void logBeforeRepository(JoinPoint joinPoint){
         String methodName = joinPoint.getSignature().toShortString();
-        Object[] args = joinPoint.getArgs();
-        log.debug("--- DB query: {} with params: {}", methodName, args);
+        log.debug("--- DB query: {}", methodName);
     }
 
     /**
@@ -119,17 +116,16 @@ public class LoggingAspect {
 
         Throwable exception = null;
         for(Object arg: args){
-            if(arg instanceof Throwable){
-                exception = (Throwable) arg;
+            if (arg instanceof Throwable throwable) {
+                exception = throwable;
                 break;
             }
         }
 
         if(exception !=null){
-            log.warn(">>> Handling exception in: {} - Exception type: {} - Message: {}",
+            log.warn(">>> Handling exception in: {} - Exception type: {}",
                     methodName,
-                    exception.getClass().getSimpleName(),
-                    exception.getMessage());
+                    exception.getClass().getSimpleName());
         }
 
         Object result = joinPoint.proceed();

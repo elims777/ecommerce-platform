@@ -61,7 +61,7 @@ const RegisterPage = () => {
             await register(request);
             reachGoal('register_success');
             messageApi.success('Регистрация прошла успешно! Проверьте почту для подтверждения аккаунта.');
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
         } catch (error) {
             const axiosError = error as AxiosError<{ message?: string; error?: string }>;
             const errorMessage =
@@ -82,7 +82,7 @@ const RegisterPage = () => {
             await registerLegal(request);
             reachGoal('register_success');
             messageApi.success('Заявка на регистрацию отправлена! Проверьте почту — ссылка для подтверждения.');
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
         } catch (error) {
             const axiosError = error as AxiosError<{ message?: string; error?: string }>;
             const errorMessage =
@@ -194,7 +194,7 @@ const RegisterPage = () => {
                         rel="noopener noreferrer"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--brand-navy)', fontWeight: 500, textDecoration: 'none' }}
                     >
-                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
                         </svg>
                         Инструкция по регистрации
@@ -216,13 +216,13 @@ const RegisterPage = () => {
                     {/* Переключатель */}
                     <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--r-4)', padding: 4, border: '1px solid var(--line-1)', marginBottom: 24 }}>
                         <button style={tabBtn(accountType === 'personal')} onClick={() => setAccountType('personal')}>
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>
                             </svg>
                             Физическое лицо
                         </button>
                         <button style={tabBtn(accountType === 'legal')} onClick={() => setAccountType('legal')}>
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="4" y="4" width="16" height="16" rx="1"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M9 16h6"/>
                             </svg>
                             Юридическое лицо
@@ -234,38 +234,38 @@ const RegisterPage = () => {
                         <Form<PersonalFormValues> form={personalForm} layout="vertical" onFinish={handlePersonalSubmit} autoComplete="off">
                             <div style={{ display: 'grid', gridTemplateColumns: twoColFields, gap: 12 }}>
                                 <div>
-                                    <label style={labelStyle}>Имя</label>
+                                    <label htmlFor="firstname" style={labelStyle}>Имя</label>
                                     <Form.Item name="firstname" noStyle rules={[{ required: true, message: 'Введите имя' }, { min: 2, message: 'Минимум 2 символа' }]}>
                                         <Input style={inputStyle} placeholder="Иван" />
                                     </Form.Item>
                                 </div>
                                 <div>
-                                    <label style={labelStyle}>Фамилия</label>
+                                    <label htmlFor="lastname" style={labelStyle}>Фамилия</label>
                                     <Form.Item name="lastname" noStyle rules={[{ required: true, message: 'Введите фамилию' }, { min: 2, message: 'Минимум 2 символа' }]}>
                                         <Input style={inputStyle} placeholder="Иванов" />
                                     </Form.Item>
                                 </div>
                             </div>
                             <div style={{ marginTop: 14 }}>
-                                <label style={labelStyle}>Телефон</label>
-                                <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\+?[0-9]{11}$/, message: 'Телефон должен содержать 11 цифр' }]}>
+                                <label htmlFor="phone" style={labelStyle}>Телефон</label>
+                                <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\+?\d{11}$/, message: 'Телефон должен содержать 11 цифр' }]}>
                                     <Input style={inputStyle} placeholder="+79001234567" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 14 }}>
-                                <label style={labelStyle}>E-mail</label>
+                                <label htmlFor="email" style={labelStyle}>E-mail</label>
                                 <Form.Item name="email" noStyle rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный формат email' }]}>
                                     <Input style={inputStyle} placeholder="ivan@company.ru" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 14 }}>
-                                <label style={labelStyle}>Пароль</label>
+                                <label htmlFor="password" style={labelStyle}>Пароль</label>
                                 <Form.Item name="password" noStyle rules={[{ required: true, message: 'Введите пароль' }, { min: 8, message: 'Минимум 8 символов' }]}>
                                     <Input.Password style={inputStyle} placeholder="Минимум 8 символов" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 14 }}>
-                                <label style={labelStyle}>Подтверждение пароля</label>
+                                <label htmlFor="confirmPassword" style={labelStyle}>Подтверждение пароля</label>
                                 <Form.Item name="confirmPassword" noStyle dependencies={['password']} rules={[
                                     { required: true, message: 'Подтвердите пароль' },
                                     ({ getFieldValue }) => ({ validator(_, value) { if (!value || getFieldValue('password') === value) return Promise.resolve(); return Promise.reject(new Error('Пароли не совпадают')); } }),
@@ -285,7 +285,7 @@ const RegisterPage = () => {
                         <Form<LegalFormValues> form={legalForm} layout="vertical" onFinish={handleLegalSubmit} autoComplete="off">
                             <div style={{ display: 'grid', gridTemplateColumns: twoColFields, gap: 12 }}>
                                 <div>
-                                    <label style={labelStyle}>ИНН</label>
+                                    <label htmlFor="inn" style={labelStyle}>ИНН</label>
                                     <Form.Item name="inn" noStyle rules={[
                                         { required: true, message: 'Введите ИНН' },
                                         { pattern: /^\d{10}$|^\d{12}$/, message: 'ИНН — 10 или 12 цифр' },
@@ -294,7 +294,7 @@ const RegisterPage = () => {
                                     </Form.Item>
                                 </div>
                                 <div>
-                                    <label style={labelStyle}>ОГРН</label>
+                                    <label htmlFor="ogrn" style={labelStyle}>ОГРН</label>
                                     <Form.Item name="ogrn" noStyle rules={[
                                         { required: true, message: 'Введите ОГРН' },
                                         { pattern: /^\d{13}$|^\d{15}$/, message: 'ОГРН — 13 или 15 цифр' },
@@ -304,19 +304,19 @@ const RegisterPage = () => {
                                 </div>
                             </div>
                             <div style={{ marginTop: 12 }}>
-                                <label style={labelStyle}>Полное название организации</label>
+                                <label htmlFor="fullName" style={labelStyle}>Полное название организации</label>
                                 <Form.Item name="fullName" noStyle rules={[{ required: true, message: 'Введите название' }]}>
                                     <Input style={inputStyle} placeholder='ООО "Ромашка"' />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 12 }}>
-                                <label style={labelStyle}>Директор (ФИО)</label>
+                                <label htmlFor="director" style={labelStyle}>Директор (ФИО)</label>
                                 <Form.Item name="director" noStyle rules={[{ required: true, message: 'Введите ФИО директора' }]}>
                                     <Input style={inputStyle} placeholder="Иванов Иван Иванович" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 12 }}>
-                                <label style={labelStyle}>Юридический адрес</label>
+                                <label htmlFor="legalCity" style={labelStyle}>Юридический адрес</label>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: 8 }}>
                                     <Form.Item name="legalCity" noStyle rules={[{ required: true, message: 'Город' }]}>
                                         <Input style={inputStyle} placeholder="Город" />
@@ -330,28 +330,28 @@ const RegisterPage = () => {
                                 </div>
                             </div>
                             <div style={{ marginTop: 12 }}>
-                                <label style={labelStyle}>Телефон</label>
+                                <label htmlFor="phone" style={labelStyle}>Телефон</label>
                                 <Form.Item name="phone" noStyle rules={[
                                     { required: true, message: 'Введите телефон' },
-                                    { pattern: /^\+?[0-9]{11}$/, message: 'Телефон должен содержать 11 цифр' },
+                                    { pattern: /^\+?\d{11}$/, message: 'Телефон должен содержать 11 цифр' },
                                 ]}>
                                     <Input style={inputStyle} placeholder="+79001234567" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 12 }}>
-                                <label style={labelStyle}>E-mail</label>
+                                <label htmlFor="email" style={labelStyle}>E-mail</label>
                                 <Form.Item name="email" noStyle rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный формат email' }]}>
                                     <Input style={inputStyle} placeholder="info@company.ru" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 12 }}>
-                                <label style={labelStyle}>Пароль</label>
+                                <label htmlFor="password" style={labelStyle}>Пароль</label>
                                 <Form.Item name="password" noStyle rules={[{ required: true, message: 'Введите пароль' }, { min: 8, message: 'Минимум 8 символов' }]}>
                                     <Input.Password style={inputStyle} placeholder="Минимум 8 символов" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 12 }}>
-                                <label style={labelStyle}>Подтверждение пароля</label>
+                                <label htmlFor="confirmPassword" style={labelStyle}>Подтверждение пароля</label>
                                 <Form.Item name="confirmPassword" noStyle dependencies={['password']} rules={[
                                     { required: true, message: 'Подтвердите пароль' },
                                     ({ getFieldValue }) => ({ validator(_, value) { if (!value || getFieldValue('password') === value) return Promise.resolve(); return Promise.reject(new Error('Пароли не совпадают')); } }),
@@ -385,7 +385,7 @@ const RegisterPage = () => {
                                 onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface)'; }}
                             >
-                                <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#FC3F1D" /><path d="M9.2 4.2v7.6h-1V8.4L6.3 12H5l2-3.8c-1-.3-1.6-.9-1.6-2.2 0-1.4 1-2.4 2.3-2.4z" fill="#fff" /></svg>
+                                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#FC3F1D" /><path d="M9.2 4.2v7.6h-1V8.4L6.3 12H5l2-3.8c-1-.3-1.6-.9-1.6-2.2 0-1.4 1-2.4 2.3-2.4z" fill="#fff" /></svg>
                                 Зарегистрироваться через Яндекс
                             </button>
                         </>

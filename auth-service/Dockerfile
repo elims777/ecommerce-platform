@@ -3,10 +3,9 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
 # Не запускаем от root
-RUN addgroup -S spring && adduser -S spring -G spring
-
 # Создаём папку для логов с правами для spring
-RUN mkdir -p /app/logs && chown spring:spring /app/logs
+RUN addgroup -S spring && adduser -S spring -G spring \
+    && mkdir -p /app/logs && chown spring:spring /app/logs
 
 USER spring:spring
 

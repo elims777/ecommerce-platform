@@ -142,25 +142,25 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                         <div style={{ padding: 20 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                                 <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
-                                    <label style={labelStyle}>Полное наименование</label>
+                                    <label htmlFor="fullName" style={labelStyle}>Полное наименование</label>
                                     <Form.Item name="fullName" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
                                         <Input style={inputStyle} />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 14 }}>
-                                    <label style={labelStyle}>Руководитель (ФИО)</label>
+                                    <label htmlFor="director" style={labelStyle}>Руководитель (ФИО)</label>
                                     <Form.Item name="director" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
                                         <Input style={inputStyle} placeholder="Иванов Иван Иванович" />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 14 }}>
-                                    <label style={labelStyle}>Должность руководителя</label>
+                                    <label htmlFor="directorTitle" style={labelStyle}>Должность руководителя</label>
                                     <Form.Item name="directorTitle" noStyle>
                                         <Input style={inputStyle} placeholder="Генеральный директор" />
                                     </Form.Item>
                                 </div>
                                 <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
-                                    <label style={labelStyle}>Действует на основании</label>
+                                    <label htmlFor="basisOfAuthority" style={labelStyle}>Действует на основании</label>
                                     <Form.Item name="basisOfAuthority" noStyle>
                                         <Input style={inputStyle} placeholder="Устава, доверенности №... от..." />
                                     </Form.Item>
@@ -177,31 +177,31 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                         <div style={{ padding: 20 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                                 <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
-                                    <label style={labelStyle}>Город</label>
+                                    <label htmlFor="legalCity" style={labelStyle}>Город</label>
                                     <Form.Item name="legalCity" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
                                         <Input style={inputStyle} />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 14 }}>
-                                    <label style={labelStyle}>Улица</label>
+                                    <label htmlFor="legalStreet" style={labelStyle}>Улица</label>
                                     <Form.Item name="legalStreet" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
                                         <Input style={inputStyle} />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 14 }}>
-                                    <label style={labelStyle}>Дом / корпус</label>
+                                    <label htmlFor="legalBuilding" style={labelStyle}>Дом / корпус</label>
                                     <Form.Item name="legalBuilding" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
                                         <Input style={inputStyle} />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 14 }}>
-                                    <label style={labelStyle}>Офис / помещение</label>
+                                    <label htmlFor="office" style={labelStyle}>Офис / помещение</label>
                                     <Form.Item name="office" noStyle>
                                         <Input style={inputStyle} placeholder="офис 101" />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 0 }}>
-                                    <label style={labelStyle}>Индекс</label>
+                                    <label htmlFor="legalPostalCode" style={labelStyle}>Индекс</label>
                                     <Form.Item name="legalPostalCode" noStyle>
                                         <Input style={inputStyle} placeholder="123456" />
                                     </Form.Item>
@@ -218,11 +218,11 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                         <div style={{ padding: 20 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                                 <div>
-                                    <label style={labelStyle}>Email</label>
-                                    <Input style={{ ...inputStyle, background: 'var(--surface-2)', color: 'var(--ink-3)' }} value={entity.email} disabled />
+                                    <label htmlFor="legal-email" style={labelStyle}>Email</label>
+                                    <Input id="legal-email" style={{ ...inputStyle, background: 'var(--surface-2)', color: 'var(--ink-3)' }} value={entity.email} disabled />
                                 </div>
                                 <div>
-                                    <label style={labelStyle}>Телефон</label>
+                                    <label htmlFor="phone" style={labelStyle}>Телефон</label>
                                     <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
                                         <Input style={inputStyle} placeholder="+79001234567" />
                                     </Form.Item>
@@ -310,8 +310,8 @@ const UnlinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResponse
         mutationFn: () => unlinkLegalEntity(legalEntity.id),
         onSuccess: () => {
             messageApi.success('Организация отвязана');
-            queryClient.invalidateQueries({ queryKey: ['link-status', userId] });
-            queryClient.invalidateQueries({ queryKey: ['legal-entity', legalEntity.id] });
+            void queryClient.invalidateQueries({ queryKey: ['link-status', userId] });
+            void queryClient.invalidateQueries({ queryKey: ['legal-entity', legalEntity.id] });
         },
         onError: () => { messageApi.error('Не удалось отвязать организацию'); },
     });
@@ -377,7 +377,7 @@ const UnlinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResponse
 };
 
 // ─── Блок "На проверке" с кнопкой повторной отправки ────────
-const ResendLinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResponse | undefined; userId: number }) => {
+const ResendLinkBlock = ({ fullName, inn, userId }: { fullName?: string; inn?: string; userId: number }) => {
     const { message: messageApi } = App.useApp();
     const queryClient = useQueryClient();
 
@@ -385,7 +385,7 @@ const ResendLinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResp
         mutationFn: resendLegalEntityLink,
         onSuccess: () => {
             messageApi.success('Письмо отправлено повторно на email организации');
-            queryClient.invalidateQueries({ queryKey: ['link-status', userId] });
+            void queryClient.invalidateQueries({ queryKey: ['link-status', userId] });
         },
         onError: () => {
             messageApi.error('Не удалось отправить письмо');
@@ -401,8 +401,8 @@ const ResendLinkBlock = ({ legalEntity, userId }: { legalEntity: LegalEntityResp
                 </span>
             </div>
             <div style={{ padding: 20 }}>
-                <Row label="Организация" value={legalEntity?.fullName} />
-                <Row label="ИНН" value={legalEntity?.inn} last />
+                <Row label="Организация" value={fullName} />
+                <Row label="ИНН" value={inn} last />
                 <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--line-1)', fontSize: 'var(--text-base)', color: 'var(--ink-3)', lineHeight: 1.5 }}>
                     На email организации отправлено письмо со ссылкой подтверждения. Если письмо не дошло — отправьте его повторно.
                 </div>
@@ -435,7 +435,8 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
     const { data: legalEntity, isLoading: legalLoading } = useQuery({
         queryKey: ['legal-entity', linkStatus?.legalEntityId],
         queryFn: () => getLegalEntity(linkStatus!.legalEntityId!),
-        enabled: !!linkStatus?.legalEntityId,
+        // PENDING-связь: GET юрлица закрыт (403), название и ИНН приходят в link-status
+        enabled: !!linkStatus?.legalEntityId && linkStatus.confirmed,
     });
 
     const linkMutation = useMutation({
@@ -444,7 +445,7 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
             messageApi.success('Заявка отправлена. На email организации придёт письмо для подтверждения.');
             setShowForm(false);
             setInn('');
-            queryClient.invalidateQueries({ queryKey: ['link-status', userId] });
+            void queryClient.invalidateQueries({ queryKey: ['link-status', userId] });
             await onRegistered();
         },
         onError: (e: { response?: { data?: { message?: string } } }) => {
@@ -484,8 +485,8 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
                             </div>
                             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                                 <div style={{ flex: '0 0 220px' }}>
-                                    <label style={labelStyle}>ИНН организации</label>
-                                    <Input
+                                    <label htmlFor="legal-inn" style={labelStyle}>ИНН организации</label>
+                                    <Input id="legal-inn"
                                         style={inputStyle}
                                         placeholder="1234567890"
                                         maxLength={12}
@@ -517,7 +518,7 @@ const OrganizationSection = ({ userId, onRegistered }: { userId: number; onRegis
     if (!linkStatus.confirmed || legalEntity?.verificationStatus !== 'VERIFIED') {
         return (
             <div style={sectionStyle}>
-                <ResendLinkBlock legalEntity={legalEntity} userId={userId} />
+                <ResendLinkBlock fullName={legalEntity?.fullName ?? linkStatus.fullName} inn={legalEntity?.inn ?? linkStatus.inn} userId={userId} />
             </div>
         );
     }
@@ -598,23 +599,23 @@ const B2CProfilePage = () => {
                     {editing ? (
                         <Form<UpdateProfileRequest> form={form} layout="vertical" onFinish={(v) => updateMutation.mutate(v)}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                                <div><label style={labelStyle}>Фамилия</label>
+                                <div><label htmlFor="lastname" style={labelStyle}>Фамилия</label>
                                     <Form.Item name="lastname" noStyle rules={[{ required: true, message: 'Введите фамилию' }, { min: 2, message: 'Минимум 2 символа' }]}>
                                         <Input style={inputStyle} placeholder="Фамилия" />
                                     </Form.Item>
                                 </div>
-                                <div><label style={labelStyle}>Имя</label>
+                                <div><label htmlFor="firstname" style={labelStyle}>Имя</label>
                                     <Form.Item name="firstname" noStyle rules={[{ required: true, message: 'Введите имя' }, { min: 2, message: 'Минимум 2 символа' }]}>
                                         <Input style={inputStyle} placeholder="Имя" />
                                     </Form.Item>
                                 </div>
-                                <div><label style={labelStyle}>Отчество</label>
+                                <div><label htmlFor="surname" style={labelStyle}>Отчество</label>
                                     <Form.Item name="surname" noStyle>
                                         <Input style={inputStyle} placeholder="Необязательно" />
                                     </Form.Item>
                                 </div>
-                                <div><label style={labelStyle}>Телефон</label>
-                                    <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\+?[0-9]{11}$/, message: '11 цифр' }]}>
+                                <div><label htmlFor="phone" style={labelStyle}>Телефон</label>
+                                    <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\+?\d{11}$/, message: '11 цифр' }]}>
                                         <Input style={inputStyle} placeholder="+79001234567" />
                                     </Form.Item>
                                 </div>

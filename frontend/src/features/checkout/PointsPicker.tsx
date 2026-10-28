@@ -70,7 +70,7 @@ const PointsPicker = ({ points, value, onChange, emptyHint }: PointsPickerProps)
                         role="button"
                         tabIndex={0}
                         onClick={() => onChange?.(p.id)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onChange?.(p.id); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onChange?.(p.id); } }}
                         style={{
                             padding: '8px 12px',
                             cursor: 'pointer',

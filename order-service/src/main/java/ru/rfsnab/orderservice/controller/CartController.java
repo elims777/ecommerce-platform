@@ -64,9 +64,10 @@ public class CartController {
             @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @Valid @RequestBody AddToCartRequest request) {
         Long userId = getCurrentUserId(authentication);
-        Cart cart = cartService.addItemToCart(userId, request.productId(), request.quantity());
+        CustomerType customerType = PriceSelector.parseCustomerType(clientType);
+        Cart cart = cartService.addItemToCart(userId, customerType, request.productId(), request.quantity());
         Map<Long, ProductDto> products = cartService.fetchProductsForCart(cart);
-        return ResponseEntity.ok(CartMapper.toDto(cart, products, PriceSelector.parseCustomerType(clientType)));
+        return ResponseEntity.ok(CartMapper.toDto(cart, products, customerType));
     }
 
     @PutMapping("/items/{productId}")
@@ -83,7 +84,7 @@ public class CartController {
             @PathVariable Long productId,
             @Valid @RequestBody UpdateCartItemRequest request) {
         Long userId = getCurrentUserId(authentication);
-        Cart cart = cartService.updateItemQuantity(userId, productId, request.quantity());
+        Cart cart = cartService.updateItemQuantity(userId, PriceSelector.parseCustomerType(clientType), productId, request.quantity());
         Map<Long, ProductDto> products = cartService.fetchProductsForCart(cart);
         return ResponseEntity.ok(CartMapper.toDto(cart, products, PriceSelector.parseCustomerType(clientType)));
     }
@@ -99,7 +100,7 @@ public class CartController {
             @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable Long productId) {
         Long userId = getCurrentUserId(authentication);
-        Cart cart = cartService.removeItem(userId, productId);
+        Cart cart = cartService.removeItem(userId, PriceSelector.parseCustomerType(clientType), productId);
         Map<Long, ProductDto> products = cartService.fetchProductsForCart(cart);
         return ResponseEntity.ok(CartMapper.toDto(cart, products, PriceSelector.parseCustomerType(clientType)));
     }
@@ -111,9 +112,11 @@ public class CartController {
             @ApiResponse(responseCode = "204", description = "Корзина очищена"),
             @ApiResponse(responseCode = "401", description = "Не авторизован")
     })
-    public ResponseEntity<Void> clearCart(Authentication authentication) {
+    public ResponseEntity<Void> clearCart(
+            Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType) {
         Long userId = getCurrentUserId(authentication);
-        cartService.clearCart(userId);
+        cartService.clearCart(userId, PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.noContent().build();
     }
 
@@ -124,9 +127,11 @@ public class CartController {
             @ApiResponse(responseCode = "204", description = "Корзина сохранена"),
             @ApiResponse(responseCode = "401", description = "Не авторизован")
     })
-    public ResponseEntity<Void> persistCart(Authentication authentication) {
+    public ResponseEntity<Void> persistCart(
+            Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType) {
         Long userId = getCurrentUserId(authentication);
-        cartService.saveCartToDB(userId);
+        cartService.saveCartToDB(userId, PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.noContent().build();
     }
 
@@ -137,7 +142,7 @@ public class CartController {
      * Вынесено для переиспользования в GET /cart.
      */
     private CartDto toCartDto(Long userId, CustomerType customerType) {
-        Cart cart = cartService.getCart(userId);
+        Cart cart = cartService.getCart(userId, customerType);
         if (cart.getItems().isEmpty()) {
             return CartMapper.emptyCartDto(userId);
         }

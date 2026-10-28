@@ -11,7 +11,6 @@ import ru.rfsnab.integrationservice.model.ExchangeSession;
 import ru.rfsnab.integrationservice.model.ExchangeSession.ExchangeType;
 import ru.rfsnab.integrationservice.model.ImportLog;
 import ru.rfsnab.integrationservice.model.ImportLog.ImportStatus;
-import ru.rfsnab.integrationservice.dto.ImportLogDto;
 import ru.rfsnab.integrationservice.repository.ImportLogRepository;
 import ru.rfsnab.integrationservice.service.auth.ExchangeAuthService;
 import ru.rfsnab.integrationservice.service.catalog.CatalogFileService;
@@ -24,7 +23,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -51,6 +49,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 public class CommerceMLExchangeController {
+
+    private static final String EXCHANGE_TYPE_ORDER_EXPORT = "ORDER_EXPORT";
+    private static final String RESULT_SUCCESS = "success";
 
     private final ExchangeAuthService authService;
     private final CatalogFileService catalogFileService;
@@ -95,7 +96,7 @@ public class CommerceMLExchangeController {
             case "file" -> handleFile(filename, sessionCookie, request);
             case "import" -> handleImport(exchangeType, sessionCookie);
             case "query" -> handleQuery(exchangeType, sessionCookie);
-            case "success" -> handleSuccess(sessionCookie, sess);
+            case RESULT_SUCCESS -> handleSuccess(sessionCookie, sess);
             default -> plainText("failure\nНеизвестный режим: " + mode);
         };
     }
@@ -149,7 +150,7 @@ public class CommerceMLExchangeController {
         }
 
         catalogFileService.saveFile(filename, sessionId, request.getInputStream());
-        return plainText("success");
+        return plainText(RESULT_SUCCESS);
     }
 
     /**
@@ -194,7 +195,7 @@ public class CommerceMLExchangeController {
             updateOrderExportSuccessLog(sessionCookie, count);
         }
         authService.completeSession(sessionCookie);
-        return plainText("success");
+        return plainText(RESULT_SUCCESS);
     }
 
     /** Сохраняет запись ORDER_EXPORT при mode=query (заказы выгружены 1С). */
@@ -202,7 +203,7 @@ public class CommerceMLExchangeController {
         try {
             LocalDateTime now = LocalDateTime.now();
             ImportLog logEntry = ImportLog.builder()
-                    .exchangeType("ORDER_EXPORT")
+                    .exchangeType(EXCHANGE_TYPE_ORDER_EXPORT)
                     .sessionId(sessionCookie)
                     .status(ImportStatus.PARTIAL)
                     .totalReceived(count)
@@ -226,7 +227,7 @@ public class CommerceMLExchangeController {
         try {
             LocalDateTime now = LocalDateTime.now();
             Optional<ImportLog> existing = importLogRepository
-                    .findFirstBySessionIdAndExchangeTypeOrderByCreatedAtDesc(sessionCookie, "ORDER_EXPORT");
+                    .findFirstBySessionIdAndExchangeTypeOrderByCreatedAtDesc(sessionCookie, EXCHANGE_TYPE_ORDER_EXPORT);
             if (existing.isPresent()) {
                 ImportLog entry = existing.get();
                 long durationMs = entry.getStartedAt() != null
@@ -239,7 +240,7 @@ public class CommerceMLExchangeController {
                 importLogRepository.save(entry);
             } else {
                 ImportLog logEntry = ImportLog.builder()
-                        .exchangeType("ORDER_EXPORT")
+                        .exchangeType(EXCHANGE_TYPE_ORDER_EXPORT)
                         .sessionId(sessionCookie)
                         .status(ImportStatus.SUCCESS)
                         .totalReceived(count)
@@ -253,13 +254,6 @@ public class CommerceMLExchangeController {
         } catch (Exception e) {
             log.error("Не удалось обновить ORDER_EXPORT success лог: {}", e.getMessage());
         }
-    }
-
-    /** Последние 20 записей лога обменов для admin-панели. */
-    @GetMapping(value = "/logs", produces = "application/json")
-    public List<ImportLogDto> getLogs() {
-        return importLogRepository.findTop20ByOrderByCreatedAtDesc()
-                .stream().map(ImportLogDto::from).toList();
     }
 
     // ===== Вспомогательные методы =====

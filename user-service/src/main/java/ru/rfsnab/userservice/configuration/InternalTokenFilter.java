@@ -20,7 +20,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
 /**
- * Проверяет X-Internal-Token на путях service-to-service (order-service).
+ * Проверяет X-Internal-Token на путях service-to-service (order-service, auth-service, notification-service).
  * Прочие пути пропускает без вмешательства — их обработает JwtAuthenticationFilter.
  * Валидный токен ставит ROLE_INTERNAL в SecurityContext; невалидный — просто не ставит,
  * 403 отдаст authorize-цепочка через hasRole('INTERNAL').
@@ -34,6 +34,14 @@ public class InternalTokenFilter extends OncePerRequestFilter {
             "/v1/users/*/profile-completeness",
             "/v1/users/account-by-email",
             "/v1/users/*/password",
+            "/v1/users/inactive",
+            "/v1/users/*/inactivity-email-sent",
+            "/v1/users/*/verify",
+            "/v1/users/authenticate",
+            "/v1/users/oauth2-login",
+            "/api/v1/legal-entities/authenticate",
+            "/api/v1/legal-entities/link-status/**",
+            "/api/v1/legal-entities/*",
             "/api/v1/legal-entities/*/password"
     );
 

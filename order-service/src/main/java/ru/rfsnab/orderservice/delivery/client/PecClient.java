@@ -45,6 +45,11 @@ import static ru.rfsnab.orderservice.delivery.client.CarrierJson.text;
 @Component
 public class PecClient implements CarrierClient {
 
+    private static final String FIELD_CARGO = "cargo";
+    private static final String FIELD_RECEIVER = "receiver";
+    private static final String FIELD_SENDER = "sender";
+    private static final String FIELD_TITLE = "title";
+
     private static final String BRANCHES_PATH = "/api/v1/branches/all/";
     private static final String STATUS_PATH = "/api/v1/cargos/status/";
     private static final String LIST_PATH = "/api/v1/cargos/listallorderbylogin/";
@@ -157,19 +162,19 @@ public class PecClient implements CarrierClient {
         listed.forEach((code, item) -> {
             JsonNode node = statuses.getOrDefault(code, MissingNode.getInstance());
             JsonNode info = node.path("info");
-            Boolean fromAddress = bool(item.path("sender"), "isIntake");
-            Boolean toAddress = bool(item.path("receiver"), "isDelivery");
-            JsonNode senderParty = item.path("sender").path("counterpart");
-            JsonNode receiverParty = item.path("receiver").path("counterpart");
+            Boolean fromAddress = bool(item.path(FIELD_SENDER), "isIntake");
+            Boolean toAddress = bool(item.path(FIELD_RECEIVER), "isDelivery");
+            JsonNode senderParty = item.path(FIELD_SENDER).path("counterpart");
+            JsonNode receiverParty = item.path(FIELD_RECEIVER).path("counterpart");
             result.add(new JournalItem(code,
-                    firstNonNull(text(node.path("sender"), "sender"), text(senderParty, "name")),
+                    firstNonNull(text(node.path(FIELD_SENDER), FIELD_SENDER), text(senderParty, "name")),
                     text(senderParty.path("legalEntity"), "inn"),
-                    firstNonNull(text(node.path("receiver"), "receiver"), text(receiverParty, "name")),
+                    firstNonNull(text(node.path(FIELD_RECEIVER), FIELD_RECEIVER), text(receiverParty, "name")),
                     text(receiverParty.path("legalEntity"), "inn"),
                     cityFrom(node), cityTo(node),
                     instant(info, "sendingDateTime", "takeOnStockDateTime"),
                     instant(info, "arrivalPlanDateTime", "deliveryPlanDate"),
-                    firstNonNull(text(node.path("cargo"), "orderNumber"), text(item, "orderNumber")),
+                    firstNonNull(text(node.path(FIELD_CARGO), "orderNumber"), text(item, "orderNumber")),
                     text(info, "cargoStatus") == null ? null : toStatus(node, fromAddress, toAddress),
                     toCargo(node, fromAddress, toAddress)));
         });
@@ -186,7 +191,7 @@ public class PecClient implements CarrierClient {
                 continue;
             }
             for (JsonNode cargo : cargosOf(body)) {
-                String code = text(cargo.path("cargo"), "code");
+                String code = text(cargo.path(FIELD_CARGO), "code");
                 if (code != null && waybills.contains(code)) {
                     result.put(code, cargo);
                 }
@@ -227,7 +232,7 @@ public class PecClient implements CarrierClient {
         if (error.path("status").asInt(0) == NOT_FOUND_STATUS) {
             return true;
         }
-        throw new CarrierApiException("ПЭК: " + text(error, "title", "message"));
+        throw new CarrierApiException("ПЭК: " + text(error, FIELD_TITLE, "message"));
     }
 
     /** Массив cargos; ответ без него — ошибка, а не «ничего не найдено». */
@@ -255,19 +260,25 @@ public class PecClient implements CarrierClient {
      */
     private static ShipmentCargo toCargo(JsonNode cargo, Boolean fromOverride, Boolean toOverride) {
         JsonNode info = cargo.path("info");
-        JsonNode goods = cargo.path("cargo");
+        JsonNode goods = cargo.path(FIELD_CARGO);
         JsonNode services = cargo.path("services");
         BigDecimal debt = decimal(services, "debt");
-        JsonNode sender = cargo.path("sender");
+        JsonNode sender = cargo.path(FIELD_SENDER);
         JsonNode barcodes = goods.get("positionBarCodes");
         List<ShipmentPackage> packages = barcodes == null || !barcodes.isArray() ? null : new ArrayList<>();
         if (packages != null) {
             barcodes.forEach(barcode -> packages.add(new ShipmentPackage(barcode.asText(), null, null, null, null)));
         }
+        Boolean fromAddress = fromOverride;
+        if (fromAddress == null && sender.isObject()) {
+            fromAddress = text(sender, "intakeAddress") != null;
+        }
+        Boolean toAddress = toOverride;
+        if (toAddress == null && text(info, "deliveryPlanDate") != null) {
+            toAddress = Boolean.TRUE;
+        }
         return new ShipmentCargo(decimal(goods, "weight"), decimal(goods, "volume"), integer(goods, "amount"),
-                decimal(services, "sum"), debt == null ? null : debt.signum() == 0,
-                fromOverride != null ? fromOverride : sender.isObject() ? text(sender, "intakeAddress") != null : null,
-                toOverride != null ? toOverride : text(info, "deliveryPlanDate") != null ? Boolean.TRUE : null,
+                decimal(services, "sum"), debt == null ? null : debt.signum() == 0, fromAddress, toAddress,
                 instant(info, "receivedByClientDateTime", "giveOutDateTime"), null, packages, payersOf(services));
     }
 
@@ -294,21 +305,21 @@ public class PecClient implements CarrierClient {
     }
 
     private static String cityFrom(JsonNode cargo) {
-        return text(cargo.path("sender").path("branchInfo"), "city");
+        return text(cargo.path(FIELD_SENDER).path("branchInfo"), "city");
     }
 
     private static String cityTo(JsonNode cargo) {
-        return text(cargo.path("receiver").path("branch"), "city");
+        return text(cargo.path(FIELD_RECEIVER).path("branch"), "city");
     }
 
     /** Город подразделения из branch.cities по cityId; если не нашёлся — название филиала. */
     private static String cityOf(JsonNode branch, String cityId) {
         for (JsonNode city : branch.path("cities")) {
             if (cityId != null && cityId.equals(text(city, "cityId"))) {
-                return text(city, "title");
+                return text(city, FIELD_TITLE);
             }
         }
-        return text(branch, "title");
+        return text(branch, FIELD_TITLE);
     }
 
     private static TerminalData toTerminal(JsonNode warehouse, String city) {

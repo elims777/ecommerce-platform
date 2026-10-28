@@ -115,6 +115,28 @@ class EmailServiceTest {
         }
 
         @Test
+        @DisplayName("данные заказчика попадают в модель письма клиенту")
+        void sendOrderCreatedEmail_PutsCustomerData() {
+            OrderEvent base = createOrderEvent();
+            OrderEvent event = new OrderEvent(
+                    base.eventType(), base.orderId(), base.orderNumber(), base.userId(), base.status(),
+                    base.totalAmount(), base.customerEmail(), base.customerName(), base.customerPhone(),
+                    base.timestamp(), base.items(), base.deliveryMethod(), base.paymentMethod(), base.comment(),
+                    base.deliveryAddress(), "B2B", "ООО Ромашка", "1234567890",
+                    null, null, null, null, null, null, null, null);
+            ArgumentCaptor<Context> captor = ArgumentCaptor.forClass(Context.class);
+
+            emailService.sendOrderCreatedEmail(event);
+
+            verify(templateEngine).process(eq("mail/order-created"), captor.capture());
+            assertThat(captor.getValue().getVariable("customerName")).isEqualTo("Иванов Иван");
+            assertThat(captor.getValue().getVariable("customerPhone")).isEqualTo("+79001234567");
+            assertThat(captor.getValue().getVariable("customerEmail")).isEqualTo("customer@example.com");
+            assertThat(captor.getValue().getVariable("companyName")).isEqualTo("ООО Ромашка");
+            assertThat(captor.getValue().getVariable("inn")).isEqualTo("1234567890");
+        }
+
+        @Test
         @DisplayName("доставка через ТК — название ТК в модели")
         void sendOrderCreatedEmail_CarrierAddress_PutsCarrierName() {
             OrderEvent base = createOrderEvent();

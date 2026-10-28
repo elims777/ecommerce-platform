@@ -2,6 +2,7 @@ package ru.rfsnab.productservice.service;
 
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -48,8 +49,8 @@ public class VideoEmbedResolver {
 
         Matcher vk = VK.matcher(videoUrl);
         if (vk.find()) {
-            String oid = vk.group(1) != null ? vk.group(1) : vk.group(3);
-            String id = vk.group(2) != null ? vk.group(2) : vk.group(4);
+            String oid = Objects.requireNonNullElse(vk.group(1), vk.group(3));
+            String id = Objects.requireNonNullElse(vk.group(2), vk.group(4));
             return "https://vk.com/video_ext.php?oid=" + oid + "&id=" + id;
         }
 

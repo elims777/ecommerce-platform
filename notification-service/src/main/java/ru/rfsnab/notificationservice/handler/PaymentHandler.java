@@ -45,7 +45,7 @@ public class PaymentHandler implements NotificationHandler {
                 default -> log.warn("Unhandled payment status in notification: {}", event.status());
             }
         } catch (Exception e) {
-            log.error("Failed to handle payment event: {}", eventJson, e);
+            log.error("Failed to handle payment event", e);
         }
     }
 }

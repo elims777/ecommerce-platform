@@ -17,17 +17,17 @@ import { reachGoal } from '@/lib/metrika';
 
 // ── Icons ────────────────────────────────────────────────────
 const SearchIcon = () => (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
     </svg>
 );
 const ChevRight = () => (
-    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="m9 18 6-6-6-6"/>
     </svg>
 );
 const XIcon = () => (
-    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M18 6 6 18M6 6l12 12"/>
     </svg>
 );
@@ -103,7 +103,8 @@ const CatalogPage = () => {
         if (idx <= 0 || idx === raw.length - 1) continue;
         const name = raw.slice(0, idx);
         const value = raw.slice(idx + 1);
-        (selectedFilters[name] ??= []).push(value);
+        selectedFilters[name] ??= [];
+        selectedFilters[name].push(value);
     }
 
     const { data: categoryTree = [], isLoading: categoriesLoading } = useQuery({
@@ -145,21 +146,16 @@ const CatalogPage = () => {
     });
 
     const handlePriceListClick = () => {
-        if (!isAuthenticated) { navigate('/login'); return; }
+        if (!isAuthenticated) { void navigate('/login'); return; }
         priceListMutation.mutate();
     };
 
     const breadcrumbItems = categoryId ? buildBreadcrumb(categoryTree, categoryId) : [];
     const currentCategory = categoryId ? findCategoryInTree(categoryTree, categoryId) : null;
-    const pageTitle = saleOnly
-        ? 'Акции'
-        : categoryId
-            ? (searchQuery
-                ? `${currentCategory?.name ?? 'Товары'}: «${searchQuery}»`
-                : (currentCategory?.name ?? 'Товары'))
-            : searchQuery
-                ? `Результаты: «${searchQuery}»`
-                : 'Все товары';
+    let pageTitle = 'Все товары';
+    if (saleOnly) pageTitle = 'Акции';
+    else if (categoryId) pageTitle = searchQuery ? `${currentCategory?.name ?? 'Товары'}: «${searchQuery}»` : (currentCategory?.name ?? 'Товары');
+    else if (searchQuery) pageTitle = `Результаты: «${searchQuery}»`;
 
     const handleCategorySelect = (selectedKeys: React.Key[]) => {
         const newParams = new URLSearchParams();
@@ -230,7 +226,7 @@ const CatalogPage = () => {
     };
 
     const handleAddToCart = async (productId: number) => {
-        if (!isAuthenticated) { navigate('/login'); return; }
+        if (!isAuthenticated) { void navigate('/login'); return; }
         try {
             await addItem(productId, 1);
             messageApi.success('Товар добавлен в корзину');
@@ -259,14 +255,14 @@ const CatalogPage = () => {
             <meta name="description" content={`${pageTitle} — каталог РФснаб: комплексное снабжение предприятий.`} />
             {/* Breadcrumbs */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--ink-3)', marginBottom: 12, flexWrap: 'wrap' }}>
-                <span onClick={handleClearFilters} style={{ cursor: 'pointer' }}>Главная</span>
+                <span onClick={handleClearFilters} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClearFilters(); } }} style={{ cursor: 'pointer' }}>Главная</span>
                 <ChevRight />
-                <span onClick={handleClearFilters} style={{ cursor: 'pointer' }}>Каталог</span>
+                <span onClick={handleClearFilters} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClearFilters(); } }} style={{ cursor: 'pointer' }}>Каталог</span>
                 {breadcrumbItems.map((cat, i) => (
                     <span key={cat.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                         <ChevRight />
                         <span
-                            onClick={() => { const p = new URLSearchParams(); p.set('category', String(cat.id)); setSearchParams(p); }}
+                            onClick={() => { const p = new URLSearchParams(); p.set('category', String(cat.id)); setSearchParams(p); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const p = new URLSearchParams(); p.set('category', String(cat.id)); setSearchParams(p); } }}
                             style={{ cursor: 'pointer', color: i === breadcrumbItems.length - 1 ? 'var(--ink-1)' : undefined, fontWeight: i === breadcrumbItems.length - 1 ? 500 : 400 }}
                         >
                             {cat.name}
@@ -393,7 +389,7 @@ const CatalogPage = () => {
                             {categoryId && (
                                 <div style={{ padding: '12px 0 0' }}>
                                     <span
-                                        onClick={() => { handleClearFilters(); setCategoriesDrawerOpen(false); }}
+                                        onClick={() => { handleClearFilters(); setCategoriesDrawerOpen(false); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClearFilters(); setCategoriesDrawerOpen(false); } }}
                                         style={{ fontSize: 12.5, color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer' }}
                                     >
                                         Показать все товары
@@ -497,7 +493,7 @@ const CatalogPage = () => {
                                 </span>
                             )}
                             <span
-                                onClick={handleClearFilters}
+                                onClick={handleClearFilters} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClearFilters(); } }}
                                 style={{ color: 'var(--brand-red)', fontWeight: 500, marginLeft: 6, cursor: 'pointer', fontSize: 13 }}
                             >
                                 Сбросить все

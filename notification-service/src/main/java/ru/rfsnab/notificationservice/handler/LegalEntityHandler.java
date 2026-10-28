@@ -69,7 +69,7 @@ public class LegalEntityHandler implements NotificationHandler {
                 default -> log.warn("Неизвестный тип события юрлица: {}", event.eventType());
             }
         } catch (Exception e) {
-            log.error("Ошибка обработки события юрлица: {}", eventJson, e);
+            log.error("Ошибка обработки события юрлица", e);
         }
     }
 }

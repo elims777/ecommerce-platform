@@ -48,9 +48,7 @@ public class UserAddressService {
         }
 
         UserAddress address = UserAddressMapper.mapToEntity(request, userId);
-        UserAddress saved = userAddressRepository.save(address);
-
-        return saved;
+        return userAddressRepository.save(address);
     }
 
     /**

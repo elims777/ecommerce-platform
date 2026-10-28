@@ -58,6 +58,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class OrderService {
 
+    private static final String ORDER_NOT_FOUND = "Заказ не найден: ";
+    private static final String B2B_ORDER_NUMBER_SEED_PREFIX = "B2B:";
+
     private final OrderRepository orderRepository;
     private final CartService cartService;
     private final WarehousePointService warehousePointService;
@@ -154,10 +157,15 @@ public class OrderService {
      */
     @Transactional
     public Order createOrder(Long userId, String customerEmail, String clientType, CreateOrderRequest request) {
-        userServiceClient.requireCompleteProfile(userId);
+        // Для B2B userId — id юрлица, профиля пользователя нет
+        if (PriceSelector.parseCustomerType(clientType) != CustomerType.B2B) {
+            userServiceClient.requireCompleteProfile(userId);
+        }
+
+        CustomerType customerType = PriceSelector.parseCustomerType(clientType);
 
         // 1. Получаем корзину
-        Cart cart = cartService.getCart(userId);
+        Cart cart = cartService.getCart(userId, customerType);
         if (cart.getItems().isEmpty()) {
             throw new CartEmptyException("Корзина пуста");
         }
@@ -170,7 +178,7 @@ public class OrderService {
         // 3. Создаём заказ — базовые поля через маппер
         Order order = OrderMapper.toEntity(userId, customerEmail, clientType, request);
         applyCarrierSnapshot(order, delivery);
-        order.setOrderNumber(generateOrderNumber(userId));
+        order.setOrderNumber(generateOrderNumber(userId, customerType));
 
         // Снапшот имени и телефона заказчика
         if (request.customerName() != null) order.setCustomerName(request.customerName());
@@ -194,7 +202,7 @@ public class OrderService {
         log.info("Заказ создан: {} для пользователя {}", order.getOrderNumber(), userId);
 
         // 5. Очищаем корзину
-        cartService.clearCart(userId);
+        cartService.clearCart(userId, customerType);
 
         // 6. Kafka event — в 1С заказ уйдёт только после confirmOrder
         kafkaProducer.sendOrderCreated(order);
@@ -207,8 +215,8 @@ public class OrderService {
      * Только в этот момент заказ с полными данными отправляется в 1С.
      */
     @Transactional
-    public Order confirmOrder(UUID orderId, Long userId) {
-        Order order = getOrderAndValidateOwner(orderId, userId);
+    public Order confirmOrder(UUID orderId, Long userId, CustomerType customerType) {
+        Order order = getOrderAndValidateOwner(orderId, userId, customerType);
 
         validatePaymentMethodAvailable(order);
 
@@ -244,8 +252,8 @@ public class OrderService {
      * Можно изменить: items, адрес, способ доставки, способ оплаты, комментарий.
      */
     @Transactional
-    public Order updateOrder(UUID orderId, Long userId, UpdateOrderRequest request) {
-        Order order = getOrderAndValidateOwner(orderId, userId);
+    public Order updateOrder(UUID orderId, Long userId, CustomerType customerType, UpdateOrderRequest request) {
+        Order order = getOrderAndValidateOwner(orderId, userId, customerType);
 
         if (order.getStatus() != OrderStatus.CREATED && order.getStatus() != OrderStatus.PROCESSING) {
             throw new InvalidOrderStateException(
@@ -318,8 +326,8 @@ public class OrderService {
      * ошибку с указанием доступного количества.
      */
     @Transactional
-    public Order repeatOrder(UUID orderId, Long userId, String customerEmail) {
-        Order sourceOrder = getOrderAndValidateOwner(orderId, userId);
+    public Order repeatOrder(UUID orderId, Long userId, CustomerType customerType, String customerEmail) {
+        Order sourceOrder = getOrderAndValidateOwner(orderId, userId, customerType);
 
         // Получаем данные о товарах
         Set<Long> productIds = sourceOrder.getItems().stream()
@@ -333,7 +341,7 @@ public class OrderService {
         // Создаём новый заказ — копируем параметры доставки и оплаты
         Order newOrder = Order.builder()
                 .userId(userId)
-                .orderNumber(generateOrderNumber(userId))
+                .orderNumber(generateOrderNumber(userId, customerType))
                 .status(OrderStatus.CREATED)
                 .paymentMethod(sourceOrder.getPaymentMethod())
                 .deliveryMethod(sourceOrder.getDeliveryMethod())
@@ -372,8 +380,6 @@ public class OrderService {
 
         // Добавляем items с актуальными ценами
         BigDecimal totalAmount = BigDecimal.ZERO;
-
-        CustomerType customerType = newOrder.getCustomerType();
 
         for (OrderItem sourceItem : sourceOrder.getItems()) {
             ProductDto product = products.get(sourceItem.getProductId());
@@ -414,17 +420,16 @@ public class OrderService {
      * Получение заказа по ID с проверкой владельца.
      */
     @Transactional(readOnly = true)
-    public Order getOrderByIdAndUser(UUID orderId, Long userId) {
-        return getOrderAndValidateOwner(orderId, userId);
+    public Order getOrderByIdAndUser(UUID orderId, Long userId, CustomerType customerType) {
+        return getOrderAndValidateOwner(orderId, userId, customerType);
     }
 
     /**
      * Получение заказа по ID (без проверки владельца — для внутренних вызовов).
      */
-    @Transactional(readOnly = true)
     public Order getOrder(UUID orderId) {
         return orderRepository.findWithItemsById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Заказ не найден: " + orderId));
+                .orElseThrow(() -> new OrderNotFoundException(ORDER_NOT_FOUND + orderId));
     }
 
     /**
@@ -433,15 +438,15 @@ public class OrderService {
     @Transactional(readOnly = true)
     public Order getOrderByNumber(String orderNumber) {
         return orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new OrderNotFoundException("Заказ не найден: " + orderNumber));
+                .orElseThrow(() -> new OrderNotFoundException(ORDER_NOT_FOUND + orderNumber));
     }
 
     /**
      * Получение заказов пользователя с пагинацией.
      */
     @Transactional(readOnly = true)
-    public Page<Order> getUserOrders(Long userId, Pageable pageable) {
-        return orderRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+    public Page<Order> getUserOrders(Long userId, CustomerType customerType, Pageable pageable) {
+        return orderRepository.findByUserIdAndCustomerTypeOrderByCreatedAtDesc(userId, customerType, pageable);
     }
 
     /**
@@ -462,7 +467,8 @@ public class OrderService {
             return orderRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
         }
         if (userId != null) {
-            return orderRepository.findByUserId(userId, pageable);
+            // userId здесь — id пользователя (B2C); у B2B userId = id юрлица, числа могут совпасть
+            return orderRepository.findByUserIdAndCustomerTypeOrderByCreatedAtDesc(userId, CustomerType.B2C, pageable);
         }
         return orderRepository.findAllByOrderByCreatedAtDesc(pageable);
     }
@@ -484,12 +490,12 @@ public class OrderService {
     }
 
     /**
-     * Подсчёт активных (не финальных) заказов по userId.
+     * Подсчёт активных (не финальных) B2C-заказов по userId.
      * Используется при удалении пользователя — блокирует удаление, если есть незавершённые заказы.
      */
     @Transactional(readOnly = true)
     public long countActiveByUserId(Long userId) {
-        return orderRepository.countByUserIdAndStatusNotIn(userId, OrderStatus.finalStatuses());
+        return orderRepository.countByUserIdAndCustomerTypeAndStatusNotIn(userId, CustomerType.B2C, OrderStatus.finalStatuses());
     }
 
     /**
@@ -506,8 +512,8 @@ public class OrderService {
      * B2B: вызывается после INVOICE_SENT когда менеджер выбирает предоплату.
      */
     @Transactional
-    public Order initiatePayment(UUID orderId, Long userId) {
-        Order order = getOrderAndValidateOwner(orderId, userId);
+    public Order initiatePayment(UUID orderId, Long userId, CustomerType customerType) {
+        Order order = getOrderAndValidateOwner(orderId, userId, customerType);
         changeStatus(order, OrderStatus.PENDING_PAYMENT);
         order = orderRepository.save(order);
 
@@ -585,8 +591,8 @@ public class OrderService {
      * Отмена заказа пользователем. Возможна только до статуса SHIPPED.
      */
     @Transactional
-    public Order cancelOrder(UUID orderId, Long userId) {
-        Order order = getOrderAndValidateOwner(orderId, userId);
+    public Order cancelOrder(UUID orderId, Long userId, CustomerType customerType) {
+        Order order = getOrderAndValidateOwner(orderId, userId, customerType);
 
         if (!CANCELLABLE_STATUSES.contains(order.getStatus())) {
             throw new InvalidOrderStateException(
@@ -603,8 +609,8 @@ public class OrderService {
     }
 
     @Transactional
-    public PaymentInitiationResponse pay(UUID orderId, Long userId) {
-        Order order = getOrderAndValidateOwner(orderId, userId);
+    public PaymentInitiationResponse pay(UUID orderId, Long userId, CustomerType customerType) {
+        Order order = getOrderAndValidateOwner(orderId, userId, customerType);
         validatePayable(order);
 
         return switch (order.getPaymentMethod()) {
@@ -615,8 +621,8 @@ public class OrderService {
         };
     }
 
-    public String getPaymentStatus(UUID orderId, Long userId) {
-        getOrderByIdAndUser(orderId, userId);
+    public String getPaymentStatus(UUID orderId, Long userId, CustomerType customerType) {
+        getOrderAndValidateOwner(orderId, userId, customerType);
         var response = paymentServiceClient.getPaymentStatus(orderId);
         return response.status();
     }
@@ -910,7 +916,7 @@ public class OrderService {
         for (CartItem item : items) {
             ProductDto product = products.get(item.getProductId());
 
-            if (product == null || !product.isActive()) {
+            if (product == null || !Boolean.TRUE.equals(product.isActive())) {
                 throw new ProductNotFoundException(
                         "Товар недоступен: " + item.getProductId());
             }
@@ -924,7 +930,7 @@ public class OrderService {
         for (OrderItemDto item : items) {
             ProductDto product = products.get(item.productId());
 
-            if (product == null || !product.isActive()) {
+            if (product == null || !Boolean.TRUE.equals(product.isActive())) {
                 throw new ProductNotFoundException(
                         "Товар недоступен: " + item.productId());
             }
@@ -941,7 +947,7 @@ public class OrderService {
         for (OrderItem item : items) {
             ProductDto product = products.get(item.getProductId());
 
-            if (product == null || !product.isActive()) {
+            if (product == null || !Boolean.TRUE.equals(product.isActive())) {
                 unavailableItems.add(
                         String.format("Товар '%s' (ID: %d) больше недоступен",
                                 item.getProductName(), item.getProductId()));
@@ -978,10 +984,12 @@ public class OrderService {
      * Генерация номера заказа.
      * Формат: {UUID-prefix}-{порядковый номер клиента}
      */
-    private String generateOrderNumber(Long userId) {
-        String prefix = UUID.nameUUIDFromBytes(userId.toString().getBytes())
+    private String generateOrderNumber(Long userId, CustomerType customerType) {
+        // B2C сохраняет прежний сид; B2B с тем же числовым id получает другой префикс, иначе номера коллизят
+        String seed = customerType == CustomerType.B2B ? B2B_ORDER_NUMBER_SEED_PREFIX + userId : userId.toString();
+        String prefix = UUID.nameUUIDFromBytes(seed.getBytes())
                 .toString().substring(0, 8).toUpperCase();
-        long orderCount = orderRepository.countByUserId(userId) + 1;
+        long orderCount = orderRepository.countByUserIdAndCustomerType(userId, customerType) + 1;
         return prefix + "-" + String.format("%05d", orderCount);
     }
 
@@ -1005,12 +1013,12 @@ public class OrderService {
     /**
      * Получение заказа с проверкой владельца.
      */
-    private Order getOrderAndValidateOwner(UUID orderId, Long userId) {
+    private Order getOrderAndValidateOwner(UUID orderId, Long userId, CustomerType customerType) {
         Order order = orderRepository.findWithItemsById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Заказ не найден: " + orderId));
+                .orElseThrow(() -> new OrderNotFoundException(ORDER_NOT_FOUND + orderId));
 
-        if (!order.getUserId().equals(userId)) {
-            throw new InvalidOrderStateException("Нет доступа к заказу: " + orderId);
+        if (!order.getUserId().equals(userId) || order.getCustomerType() != customerType) {
+            throw new OrderNotFoundException(ORDER_NOT_FOUND + orderId);
         }
 
         return order;

@@ -129,7 +129,7 @@ class CatalogImportServiceTest extends BaseIntegrationTest {
             copyTestXml("import.xml");
 
             // product-service замокан но не настроен → chunk'и вернут ошибку
-            String result = catalogImportService.processImport(tempExchangeDir, "test-session-4");
+            catalogImportService.processImport(tempExchangeDir, "test-session-4");
 
             // Ожидаем failure или success зависит от того как обработается ошибка WebClient
             // Главное — лог записан и нет NPE/исключений

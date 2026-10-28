@@ -11,6 +11,8 @@ const apiClient = axios.create({
     },
 });
 
+let refreshPromise: Promise<string> | null = null;
+
 // Request interceptor — подставляет JWT токен в каждый запрос
 apiClient.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
@@ -37,44 +39,55 @@ apiClient.interceptors.response.use(
             error.response?.status === 401 &&
             !originalRequest._retry &&
             !originalRequest.url?.includes('/auth/refresh') &&
-            !originalRequest.url?.includes('/auth/login')
+            !originalRequest.url?.includes('/auth/login') &&
+            !originalRequest.url?.includes('/auth/oauth2/exchange')
         ) {
             originalRequest._retry = true;
 
+            // Параллельный 401 пришёл уже после refresh соседнего запроса — токен свежий, просто повторяем
+            const currentToken = localStorage.getItem('accessToken');
+            if (currentToken && originalRequest.headers.Authorization !== `Bearer ${currentToken}`) {
+                originalRequest.headers.Authorization = `Bearer ${currentToken}`;
+                return apiClient(originalRequest);
+            }
+
             const refreshToken = localStorage.getItem('refreshToken');
             if (!refreshToken) {
-                return Promise.reject(error);
+                throw error;
             }
 
             try {
-                const { data } = await axios.post(
-                    `${API_BASE_URL}/v1/auth/refresh`,
-                    null,
-                    {
-                        params: { refreshToken },
-                        headers: { 'Accept': 'application/json' },
-                    },
-                );
-
-                const newAccessToken = data.access_token || data.accessToken;
-                const newRefreshToken = data.refresh_token || data.refreshToken;
-
-                if (newAccessToken) {
-                    localStorage.setItem('accessToken', newAccessToken);
-                }
-                if (newRefreshToken) {
-                    localStorage.setItem('refreshToken', newRefreshToken);
-                }
+                // single-flight: параллельные 401 ждут один общий refresh
+                refreshPromise ??= axios
+                    .post(
+                        `${API_BASE_URL}/v1/auth/refresh`,
+                        { refreshToken },
+                        { headers: { 'Accept': 'application/json' } },
+                    )
+                    .then(({ data }) => {
+                        const access = data.access_token || data.accessToken;
+                        const refresh = data.refresh_token || data.refreshToken;
+                        if (!access) {
+                            throw new Error('Refresh response without access token');
+                        }
+                        localStorage.setItem('accessToken', access);
+                        if (refresh) {
+                            localStorage.setItem('refreshToken', refresh);
+                        }
+                        return access as string;
+                    })
+                    .finally(() => { refreshPromise = null; });
+                const newAccessToken = await refreshPromise;
 
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
                 return apiClient(originalRequest);
             } catch {
                 // Refresh не удался — просто reject, authStore разберётся
-                return Promise.reject(error);
+                throw error;
             }
         }
 
-        return Promise.reject(error);
+        throw error;
     },
 );
 

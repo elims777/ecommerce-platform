@@ -135,7 +135,7 @@ class ProductControllerTest {
         @Test
         @DisplayName("возвращает children[] вместо variants[] для товара с дочерними вариантами")
         void getProductById_WithChildren_ReturnsChildren() throws Exception {
-            Product child = productRepository.save(Product.builder()
+            productRepository.save(Product.builder()
                     .name("Огнетушитель ОП-4 (S)")
                     .slug("ognetushitel-op-4-s")
                     .price(new BigDecimal("1500.00"))
@@ -256,6 +256,48 @@ class ProductControllerTest {
                     .andExpect(jsonPath("$.content", hasSize(1)))
                     .andExpect(jsonPath("$.totalElements", is(2)))
                     .andExpect(jsonPath("$.totalPages", is(2)));
+        }
+    }
+
+    // ==================== Ошибки клиента Spring MVC → 4xx, а не 500 ====================
+
+    @Nested
+    @DisplayName("Ошибки клиента возвращают 4xx, а не 500")
+    class ClientErrorTests {
+
+        @Test
+        @DisplayName("поиск без query → 400")
+        void search_MissingQuery_Returns400() throws Exception {
+            mockMvc.perform(get("/api/v1/products/search"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status", is(400)));
+        }
+
+        @Test
+        @DisplayName("нечисловой id → 400")
+        void getProductById_NonNumericId_Returns400() throws Exception {
+            mockMvc.perform(get("/api/v1/products/{id}", "abc"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status", is(400)));
+        }
+
+        @Test
+        @WithMockUser(authorities = "ROLE_ADMIN")
+        @DisplayName("битый JSON в теле POST → 400")
+        void createProduct_MalformedJson_Returns400() throws Exception {
+            mockMvc.perform(post("/api/v1/products")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{not-json"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status", is(400)));
+        }
+
+        @Test
+        @DisplayName("несуществующий путь → 404")
+        void unknownPath_Returns404() throws Exception {
+            mockMvc.perform(get("/api/v1/products/1/no-such-endpoint"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.status", is(404)));
         }
     }
 

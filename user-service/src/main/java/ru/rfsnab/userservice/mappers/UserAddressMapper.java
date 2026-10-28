@@ -5,6 +5,9 @@ import ru.rfsnab.userservice.models.dto.SaveUserAddressRequest;
 import ru.rfsnab.userservice.models.dto.UserAddressDto;
 
 public class UserAddressMapper {
+    private UserAddressMapper() {
+    }
+
     public static UserAddressDto mapToDto(UserAddress entity){
         return UserAddressDto.builder()
                 .id(entity.getId())

@@ -15,7 +15,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -54,8 +53,8 @@ class RoleServiceTest {
         RoleEntity result = roleService.findRoleByName("ROLE_USER");
 
         assertThat(result).isNotNull();
-        assertThat(result.getName().equals("ROLE_USER"));
-        assertThat(result.getId().equals(1L));
+        assertThat(result.getName()).isEqualTo("ROLE_USER");
+        assertThat(result.getId()).isEqualTo(1L);
         verify(roleRepository, times(1)).findByName("ROLE_USER");
     }
 
@@ -67,8 +66,8 @@ class RoleServiceTest {
         RoleEntity result = roleService.findRoleByName("ROLE_ADMIN");
 
         assertThat(result).isNotNull();
-        assertThat(result.getName().equals("ROLE_ADMIN"));
-        assertThat(result.getId().equals(2L));
+        assertThat(result.getName()).isEqualTo("ROLE_ADMIN");
+        assertThat(result.getId()).isEqualTo(2L);
         verify(roleRepository, times(1)).findByName("ROLE_ADMIN");
     }
 

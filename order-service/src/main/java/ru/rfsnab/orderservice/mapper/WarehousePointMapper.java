@@ -4,6 +4,9 @@ import ru.rfsnab.orderservice.models.dto.order.WarehousePointDto;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 
 public class WarehousePointMapper {
+    private WarehousePointMapper() {
+    }
+
     public static WarehousePointDto mapToWarehousePointDto(WarehousePoint entity){
         return WarehousePointDto.builder()
                 .id(entity.getId())

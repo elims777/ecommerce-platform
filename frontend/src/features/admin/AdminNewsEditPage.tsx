@@ -46,10 +46,10 @@ const AdminNewsEditPage = () => {
             newsId === null ? createNews(request) : updateNews(newsId, request),
         onSuccess: () => {
             messageApi.success(isNew ? 'Новость создана' : 'Новость сохранена');
-            queryClient.invalidateQueries({ queryKey: ['adminNews'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminNews'] });
             // Публичная часть: /news, /news/:slug и блок на главной — иначе там висит старая версия
-            queryClient.invalidateQueries({ queryKey: ['news'] });
-            navigate('/admin/news');
+            void queryClient.invalidateQueries({ queryKey: ['news'] });
+            void navigate('/admin/news');
         },
         onError: () => messageApi.error('Не удалось сохранить новость'),
     });

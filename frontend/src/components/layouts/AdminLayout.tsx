@@ -27,7 +27,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 function GridIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
       <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
     </svg>
@@ -36,7 +36,7 @@ function GridIcon() {
 
 function DocIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M3 2h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z"/>
       <path d="M10 2v3h3M5 7h6M5 10h6M5 13h4"/>
     </svg>
@@ -45,7 +45,7 @@ function DocIcon() {
 
 function MenuIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M2 4h12M2 8h12M2 12h12"/>
     </svg>
   );
@@ -53,7 +53,7 @@ function MenuIcon() {
 
 function NewsIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M2 3h9a1 1 0 011 1v9a1 1 0 001 1H3a1 1 0 01-1-1V3z"/>
       <path d="M12 6h2v7a1 1 0 01-1 1M4 6h5M4 9h5M4 12h3"/>
     </svg>
@@ -62,7 +62,7 @@ function NewsIcon() {
 
 function PersonIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
     </svg>
   );
@@ -70,7 +70,7 @@ function PersonIcon() {
 
 function TruckIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M1 3h9v8H1zM10 5h2.5L14 7.5V11h-4V5z" strokeLinejoin="round"/>
       <circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="12.5" r="1.5"/>
     </svg>
@@ -79,7 +79,7 @@ function TruckIcon() {
 
 function SyncIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M2 8a6 6 0 0110.5-4M14 8a6 6 0 01-10.5 4"/>
       <path d="M12 3l1 2-2 .5M4 13l-1-2 2-.5"/>
     </svg>
@@ -88,7 +88,7 @@ function SyncIcon() {
 
 function SettingsIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
       <circle cx="8" cy="8" r="2.5"/>
       <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.42 1.42M11.53 11.53l1.42 1.42M3.05 12.95l1.42-1.42M11.53 4.47l1.42-1.42"/>
     </svg>
@@ -97,7 +97,7 @@ function SettingsIcon() {
 
 function ChevronDownIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M3 5l4 4 4-4"/>
     </svg>
   );

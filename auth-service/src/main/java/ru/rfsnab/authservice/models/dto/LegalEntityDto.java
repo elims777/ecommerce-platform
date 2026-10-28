@@ -12,4 +12,5 @@ public class LegalEntityDto {
     private String email;
     private String inn;
     private String fullName;
+    private String verificationStatus;
 }

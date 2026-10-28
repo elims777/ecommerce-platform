@@ -64,7 +64,7 @@ export const loginLegal = async (login: string, password: string): Promise<AuthT
             firstname: '',
             lastname: '',
             surname: null,
-            phone: null,
+            phone: (entity.phone as string) ?? null,
             emailVerified: true,
             roles: [{ id: 0, name: 'ROLE_USER' }],
             createdAt: (entity.createdAt as string) ?? '',
@@ -74,6 +74,12 @@ export const loginLegal = async (login: string, password: string): Promise<AuthT
             inn: (entity.inn as string) ?? null,
         },
     };
+};
+
+/** Обмен одноразового кода OAuth2 на токены — POST /v1/auth/oauth2/exchange */
+export const exchangeOAuth2Code = async (code: string): Promise<AuthTokens> => {
+    const { data } = await apiClient.post<AuthTokens>('/v1/auth/oauth2/exchange', { code });
+    return data;
 };
 
 /** Регистрация физлица — POST /v1/register */
@@ -112,21 +118,21 @@ export const logout = async (): Promise<void> => {
 };
 
 /**
- * Обновление токенов — POST /v1/auth/refresh?refreshToken=xxx
+ * Обновление токенов — POST /v1/auth/refresh, body {"refreshToken": "..."}
  * Swagger показывает AuthResponse (camelCase), но login возвращает snake_case.
  * Обрабатываем оба варианта.
  */
 export const refreshTokens = async (refreshToken: string): Promise<AuthTokens> => {
     const { data } = await apiClient.post<Record<string, unknown>>(
         '/v1/auth/refresh',
-        null,
-        { params: { refreshToken } },
+        { refreshToken },
     );
 
     const accessToken = (data.access_token || data.accessToken) as string;
     const parts = accessToken.split('.');
     let payload: Record<string, unknown> = {};
-    try { payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { /* ignore */ }
+    // atob даёт latin1 — кириллицу (companyName) декодируем как UTF-8
+    try { payload = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)))); } catch { /* ignore */ }
 
     return {
         access_token: accessToken,
@@ -170,16 +176,16 @@ export const resetPassword = async (token: string, newPassword: string): Promise
 /** Переключение контекста B2C↔B2B — POST /v1/auth/switch-context */
 export const switchContext = async (
     targetType: 'B2C' | 'B2B',
-    password?: string,
 ): Promise<AuthTokens> => {
     const { data } = await apiClient.post<Record<string, unknown>>(
         '/v1/auth/switch-context',
-        { targetType, ...(password ? { password } : {}) },
+        { targetType },
     );
     const accessToken = data.accessToken as string;
     const parts = accessToken.split('.');
     let payload: Record<string, unknown> = {};
-    try { payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { /* ignore */ }
+    // atob даёт latin1 — кириллицу (companyName) декодируем как UTF-8
+    try { payload = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)))); } catch { /* ignore */ }
 
     return {
         access_token: accessToken,

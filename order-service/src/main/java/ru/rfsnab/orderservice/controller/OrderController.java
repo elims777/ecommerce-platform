@@ -33,6 +33,7 @@ import ru.rfsnab.orderservice.models.entity.OrderDocument;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
 import ru.rfsnab.orderservice.service.OrderDocumentService;
 import ru.rfsnab.orderservice.service.OrderService;
+import ru.rfsnab.orderservice.service.PriceSelector;
 import ru.rfsnab.orderservice.service.WarehousePointService;
 
 import java.nio.charset.StandardCharsets;
@@ -77,12 +78,10 @@ public class OrderController {
     @Operation(summary = "Список заказов пользователя")
     public ResponseEntity<Page<OrderSummaryDto>> getUserOrders(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PageableDefault(size = 20, sort = "createdAt")
             @Parameter(hidden = true) Pageable pageable) {
-//        Page<OrderSummaryDto> page = orderService.getUserOrders(getCurrentUserId(authentication), pageable)
-//                .map(OrderMapper::toSummaryDto);
-//        return ResponseEntity.ok(page);
-        Page<Order> orders = orderService.getUserOrders(getCurrentUserId(authentication), pageable);
+        Page<Order> orders = orderService.getUserOrders(getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType), pageable);
         List<OrderSummaryDto> content = orders.getContent().stream()
                 .map(OrderMapper::toSummaryDto)
                 .toList();
@@ -94,8 +93,9 @@ public class OrderController {
     @Operation(summary = "Получить заказ по ID")
     public ResponseEntity<OrderDto> getOrder(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable UUID orderId) {
-        Order order = orderService.getOrderByIdAndUser(orderId, getCurrentUserId(authentication));
+        Order order = orderService.getOrderByIdAndUser(orderId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.ok(enrichAndMap(order));
     }
 
@@ -103,9 +103,10 @@ public class OrderController {
     @Operation(summary = "Обновить заказ (в статусах CREATED и PROCESSING)")
     public ResponseEntity<OrderDto> updateOrder(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable UUID orderId,
             @Valid @RequestBody UpdateOrderRequest request) {
-        Order order = orderService.updateOrder(orderId, getCurrentUserId(authentication), request);
+        Order order = orderService.updateOrder(orderId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType), request);
         return ResponseEntity.ok(enrichAndMap(order));
     }
 
@@ -113,8 +114,9 @@ public class OrderController {
     @Operation(summary = "Подтвердить заказ (CREATED → PROCESSING, отправляет в 1С)")
     public ResponseEntity<OrderDto> confirmOrder(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable UUID orderId) {
-        Order order = orderService.confirmOrder(orderId, getCurrentUserId(authentication));
+        Order order = orderService.confirmOrder(orderId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.ok(enrichAndMap(order));
     }
 
@@ -122,8 +124,9 @@ public class OrderController {
     @Operation(summary = "Отменить заказ")
     public ResponseEntity<OrderDto> cancelOrder(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable UUID orderId) {
-        Order order = orderService.cancelOrder(orderId, getCurrentUserId(authentication));
+        Order order = orderService.cancelOrder(orderId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.ok(enrichAndMap(order));
     }
 
@@ -131,16 +134,18 @@ public class OrderController {
     @Operation(summary = "Инициировать оплату — роутится по paymentMethod заказа (CARD/SBP/CASH_ON_DELIVERY)")
     public ResponseEntity<PaymentInitiationResponse> pay(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable UUID orderId) {
-        return ResponseEntity.ok(orderService.pay(orderId, getCurrentUserId(authentication)));
+        return ResponseEntity.ok(orderService.pay(orderId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType)));
     }
 
     @GetMapping("/{orderId}/pay/status")
     @Operation(summary = "Получить статус платежа (фронт вызывает при возврате с redirectUrl)")
     public ResponseEntity<Map<String, String>> getPaymentStatus(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable UUID orderId) {
-        String status = orderService.getPaymentStatus(orderId, getCurrentUserId(authentication));
+        String status = orderService.getPaymentStatus(orderId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.ok(Map.of("status", status));
     }
 
@@ -164,10 +169,12 @@ public class OrderController {
     @Operation(summary = "Повторить заказ (создаёт новый заказ на основе существующего)")
     public ResponseEntity<OrderDto> repeatOrder(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable UUID orderId) {
         Order order = orderService.repeatOrder(
                 orderId,
                 getCurrentUserId(authentication),
+                PriceSelector.parseCustomerType(clientType),
                 getCurrentUserEmail(authentication));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(enrichAndMap(order));
@@ -193,9 +200,10 @@ public class OrderController {
     @Operation(summary = "Список документов своего заказа (счета, УПД, КП, сертификаты)")
     public ResponseEntity<List<OrderDocumentDto>> listDocuments(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable UUID orderId) {
         List<OrderDocumentDto> documents = orderDocumentService
-                .listForUser(orderId, getCurrentUserId(authentication)).stream()
+                .listForUser(orderId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType)).stream()
                 .map(OrderDocumentMapper::toDto)
                 .toList();
         return ResponseEntity.ok(documents);
@@ -205,10 +213,11 @@ public class OrderController {
     @Operation(summary = "Скачать документ своего заказа")
     public ResponseEntity<InputStreamResource> downloadDocument(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable UUID orderId,
             @PathVariable UUID docId) {
         OrderDocumentService.DownloadResult result = orderDocumentService
-                .downloadForUser(orderId, docId, getCurrentUserId(authentication));
+                .downloadForUser(orderId, docId, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType));
         OrderDocument document = result.document();
         MediaType mediaType = document.getContentType() != null
                 ? MediaType.parseMediaType(document.getContentType())

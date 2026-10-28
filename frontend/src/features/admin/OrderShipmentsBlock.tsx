@@ -31,8 +31,8 @@ const OrderShipmentsBlock = ({ order }: { order: OrderDto }) => {
   const { data: carriers = [] } = useQuery({ queryKey: ['adminCarriers'], queryFn: getAdminCarriers });
 
   const onChanged = () => {
-    queryClient.invalidateQueries({ queryKey: ['adminOrderDetail', order.id] });
-    queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
+    void queryClient.invalidateQueries({ queryKey: ['adminOrderDetail', order.id] });
+    void queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
   };
 
   const addMutation = useMutation({
@@ -71,7 +71,7 @@ const OrderShipmentsBlock = ({ order }: { order: OrderDto }) => {
     onSuccess: () => {
       messageApi.success('Накладная отвязана');
       onChanged();
-      queryClient.invalidateQueries({ queryKey: ['adminShipments'] });
+      void queryClient.invalidateQueries({ queryKey: ['adminShipments'] });
     },
     onError: (error) => messageApi.error(
       (isAxiosError(error) && error.response?.data?.message) || 'Не удалось отвязать накладную'),
@@ -134,7 +134,7 @@ const OrderShipmentsBlock = ({ order }: { order: OrderDto }) => {
 
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12, borderTop: '1px solid var(--line-1)' }}>
         {order.shipmentsComplete && (
-          <Alert type="info" showIcon message="Отправления отмечены как внесённые полностью" />
+          <Alert type="info" showIcon title="Отправления отмечены как внесённые полностью" />
         )}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <Select

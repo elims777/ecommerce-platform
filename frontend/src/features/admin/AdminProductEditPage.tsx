@@ -104,8 +104,8 @@ const AdminProductEditPage = () => {
     const categoryOptions = flattenCategories(categoryTree);
 
     const invalidateProduct = () => {
-        queryClient.invalidateQueries({ queryKey: ['adminProduct', productId] });
-        queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
+        void queryClient.invalidateQueries({ queryKey: ['adminProduct', productId] });
+        void queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
     };
 
     const saveMutation = useMutation({
@@ -217,8 +217,8 @@ const AdminProductEditPage = () => {
     return (
         <div>
             {/* Header */}
-            <div className="rf-admin-back" onClick={() => navigate(-1)}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <div className="rf-admin-back" onClick={() => navigate(-1)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(-1); } }}>
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M10 4L6 8l4 4"/>
                 </svg>
                 Каталог
@@ -375,8 +375,8 @@ const AdminProductEditPage = () => {
 
                             {form.isSale && (
                                 <div>
-                                    <label style={labelStyle}>Наценка / скидка, %</label>
-                                    <input
+                                    <label htmlFor="product-sale-percent" style={labelStyle}>Наценка / скидка, %</label>
+                                    <input id="product-sale-percent"
                                         className="rf-input"
                                         type="number"
                                         step="0.01"
@@ -656,7 +656,7 @@ const AdminProductEditPage = () => {
                                                     if (window.confirm(`Назначить родителем: «${p.name}»?`)) {
                                                         setParentMutation.mutate(p.id);
                                                     }
-                                                }}
+                                                }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (window.confirm(`Назначить родителем: «${p.name}»?`)) setParentMutation.mutate(p.id); } }}
                                                 style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--line-1)', color: 'var(--ink-1)' }}
                                                 onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
                                                 onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--surface)')}

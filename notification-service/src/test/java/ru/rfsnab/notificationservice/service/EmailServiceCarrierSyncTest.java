@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -25,6 +24,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,7 +47,7 @@ class EmailServiceCarrierSyncTest {
         resolver.setPrefix("templates/");
         resolver.setSuffix(".html");
         resolver.setCharacterEncoding("UTF-8");
-        engine = Mockito.spy(new SpringTemplateEngine());
+        engine = spy(new SpringTemplateEngine());
         engine.setTemplateResolver(resolver);
 
         emailService = new EmailService(mailSender, engine);
@@ -86,7 +86,7 @@ class EmailServiceCarrierSyncTest {
 
         ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
         verify(mailSender).send(captor.capture());
-        assertThat(captor.getValue().getRecipients(Message.RecipientType.TO)[0].toString()).isEqualTo(MANAGER_EMAIL);
+        assertThat(captor.getValue().getRecipients(Message.RecipientType.TO)[0]).hasToString(MANAGER_EMAIL);
         assertThat(captor.getValue().getSubject()).isEqualTo("Синхронизация терминалов ТК: ошибки");
     }
 

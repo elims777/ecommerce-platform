@@ -29,7 +29,7 @@ const ContactsPage = () => {
             <Row gutter={[16, 16]}>
                 <Col xs={24} md={12}>
                     <Card style={{ height: '100%', borderRadius: 12 }}>
-                        <Space direction="vertical" size={20} style={{ width: '100%' }}>
+                        <Space orientation="vertical" size={20} style={{ width: '100%' }}>
                             <div>
                                 <Space align="start">
                                     <PhoneOutlined style={{ fontSize: 20, color: '#1677ff' }} />
@@ -74,7 +74,7 @@ const ContactsPage = () => {
 
                 <Col xs={24} md={12}>
                     <Card style={{ height: '100%', borderRadius: 12 }}>
-                        <Space direction="vertical" size={20} style={{ width: '100%' }}>
+                        <Space orientation="vertical" size={20} style={{ width: '100%' }}>
                             <div>
                                 <Space align="start">
                                     <EnvironmentOutlined style={{ fontSize: 20, color: '#1677ff' }} />

@@ -30,20 +30,20 @@ public class KafkaListenerService {
                       "${app.kafka.topic.import-events}"},
             groupId = "${spring.kafka.consumer.group-id}"
     )
-    public void onMessage(ConsumerRecord<String, String> record){
-        String topic = record.topic();
-        String json = record.value();
+    public void onMessage(ConsumerRecord<String, String> consumerRecord){
+        String topic = consumerRecord.topic();
+        String json = consumerRecord.value();
 
         try{
             JsonNode jsonNode = objectMapper.readTree(json);
             String eventType = jsonNode.get("eventType").asText();
 
-            log.info("Kafka event: topic={}, eventType={}, key={}", topic, eventType, record.key());
+            log.info("Kafka event: topic={}, eventType={}, key={}", topic, eventType, consumerRecord.key());
 
             router.route(topic, eventType, json);
         } catch (Exception e){
-            log.error("Ошибка обработки Kafka события: topic={}, value={}",
-                    topic, json, e);
+            log.error("Ошибка обработки Kafka события: topic={}, key={}",
+                    topic, consumerRecord.key(), e);
         }
     }
 }

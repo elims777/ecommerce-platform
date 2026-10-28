@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ClickableCard } from '@/components/navigation';
-import { Spin, Grid } from 'antd';
+import { Spin, Grid, App } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { getProducts, getFeaturedProducts, getSaleProducts } from '@/api/products';
 import { getLatestNews } from '@/api/news';
@@ -9,7 +9,6 @@ import { getCategoryTree } from '@/api/categories';
 import ProductCard from '@/features/catalog/ProductCard';
 import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
-import { App } from 'antd';
 import type { CategoryTree } from '@/types/product';
 import type { News as NewsItem } from '@/types/news';
 import { handleProfileIncomplete } from '@/utils/profileGate';
@@ -19,37 +18,37 @@ import PriceListModal from '@/components/PriceListModal';
 
 // ── Icons ─────────────────────────────────────────────────────
 const ArrRight = ({ width = 16, height = 16 }: { width?: number; height?: number }) => (
-    <svg viewBox="0 0 24 24" width={width} height={height} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width={width} height={height} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 12h14M13 6l6 6-6 6"/>
     </svg>
 );
 const DocIcon = () => (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
     </svg>
 );
 const TruckIcon = () => (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M2 6h12v10H2zM14 10h4l3 3v3h-7"/><circle cx="6.5" cy="17.5" r="1.7"/><circle cx="17" cy="17.5" r="1.7"/>
     </svg>
 );
 const ShieldIcon = () => (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
     </svg>
 );
 const GridIcon = () => (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
     </svg>
 );
 const ChevLeft = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="m15 18-6-6 6-6"/>
     </svg>
 );
 const ChevRight = () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="m9 18 6-6-6-6"/>
     </svg>
 );
@@ -342,7 +341,7 @@ const PrimaryGroupCard = ({ category, color, hoverColor, index, onClick }: {
 
     return (
         <div
-            onClick={onClick}
+            onClick={onClick} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             style={{
@@ -395,7 +394,7 @@ const SecondaryCatTile = ({ category, onClick }: { category: CategoryTree; onCli
     const [hovered, setHovered] = useState(false);
     return (
         <div
-            onClick={onClick}
+            onClick={onClick} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             style={{
@@ -429,7 +428,7 @@ const ServiceCard = ({ icon, title, text, cta, accent, onClick }: { icon: React.
     const tint  = accent === 'navy' ? 'var(--navy-tint)' : accent === 'green' ? 'var(--brand-green-soft)' : 'var(--red-tint)';
     return (
         <div
-            onClick={onClick}
+            onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
             style={{ background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-5)', padding: 22, display: 'flex', gap: 16, cursor: onClick ? 'pointer' : undefined }}
         >
             <div style={{
@@ -467,7 +466,7 @@ const HomePage = () => {
     const secondaryCategories = rootCategories.slice(3, 11);
 
     const handleAddToCart = async (productId: number) => {
-        if (!isAuthenticated) { navigate('/login'); return; }
+        if (!isAuthenticated) { void navigate('/login'); return; }
         try {
             await addItem(productId, 1);
             messageApi.success('Товар добавлен в корзину');
@@ -478,11 +477,11 @@ const HomePage = () => {
     };
 
     const handleCategoryClick = (categoryId: number) => {
-        navigate(`/catalog?category=${categoryId}`);
+        void navigate(`/catalog?category=${categoryId}`);
     };
 
     const handlePriceListClick = () => {
-        if (!isAuthenticated) { navigate('/login'); return; }
+        if (!isAuthenticated) { void navigate('/login'); return; }
         setPriceListModalOpen(true);
     };
 

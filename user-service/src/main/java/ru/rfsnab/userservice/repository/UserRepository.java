@@ -17,6 +17,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     Optional<UserEntity> findByUnsubscribeToken(String token);
     boolean existsByEmail(String email);
     boolean existsByPhone(String phone);
+    boolean existsByPhoneAndIdNot(String phone, Long id);
     List<UserEntity> findAllByLastLoginAtBeforeAndLastInactivityEmailAtIsNullOrLastInactivityEmailAtBefore(
             LocalDateTime loginThreshold, LocalDateTime emailThreshold);
     long countByRoles_Name(String roleName);

@@ -4,6 +4,9 @@ import ru.rfsnab.orderservice.models.dto.order.AddressDto;
 import ru.rfsnab.orderservice.models.entity.DeliveryAddress;
 
 public class AddressMapper {
+    private AddressMapper() {
+    }
+
     public static AddressDto mapToAddressDto (DeliveryAddress address){
         return AddressDto.builder()
                 .city(address.getCity())

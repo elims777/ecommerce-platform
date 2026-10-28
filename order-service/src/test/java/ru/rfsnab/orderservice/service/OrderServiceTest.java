@@ -23,6 +23,7 @@ import ru.rfsnab.orderservice.delivery.repository.CarrierRepository;
 import ru.rfsnab.orderservice.delivery.repository.CarrierTerminalRepository;
 import ru.rfsnab.orderservice.exception.CartEmptyException;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
+import ru.rfsnab.orderservice.exception.OrderNotFoundException;
 import ru.rfsnab.orderservice.exception.PaymentMethodNotAvailableException;
 import ru.rfsnab.orderservice.exception.ProfileIncompleteException;
 import ru.rfsnab.orderservice.kafka.Order1CKafkaProducer;
@@ -40,6 +41,7 @@ import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.OrderItem;
 import ru.rfsnab.orderservice.models.entity.PaymentMethodSettings;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
@@ -50,6 +52,7 @@ import ru.rfsnab.orderservice.repository.WarehousePointRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.Duration;
+import org.springframework.data.domain.Pageable;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -94,9 +97,6 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
     @Autowired
     private PaymentMethodSettingsRepository paymentMethodSettingsRepository;
 
-//    @MockitoBean
-//    private ProductServiceClient productServiceClient;
-
     @MockitoBean
     private Order1CKafkaProducer order1CKafkaProducer;
 
@@ -125,7 +125,8 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
     @BeforeEach
     void setUp() {
         orderRepository.deleteAll();
-        cartService.clearCart(USER_ID);
+        cartService.clearCart(USER_ID, CustomerType.B2C);
+        cartService.clearCart(USER_ID, CustomerType.B2B);
 
         Carrier dellin = carrierRepository.findById(CarrierCode.DELLIN).orElseThrow();
         dellin.setEnabled(true);
@@ -273,7 +274,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             assertThat(item1.getPrice()).isEqualByComparingTo("1500.00");
 
             // Корзина очищена
-            Cart cart = cartService.getCart(USER_ID);
+            Cart cart = cartService.getCart(USER_ID, CustomerType.B2C);
             assertThat(cart.getItems()).isEmpty();
 
             // Заказ сохранён в БД
@@ -361,9 +362,23 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         }
 
         @Test
+        @DisplayName("B2B: не проверяет заполненность профиля (userId — id юрлица)")
+        void createOrder_B2B_skipsProfileCheck() {
+            cartService.addItemToCart(USER_ID, CustomerType.B2B, PRODUCT_ID_1, 1);
+
+            CreateOrderRequest request = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, null, "ООО Ромашка", "1234567890", null, null, CarrierCode.DELLIN, 1L);
+
+            orderService.createOrder(USER_ID, USER_EMAIL, "B2B", request);
+
+            verify(userServiceClient, never()).requireCompleteProfile(USER_ID);
+        }
+
+        @Test
         @DisplayName("B2B: снапшот компании — customerType, companyName, inn")
         void createOrder_B2B_snapshotsCompanyData() {
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, CustomerType.B2B, PRODUCT_ID_1, 1);
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
@@ -379,7 +394,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("B2C: поля компании не заполняются — customerType B2C, companyName null, inn null")
         void createOrder_B2C_noSnapshotFields() {
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 1);
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
@@ -402,7 +417,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
             when(productServiceClient.getProduct(productId)).thenReturn(product);
 
-            cartService.addItemToCart(USER_ID, productId, 2);
+            cartService.addItemToCart(USER_ID, CustomerType.B2B, productId, 2);
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
@@ -429,7 +444,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
             when(productServiceClient.getProduct(productId)).thenReturn(product);
 
-            cartService.addItemToCart(USER_ID, productId, 1);
+            cartService.addItemToCart(USER_ID, CustomerType.B2C, productId, 1);
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
@@ -452,7 +467,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             when(productServiceClient.getProducts(anySet())).thenReturn(Map.of(productId, product));
             when(productServiceClient.getProduct(productId)).thenReturn(product);
 
-            cartService.addItemToCart(USER_ID, productId, 2);
+            cartService.addItemToCart(USER_ID, CustomerType.B2C, productId, 2);
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
@@ -469,7 +484,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @Test
         @DisplayName("B2B без inn: выбрасывает InvalidOrderStateException")
         void createOrder_B2B_missingInn_throws() {
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, CustomerType.B2B, PRODUCT_ID_1, 1);
 
             CreateOrderRequest request = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
@@ -526,7 +541,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null)))
                     .build();
 
-            assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, request))
+            assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, request))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessageContaining("менеджер");
         }
@@ -545,7 +560,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .comment("новый")
                     .build();
 
-            Order updated = orderService.updateOrder(order.getId(), USER_ID, request);
+            Order updated = orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, request);
 
             assertThat(updated.getDeliveryMethod()).isEqualTo(DeliveryMethod.SUPPLIER_DELIVERY);
             assertThat(updated.getComment()).isEqualTo("новый");
@@ -563,7 +578,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null)))
                     .build();
 
-            Order updated = orderService.updateOrder(order.getId(), USER_ID, request);
+            Order updated = orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, request);
 
             assertThat(updated.getCarrierCode()).isEqualTo(CarrierCode.PEC);
             assertThat(updated.getCarrierName()).isEqualTo("ПЭК");
@@ -583,7 +598,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .comment("Обновлённый комментарий")
                     .build();
 
-            Order updated = orderService.updateOrder(order.getId(), USER_ID, request);
+            Order updated = orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, request);
 
             assertThat(updated.getPaymentMethod()).isEqualTo(PaymentMethod.SBP);
             assertThat(updated.getDeliveryMethod()).isEqualTo(DeliveryMethod.PICKUP);
@@ -602,7 +617,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("обновляет заказ в статусе PROCESSING и повторно отправляет в 1С")
         void shouldUpdateProcessingOrderAndResendTo1C() {
             Order order = createTestOrder();
-            orderService.confirmOrder(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
             clearInvocations(order1CKafkaProducer);
 
             UpdateOrderRequest request = UpdateOrderRequest.builder().shippingWarehouseId(1L)
@@ -613,7 +628,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .comment("Правка в PROCESSING")
                     .build();
 
-            Order updated = orderService.updateOrder(order.getId(), USER_ID, request);
+            Order updated = orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, request);
 
             assertThat(updated.getStatus()).isEqualTo(OrderStatus.PROCESSING);
             assertThat(updated.getComment()).isEqualTo("Правка в PROCESSING");
@@ -627,7 +642,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("PROCESSING: переключение на выключенный способ оплаты — PaymentMethodNotAvailableException, в 1С не уходит")
         void shouldRejectDisabledPaymentMethodOnProcessingEdit() {
             Order order = createTestOrder();
-            orderService.confirmOrder(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
             clearInvocations(order1CKafkaProducer);
 
             PaymentMethodSettings s = getOrCreateSettings();
@@ -642,7 +657,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .build();
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.updateOrder(orderId, USER_ID, request))
+            assertThatThrownBy(() -> orderService.updateOrder(orderId, USER_ID, CustomerType.B2C, request))
                     .isInstanceOf(PaymentMethodNotAvailableException.class)
                     .hasMessageContaining("СБП");
             verify(order1CKafkaProducer, never()).sendOrderFor1C(any());
@@ -652,7 +667,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("PROCESSING: способ оплаты не менялся и выключен в настройках — правка комментария проходит, в 1С уходит")
         void shouldAllowEditWithoutPaymentChangeWhenCurrentMethodDisabled() {
             Order order = createTestOrder();
-            orderService.confirmOrder(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
             clearInvocations(order1CKafkaProducer);
 
             PaymentMethodSettings s = getOrCreateSettings();
@@ -667,7 +682,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .comment("Только комментарий")
                     .build();
 
-            Order updated = orderService.updateOrder(order.getId(), USER_ID, request);
+            Order updated = orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, request);
 
             assertThat(updated.getComment()).isEqualTo("Только комментарий");
             verify(order1CKafkaProducer).sendOrderFor1C(any(Order.class));
@@ -677,7 +692,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("PROCESSING: чужой пользователь не может редактировать заказ")
         void shouldThrowWhenWrongUserOnProcessingOrder() {
             Order order = createTestOrder();
-            orderService.confirmOrder(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
 
             UpdateOrderRequest request = UpdateOrderRequest.builder().shippingWarehouseId(1L)
                     .paymentMethod(PaymentMethod.CARD)
@@ -687,9 +702,8 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .build();
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.updateOrder(orderId, 999L, request))
-                    .isInstanceOf(InvalidOrderStateException.class)
-                    .hasMessageContaining("Нет доступа");
+            assertThatThrownBy(() -> orderService.updateOrder(orderId, 999L, CustomerType.B2C, request))
+                    .isInstanceOf(OrderNotFoundException.class);
         }
 
         @Test
@@ -704,7 +718,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null, null, null)))
                     .build();
 
-            assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, request))
+            assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, request))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessageContaining("невозможно в статусе");
         }
@@ -721,9 +735,8 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .items(List.of(new OrderItemDto(PRODUCT_ID_1, null, 5, null, null, null, null, null, null, null)))
                     .build();
 
-            assertThatThrownBy(() -> orderService.updateOrder(order.getId(), 999L, request))
-                    .isInstanceOf(InvalidOrderStateException.class)
-                    .hasMessageContaining("Нет доступа");
+            assertThatThrownBy(() -> orderService.updateOrder(order.getId(), 999L, CustomerType.B2C, request))
+                    .isInstanceOf(OrderNotFoundException.class);
         }
     }
 
@@ -801,7 +814,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .deliveryMethod(DeliveryMethod.CARRIER_ADDRESS).carrierCode(CarrierCode.DELLIN)
                     .deliveryAddress(buildAddressDto()).build();
 
-            assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, request))
+            assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, request))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessage("Выберите город отгрузки");
         }
@@ -814,7 +827,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .deliveryMethod(DeliveryMethod.PICKUP).warehousePointId(savedWarehousePoint.getId())
                     .pickupRecipientName("Петров Петр").pickupRecipientPhone("+79001112233").build();
 
-            assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, request))
+            assertThatThrownBy(() -> orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, request))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessage("Самовывоз недоступен для выбранного города");
         }
@@ -827,7 +840,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .deliveryMethod(DeliveryMethod.CARRIER_ADDRESS).carrierCode(CarrierCode.DELLIN)
                     .deliveryAddress(buildAddressDto()).build();
 
-            Order updated = orderService.updateOrder(order.getId(), USER_ID, request);
+            Order updated = orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, request);
 
             assertThat(updated.getShippingWarehouseId()).isEqualTo(WAREHOUSE_NO_PICKUP.id());
             assertThat(updated.getShippingWarehouseCity()).isEqualTo("Санкт-Петербург");
@@ -839,13 +852,13 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             addItemsToCart();
             Order original = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", carrierRequest(WAREHOUSE.id()));
 
-            Order repeated = orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL);
+            Order repeated = orderService.repeatOrder(original.getId(), USER_ID, CustomerType.B2C, USER_EMAIL);
 
             assertThat(repeated.getShippingWarehouseId()).isEqualTo(WAREHOUSE.id());
             assertThat(repeated.getShippingWarehouseCity()).isEqualTo("Пушкин");
 
             when(productServiceClient.getActiveWarehouses()).thenReturn(List.of(WAREHOUSE_NO_PICKUP));
-            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL))
+            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, CustomerType.B2C, USER_EMAIL))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessage("Город отгрузки больше недоступен, выберите другой");
         }
@@ -878,7 +891,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         void shouldRepeatOrder() {
             Order original = createTestOrder();
 
-            Order repeated = orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL);
+            Order repeated = orderService.repeatOrder(original.getId(), USER_ID, CustomerType.B2C, USER_EMAIL);
 
             assertThat(repeated.getId()).isNotEqualTo(original.getId());
             assertThat(repeated.getOrderNumber()).isNotEqualTo(original.getOrderNumber());
@@ -904,7 +917,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             Order order = createTestOrder();
             assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
 
-            order = orderService.confirmOrder(order.getId(), USER_ID);
+            order = orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
 
             assertThat(order.getStatus()).isEqualTo(OrderStatus.PROCESSING);
 
@@ -918,19 +931,59 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             Order order = createTestOrder();
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.confirmOrder(orderId, 999L))
-                    .isInstanceOf(InvalidOrderStateException.class)
-                    .hasMessageContaining("Нет доступа");
+            assertThatThrownBy(() -> orderService.confirmOrder(orderId, 999L, CustomerType.B2C))
+                    .isInstanceOf(OrderNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("B2B с тем же числовым id не видит и не подтверждает B2C-заказ, и наоборот")
+        void shouldIsolateOrdersByCustomerType() {
+            Order b2cOrder = createTestOrder();
+
+            cartService.addItemToCart(USER_ID, CustomerType.B2B, PRODUCT_ID_1, 1);
+            CreateOrderRequest b2bRequest = new CreateOrderRequest(
+                    PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
+                    buildAddressDto(), null, null, null, "Тест", "ООО Ромашка", "1234567890", null, null, CarrierCode.DELLIN, 1L);
+            Order b2bOrder = orderService.createOrder(USER_ID, USER_EMAIL, "B2B", b2bRequest);
+
+            UUID b2cId = b2cOrder.getId();
+            UUID b2bId = b2bOrder.getId();
+            assertThat(b2bOrder.getOrderNumber()).isNotEqualTo(b2cOrder.getOrderNumber());
+            UpdateOrderRequest updateRequest = UpdateOrderRequest.builder().build();
+            assertThatThrownBy(() -> orderService.getOrderByIdAndUser(b2cId, USER_ID, CustomerType.B2B))
+                    .isInstanceOf(OrderNotFoundException.class);
+            assertThatThrownBy(() -> orderService.getOrderByIdAndUser(b2bId, USER_ID, CustomerType.B2C))
+                    .isInstanceOf(OrderNotFoundException.class);
+            assertThatThrownBy(() -> orderService.confirmOrder(b2bId, USER_ID, CustomerType.B2C))
+                    .isInstanceOf(OrderNotFoundException.class);
+            assertThatThrownBy(() -> orderService.cancelOrder(b2cId, USER_ID, CustomerType.B2B))
+                    .isInstanceOf(OrderNotFoundException.class);
+            assertThatThrownBy(() -> orderService.updateOrder(b2cId, USER_ID, CustomerType.B2B, updateRequest))
+                    .isInstanceOf(OrderNotFoundException.class);
+            assertThatThrownBy(() -> orderService.updateOrder(b2bId, USER_ID, CustomerType.B2C, updateRequest))
+                    .isInstanceOf(OrderNotFoundException.class);
+            assertThatThrownBy(() -> orderService.repeatOrder(b2cId, USER_ID, CustomerType.B2B, USER_EMAIL))
+                    .isInstanceOf(OrderNotFoundException.class);
+            assertThatThrownBy(() -> orderService.repeatOrder(b2bId, USER_ID, CustomerType.B2C, USER_EMAIL))
+                    .isInstanceOf(OrderNotFoundException.class);
+            assertThatThrownBy(() -> orderService.pay(b2cId, USER_ID, CustomerType.B2B))
+                    .isInstanceOf(OrderNotFoundException.class);
+            assertThatThrownBy(() -> orderService.pay(b2bId, USER_ID, CustomerType.B2C))
+                    .isInstanceOf(OrderNotFoundException.class);
+            assertThat(orderService.getUserOrders(USER_ID, CustomerType.B2B, Pageable.unpaged()).getContent())
+                    .extracting(Order::getId).containsExactly(b2bId);
+            assertThat(orderService.getUserOrders(USER_ID, CustomerType.B2C, Pageable.unpaged()).getContent())
+                    .extracting(Order::getId).containsExactly(b2cId);
         }
 
         @Test
         @DisplayName("выбрасывает исключение при повторном подтверждении (не CREATED)")
         void shouldThrowWhenAlreadyConfirmed() {
             Order order = createTestOrder();
-            orderService.confirmOrder(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.confirmOrder(orderId, USER_ID))
+            assertThatThrownBy(() -> orderService.confirmOrder(orderId, USER_ID, CustomerType.B2C))
                     .isInstanceOf(InvalidOrderStateException.class);
         }
     }
@@ -949,13 +1002,13 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             s.setSbpEnabled(false);
             paymentMethodSettingsRepository.save(s);
 
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.INVOICE, DeliveryMethod.CARRIER_ADDRESS,
                     buildAddressDto(), null, null, null, null, null, null, null, null, CarrierCode.DELLIN, 1L);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
 
-            Order confirmed = orderService.confirmOrder(order.getId(), USER_ID);
+            Order confirmed = orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
             assertThat(confirmed.getStatus()).isEqualTo(OrderStatus.PROCESSING);
         }
 
@@ -967,14 +1020,14 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             s.setSbpEnabled(false);
             paymentMethodSettingsRepository.save(s);
 
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.CARD, DeliveryMethod.CARRIER_ADDRESS,
                     buildAddressDto(), null, null, null, null, null, null, null, null, CarrierCode.DELLIN, 1L);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.confirmOrder(orderId, USER_ID))
+            assertThatThrownBy(() -> orderService.confirmOrder(orderId, USER_ID, CustomerType.B2C))
                     .isInstanceOf(PaymentMethodNotAvailableException.class)
                     .hasMessageContaining("картой");
         }
@@ -987,14 +1040,14 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             s.setSbpEnabled(false);
             paymentMethodSettingsRepository.save(s);
 
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.SBP, DeliveryMethod.CARRIER_ADDRESS,
                     buildAddressDto(), null, null, null, null, null, null, null, null, CarrierCode.DELLIN, 1L);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2C", req);
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.confirmOrder(orderId, USER_ID))
+            assertThatThrownBy(() -> orderService.confirmOrder(orderId, USER_ID, CustomerType.B2C))
                     .isInstanceOf(PaymentMethodNotAvailableException.class)
                     .hasMessageContaining("СБП");
         }
@@ -1007,13 +1060,13 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             s.setSbpEnabled(false);
             paymentMethodSettingsRepository.save(s);
 
-            cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 1);
+            cartService.addItemToCart(USER_ID, CustomerType.B2B, PRODUCT_ID_1, 1);
             CreateOrderRequest req = new CreateOrderRequest(
                     PaymentMethod.INVOICE, DeliveryMethod.CARRIER_ADDRESS,
                     buildAddressDto(), null, null, null, null, "ООО Тест", "1234567890", null, null, CarrierCode.DELLIN, 1L);
             Order order = orderService.createOrder(USER_ID, USER_EMAIL, "B2B", req);
 
-            Order confirmed = orderService.confirmOrder(order.getId(), USER_ID);
+            Order confirmed = orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2B);
             assertThat(confirmed.getStatus()).isEqualTo(OrderStatus.PROCESSING);
         }
     }
@@ -1030,10 +1083,10 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             Order order = createTestOrder();
             assertThat(order.getStatus()).isEqualTo(OrderStatus.CREATED);
 
-            order = orderService.confirmOrder(order.getId(), USER_ID);
+            order = orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.PROCESSING);
 
-            order = orderService.initiatePayment(order.getId(), USER_ID);
+            order = orderService.initiatePayment(order.getId(), USER_ID, CustomerType.B2C);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
 
             order = orderService.confirmPayment(order.getId());
@@ -1054,7 +1107,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         void shouldFollowB2BPrepaymentPath() {
             Order order = createTestOrder();
 
-            order = orderService.confirmOrder(order.getId(), USER_ID);
+            order = orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.PROCESSING);
 
             order = orderService.updateStatus(order.getId(), OrderStatus.INVOICE_SENT);
@@ -1071,7 +1124,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("B2B postpayment path: PROCESSING → INVOICE_SENT → AWAITING_CONFIRMATION → SHIPPED → DELIVERED → PAID")
         void shouldFollowB2BPostpaymentPath() {
             Order order = createTestOrder();
-            orderService.confirmOrder(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
 
             order = orderService.updateStatus(order.getId(), OrderStatus.INVOICE_SENT);
             order = orderService.updateStatus(order.getId(), OrderStatus.AWAITING_CONFIRMATION);
@@ -1090,13 +1143,13 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("PENDING_PAYMENT → PAYMENT_FAILED → PENDING_PAYMENT (повтор оплаты)")
         void shouldAllowRetryAfterPaymentFailure() {
             Order order = createTestOrder();
-            orderService.confirmOrder(order.getId(), USER_ID);
-            orderService.initiatePayment(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
+            orderService.initiatePayment(order.getId(), USER_ID, CustomerType.B2C);
 
             order = orderService.failPayment(order.getId());
             assertThat(order.getStatus()).isEqualTo(OrderStatus.PAYMENT_FAILED);
 
-            order = orderService.initiatePayment(order.getId(), USER_ID);
+            order = orderService.initiatePayment(order.getId(), USER_ID, CustomerType.B2C);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
         }
 
@@ -1104,7 +1157,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("клиент может отменить заказ в статусе CREATED")
         void shouldCancelCreatedOrder() {
             Order order = createTestOrder();
-            order = orderService.cancelOrder(order.getId(), USER_ID);
+            order = orderService.cancelOrder(order.getId(), USER_ID, CustomerType.B2C);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         }
 
@@ -1112,8 +1165,8 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("клиент может отменить заказ в статусе PROCESSING")
         void shouldCancelProcessingOrder() {
             Order order = createTestOrder();
-            orderService.confirmOrder(order.getId(), USER_ID);
-            order = orderService.cancelOrder(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
+            order = orderService.cancelOrder(order.getId(), USER_ID, CustomerType.B2C);
             assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         }
 
@@ -1121,12 +1174,12 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("клиент не может отменить заказ в статусе AWAITING_CONFIRMATION")
         void shouldNotCancelAwaitingConfirmationOrder() {
             Order order = createTestOrder();
-            orderService.confirmOrder(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
             orderService.updateStatus(order.getId(), OrderStatus.INVOICE_SENT);
             orderService.updateStatus(order.getId(), OrderStatus.AWAITING_CONFIRMATION);
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.cancelOrder(orderId, USER_ID))
+            assertThatThrownBy(() -> orderService.cancelOrder(orderId, USER_ID, CustomerType.B2C))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessageContaining("нельзя отменить");
         }
@@ -1135,7 +1188,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("недопустимый переход: DELIVERED → CANCELLED")
         void shouldRejectInvalidTransition() {
             Order order = createTestOrder();
-            orderService.confirmOrder(order.getId(), USER_ID);
+            orderService.confirmOrder(order.getId(), USER_ID, CustomerType.B2C);
             orderService.updateStatus(order.getId(), OrderStatus.INVOICE_SENT);
             orderService.updateStatus(order.getId(), OrderStatus.PENDING_PAYMENT);
             orderService.confirmPayment(order.getId());
@@ -1144,7 +1197,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             orderService.updateStatus(order.getId(), OrderStatus.DELIVERED);
 
             UUID orderId = order.getId();
-            assertThatThrownBy(() -> orderService.cancelOrder(orderId, USER_ID))
+            assertThatThrownBy(() -> orderService.cancelOrder(orderId, USER_ID, CustomerType.B2C))
                     .isInstanceOf(InvalidOrderStateException.class);
         }
     }
@@ -1225,6 +1278,40 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         }
     }
 
+    // ==================== B2B/B2C изоляция по userId ====================
+
+    @Nested
+    @DisplayName("userId-фильтры игнорируют B2B-заказы с тем же числовым id")
+    class UserIdCustomerTypeIsolationTests {
+
+        private void seedB2bOrderWithSameUserId() {
+            Order b2b = seedOrderWithStatus(OrderStatus.CREATED);
+            b2b.setCustomerType(CustomerType.B2B);
+            orderRepository.save(b2b);
+        }
+
+        @Test
+        @DisplayName("countActiveByUserId не считает B2B-заказ с тем же userId")
+        void countActiveByUserIdShouldIgnoreB2b() {
+            seedOrderWithStatus(OrderStatus.CREATED);
+            seedOrderWithStatus(OrderStatus.COMPLETED);
+            seedB2bOrderWithSameUserId();
+
+            assertThat(orderService.countActiveByUserId(USER_ID)).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("getAdminOrders по userId не возвращает B2B-заказ с тем же userId")
+        void getAdminOrdersByUserIdShouldIgnoreB2b() {
+            Order b2c = seedOrderWithStatus(OrderStatus.CREATED);
+            seedB2bOrderWithSameUserId();
+
+            var page = orderService.getAdminOrders(null, USER_ID, null, null, Pageable.unpaged());
+
+            assertThat(page.getContent()).extracting(Order::getId).containsExactly(b2c.getId());
+        }
+    }
+
     // ==================== Kafka events ====================
 
     @Nested
@@ -1259,7 +1346,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
         @DisplayName("ORDER_CANCELLED event отправляется при отмене")
         void shouldSendOrderCancelledEvent() {
             Order order = createTestOrder();
-            orderService.cancelOrder(order.getId(), USER_ID);
+            orderService.cancelOrder(order.getId(), USER_ID, CustomerType.B2C);
 
             List<OrderEvent> events = consumeEvents("order-events", 10);
 
@@ -1425,7 +1512,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             Order order = createTestOrder();
             OrderItemDto item = new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null);
 
-            Order toTerminal = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder().shippingWarehouseId(1L)
+            Order toTerminal = orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, UpdateOrderRequest.builder().shippingWarehouseId(1L)
                     .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.CARRIER_TERMINAL)
                     .carrierCode(CarrierCode.DELLIN).carrierTerminalId(dellinTerminal.getId())
                     .pickupRecipientName("Иван Иванов").pickupRecipientPhone("+79990000000")
@@ -1437,7 +1524,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             assertThat(toTerminal.getTerminalName()).isEqualTo("Терминал Толмачёво");
             assertThat(toTerminal.getPickupRecipientName()).isEqualTo("Иван Иванов");
 
-            Order toPickup = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder().shippingWarehouseId(1L)
+            Order toPickup = orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, UpdateOrderRequest.builder().shippingWarehouseId(1L)
                     .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.PICKUP)
                     .warehousePointId(savedWarehousePoint.getId()).items(List.of(item)).build());
 
@@ -1454,7 +1541,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             Order order = createTestOrder();
             OrderItemDto item = new OrderItemDto(PRODUCT_ID_1, null, 1, null, null, null, null, null, null, null);
 
-            Order toPickup = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder().shippingWarehouseId(1L)
+            Order toPickup = orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, UpdateOrderRequest.builder().shippingWarehouseId(1L)
                     .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.PICKUP)
                     .warehousePointId(savedWarehousePoint.getId())
                     .pickupRecipientName("Пётр Петров").pickupRecipientPhone("+79991112233")
@@ -1462,7 +1549,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             assertThat(toPickup.getPickupRecipientName()).isEqualTo("Пётр Петров");
             assertThat(toPickup.getPickupRecipientPhone()).isEqualTo("+79991112233");
 
-            Order toAddress = orderService.updateOrder(order.getId(), USER_ID, UpdateOrderRequest.builder().shippingWarehouseId(1L)
+            Order toAddress = orderService.updateOrder(order.getId(), USER_ID, CustomerType.B2C, UpdateOrderRequest.builder().shippingWarehouseId(1L)
                     .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.CARRIER_ADDRESS)
                     .carrierCode(CarrierCode.PEC).deliveryAddress(buildAddressDto())
                     .items(List.of(item)).build());
@@ -1492,7 +1579,7 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
                     .paymentMethod(PaymentMethod.CARD).deliveryMethod(DeliveryMethod.CARRIER_TERMINAL)
                     .carrierCode(CarrierCode.DELLIN).carrierTerminalId(dellinTerminal.getId())
                     .pickupRecipientName("Иван Иванов").items(List.of(item)).build();
-            assertThatThrownBy(() -> orderService.updateOrder(created.getId(), USER_ID, noPhone))
+            assertThatThrownBy(() -> orderService.updateOrder(created.getId(), USER_ID, CustomerType.B2C, noPhone))
                     .isInstanceOf(InvalidOrderStateException.class).hasMessage("Укажите ФИО и телефон получателя");
         }
 
@@ -1503,20 +1590,20 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             Order original = orderService.createOrder(USER_ID, USER_EMAIL, "B2C",
                     terminalRequest(CarrierCode.DELLIN, dellinTerminal.getId(), null));
 
-            Order repeated = orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL);
+            Order repeated = orderService.repeatOrder(original.getId(), USER_ID, CustomerType.B2C, USER_EMAIL);
             assertThat(repeated.getTerminalName()).isEqualTo("Терминал Толмачёво");
             assertThat(repeated.getPickupRecipientName()).isEqualTo("Иван Иванов");
             assertThat(repeated.getPickupRecipientPhone()).isEqualTo("+79990000000");
 
             setDellinTerminalDelivery(false);
-            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL))
+            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, CustomerType.B2C, USER_EMAIL))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessage("Терминал больше недоступен, выберите другой");
 
             setDellinTerminalDelivery(true);
             dellinTerminal.setActive(false);
             terminalRepository.save(dellinTerminal);
-            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, USER_EMAIL))
+            assertThatThrownBy(() -> orderService.repeatOrder(original.getId(), USER_ID, CustomerType.B2C, USER_EMAIL))
                     .isInstanceOf(InvalidOrderStateException.class)
                     .hasMessage("Терминал больше недоступен, выберите другой");
         }
@@ -1539,8 +1626,8 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
     }
 
     private void addItemsToCart() {
-        cartService.addItemToCart(USER_ID, PRODUCT_ID_1, 10);
-        cartService.addItemToCart(USER_ID, PRODUCT_ID_2, 10);
+        cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_1, 10);
+        cartService.addItemToCart(USER_ID, CustomerType.B2C, PRODUCT_ID_2, 10);
     }
 
     private Order createTestOrder() {
@@ -1617,9 +1704,9 @@ class OrderServiceTest extends BaseServiceIntegrationTest {
             long deadline = System.currentTimeMillis() + 10_000;
             while (events.size() < maxEvents && System.currentTimeMillis() < deadline) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
-                for (ConsumerRecord<String, String> record : records) {
+                for (ConsumerRecord<String, String> consumerRecord : records) {
                     try {
-                        events.add(jsonMapper.readValue(record.value(), OrderEvent.class));
+                        events.add(jsonMapper.readValue(consumerRecord.value(), OrderEvent.class));
                     } catch (Exception e) {
                         throw new RuntimeException("Ошибка десериализации OrderEvent", e);
                     }

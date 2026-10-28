@@ -28,8 +28,8 @@ const AdminNewsPage = () => {
         mutationFn: deleteNews,
         onSuccess: () => {
             messageApi.success('Новость удалена');
-            queryClient.invalidateQueries({ queryKey: ['adminNews'] });
-            queryClient.invalidateQueries({ queryKey: ['news'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminNews'] });
+            void queryClient.invalidateQueries({ queryKey: ['news'] });
         },
         onError: () => messageApi.error('Не удалось удалить новость'),
     });

@@ -48,6 +48,9 @@ import java.util.List;
 @Slf4j
 public class OrderStatusImportService {
 
+    private static final String EXCHANGE_TYPE_ORDER_STATUS = "ORDER_STATUS";
+    private static final String RESULT_SUCCESS = "success";
+
     private static final String ORDERS_XML_PREFIX = "orders";
     private static final String STATUS_REQUISITE_NAME = "Статус заказа";
     private static final String SYNC_URI = "/api/v1/orders/by-number/{orderNumber}/1c-sync";
@@ -71,7 +74,7 @@ public class OrderStatusImportService {
         Path ordersFile = findLatestOrdersFile(exchangeDir);
         if (ordersFile == null) {
             log.warn("Файлы orders*.xml не найдены в {} — нет статусов для обработки", exchangeDir);
-            return "success";
+            return RESULT_SUCCESS;
         }
 
         log.info("Обработка статусов заказов из {}", ordersFile.getFileName());
@@ -82,8 +85,8 @@ public class OrderStatusImportService {
 
             if (documents == null || documents.isEmpty()) {
                 log.info("Нет документов со статусами в {}", ordersFile.getFileName());
-                saveImportLog("ORDER_STATUS", ImportStatus.SUCCESS, 0, 0, 0, null, startedAt);
-                return "success";
+                saveImportLog(EXCHANGE_TYPE_ORDER_STATUS, ImportStatus.SUCCESS, 0, 0, 0, null, startedAt);
+                return RESULT_SUCCESS;
             }
 
             int updated = 0;
@@ -96,27 +99,33 @@ public class OrderStatusImportService {
                     updated++;
                 } catch (Exception e) {
                     failed++;
-                    String error = String.format("Заказ %s: %s", doc.getId(), e.getMessage());
+                    String error = "Заказ " + doc.getId() + ": " + e.getMessage();
                     errors.add(error);
                     log.error("Ошибка обновления статуса заказа {}: {}", doc.getId(), e.getMessage());
                 }
             }
 
-            ImportStatus status = failed == 0 ? ImportStatus.SUCCESS
-                    : (updated > 0 ? ImportStatus.PARTIAL : ImportStatus.FAILED);
+            ImportStatus status;
+            if (failed == 0) {
+                status = ImportStatus.SUCCESS;
+            } else if (updated > 0) {
+                status = ImportStatus.PARTIAL;
+            } else {
+                status = ImportStatus.FAILED;
+            }
 
-            saveImportLog("ORDER_STATUS", status, documents.size(), updated, failed,
+            saveImportLog(EXCHANGE_TYPE_ORDER_STATUS, status, documents.size(), updated, failed,
                     errors.isEmpty() ? null : String.join("; ", errors), startedAt);
 
             log.info("Обработка статусов завершена: updated={}, failed={}", updated, failed);
 
             return status == ImportStatus.FAILED
                     ? "failure\nВсе заказы завершились с ошибкой"
-                    : "success";
+                    : RESULT_SUCCESS;
 
         } catch (Exception e) {
             log.error("Критическая ошибка обработки статусов заказов", e);
-            saveImportLog("ORDER_STATUS", ImportStatus.FAILED, 0, 0, 0, e.getMessage(), startedAt);
+            saveImportLog(EXCHANGE_TYPE_ORDER_STATUS, ImportStatus.FAILED, 0, 0, 0, e.getMessage(), startedAt);
             return "failure\n" + e.getMessage();
         }
     }

@@ -9,6 +9,8 @@ import ru.rfsnab.userservice.models.dto.legal.*;
  * Маппер для преобразования сущностей юридического лица в DTO.
  */
 public class LegalEntityMapper {
+    private LegalEntityMapper() {
+    }
 
     public static LegalEntityDto toDto(LegalEntity entity) {
         return new LegalEntityDto(

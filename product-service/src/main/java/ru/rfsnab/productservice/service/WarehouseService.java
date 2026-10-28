@@ -53,7 +53,6 @@ public class WarehouseService {
         return saved;
     }
 
-    @Transactional(readOnly = true)
     public Warehouse requireById(Long id) {
         return warehouseRepository.findById(id)
                 .orElseThrow(() -> new WarehouseNotFoundException("Склад id=" + id + " не найден"));
@@ -63,7 +62,7 @@ public class WarehouseService {
     public Warehouse requireActiveByCode(String code) {
         Warehouse warehouse = warehouseRepository.findByCode(code)
                 .orElseThrow(() -> new WarehouseNotFoundException("Склад " + code + " не найден"));
-        if (!warehouse.getActive()) {
+        if (!Boolean.TRUE.equals(warehouse.getActive())) {
             throw new BusinessException("Склад " + code + " выключен");
         }
         return warehouse;

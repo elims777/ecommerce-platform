@@ -13,6 +13,7 @@ import ru.rfsnab.orderservice.mapper.RecipientMapper;
 import ru.rfsnab.orderservice.models.dto.recipient.RecipientRequest;
 import ru.rfsnab.orderservice.models.dto.recipient.RecipientResponse;
 import ru.rfsnab.orderservice.models.entity.Recipient;
+import ru.rfsnab.orderservice.service.PriceSelector;
 import ru.rfsnab.orderservice.service.RecipientService;
 
 import java.util.List;
@@ -32,8 +33,10 @@ public class RecipientController {
 
     @GetMapping
     @Operation(summary = "Список получателей пользователя")
-    public ResponseEntity<List<RecipientResponse>> getAll(Authentication authentication) {
-        List<Recipient> recipients = recipientService.getByUserId(getCurrentUserId(authentication));
+    public ResponseEntity<List<RecipientResponse>> getAll(
+            Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType) {
+        List<Recipient> recipients = recipientService.getByUserId(getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.ok(recipients.stream().map(recipientMapper::toResponse).toList());
     }
 
@@ -41,8 +44,9 @@ public class RecipientController {
     @Operation(summary = "Создать получателя")
     public ResponseEntity<RecipientResponse> create(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @Valid @RequestBody RecipientRequest request) {
-        Recipient recipient = recipientService.create(getCurrentUserId(authentication), request);
+        Recipient recipient = recipientService.create(getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(recipientMapper.toResponse(recipient));
     }
 
@@ -50,9 +54,10 @@ public class RecipientController {
     @Operation(summary = "Обновить получателя")
     public ResponseEntity<RecipientResponse> update(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable Long id,
             @Valid @RequestBody RecipientRequest request) {
-        Recipient recipient = recipientService.update(id, getCurrentUserId(authentication), request);
+        Recipient recipient = recipientService.update(id, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType), request);
         return ResponseEntity.ok(recipientMapper.toResponse(recipient));
     }
 
@@ -60,8 +65,9 @@ public class RecipientController {
     @Operation(summary = "Удалить получателя")
     public ResponseEntity<Void> delete(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable Long id) {
-        recipientService.delete(id, getCurrentUserId(authentication));
+        recipientService.delete(id, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.noContent().build();
     }
 
@@ -69,8 +75,9 @@ public class RecipientController {
     @Operation(summary = "Установить получателя по умолчанию")
     public ResponseEntity<RecipientResponse> setDefault(
             Authentication authentication,
+            @RequestHeader(value = "X-Client-Type", defaultValue = "B2C") String clientType,
             @PathVariable Long id) {
-        Recipient recipient = recipientService.setDefault(id, getCurrentUserId(authentication));
+        Recipient recipient = recipientService.setDefault(id, getCurrentUserId(authentication), PriceSelector.parseCustomerType(clientType));
         return ResponseEntity.ok(recipientMapper.toResponse(recipient));
     }
 

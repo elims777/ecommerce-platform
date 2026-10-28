@@ -1,13 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { Spin } from 'antd';
+import { Spin, App } from 'antd';
 import { NavLink } from '@/components/navigation';
-import { App } from 'antd';
 import { getFavouriteProducts } from '@/api/favourites';
 import ProductCard from '@/features/catalog/ProductCard';
 import { useCartStore } from '@/store/cartStore';
 
 const HeartEmptyIcon = () => (
-    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--ink-4)' }}>
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--ink-4)' }}>
         <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>
     </svg>
 );

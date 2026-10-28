@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Objects;
 
 public class OrderMapper {
+    private OrderMapper() {
+    }
 
     /**
      * Order → OrderDto (полный, с данными о точке самовывоза).

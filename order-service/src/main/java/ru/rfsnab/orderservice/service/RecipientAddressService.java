@@ -8,6 +8,7 @@ import ru.rfsnab.orderservice.mapper.RecipientAddressMapper;
 import ru.rfsnab.orderservice.models.dto.recipient.RecipientAddressRequest;
 import ru.rfsnab.orderservice.models.entity.Recipient;
 import ru.rfsnab.orderservice.models.entity.RecipientAddress;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.repository.RecipientAddressRepository;
 
 import java.util.List;
@@ -21,14 +22,14 @@ public class RecipientAddressService {
     private final RecipientService recipientService;
 
     /** Возвращает все адреса получателя. */
-    public List<RecipientAddress> getByRecipientId(Long recipientId, Long userId) {
-        recipientService.getById(recipientId, userId);
+    public List<RecipientAddress> getByRecipientId(Long recipientId, Long userId, CustomerType customerType) {
+        recipientService.getById(recipientId, userId, customerType);
         return addressRepository.findByRecipientId(recipientId);
     }
 
     /** Возвращает адрес по id с проверкой владельца. */
-    public RecipientAddress getById(Long id, Long recipientId, Long userId) {
-        recipientService.getById(recipientId, userId);
+    public RecipientAddress getById(Long id, Long recipientId, Long userId, CustomerType customerType) {
+        recipientService.getById(recipientId, userId, customerType);
         return addressRepository.findById(id)
                 .filter(a -> a.getRecipient().getId().equals(recipientId))
                 .orElseThrow(() -> new BusinessException("Адрес не найден"));
@@ -36,8 +37,8 @@ public class RecipientAddressService {
 
     /** Создаёт новый адрес для получателя. */
     @Transactional
-    public RecipientAddress create(Long recipientId, Long userId, RecipientAddressRequest request) {
-        Recipient recipient = recipientService.getById(recipientId, userId);
+    public RecipientAddress create(Long recipientId, Long userId, CustomerType customerType, RecipientAddressRequest request) {
+        Recipient recipient = recipientService.getById(recipientId, userId, customerType);
         if (request.isDefault()) {
             resetDefault(recipientId);
         }
@@ -48,8 +49,8 @@ public class RecipientAddressService {
 
     /** Обновляет данные адреса. */
     @Transactional
-    public RecipientAddress update(Long id, Long recipientId, Long userId, RecipientAddressRequest request) {
-        RecipientAddress address = getById(id, recipientId, userId);
+    public RecipientAddress update(Long id, Long recipientId, Long userId, CustomerType customerType, RecipientAddressRequest request) {
+        RecipientAddress address = getById(id, recipientId, userId, customerType);
         address.setLabel(request.label());
         address.setCity(request.city());
         address.setStreet(request.street());
@@ -61,16 +62,16 @@ public class RecipientAddressService {
 
     /** Удаляет адрес получателя. */
     @Transactional
-    public void delete(Long id, Long recipientId, Long userId) {
-        RecipientAddress address = getById(id, recipientId, userId);
+    public void delete(Long id, Long recipientId, Long userId, CustomerType customerType) {
+        RecipientAddress address = getById(id, recipientId, userId, customerType);
         addressRepository.delete(address);
     }
 
     /** Устанавливает адрес по умолчанию, сбрасывая предыдущий. */
     @Transactional
-    public RecipientAddress setDefault(Long id, Long recipientId, Long userId) {
+    public RecipientAddress setDefault(Long id, Long recipientId, Long userId, CustomerType customerType) {
         resetDefault(recipientId);
-        RecipientAddress address = getById(id, recipientId, userId);
+        RecipientAddress address = getById(id, recipientId, userId, customerType);
         address.setDefault(true);
         return addressRepository.save(address);
     }

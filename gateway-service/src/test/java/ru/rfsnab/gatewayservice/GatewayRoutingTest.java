@@ -128,6 +128,19 @@ public class GatewayRoutingTest extends BaseIntegrationTest {
         }
 
         @Test
+        @DisplayName("POST /api/v1/auth/oauth2/exchange без токена — публичный, проксируется в auth-service")
+        void oauth2ExchangeWithoutToken_ShouldPass() {
+            webTestClient.post()
+                    .uri("/api/v1/auth/oauth2/exchange")
+                    .header("Content-Type", "application/json")
+                    .bodyValue("{\"code\":\"abc\"}")
+                    .exchange()
+                    .expectStatus().isOk();
+
+            wireMock.verify(postRequestedFor(urlEqualTo("/v1/auth/oauth2/exchange")));
+        }
+
+        @Test
         @DisplayName("Защищённый endpoint без токена — 401")
         void protectedEndpointWithoutToken_ShouldReturn401() {
             webTestClient.get()
@@ -183,6 +196,17 @@ public class GatewayRoutingTest extends BaseIntegrationTest {
         }
 
         @Test
+        @DisplayName("POST /api/v1/legal-entities/authenticate без токена — 401 (внутренний endpoint не публичный)")
+        void legalEntityAuthenticateWithoutToken_ShouldReturn401() {
+            webTestClient.post()
+                    .uri("/api/v1/legal-entities/authenticate")
+                    .header("Content-Type", "application/json")
+                    .bodyValue("{\"email\":\"a@b.c\",\"password\":\"x\"}")
+                    .exchange()
+                    .expectStatus().isUnauthorized();
+        }
+
+        @Test
         @DisplayName("POST /api/v1/products без токена — 401 (не GET)")
         void postProductWithoutToken_ShouldReturn401() {
             webTestClient.post()
@@ -206,6 +230,50 @@ public class GatewayRoutingTest extends BaseIntegrationTest {
 
             wireMock.verify(getRequestedFor(urlEqualTo("/api/v1/orders"))
                     .withHeader("X-User-Email", equalTo("test@test.com")));
+        }
+    }
+
+    //ADMIN INTEGRATION LOGS
+
+    @Nested
+    @DisplayName("Admin integration logs — /api/v1/admin/integration/logs")
+    class AdminIntegrationLogsTests {
+
+        private static final String ADMIN_LOGS_URI = "/api/v1/admin/integration/logs";
+
+        @Test
+        @DisplayName("Без токена — 401")
+        void withoutToken_ShouldReturn401() {
+            webTestClient.get()
+                    .uri(ADMIN_LOGS_URI)
+                    .exchange()
+                    .expectStatus().isUnauthorized();
+        }
+
+        @Test
+        @DisplayName("С токеном не-админа — 403")
+        void withNonAdminToken_ShouldReturn403() {
+            String token = generateValidToken(1L, "test@test.com", List.of("ROLE_USER"));
+
+            webTestClient.get()
+                    .uri(ADMIN_LOGS_URI)
+                    .header("Authorization", "Bearer " + token)
+                    .exchange()
+                    .expectStatus().isForbidden();
+        }
+
+        @Test
+        @DisplayName("С токеном админа — 200, путь переписан на /api/v1/integration/logs")
+        void withAdminToken_ShouldRewritePathAndReturn200() {
+            String token = generateValidToken(1L, "admin@test.com", List.of("ROLE_ADMIN"));
+
+            webTestClient.get()
+                    .uri(ADMIN_LOGS_URI)
+                    .header("Authorization", "Bearer " + token)
+                    .exchange()
+                    .expectStatus().isOk();
+
+            wireMock.verify(getRequestedFor(urlEqualTo("/api/v1/integration/logs")));
         }
     }
 

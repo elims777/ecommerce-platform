@@ -30,6 +30,7 @@ import ru.rfsnab.orderservice.models.entity.DeliveryAddress;
 import ru.rfsnab.orderservice.models.entity.Order;
 import ru.rfsnab.orderservice.models.entity.OrderItem;
 import ru.rfsnab.orderservice.models.entity.WarehousePoint;
+import ru.rfsnab.orderservice.models.entity.enums.CustomerType;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 import ru.rfsnab.orderservice.models.entity.enums.PaymentMethod;
@@ -97,7 +98,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("201 Created — заказ успешно создан (DELIVERY)")
         void shouldCreateDeliveryOrder() throws Exception {
             Order order = buildDeliveryOrder();
-            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class)))
+            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), eq("B2C"), any(CreateOrderRequest.class)))
                     .thenReturn(order);
 
             String json = """
@@ -125,7 +126,38 @@ class OrderControllerTest extends BaseIntegrationTest {
                     .andExpect(jsonPath("$.status.code").value("CREATED"))
                     .andExpect(jsonPath("$.deliveryAddress.city").value("Сыктывкар"));
 
-            verify(orderService).createOrder(eq(USER_ID), eq(USER_EMAIL), any(String.class), any(CreateOrderRequest.class));
+            verify(orderService).createOrder(eq(USER_ID), eq(USER_EMAIL), eq("B2C"), any(CreateOrderRequest.class));
+        }
+
+        @Test
+        @DisplayName("201 Created — заголовок X-Client-Type: B2B передаётся в сервис как B2B")
+        void shouldPassB2bClientTypeOnCreate() throws Exception {
+            when(orderService.createOrder(eq(USER_ID), eq(USER_EMAIL), eq("B2B"), any(CreateOrderRequest.class)))
+                    .thenReturn(buildDeliveryOrder());
+
+            String json = """
+                    {
+                        "paymentMethod": "CARD",
+                        "deliveryMethod": "SUPPLIER_DELIVERY",
+                        "shippingWarehouseId": 1,
+                        "deliveryAddress": {
+                            "city": "Сыктывкар",
+                            "street": "Октябрьский проспект",
+                            "building": "1",
+                            "phone": "+79001234567",
+                            "recipientName": "Иванов Иван"
+                        }
+                    }
+                    """;
+
+            mockMvc.perform(post("/api/v1/orders")
+                            .header("X-Client-Type", "B2B")
+                            .with(jwtUser()).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isCreated());
+
+            verify(orderService).createOrder(eq(USER_ID), eq(USER_EMAIL), eq("B2B"), any(CreateOrderRequest.class));
         }
 
         @Test
@@ -183,7 +215,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         void shouldReturnPageOfOrders() throws Exception {
             Order order = buildDeliveryOrder();
             Page<Order> page = new PageImpl<>(List.of(order), PageRequest.of(0, 20), 0);
-            when(orderService.getUserOrders(eq(USER_ID), any(Pageable.class)))
+            when(orderService.getUserOrders(eq(USER_ID), eq(CustomerType.B2C), any(Pageable.class)))
                     .thenReturn(page);
 
             mockMvc.perform(get("/api/v1/orders")
@@ -198,7 +230,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         @Test
         @DisplayName("200 OK — пустой список")
         void shouldReturnEmptyPage() throws Exception {
-            when(orderService.getUserOrders(eq(USER_ID), any(Pageable.class)))
+            when(orderService.getUserOrders(eq(USER_ID), eq(CustomerType.B2C), any(Pageable.class)))
                     .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
 
             mockMvc.perform(get("/api/v1/orders")
@@ -218,7 +250,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — возвращает заказ с items")
         void shouldReturnOrder() throws Exception {
             Order order = buildDeliveryOrder();
-            when(orderService.getOrderByIdAndUser(order.getId(), USER_ID))
+            when(orderService.getOrderByIdAndUser(order.getId(), USER_ID, CustomerType.B2C))
                     .thenReturn(order);
 
             mockMvc.perform(get("/api/v1/orders/{id}", order.getId())
@@ -233,7 +265,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         @DisplayName("200 OK — отправления клиенту без sender, receiver и direction")
         void shouldHideShipmentCounterparties() throws Exception {
             Order order = buildDeliveryOrder();
-            when(orderService.getOrderByIdAndUser(order.getId(), USER_ID)).thenReturn(order);
+            when(orderService.getOrderByIdAndUser(order.getId(), USER_ID, CustomerType.B2C)).thenReturn(order);
             when(shipmentService.getByOrderId(order.getId())).thenReturn(List.of(new ShipmentDto(1L, order.getId(),
                     "ABC-00001", CarrierCode.DELLIN, "Деловые Линии", "123", ShipmentDirection.OUTGOING, "ООО Отправитель", "7701",
                     "ООО Получатель", "5401", "Москва", "Сыктывкар", null, null, "В пути", null, null, null, false, false,
@@ -266,7 +298,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         void shouldUpdateOrder() throws Exception {
             Order updatedOrder = buildDeliveryOrder();
             updatedOrder.setPaymentMethod(PaymentMethod.SBP);
-            when(orderService.updateOrder(eq(ORDER_ID), eq(USER_ID),
+            when(orderService.updateOrder(eq(ORDER_ID), eq(USER_ID), eq(CustomerType.B2C),
                     any(UpdateOrderRequest.class))).thenReturn(updatedOrder);
 
             String json = """
@@ -327,14 +359,14 @@ class OrderControllerTest extends BaseIntegrationTest {
         void shouldConfirmOrder() throws Exception {
             Order order = buildDeliveryOrder();
             order.setStatus(OrderStatus.PROCESSING);
-            when(orderService.confirmOrder(ORDER_ID, USER_ID)).thenReturn(order);
+            when(orderService.confirmOrder(ORDER_ID, USER_ID, CustomerType.B2C)).thenReturn(order);
 
             mockMvc.perform(post("/api/v1/orders/{id}/confirm", ORDER_ID)
                             .with(jwtUser()).with(csrf()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status.code").value("PROCESSING"));
 
-            verify(orderService).confirmOrder(ORDER_ID, USER_ID);
+            verify(orderService).confirmOrder(ORDER_ID, USER_ID, CustomerType.B2C);
         }
 
         @Test
@@ -357,7 +389,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         void shouldCancelOrder() throws Exception {
             Order cancelledOrder = buildDeliveryOrder();
             cancelledOrder.setStatus(OrderStatus.CANCELLED);
-            when(orderService.cancelOrder(ORDER_ID, USER_ID)).thenReturn(cancelledOrder);
+            when(orderService.cancelOrder(ORDER_ID, USER_ID, CustomerType.B2C)).thenReturn(cancelledOrder);
 
             mockMvc.perform(post("/api/v1/orders/{id}/cancel", ORDER_ID)
                             .with(jwtUser()).with(csrf()))
@@ -377,7 +409,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         void shouldInitiatePayment() throws Exception {
             PaymentInitiationResponse response = new PaymentInitiationResponse(
                     "https://pay.tochka.com/link", PaymentMethod.CARD, OrderStatus.PENDING_PAYMENT);
-            when(orderService.pay(ORDER_ID, USER_ID)).thenReturn(response);
+            when(orderService.pay(ORDER_ID, USER_ID, CustomerType.B2C)).thenReturn(response);
 
             mockMvc.perform(post("/api/v1/orders/{id}/pay", ORDER_ID)
                             .with(jwtUser()).with(csrf()))
@@ -397,7 +429,7 @@ class OrderControllerTest extends BaseIntegrationTest {
         void shouldRepeatOrder() throws Exception {
             Order newOrder = buildDeliveryOrder();
             newOrder.setOrderNumber("ABC-00002");
-            when(orderService.repeatOrder(eq(ORDER_ID), eq(USER_ID), eq(USER_EMAIL))).thenReturn(newOrder);
+            when(orderService.repeatOrder(ORDER_ID, USER_ID, CustomerType.B2C, USER_EMAIL)).thenReturn(newOrder);
 
             mockMvc.perform(post("/api/v1/orders/{id}/repeat", ORDER_ID)
                             .with(jwtUser()).with(csrf()))
@@ -470,7 +502,7 @@ class OrderControllerTest extends BaseIntegrationTest {
             Order order = buildDeliveryOrder();
             order.setExternalId("РФ-000123");
             order.setStatus(OrderStatus.PROCESSING);
-            when(orderService.syncFrom1C(eq(ORDER_ID), eq("РФ-000123"), eq(OrderStatus.PROCESSING)))
+            when(orderService.syncFrom1C(ORDER_ID, "РФ-000123", OrderStatus.PROCESSING))
                     .thenReturn(order);
 
             String json = """
@@ -559,6 +591,14 @@ class OrderControllerTest extends BaseIntegrationTest {
                 .phoneNumber("+7 (8212) 00-00-00")
                 .workingHours("Пн-Пт: 9:00-18:00")
                 .active(true).build();
+    }
+
+    @Test
+    @DisplayName("GET несуществующего пути — 404, а не 500")
+    void unknownPath_Returns404() throws Exception {
+        mockMvc.perform(get("/api/v1/orders/no/such/endpoint").with(jwtUser()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
     }
 
     private static RequestPostProcessor jwtUser() {

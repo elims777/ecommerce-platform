@@ -10,7 +10,7 @@ import ru.rfsnab.productservice.configuration.JwtProperties;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -65,8 +65,8 @@ public class JwtService {
      */
     public boolean isTokenExpired(String token){
         try{
-            Date expiration = extractClaims(token).getExpiration();
-            return expiration.before(new Date());
+            Instant expiration = extractClaims(token).getExpiration().toInstant();
+            return expiration.isBefore(Instant.now());
         } catch (JwtException e){
             return true;
         }

@@ -102,7 +102,7 @@ const SortableCatItem = ({ cat, selectedId, onSelect }: SortableCatItemProps) =>
     return (
         <li ref={setNodeRef} style={{ listStyle: 'none', transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}>
             <div
-                onClick={() => !isDragging && onSelect(cat.id)}
+                onClick={() => !isDragging && onSelect(cat.id)} role="button" tabIndex={0} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); if (!isDragging) onSelect(cat.id); } }}
                 style={{
                     display: 'flex', alignItems: 'center', gap: 4,
                     padding: '6px 10px', borderRadius: 'var(--r-3)', cursor: 'pointer',
@@ -119,7 +119,7 @@ const SortableCatItem = ({ cat, selectedId, onSelect }: SortableCatItemProps) =>
                     onClick={(e) => e.stopPropagation()}
                     style={{ cursor: 'grab', display: 'inline-flex', flexShrink: 0, color: '#999', touchAction: 'none', padding: '0 2px' }}
                 >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none">
                         <circle cx="4" cy="2.5" r="1" fill="currentColor"/>
                         <circle cx="8" cy="2.5" r="1" fill="currentColor"/>
                         <circle cx="4" cy="6" r="1" fill="currentColor"/>
@@ -129,11 +129,11 @@ const SortableCatItem = ({ cat, selectedId, onSelect }: SortableCatItemProps) =>
                     </svg>
                 </span>
                 {hasChildren ? (
-                    <svg width="10" height="10" viewBox="0 0 8 8" fill="none" style={{ flexShrink: 0, opacity: 0.55, transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
+                    <svg aria-hidden="true" width="10" height="10" viewBox="0 0 8 8" fill="none" style={{ flexShrink: 0, opacity: 0.55, transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
                         <path d="M2 1.5l3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 ) : (
-                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, opacity: 0.55 }}>
+                    <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, opacity: 0.55 }}>
                         <path d="M2 4h5l2 2h5v8H2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none" />
                     </svg>
                 )}
@@ -415,10 +415,10 @@ const AdminCatalogPage = () => {
     }, [displayProducts, searchQuery]);
 
     const invalidateAll = useCallback(() => {
-        queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
-        queryClient.invalidateQueries({ queryKey: ['adminCatalogInactiveCount'] });
-        queryClient.invalidateQueries({ queryKey: ['adminCategoryTree'] });
-        queryClient.invalidateQueries({ queryKey: ['categories'] });
+        void queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
+        void queryClient.invalidateQueries({ queryKey: ['adminCatalogInactiveCount'] });
+        void queryClient.invalidateQueries({ queryKey: ['adminCategoryTree'] });
+        void queryClient.invalidateQueries({ queryKey: ['categories'] });
     }, [queryClient]);
 
     // ── Category DnD ─────────────────────────────────────────────────────────
@@ -684,8 +684,8 @@ const AdminCatalogPage = () => {
             await apiClient.put(`/v1/products/${id}/${isActive ? 'deactivate' : 'activate'}`);
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
-            queryClient.invalidateQueries({ queryKey: ['adminCatalogInactiveCount'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminCatalogInactiveCount'] });
             messageApi.success('Статус товара обновлён');
         },
     });
@@ -695,7 +695,7 @@ const AdminCatalogPage = () => {
             await apiClient.delete(`/v1/products/${id}`);
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
+            void queryClient.invalidateQueries({ queryKey: ['adminCatalogProducts'] });
             messageApi.success('Товар удалён');
         },
     });
@@ -803,13 +803,10 @@ const AdminCatalogPage = () => {
     const totalPages = activePage ? Math.ceil(activePage.totalElements / pageSize) : 0;
     const isPaginated = !activeLetter;
 
-    const pageTitle = selectedCategoryId
-        ? findCatName(categoryTree, selectedCategoryId) || 'Товары'
-        : activeLetter
-            ? `Товары на «${activeLetter}»`
-            : searchQuery
-                ? `Поиск: «${searchQuery}»`
-                : 'Все товары';
+    let pageTitle = 'Все товары';
+    if (selectedCategoryId) pageTitle = findCatName(categoryTree, selectedCategoryId) || 'Товары';
+    else if (activeLetter) pageTitle = `Товары на «${activeLetter}»`;
+    else if (searchQuery) pageTitle = `Поиск: «${searchQuery}»`;
 
     // Все строки страницы, включая варианты (в т.ч. свёрнутые)
     const pageRowIds = groupedRows.map((r) => r.product.id);
@@ -938,16 +935,16 @@ const AdminCatalogPage = () => {
                 <div style={{ display: 'flex', gap: 8 }}>
                     <button
                         className="rf-btn rf-btn-sm rf-btn-quiet"
-                        onClick={() => { refetchProducts(); invalidateAll(); }}
+                        onClick={() => { void refetchProducts(); invalidateAll(); }}
                     >
-                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none">
                             <path d="M13.6 2.4A7 7 0 1 0 15 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                             <path d="M11 2h3v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                         Обновить
                     </button>
                     <button className="rf-btn rf-btn-sm rf-btn-quiet" onClick={handleAddCategory}>
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none">
                             <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                         </svg>
                         Категория
@@ -956,7 +953,7 @@ const AdminCatalogPage = () => {
                         to="/admin/products/new"
                         className="rf-btn rf-btn-sm rf-btn-quiet"
                     >
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                        <svg aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none">
                             <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                         </svg>
                         Товар
@@ -968,7 +965,7 @@ const AdminCatalogPage = () => {
             <div className="rf-card" style={{ marginBottom: 10 }}>
                 <div style={{ padding: '10px 14px' }}>
                     <div className="rf-admin-search" style={{ width: '100%' }}>
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none">
                             <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.5" />
                             <path d="M10 10l3.5 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                         </svg>
@@ -1024,7 +1021,7 @@ const AdminCatalogPage = () => {
                         {/* Header */}
                         <div className="rf-card-header" style={{ justifyContent: 'space-between' }}>
                             <h3 style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 16 16" fill="none">
                                     <rect x="1" y="1" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.4" />
                                     <rect x="9" y="1" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.4" />
                                     <rect x="1" y="9" width="6" height="6" rx="1.2" stroke="currentColor" strokeWidth="1.4" />
@@ -1040,7 +1037,7 @@ const AdminCatalogPage = () => {
                                     onClick={handleAddCategory}
                                     title="Новая категория"
                                 >
-                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                    <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none">
                                         <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                                     </svg>
                                 </button>
@@ -1052,7 +1049,7 @@ const AdminCatalogPage = () => {
                                     onClick={() => selectedCategoryId && handleAddSubcategory(selectedCategoryId)}
                                     title="Добавить подкатегорию"
                                 >
-                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                    <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none">
                                         <path d="M2 4h5l2 2h5v8H2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
                                         <path d="M8 8v4M6 10h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                                     </svg>
@@ -1065,7 +1062,7 @@ const AdminCatalogPage = () => {
                                     onClick={() => selectedCategoryId && handleEditCategory(selectedCategoryId)}
                                     title="Редактировать категорию"
                                 >
-                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                    <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none">
                                         <path d="M11 2l3 3-8 8H3v-3L11 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
                                     </svg>
                                 </button>
@@ -1079,13 +1076,13 @@ const AdminCatalogPage = () => {
                                 >
                                     {selectedCategory && !selectedCategory.isActive ? (
                                         // Глаз перечёркнутый — категория скрыта, клик покажет
-                                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none">
                                             <path d="M2 2l12 12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
                                             <path d="M6.5 6.5a2 2 0 0 0 2.8 2.8M4.3 4.4C2.7 5.4 1.5 7 1.5 8c0 0 2.5 4 6.5 4 1 0 1.9-.25 2.7-.65M11.4 11.3C13 10.3 14.5 8 14.5 8s-2.5-4-6.5-4c-.6 0-1.2.1-1.7.25" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     ) : (
                                         // Глаз — категория видна, клик скроет
-                                        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none">
                                             <path d="M1.5 8s2.5-4 6.5-4 6.5 4 6.5 4-2.5 4-6.5 4-6.5-4-6.5-4z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
                                             <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4" />
                                         </svg>
@@ -1103,7 +1100,7 @@ const AdminCatalogPage = () => {
                                     }}
                                     title="Удалить категорию"
                                 >
-                                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                    <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none">
                                         <path d="M2 4h12M6 4V2h4v2M5 4l.5 9h5l.5-9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                 </button>
@@ -1302,7 +1299,7 @@ const AdminCatalogPage = () => {
                                                                 style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, border: 'none', background: 'none', cursor: 'pointer', color: 'var(--ink-3)', padding: 0 }}
                                                                 title={isCollapsed ? 'Развернуть варианты' : 'Свернуть варианты'}
                                                             >
-                                                                <svg width="10" height="10" viewBox="0 0 8 8" fill="none" style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
+                                                                <svg aria-hidden="true" width="10" height="10" viewBox="0 0 8 8" fill="none" style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
                                                                     <path d="M1 2.5l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
                                                                 </svg>
                                                             </button>
@@ -1320,7 +1317,7 @@ const AdminCatalogPage = () => {
                                                                     style={{ cursor: rowDragging ? 'grabbing' : 'grab', color: 'var(--ink-2)', display: 'inline-flex', touchAction: 'none' }}
                                                                     title="Перетащить"
                                                                 >
-                                                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                                                    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 12 12" fill="none">
                                                                         <circle cx="4" cy="2.5" r="1" fill="currentColor"/>
                                                                         <circle cx="8" cy="2.5" r="1" fill="currentColor"/>
                                                                         <circle cx="4" cy="6" r="1" fill="currentColor"/>
@@ -1349,7 +1346,7 @@ const AdminCatalogPage = () => {
                                                                 background: isChild ? 'var(--surface-3)' : 'var(--surface-2)',
                                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                             }}>
-                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                                                <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none">
                                                                     <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" stroke="var(--ink-3)" strokeWidth="1.5" />
                                                                     <path d="M16 3H8" stroke="var(--ink-3)" strokeWidth="1.5" strokeLinecap="round" />
                                                                     <circle cx="12" cy="13" r="2.5" stroke="var(--ink-3)" strokeWidth="1.5" />
@@ -1473,7 +1470,7 @@ const AdminCatalogPage = () => {
                                                                     setMoveProductTarget('');
                                                                 }}
                                                             >
-                                                                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                                                <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none">
                                                                     <path d="M2 4h5l2 2h5v8H2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
                                                                 </svg>
                                                             </button>
@@ -1487,7 +1484,7 @@ const AdminCatalogPage = () => {
                                                                     }
                                                                 }}
                                                             >
-                                                                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                                                                <svg aria-hidden="true" width="13" height="13" viewBox="0 0 16 16" fill="none">
                                                                     <path d="M2 4h12M6 4V2h4v2M5 4l.5 9h5l.5-9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                                                                 </svg>
                                                             </button>
@@ -1635,10 +1632,10 @@ const AdminCatalogPage = () => {
                 </div>
                 <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div>
-                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label htmlFor="batch-target-category" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Целевая категория <span style={{ color: 'var(--brand-red)' }}>*</span>
                         </label>
-                        <select
+                        <select id="batch-target-category"
                             style={{
                                 width: '100%', height: 34, fontSize: 'var(--text-base)',
                                 border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)',
@@ -1697,10 +1694,10 @@ const AdminCatalogPage = () => {
                     </label>
                     {batchSaleEnabled ? (
                         <div>
-                            <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                            <label htmlFor="batch-sale-percent" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                                 Наценка / скидка, % <span style={{ color: 'var(--brand-red)' }}>*</span>
                             </label>
-                            <input
+                            <input id="batch-sale-percent"
                                 type="number"
                                 step="0.01"
                                 min={-90}
@@ -1770,7 +1767,7 @@ const AdminCatalogPage = () => {
                                 {parentSearchResults.map(p => (
                                     <div
                                         key={p.id}
-                                        onClick={() => { setSelectedParentId(p.id); setSelectedParentName(p.name); setParentSearch(p.name); setParentSearchResults([]); }}
+                                        onClick={() => { setSelectedParentId(p.id); setSelectedParentName(p.name); setParentSearch(p.name); setParentSearchResults([]); }} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedParentId(p.id); setSelectedParentName(p.name); setParentSearch(p.name); setParentSearchResults([]); } }}
                                         style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--line-1)', color: 'var(--ink-1)' }}
                                         onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
                                         onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--surface)')}
@@ -1849,10 +1846,10 @@ const AdminCatalogPage = () => {
                 <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {/* Name */}
                     <div>
-                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label htmlFor="cat-name" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Название <span style={{ color: 'var(--brand-red)' }}>*</span>
                         </label>
-                        <input
+                        <input id="cat-name"
                             type="text"
                             placeholder="Название категории"
                             value={catForm.name}
@@ -1874,10 +1871,10 @@ const AdminCatalogPage = () => {
 
                     {/* Description */}
                     <div>
-                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label htmlFor="cat-description" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Описание
                         </label>
-                        <textarea
+                        <textarea id="cat-description"
                             placeholder="Описание"
                             value={catForm.description}
                             onChange={(e) => setCatForm((f) => ({ ...f, description: e.target.value }))}
@@ -1894,10 +1891,10 @@ const AdminCatalogPage = () => {
 
                     {/* Parent category */}
                     <div>
-                        <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                        <label htmlFor="cat-parent" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                             Родительская категория
                         </label>
-                        <select
+                        <select id="cat-parent"
                             value={catForm.parentId}
                             onChange={(e) => setCatForm((f) => ({ ...f, parentId: e.target.value ? Number(e.target.value) : '' }))}
                             style={{
@@ -1929,10 +1926,10 @@ const AdminCatalogPage = () => {
                         </label>
                         {catForm.isSale && (
                             <div style={{ marginTop: 8 }}>
-                                <label style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
+                                <label htmlFor="cat-sale-percent" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--ink-2)', marginBottom: 5 }}>
                                     Наценка / скидка, %
                                 </label>
-                                <input
+                                <input id="cat-sale-percent"
                                     type="number"
                                     step="0.01"
                                     min={-90}

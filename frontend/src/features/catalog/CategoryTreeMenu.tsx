@@ -6,7 +6,7 @@ const subtreeContainsSelected = (category: CategoryTree, selectedId?: number): b
     category.children.some((c) => c.id === selectedId || subtreeContainsSelected(c, selectedId));
 
 const ChevRight = () => (
-    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
         <path d="m9 18 6-6-6-6"/>
     </svg>
 );
@@ -19,7 +19,7 @@ interface CategoryNodeProps {
 }
 
 const CategoryNode = ({ category, selectedId, onSelect, depth = 0 }: CategoryNodeProps) => {
-    const hasChildren = category.children.filter((c) => c.isActive).length > 0;
+    const hasChildren = category.children.some((c) => c.isActive);
     const isSelected = selectedId === category.id;
     const [expanded, setExpanded] = useState(() => subtreeContainsSelected(category, selectedId));
 
@@ -45,7 +45,7 @@ const CategoryNode = ({ category, selectedId, onSelect, depth = 0 }: CategoryNod
     return (
         <div>
             <div
-                onClick={handleClick}
+                onClick={handleClick} role="button" tabIndex={0} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === e.currentTarget) { e.preventDefault(); handleClick(); } }}
                 style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -102,7 +102,7 @@ const CategoryNode = ({ category, selectedId, onSelect, depth = 0 }: CategoryNod
                     background: expanded ? 'var(--surface-2)' : 'transparent',
                 }}
             >
-                {activeChildren.map((child) => (
+                {expanded && activeChildren.map((child) => (
                     <CategoryNode
                         key={child.id}
                         category={child}

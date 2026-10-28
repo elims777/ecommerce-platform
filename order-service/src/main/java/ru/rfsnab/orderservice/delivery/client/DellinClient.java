@@ -42,6 +42,10 @@ import static ru.rfsnab.orderservice.delivery.client.CarrierJson.text;
 @Component
 public class DellinClient implements CarrierClient {
 
+    private static final String FIELD_SESSION_ID = "sessionID";
+    private static final String FIELD_ORDER_DATES = "orderDates";
+    private static final String FIELD_APPKEY = "appkey";
+
     private static final String TERMINALS_PATH = "/v3/public/terminals.json";
     private static final String GENERAL_DEPARTMENT = "general";
     private static final Map<String, String> DAYS = new LinkedHashMap<>();
@@ -123,7 +127,7 @@ public class DellinClient implements CarrierClient {
         for (int from = 0; from < waybills.size(); from += DOC_IDS_BATCH_SIZE) {
             List<String> batch = waybills.subList(from, Math.min(from + DOC_IDS_BATCH_SIZE, waybills.size()));
             JsonNode response = http.post().uri(JOURNAL_PATH)
-                    .body(Map.of("appkey", appKey, "sessionID", sessionId, "docIds", batch))
+                    .body(Map.of(FIELD_APPKEY, appKey, FIELD_SESSION_ID, sessionId, "docIds", batch))
                     .retrieve().body(JsonNode.class);
             for (JsonNode order : ordersOf(response)) {
                 CarrierShipmentStatus status = toStatus(order);
@@ -145,7 +149,7 @@ public class DellinClient implements CarrierClient {
             throw new CarrierApiException("Некорректная ссылка на документ Деловых Линий");
         }
         JsonNode response = http.post().uri(PRINT_PATH)
-                .body(Map.of("appkey", appKey, "sessionID", login(),
+                .body(Map.of(FIELD_APPKEY, appKey, FIELD_SESSION_ID, login(),
                         "docUID", doc.ref().substring(0, separator), "mode", doc.ref().substring(separator + 1)))
                 .retrieve().body(JsonNode.class);
         JsonNode data = response == null ? null : response.get("data");
@@ -169,7 +173,7 @@ public class DellinClient implements CarrierClient {
         Map<String, JournalItem> result = new LinkedHashMap<>();
         for (int page = 1; page <= MAX_JOURNAL_PAGES; page++) {
             JsonNode response = http.post().uri(JOURNAL_PATH)
-                    .body(Map.of("appkey", appKey, "sessionID", sessionId,
+                    .body(Map.of(FIELD_APPKEY, appKey, FIELD_SESSION_ID, sessionId,
                             "dateStart", dateStart, "dateEnd", dateEnd, "page", page))
                     .retrieve().body(JsonNode.class);
             int before = result.size();
@@ -193,9 +197,9 @@ public class DellinClient implements CarrierClient {
 
     private String login() {
         JsonNode response = http.post().uri(LOGIN_PATH)
-                .body(Map.of("appkey", appKey, "login", login, "password", password))
+                .body(Map.of(FIELD_APPKEY, appKey, "login", login, "password", password))
                 .retrieve().body(JsonNode.class);
-        String sessionId = text(response == null ? null : response.get("data"), "sessionID");
+        String sessionId = text(response == null ? null : response.get("data"), FIELD_SESSION_ID);
         if (sessionId == null) {
             throw new CarrierApiException("Деловые Линии не выдали sessionID — проверьте логин и пароль ЛК");
         }
@@ -236,7 +240,7 @@ public class DellinClient implements CarrierClient {
         return new ShipmentCargo(decimal(freight, "weight"), decimal(freight, "volume"), integer(freight, "places"),
                 decimal(order, "totalSum"), bool(order, "isPaid"), bool(order, "orderedDeliveryFromAddress"),
                 bool(order, "orderedDeliveryToAddress"),
-                code == ShipmentStatusCode.DELIVERED ? instant(order.get("orderDates"), "finish") : null,
+                code == ShipmentStatusCode.DELIVERED ? instant(order.get(FIELD_ORDER_DATES), "finish") : null,
                 documentsOf(order), packages, payerOf(order.path("payer")));
     }
 
@@ -275,8 +279,8 @@ public class DellinClient implements CarrierClient {
                 text(order, "senderName", "sender"), firstOf(text(order, "senderInn", "derivalInn"), text(order.get("sender"), "inn")),
                 text(order, "receiverName", "receiver"), firstOf(text(order, "receiverInn", "arrivalInn"), text(order.get("receiver"), "inn")),
                 cityOf(order, "derival"), cityOf(order, "arrival"),
-                firstOf(instant(order.get("orderDates"), "derivalFromOspSender"), instant(order, "orderedAt")),
-                firstOf(instant(order.get("orderDates"), "arrivalToOspReceiver"), instant(order.get("orderDates"), "giveoutFromOspReceiver")),
+                firstOf(instant(order.get(FIELD_ORDER_DATES), "derivalFromOspSender"), instant(order, "orderedAt")),
+                firstOf(instant(order.get(FIELD_ORDER_DATES), "arrivalToOspReceiver"), instant(order.get(FIELD_ORDER_DATES), "giveoutFromOspReceiver")),
                 text(order, "orderNumber"),
                 state == null ? null : toStatus(order), toCargo(order, normalizeStatus(state)));
     }
@@ -307,7 +311,7 @@ public class DellinClient implements CarrierClient {
 
     @Override
     public Optional<List<TerminalData>> fetchTerminals() {
-        JsonNode meta = http.post().uri(TERMINALS_PATH).body(Map.of("appkey", appKey)).retrieve().body(JsonNode.class);
+        JsonNode meta = http.post().uri(TERMINALS_PATH).body(Map.of(FIELD_APPKEY, appKey)).retrieve().body(JsonNode.class);
         String hash = text(meta, "hash");
         String url = text(meta, "url");
         if (hash == null || url == null) {

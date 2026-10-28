@@ -1,5 +1,7 @@
 package ru.rfsnab.notificationservice.service;
 
+import ru.rfsnab.notificationservice.utils.LogMasker;
+
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,21 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class EmailService {
+
+    private static final String KEY_TERMINAL_NAME = "terminalName";
+    private static final String KEY_ORDER_NUMBER = "orderNumber";
+    private static final String KEY_CARRIER_NAME = "carrierName";
+    private static final String KEY_DELIVERY_METHOD = "deliveryMethod";
+    private static final String KEY_TERMINAL_ADDRESS = "terminalAddress";
+    private static final String STATUS_FAILED = "FAILED";
+    private static final String STATUS_PARTIAL = "PARTIAL";
+    private static final String SUBJECT_SUFFIX = " — РФСнаб";
+    private static final String KEY_TRACK_URL = "trackUrl";
+    private static final String ORDERS_PATH = "/orders";
+    private static final String SUBJECT_ORDER_PREFIX = "Заказ ";
+    private static final String KEY_COMPANY_NAME = "companyName";
+    private static final String KEY_TOTAL_AMOUNT = "totalAmount";
+    private static final String KEY_USER_NAME = "userName";
     private static final ZoneId MOSCOW = ZoneId.of("Europe/Moscow");
     private static final DateTimeFormatter MOSCOW_DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
     private static final DateTimeFormatter IMPORT_REPORT_FILE_DATE_FORMAT =
@@ -66,7 +83,7 @@ public class EmailService {
     private String frontendUrl;
 
     public void sendVerificationEmail(String toEmail, String firstName, String verificationToken) {
-        log.info("Send verification email to: {}", toEmail);
+        log.info("Send verification email to: {}", LogMasker.maskEmail(toEmail));
 
         String verificationLink = verificationBaseUrl + "?token=" + verificationToken;
 
@@ -78,7 +95,7 @@ public class EmailService {
     }
 
     public void sendPasswordResetEmail(String toEmail, String firstName, String rawToken) {
-        log.info("Send password reset email to: {}", toEmail);
+        log.info("Send password reset email to: {}", LogMasker.maskEmail(toEmail));
 
         String resetLink = frontendUrl + "/reset-password?token=" + rawToken;
 
@@ -94,23 +111,28 @@ public class EmailService {
      */
     public void sendOrderCreatedEmail(OrderEvent event) {
         Map<String, Object> model = new HashMap<>();
-        model.put("orderNumber", event.orderNumber());
-        model.put("totalAmount", event.totalAmount());
+        model.put(KEY_ORDER_NUMBER, event.orderNumber());
+        model.put(KEY_TOTAL_AMOUNT, event.totalAmount());
         model.put("items", event.items());
+        model.put("customerName", event.customerName());
+        model.put("customerPhone", event.customerPhone());
+        model.put("customerEmail", event.customerEmail());
+        model.put(KEY_COMPANY_NAME, event.companyName());
+        model.put("inn", event.inn());
         model.put("deliveryAddress", event.deliveryAddress());
         model.put("addressLine", formatAddress(event.deliveryAddress()));
         model.put("pickupPoint", event.pickupPoint());
         model.put("pickupLine", formatPickupAddress(event.pickupPoint()));
-        model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
-        model.put("carrierName", event.carrierName());
-        model.put("terminalName", event.terminalName());
-        model.put("terminalAddress", event.terminalAddress());
+        model.put(KEY_DELIVERY_METHOD, deliveryMethodLabel(event.deliveryMethod()));
+        model.put(KEY_CARRIER_NAME, event.carrierName());
+        model.put(KEY_TERMINAL_NAME, event.terminalName());
+        model.put(KEY_TERMINAL_ADDRESS, event.terminalAddress());
         model.put("shippingWarehouseCity", event.shippingWarehouseCity());
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
-        model.put("trackUrl", frontendUrl + "/orders");
+        model.put(KEY_TRACK_URL, frontendUrl + ORDERS_PATH);
 
-        sendHtml(event.customerEmail(), "Заказ " + event.orderNumber() + " оформлен — РФСнаб",
+        sendHtml(event.customerEmail(), SUBJECT_ORDER_PREFIX + event.orderNumber() + " оформлен — РФСнаб",
                 "order-created", model);
     }
 
@@ -119,29 +141,29 @@ public class EmailService {
      */
     public void sendManagerOrderNotification(OrderEvent event) {
         Map<String, Object> model = new HashMap<>();
-        model.put("orderNumber", event.orderNumber());
-        model.put("totalAmount", event.totalAmount());
+        model.put(KEY_ORDER_NUMBER, event.orderNumber());
+        model.put(KEY_TOTAL_AMOUNT, event.totalAmount());
         model.put("items", event.items());
         model.put("customerName", event.customerName());
         model.put("customerPhone", event.customerPhone());
         model.put("customerEmail", event.customerEmail());
-        model.put("companyName", event.companyName());
+        model.put(KEY_COMPANY_NAME, event.companyName());
         model.put("inn", event.inn());
         model.put("customerType", event.customerType());
         model.put("deliveryAddress", event.deliveryAddress());
         model.put("addressLine", formatAddress(event.deliveryAddress()));
         model.put("pickupPoint", event.pickupPoint());
         model.put("pickupLine", formatPickupAddress(event.pickupPoint()));
-        model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
-        model.put("carrierName", event.carrierName());
-        model.put("terminalName", event.terminalName());
-        model.put("terminalAddress", event.terminalAddress());
+        model.put(KEY_DELIVERY_METHOD, deliveryMethodLabel(event.deliveryMethod()));
+        model.put(KEY_CARRIER_NAME, event.carrierName());
+        model.put(KEY_TERMINAL_NAME, event.terminalName());
+        model.put(KEY_TERMINAL_ADDRESS, event.terminalAddress());
         model.put("shippingWarehouseCity", event.shippingWarehouseCity());
         model.put("paymentMethod", paymentMethodLabel(event.paymentMethod()));
         model.put("comment", event.comment());
         model.put("adminUrl", frontendUrl + "/admin/orders");
 
-        sendHtml(managerEmail, "Новый заказ " + event.orderNumber() + " — РФСнаб",
+        sendHtml(managerEmail, "Новый заказ " + event.orderNumber() + SUBJECT_SUFFIX,
                 "manager-new-order", model);
     }
 
@@ -150,9 +172,9 @@ public class EmailService {
      */
     public void sendOrderPaidEmail(String toEmail, String orderNumber, BigDecimal totalAmount) {
         Map<String, Object> model = new HashMap<>();
-        model.put("orderNumber", orderNumber);
-        model.put("totalAmount", totalAmount);
-        model.put("trackUrl", frontendUrl + "/orders");
+        model.put(KEY_ORDER_NUMBER, orderNumber);
+        model.put(KEY_TOTAL_AMOUNT, totalAmount);
+        model.put(KEY_TRACK_URL, frontendUrl + ORDERS_PATH);
 
         sendHtml(toEmail, "Оплата заказа " + orderNumber + " подтверждена — РФСнаб", "order-paid", model);
     }
@@ -162,9 +184,9 @@ public class EmailService {
      */
     public void sendOrderCancelledEmail(String toEmail, String orderNumber) {
         Map<String, Object> model = new HashMap<>();
-        model.put("orderNumber", orderNumber);
+        model.put(KEY_ORDER_NUMBER, orderNumber);
 
-        sendHtml(toEmail, "Заказ " + orderNumber + " отменён — РФСнаб", "order-cancelled", model);
+        sendHtml(toEmail, SUBJECT_ORDER_PREFIX + orderNumber + " отменён — РФСнаб", "order-cancelled", model);
     }
 
     /**
@@ -172,10 +194,10 @@ public class EmailService {
      */
     public void sendInvoiceSentEmail(String toEmail, String orderNumber) {
         Map<String, Object> model = new HashMap<>();
-        model.put("orderNumber", orderNumber);
-        model.put("trackUrl", frontendUrl + "/orders");
+        model.put(KEY_ORDER_NUMBER, orderNumber);
+        model.put(KEY_TRACK_URL, frontendUrl + ORDERS_PATH);
 
-        sendHtml(toEmail, "Счёт по заказу " + orderNumber + " — РФСнаб", "invoice-sent", model);
+        sendHtml(toEmail, "Счёт по заказу " + orderNumber + SUBJECT_SUFFIX, "invoice-sent", model);
     }
 
     /**
@@ -183,15 +205,15 @@ public class EmailService {
      */
     public void sendAwaitingConfirmationEmail(String toEmail, String orderNumber) {
         Map<String, Object> model = new HashMap<>();
-        model.put("orderNumber", orderNumber);
+        model.put(KEY_ORDER_NUMBER, orderNumber);
 
-        sendHtml(toEmail, "Заказ " + orderNumber + " принят в работу — постоплата",
+        sendHtml(toEmail, SUBJECT_ORDER_PREFIX + orderNumber + " принят в работу — постоплата",
                 "awaiting-confirmation", model);
     }
 
     public void sendLegalEntityVerificationEmail(String to, String companyName, String confirmUrl) {
         Map<String, Object> model = new HashMap<>();
-        model.put("companyName", companyName);
+        model.put(KEY_COMPANY_NAME, companyName);
         model.put("confirmUrl", confirmUrl);
 
         sendHtml(to, "Подтвердите email организации — РФСнаб", "legal-verification", model);
@@ -199,7 +221,7 @@ public class EmailService {
 
     public void sendLegalEntityEmailConfirmedToManager(String managerEmail, String companyName, String inn) {
         Map<String, Object> model = new HashMap<>();
-        model.put("companyName", companyName);
+        model.put(KEY_COMPANY_NAME, companyName);
         model.put("inn", inn);
 
         sendHtml(managerEmail, "Новое юрлицо на верификацию — " + companyName,
@@ -208,14 +230,14 @@ public class EmailService {
 
     public void sendLegalEntityVerifiedEmail(String to, String companyName) {
         Map<String, Object> model = new HashMap<>();
-        model.put("companyName", companyName);
+        model.put(KEY_COMPANY_NAME, companyName);
 
         sendHtml(to, "Регистрация подтверждена — РФСнаб", "legal-verified", model);
     }
 
     public void sendLegalEntityRejectedEmail(String to, String companyName, String reason) {
         Map<String, Object> model = new HashMap<>();
-        model.put("companyName", companyName);
+        model.put(KEY_COMPANY_NAME, companyName);
         model.put("reason", reason != null ? reason : "не указана");
 
         sendHtml(to, "Регистрация отклонена — РФСнаб", "legal-rejected", model);
@@ -224,8 +246,8 @@ public class EmailService {
     public void sendLegalEntityLinkRequestedEmail(String to, String companyName,
                                                    String userName, String confirmUrl) {
         Map<String, Object> model = new HashMap<>();
-        model.put("companyName", companyName);
-        model.put("userName", userName);
+        model.put(KEY_COMPANY_NAME, companyName);
+        model.put(KEY_USER_NAME, userName);
         model.put("confirmUrl", confirmUrl);
 
         sendHtml(to, "Запрос на привязку аккаунта — РФСнаб", "legal-link-requested", model);
@@ -234,14 +256,14 @@ public class EmailService {
     public void sendLegalEntityLinkConfirmedEmail(String toLegal, String toUser,
                                                    String companyName, String userName) {
         Map<String, Object> modelLegal = new HashMap<>();
-        modelLegal.put("companyName", companyName);
-        modelLegal.put("userName", userName);
+        modelLegal.put(KEY_COMPANY_NAME, companyName);
+        modelLegal.put(KEY_USER_NAME, userName);
         sendHtml(toLegal, "Пользователь привязан к вашей организации — РФСнаб",
                 "legal-link-confirmed-owner", modelLegal);
 
         Map<String, Object> modelUser = new HashMap<>();
-        modelUser.put("companyName", companyName);
-        modelUser.put("userName", userName);
+        modelUser.put(KEY_COMPANY_NAME, companyName);
+        modelUser.put(KEY_USER_NAME, userName);
         sendHtml(toUser, "Привязка к организации подтверждена — РФСнаб",
                 "legal-link-confirmed-user", modelUser);
     }
@@ -249,14 +271,14 @@ public class EmailService {
     public void sendLegalEntityUnlinkedEmail(String toLegal, String toUser,
                                               String companyName, String userName) {
         Map<String, Object> modelLegal = new HashMap<>();
-        modelLegal.put("companyName", companyName);
-        modelLegal.put("userName", userName);
+        modelLegal.put(KEY_COMPANY_NAME, companyName);
+        modelLegal.put(KEY_USER_NAME, userName);
         sendHtml(toLegal, "Пользователь отвязан от вашей организации — РФСнаб",
                 "legal-unlinked-owner", modelLegal);
 
         Map<String, Object> modelUser = new HashMap<>();
-        modelUser.put("companyName", companyName);
-        modelUser.put("userName", userName);
+        modelUser.put(KEY_COMPANY_NAME, companyName);
+        modelUser.put(KEY_USER_NAME, userName);
         sendHtml(toUser, "Организация отвязана — РФСнаб", "legal-unlinked-user", modelUser);
     }
 
@@ -287,11 +309,11 @@ public class EmailService {
      */
     public void sendOrderDocumentAddedEmail(String toEmail, String orderNumber, String documentType) {
         Map<String, Object> model = new HashMap<>();
-        model.put("orderNumber", orderNumber);
+        model.put(KEY_ORDER_NUMBER, orderNumber);
         model.put("documentType", documentType);
-        model.put("trackUrl", frontendUrl + "/orders");
+        model.put(KEY_TRACK_URL, frontendUrl + ORDERS_PATH);
 
-        sendHtml(toEmail, documentType + " к заказу " + orderNumber + " — РФСнаб",
+        sendHtml(toEmail, documentType + " к заказу " + orderNumber + SUBJECT_SUFFIX,
                 "order-document-added", model);
     }
 
@@ -304,13 +326,13 @@ public class EmailService {
                 && (event.carrierName() != null || event.terminalName() != null || !shipments.isEmpty());
 
         Map<String, Object> model = new HashMap<>();
-        model.put("orderNumber", event.orderNumber());
+        model.put(KEY_ORDER_NUMBER, event.orderNumber());
         model.put("statusLabel", event.status());
         model.put("showDelivery", showDelivery);
-        model.put("deliveryMethod", deliveryMethodLabel(event.deliveryMethod()));
-        model.put("carrierName", event.carrierName());
-        model.put("terminalName", event.terminalName());
-        model.put("terminalAddress", event.terminalAddress());
+        model.put(KEY_DELIVERY_METHOD, deliveryMethodLabel(event.deliveryMethod()));
+        model.put(KEY_CARRIER_NAME, event.carrierName());
+        model.put(KEY_TERMINAL_NAME, event.terminalName());
+        model.put(KEY_TERMINAL_ADDRESS, event.terminalAddress());
         model.put("shipments", shipments);
 
         sendHtml(event.customerEmail(), "Статус заказа " + event.orderNumber() + " обновлён — РФСнаб",
@@ -322,8 +344,8 @@ public class EmailService {
      */
     public void sendShipmentNotFoundEmail(ShipmentNotFoundEvent event) {
         Map<String, Object> model = new HashMap<>();
-        model.put("orderNumber", event.orderNumber());
-        model.put("carrierName", event.carrierName());
+        model.put(KEY_ORDER_NUMBER, event.orderNumber());
+        model.put(KEY_CARRIER_NAME, event.carrierName());
         model.put("waybillNumber", event.waybillNumber());
         model.put("notFoundSince", formatMoscow(event.notFoundSince()));
 
@@ -364,7 +386,7 @@ public class EmailService {
         model.put("rootCause", event.rootCause());
 
         String subject = importSubject(event);
-        if ("FAILED".equals(event.status()) || "PARTIAL".equals(event.status())) {
+        if (STATUS_FAILED.equals(event.status()) || STATUS_PARTIAL.equals(event.status())) {
             LocalDateTime startedAt = event.startedAt() != null ? event.startedAt() : LocalDateTime.now();
             String attachmentName = "ftk-import-" + startedAt.format(IMPORT_REPORT_FILE_DATE_FORMAT) + ".txt";
             byte[] attachmentContent = buildImportReportFile(event).getBytes(StandardCharsets.UTF_8);
@@ -435,14 +457,14 @@ public class EmailService {
     }
 
     String importSubject(ImportEvent event) {
-        if ("FAILED".equals(event.status())) {
+        if (STATUS_FAILED.equals(event.status())) {
             return "Импорт каталога ФТК — ОШИБКА";
         }
         if (event.failed() > 0) {
             return "Импорт каталога ФТК — " + event.failed() + " ошибок";
         }
         // PARTIAL бывает и при failed=0 — когда упали только картинки (см. saveFtkLog)
-        if ("PARTIAL".equals(event.status())) {
+        if (STATUS_PARTIAL.equals(event.status())) {
             return "Импорт каталога ФТК — частично, ошибок фото: " + event.imagesFailed();
         }
         return "Импорт каталога ФТК — успешно";
@@ -481,8 +503,8 @@ public class EmailService {
         }
         return switch (status) {
             case "SUCCESS" -> "Успешно";
-            case "PARTIAL" -> "Частично с ошибками";
-            case "FAILED" -> "Провален";
+            case STATUS_PARTIAL -> "Частично с ошибками";
+            case STATUS_FAILED -> "Провален";
             default -> status;
         };
     }
@@ -585,11 +607,11 @@ public class EmailService {
             }
 
             mailSender.send(message);
-            log.info("HTML email '{}' sent successfully to: {}", template, to);
+            log.info("HTML email '{}' sent successfully to: {}", template, LogMasker.maskEmail(to));
         } catch (MessagingException e) {
-            log.error("Failed to build HTML email '{}' for: {}", template, to, e);
+            log.error("Failed to build HTML email '{}' for: {}", template, LogMasker.maskEmail(to), e);
         } catch (Exception e) {
-            log.error("Failed to send HTML email '{}' to: {}", template, to, e);
+            log.error("Failed to send HTML email '{}' to: {}", template, LogMasker.maskEmail(to), e);
         }
     }
 }

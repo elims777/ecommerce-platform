@@ -20,6 +20,7 @@ import ru.rfsnab.authservice.exceptions.InvalidResetTokenException;
 import ru.rfsnab.authservice.models.dto.AccountByEmailResponse;
 import ru.rfsnab.authservice.models.dto.PasswordResetConsumeResponse;
 
+import java.net.URI;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,7 +65,7 @@ class PasswordResetServiceTest {
     @DisplayName("forgot() - несуществующий email → notification НЕ вызывается")
     void forgot_UnknownEmail_DoesNotCallNotification() {
         when(restTemplate.exchange(
-                anyString(),
+                any(URI.class),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(AccountByEmailResponse.class)
@@ -83,7 +84,7 @@ class PasswordResetServiceTest {
         AccountByEmailResponse account = new AccountByEmailResponse(1L, "USER", EMAIL, "Test");
 
         when(restTemplate.exchange(
-                anyString(),
+                any(URI.class),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(AccountByEmailResponse.class)
@@ -105,13 +106,30 @@ class PasswordResetServiceTest {
     @DisplayName("forgot() - неожиданная ошибка проглатывается, не пробрасывается наружу")
     void forgot_UnexpectedError_DoesNotThrow() {
         when(restTemplate.exchange(
-                anyString(),
+                any(URI.class),
                 eq(HttpMethod.GET),
                 any(HttpEntity.class),
                 eq(AccountByEmailResponse.class)
         )).thenThrow(new RuntimeException("boom"));
 
         assertThatCode(() -> passwordResetService.forgot(EMAIL)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("forgot() - '+' в email кодируется как %2B, а не остаётся пробелом")
+    void forgot_EmailWithPlus_EncodedAsPercent2B() {
+        String plusEmail = "user+tag@example.com";
+        when(restTemplate.exchange(any(URI.class), eq(HttpMethod.GET), any(HttpEntity.class), eq(AccountByEmailResponse.class)))
+                .thenReturn(ResponseEntity.ok(null));
+
+        passwordResetService.forgot(plusEmail);
+
+        verify(restTemplate).exchange(
+                eq(URI.create(USER_SERVICE_URL + "/v1/users/account-by-email?email=user%2Btag%40example.com")),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(AccountByEmailResponse.class)
+        );
     }
 
     // ==================== reset() Tests ====================

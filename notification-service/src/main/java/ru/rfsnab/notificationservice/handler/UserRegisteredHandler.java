@@ -1,5 +1,7 @@
 package ru.rfsnab.notificationservice.handler;
 
+import ru.rfsnab.notificationservice.utils.LogMasker;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +39,7 @@ public class UserRegisteredHandler implements NotificationHandler{
 
             // Idempotency — проверка дубликата
             if(tokenService.existsByToken(event.getVerificationToken())){
-                log.warn("Дубликат verification token: {}", event.getVerificationToken());
+                log.warn("Дубликат verification token для userId: {}", event.getUserId());
                 return;
             }
             // Гасим прежние неиспользованные токены этого пользователя, чтобы старая ссылка не работала после resend
@@ -62,10 +64,10 @@ public class UserRegisteredHandler implements NotificationHandler{
             );
 
             log.info("Verification email отправлен: userId={}, email={}",
-                    event.getUserId(), event.getEmail());
+                    event.getUserId(), LogMasker.maskEmail(event.getEmail()));
 
         } catch (Exception e) {
-            log.error("Ошибка обработки USER_REGISTERED: {}", eventJson, e);
+            log.error("Ошибка обработки USER_REGISTERED", e);
         }
     }
 }

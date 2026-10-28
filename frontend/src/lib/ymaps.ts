@@ -75,7 +75,7 @@ export const useYmaps = (): YmapsKit | null => {
     useEffect(() => {
         let alive = true;
         kitPromise ??= loadKit();
-        kitPromise.then((k) => {
+        void kitPromise.then((k) => {
             if (!k && YANDEX_MAPS_KEY) kitPromise = null; // загрузка упала — следующий монтаж попробует снова
             if (alive) setKit(k);
         });

@@ -6,7 +6,6 @@ import ru.rfsnab.authservice.models.dto.RoleEntity;
 import ru.rfsnab.authservice.models.dto.UserDtoResponse;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -26,12 +25,12 @@ public class RoleExtractor {
         }
 
         if (user.getRoles() == null || user.getRoles().isEmpty()) {
-            log.warn("У пользователя {} нет ролей, используется ROLE_USER", user.getEmail());
+            log.warn("У пользователя {} нет ролей, используется ROLE_USER", EmailMasker.mask(user.getEmail()));
             return List.of("ROLE_USER");
         }
 
         return user.getRoles().stream()
                 .map(RoleEntity::getName)
-                .collect(Collectors.toList());
+                .toList();
     }
 }

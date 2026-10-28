@@ -51,25 +51,7 @@
         <appender-ref ref="FILE_ERROR"/>
     </logger>
 
-    <logger name="ru.rfsnab.userservice.service" level="DEBUG" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE_ALL"/>
-        <appender-ref ref="FILE_ERROR"/>
-    </logger>
-
-    <logger name="ru.rfsnab.userservice.repository" level="DEBUG" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE_ALL"/>
-        <appender-ref ref="FILE_ERROR"/>
-    </logger>
-
     <logger name="ru.rfsnab.userservice.exception" level="WARN" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE_ALL"/>
-        <appender-ref ref="FILE_ERROR"/>
-    </logger>
-
-    <logger name="ru.rfsnab.userservice.aspect" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE_ALL"/>
         <appender-ref ref="FILE_ERROR"/>
@@ -77,8 +59,26 @@
 
     <logger name="org.springframework.web" level="INFO"/>
     <logger name="org.springframework.security" level="INFO"/>
-    <logger name="org.hibernate.SQL" level="DEBUG"/>
     <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="WARN"/>
+
+    <springProfile name="dev">
+        <logger name="ru.rfsnab.userservice.service" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE_ALL"/>
+            <appender-ref ref="FILE_ERROR"/>
+        </logger>
+        <logger name="ru.rfsnab.userservice.repository" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE_ALL"/>
+            <appender-ref ref="FILE_ERROR"/>
+        </logger>
+        <logger name="ru.rfsnab.userservice.aspect" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE_ALL"/>
+            <appender-ref ref="FILE_ERROR"/>
+        </logger>
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+    </springProfile>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>

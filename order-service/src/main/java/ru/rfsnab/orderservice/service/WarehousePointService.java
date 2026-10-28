@@ -49,7 +49,6 @@ public class WarehousePointService{
      *
      * @throws WarehousePointNotFoundException если точки нет
      */
-    @Transactional(readOnly = true)
     public WarehousePoint getPoint(Long id) {
         return warehousePointRepository.findById(id)
                 .orElseThrow(() -> new WarehousePointNotFoundException("Точка самовывоза не найдена: " + id));

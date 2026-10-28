@@ -13,13 +13,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.rfsnab.userservice.exceptions.InvalidUnsubscribeTokenException;
+import ru.rfsnab.userservice.exceptions.UserAlreadyExistsException;
 import ru.rfsnab.userservice.models.LegalEntity;
 import ru.rfsnab.userservice.models.RoleEntity;
 import ru.rfsnab.userservice.models.UserEntity;
 import ru.rfsnab.userservice.models.dto.RegistrationRequest;
 import ru.rfsnab.userservice.models.dto.SetPasswordRequest;
 import ru.rfsnab.userservice.models.dto.SimpleAuthRequest;
-import ru.rfsnab.userservice.models.dto.UserDto;
+import ru.rfsnab.userservice.models.dto.UpdateUserRequest;
 import ru.rfsnab.userservice.services.LegalEntityService;
 import ru.rfsnab.userservice.services.UserService;
 
@@ -267,32 +269,112 @@ class UserControllerTest {
     @DisplayName("PUT /v1/users/{id} - success returns OK")
     void updateUser_Success_ReturnsOk() throws Exception {
         // Given
-        UserDto userDto = UserDto.builder()
-                .id(1L)
-                .email("updated@test.com")
-                .firstname("Updated")
-                .lastname("Name")
-                .build();
+        UpdateUserRequest request = new UpdateUserRequest("Updated", "Name", null, "79001112233");
 
         UserEntity updatedUser = UserEntity.builder()
                 .id(1L)
-                .email("updated@test.com")
+                .email("test@test.com")
                 .firstname("Updated")
                 .lastname("Name")
                 .password("encodedPassword")
                 .build();
 
-        when(userService.updateUser(anyLong(), any(UserEntity.class))).thenReturn(updatedUser);
+        when(userService.updateUser(anyLong(), any(UpdateUserRequest.class))).thenReturn(updatedUser);
 
         // When & Then
         mockMvc.perform(put("/v1/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(userDto)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email", is("updated@test.com")))
+                .andExpect(jsonPath("$.email", is("test@test.com")))
                 .andExpect(jsonPath("$.firstname", is("Updated")));
 
-        verify(userService, times(1)).updateUser(eq(1L), any(UserEntity.class));
+        verify(userService, times(1)).updateUser(1L, request);
+    }
+
+    @Test
+    @DisplayName("PUT /v1/users/{id} - имя длиннее 50 символов возвращает 400")
+    void updateUser_TooLongFirstname_ReturnsBadRequest() throws Exception {
+        String body = "{\"firstname\":\"" + "а".repeat(51) + "\",\"lastname\":\"Name\",\"phone\":\"79001112233\"}";
+
+        mockMvc.perform(put("/v1/users/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+
+        verify(userService, never()).updateUser(anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("PUT /v1/users/{id} - телефон занят другим пользователем возвращает 409")
+    void updateUser_PhoneTaken_ReturnsConflict() throws Exception {
+        when(userService.updateUser(anyLong(), any(UpdateUserRequest.class)))
+                .thenThrow(new UserAlreadyExistsException("Пользователь с таким номером телефона уже существует"));
+
+        mockMvc.perform(put("/v1/users/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new UpdateUserRequest("A", "B", null, "79001112233"))))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @DisplayName("PUT /v1/users/{id} - пустое имя и неверный телефон возвращают 400")
+    void updateUser_InvalidBody_ReturnsBadRequest() throws Exception {
+        mockMvc.perform(put("/v1/users/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstname\":\"\",\"lastname\":\"Name\",\"phone\":\"123\"}"))
+                .andExpect(status().isBadRequest());
+
+        verify(userService, never()).updateUser(anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("PATCH /v1/users/{id}/admin - имя длиннее 50 символов возвращает 400")
+    void updateUserAdmin_TooLongFirstname_ReturnsBadRequest() throws Exception {
+        String body = "{\"firstname\":\"" + "а".repeat(51) + "\",\"lastname\":\"Name\",\"phone\":\"\"}";
+
+        mockMvc.perform(patch("/v1/users/1/admin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+
+        verify(userService, never()).updateUserAdmin(anyLong(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("PATCH /v1/users/{id}/admin - пустой телефон проходит валидацию")
+    void updateUserAdmin_EmptyPhone_ReturnsOk() throws Exception {
+        when(userService.updateUserAdmin(1L, "A", "B", "")).thenReturn(testUser);
+
+        mockMvc.perform(patch("/v1/users/1/admin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstname\":\"A\",\"lastname\":\"B\",\"phone\":\"\"}"))
+                .andExpect(status().isOk());
+
+        verify(userService).updateUserAdmin(1L, "A", "B", "");
+    }
+
+    @Test
+    @DisplayName("PATCH /v1/users/{id}/admin - телефон не из 11 цифр возвращает 400")
+    void updateUserAdmin_InvalidPhone_ReturnsBadRequest() throws Exception {
+        mockMvc.perform(patch("/v1/users/1/admin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstname\":\"A\",\"lastname\":\"B\",\"phone\":\"123\"}"))
+                .andExpect(status().isBadRequest());
+
+        verify(userService, never()).updateUserAdmin(anyLong(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("PATCH /v1/users/{id}/admin - телефон занят другим пользователем возвращает 409")
+    void updateUserAdmin_PhoneTaken_ReturnsConflict() throws Exception {
+        when(userService.updateUserAdmin(anyLong(), any(), any(), any()))
+                .thenThrow(new UserAlreadyExistsException("Пользователь с таким номером телефона уже существует"));
+
+        mockMvc.perform(patch("/v1/users/1/admin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstname\":\"A\",\"lastname\":\"B\",\"phone\":\"79001112233\"}"))
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -395,6 +477,53 @@ class UserControllerTest {
 
         mockMvc.perform(get("/v1/users/account-by-email").param("email", "nobody@test.com"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET несуществующего пути — 404, а не 500")
+    void unknownPath_Returns404() throws Exception {
+        mockMvc.perform(get("/v1/users/1/no-such-endpoint"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)));
+    }
+
+    @Test
+    @DisplayName("GET /v1/users/abc — нечисловой id возвращает 400, а не 500")
+    void nonNumericId_Returns400() throws Exception {
+        mockMvc.perform(get("/v1/users/abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)));
+    }
+
+    @Test
+    @DisplayName("GET /v1/users/account-by-email без email — 400, а не 500")
+    void accountByEmail_MissingEmail_Returns400() throws Exception {
+        mockMvc.perform(get("/v1/users/account-by-email"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)));
+    }
+
+    @Test
+    @DisplayName("PUT /v1/users/{id} — битый JSON возвращает 400, а не 500")
+    void updateUser_MalformedJson_Returns400() throws Exception {
+        mockMvc.perform(put("/v1/users/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{not-json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)));
+
+        verify(userService, never()).updateUser(anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("GET /v1/users/unsubscribe - недействительный токен возвращает 400")
+    void unsubscribe_InvalidToken_Returns400() throws Exception {
+        doThrow(new InvalidUnsubscribeTokenException("Недействительная ссылка отписки"))
+                .when(userService).unsubscribeByToken("bad");
+
+        mockMvc.perform(get("/v1/users/unsubscribe").param("token", "bad"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)));
     }
 
     @Test

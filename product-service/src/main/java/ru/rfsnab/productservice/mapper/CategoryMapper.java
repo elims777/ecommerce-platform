@@ -5,6 +5,8 @@ import ru.rfsnab.productservice.dto.CategoryResponse;
 import ru.rfsnab.productservice.model.Category;
 
 public class CategoryMapper {
+    private CategoryMapper() {
+    }
 
     public static Category toEntity(CategoryRequest request) {
         Category category = Category.builder()

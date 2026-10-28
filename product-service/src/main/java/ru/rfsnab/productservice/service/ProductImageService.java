@@ -21,6 +21,9 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class ProductImageService {
+
+    private static final String IMAGE_NOT_FOUND = "Изображение не найдено";
+
     private final ProductImageRepository imageRepository;
     private final ProductService productService;
     private final StorageService storageService;
@@ -152,7 +155,7 @@ public class ProductImageService {
     @Transactional
     public void deleteImage(Long imageId) {
         ProductImage image = imageRepository.findById(imageId)
-                .orElseThrow(() -> new BusinessException("Изображение не найдено"));
+                .orElseThrow(() -> new BusinessException(IMAGE_NOT_FOUND));
 
         // Удаляем из Yandex Object Storage
         storageService.deleteFile(image.getFileKey());
@@ -170,7 +173,7 @@ public class ProductImageService {
     @Transactional
     public ProductImage setPrimaryImage(Long imageId) {
         ProductImage image = imageRepository.findById(imageId)
-                .orElseThrow(() -> new BusinessException("Изображение не найдено"));
+                .orElseThrow(() -> new BusinessException(IMAGE_NOT_FOUND));
 
         Long productId = image.getProduct().getId();
         imageRepository.resetPrimaryForProduct(productId);
@@ -192,7 +195,7 @@ public class ProductImageService {
         }
 
         ProductImage image = imageRepository.findById(imageId)
-                .orElseThrow(() -> new BusinessException("Изображение не найдено"));
+                .orElseThrow(() -> new BusinessException(IMAGE_NOT_FOUND));
 
         image.setDisplayOrder(newOrder);
         return imageRepository.save(image);
@@ -207,7 +210,7 @@ public class ProductImageService {
     @Transactional
     public ProductImage updateAltText(Long imageId, String altText) {
         ProductImage image = imageRepository.findById(imageId)
-                .orElseThrow(() -> new BusinessException("Изображение не найдено"));
+                .orElseThrow(() -> new BusinessException(IMAGE_NOT_FOUND));
 
         image.setAltText(altText);
         return imageRepository.save(image);
@@ -242,7 +245,7 @@ public class ProductImageService {
      */
     public ProductImage getImageById(Long imageId) {
         return imageRepository.findById(imageId)
-                .orElseThrow(() -> new BusinessException("Изображение не найдено"));
+                .orElseThrow(() -> new BusinessException(IMAGE_NOT_FOUND));
     }
 
     /**

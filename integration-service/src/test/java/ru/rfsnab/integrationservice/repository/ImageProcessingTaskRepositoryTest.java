@@ -46,8 +46,8 @@ class ImageProcessingTaskRepositoryTest extends BaseIntegrationTest {
 
         List<ImageProcessingTask> pending = taskRepository.findPendingTasksForProcessing(10);
 
-        assertThat(pending).hasSize(2);
-        assertThat(pending).allMatch(t -> t.getStatus() == TaskStatus.PENDING);
+        assertThat(pending).hasSize(2)
+                .allMatch(t -> t.getStatus() == TaskStatus.PENDING);
     }
 
     @Test
@@ -82,7 +82,7 @@ class ImageProcessingTaskRepositoryTest extends BaseIntegrationTest {
 
         int claimed = taskRepository.claimTask(task.getId());
 
-        assertThat(claimed).isEqualTo(0);
+        assertThat(claimed).isZero();
     }
 
     @Test
@@ -94,7 +94,7 @@ class ImageProcessingTaskRepositoryTest extends BaseIntegrationTest {
 
         assertThat(taskRepository.countByStatus(TaskStatus.PENDING)).isEqualTo(2);
         assertThat(taskRepository.countByStatus(TaskStatus.COMPLETED)).isEqualTo(1);
-        assertThat(taskRepository.countByStatus(TaskStatus.FAILED)).isEqualTo(0);
+        assertThat(taskRepository.countByStatus(TaskStatus.FAILED)).isZero();
     }
 
     @Test

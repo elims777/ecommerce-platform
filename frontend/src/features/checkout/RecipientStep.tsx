@@ -54,11 +54,11 @@ const RecipientStep = ({
                             value={selectedRecipient?.id}
                             onChange={onRecipientChange}
                             placeholder="Выберите получателя"
-                            suffixIcon={<UserOutlined />}
+                            suffix={<UserOutlined />}
                             size="large"
-                        >
-                            {recipients.map((r) => (
-                                <Select.Option key={r.id} value={r.id}>
+                            options={recipients.map((r) => ({
+                                value: r.id,
+                                label: (
                                     <Space>
                                         <Text strong>{r.name}</Text>
                                         <Text type="secondary">{r.phone}</Text>
@@ -68,9 +68,9 @@ const RecipientStep = ({
                                             </Text>
                                         )}
                                     </Space>
-                                </Select.Option>
-                            ))}
-                        </Select>
+                                ),
+                            }))}
+                        />
                     </Form.Item>
 
                     {selectedRecipient && (
@@ -93,11 +93,11 @@ const RecipientStep = ({
                                     value={selectedAddress?.id}
                                     onChange={onAddressChange}
                                     placeholder="Выберите адрес"
-                                    suffixIcon={<EnvironmentOutlined />}
+                                    suffix={<EnvironmentOutlined />}
                                     size="large"
-                                >
-                                    {addresses.map((a) => (
-                                        <Select.Option key={a.id} value={a.id}>
+                                    options={addresses.map((a) => ({
+                                        value: a.id,
+                                        label: (
                                             <Space>
                                                 <Text strong>{a.label}</Text>
                                                 <Text type="secondary">
@@ -105,9 +105,9 @@ const RecipientStep = ({
                                                     {a.apartment ? `, кв. ${a.apartment}` : ''}
                                                 </Text>
                                             </Space>
-                                        </Select.Option>
-                                    ))}
-                                </Select>
+                                        ),
+                                    }))}
+                                />
                             )}
                         </Form.Item>
                     )}
@@ -140,7 +140,7 @@ const RecipientStep = ({
                                 rules={[
                                     { required: true, message: 'Укажите телефон' },
                                     {
-                                        pattern: /^\+?[0-9]{11}$/,
+                                        pattern: /^\+?\d{11}$/,
                                         message: 'Введите 11 цифр',
                                     },
                                 ]}

@@ -101,7 +101,7 @@ const LoginPage = () => {
             } else {
                 messageApi.success('Вы успешно вошли в систему');
             }
-            navigate(from, { replace: true });
+            void navigate(from, { replace: true });
         } catch (error) {
             const axiosError = error as AxiosError<{ message?: string }>;
             const errorMessage = axiosError.response?.data?.message || 'Неверный email или пароль';
@@ -148,7 +148,7 @@ const LoginPage = () => {
                         rel="noopener noreferrer"
                         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--brand-navy)', fontWeight: 500, textDecoration: 'none' }}
                     >
-                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>
                         </svg>
                         Инструкция по регистрации
@@ -170,13 +170,13 @@ const LoginPage = () => {
                     {/* Юр / Физ toggle */}
                     <div style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--r-4)', padding: 4, border: '1px solid var(--line-1)', marginBottom: 22 }}>
                         <button style={tabBtn(accountType === 'personal')} onClick={() => setAccountType('personal')}>
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>
                             </svg>
                             Физическое лицо
                         </button>
                         <button style={tabBtn(accountType === 'legal')} onClick={() => setAccountType('legal')}>
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                                 <rect x="4" y="4" width="16" height="16" rx="1"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M9 16h6"/>
                             </svg>
                             Юридическое лицо
@@ -185,7 +185,7 @@ const LoginPage = () => {
 
                     <Form<LoginRequest> layout="vertical" onFinish={handleSubmit} autoComplete="off">
                         <div style={{ marginBottom: 14 }}>
-                            <label style={labelStyle}>E-mail{accountType === 'legal' ? ' или ИНН' : ''}</label>
+                            <label htmlFor="email" style={labelStyle}>E-mail{accountType === 'legal' ? ' или ИНН' : ''}</label>
                             <Form.Item name="email" noStyle rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный формат email' }]}>
                                 <Input style={inputStyle} placeholder={accountType === 'legal' ? 'buyer@company.ru' : 'ivan@mail.ru'} />
                             </Form.Item>
@@ -193,7 +193,7 @@ const LoginPage = () => {
 
                         <div style={{ marginBottom: 14 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                                <label style={{ ...labelStyle, marginBottom: 0 }}>Пароль</label>
+                                <label htmlFor="password" style={{ ...labelStyle, marginBottom: 0 }}>Пароль</label>
                                 <NavLink to="/forgot-password" style={{ fontSize: 'var(--text-sm)', color: 'var(--brand-navy)', fontWeight: 500, cursor: 'pointer', textDecoration: 'none' }}>Забыли пароль?</NavLink>
                             </div>
                             <Form.Item name="password" noStyle rules={[{ required: true, message: 'Введите пароль' }, { min: 8, message: 'Минимум 8 символов' }]}>
@@ -238,12 +238,12 @@ const LoginPage = () => {
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-2)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface)'; }}
                     >
-                        <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#FC3F1D" /><path d="M9.2 4.2v7.6h-1V8.4L6.3 12H5l2-3.8c-1-.3-1.6-.9-1.6-2.2 0-1.4 1-2.4 2.3-2.4z" fill="#fff" /></svg>
+                        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="8" fill="#FC3F1D" /><path d="M9.2 4.2v7.6h-1V8.4L6.3 12H5l2-3.8c-1-.3-1.6-.9-1.6-2.2 0-1.4 1-2.4 2.3-2.4z" fill="#fff" /></svg>
                         Войти через Яндекс
                     </button>
 
                     <div style={{ marginTop: 24, padding: 14, background: 'var(--navy-tint)', borderRadius: 'var(--r-4)', fontSize: 'var(--text-sm)', color: 'var(--brand-navy)', display: 'flex', gap: 10 }}>
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
                             <path d="M12 3 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-3z"/>
                         </svg>
                         <div>Защищённый вход в соответствии с 152-ФЗ. Данные передаются по зашифрованному каналу.</div>

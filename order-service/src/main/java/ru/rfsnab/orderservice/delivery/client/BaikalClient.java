@@ -43,6 +43,18 @@ import static ru.rfsnab.orderservice.delivery.client.CarrierJson.text;
 @Component
 public class BaikalClient implements CarrierClient {
 
+    private static final String FIELD_NUMBER = "number";
+    private static final String FIELD_CONSIGNEE = "consignee";
+    private static final String FIELD_CARGO_LIST = "cargoList";
+    private static final String FIELD_WEIGHT = "weight";
+    private static final String FIELD_VOLUME = "volume";
+    private static final String FIELD_DEPARTURE = "departure";
+    private static final String FIELD_STATUS = "status";
+    private static final String FIELD_DESTINATION = "destination";
+    private static final String FIELD_TOTAL = "total";
+    private static final String FIELD_CONSIGNOR = "consignor";
+    private static final String FIELD_ADDRESS = "address";
+
     private static final String AFFILIATE_PATH = "/v2/affiliate";
     private static final String TRACKING_PATH = "/v1/tracking?number={number}";
     private static final String ORDER_LIST_PATH = "/v2/order/list";
@@ -97,7 +109,7 @@ public class BaikalClient implements CarrierClient {
                 if (terminal.path("finish").asInt(1) != 0) {
                     String map = text(terminal, "map");
                     result.add(new TerminalData(text(terminal, "id"), PointType.TERMINAL, city, text(terminal, "name"),
-                            text(terminal, "address"), coordinate(map, LATITUDE_INDEX), coordinate(map, LONGITUDE_INDEX),
+                            text(terminal, FIELD_ADDRESS), coordinate(map, LATITUDE_INDEX), coordinate(map, LONGITUDE_INDEX),
                             null, text(terminal, "phone")));
                 }
             }
@@ -141,11 +153,11 @@ public class BaikalClient implements CarrierClient {
                 continue;
             }
             // id статусов трекинга, заявок и квитанций нумеруются по-разному и расходятся с документацией — только по тексту
-            String statusText = text(body.path("status"), "text");
+            String statusText = text(body.path(FIELD_STATUS), "text");
             if (statusText == null) {
                 throw new CarrierApiException("Ответ Байкал Сервис не содержит статуса накладной");
             }
-            result.put(waybill, toStatus(statusText, text(body, "departure"), text(body, "destination"), trackingCargo(body)));
+            result.put(waybill, toStatus(statusText, text(body, FIELD_DEPARTURE), text(body, FIELD_DESTINATION), trackingCargo(body)));
         }
         return result;
     }
@@ -170,14 +182,14 @@ public class BaikalClient implements CarrierClient {
         // заявки первыми: квитанция с тем же trackingnumber записывается позже и её статус побеждает
         List<JournalItem> result = new ArrayList<>(requestItems);
         forEachListed(ORDER_LIST_PATH, "orderList", JOURNAL_PAGE_SIZE, period, order -> {
-            String number = text(order, "number");
+            String number = text(order, FIELD_NUMBER);
             String waybill = text(order, "trackingnumber");
             if (number == null || waybill == null) {
                 log.warn("Байкал: квитанция {} без trackingnumber пропущена", number);
                 return;
             }
             try {
-                result.add(toReceipt(waybill, post(ORDER_DETAIL_PATH, Map.of("number", number))));
+                result.add(toReceipt(waybill, post(ORDER_DETAIL_PATH, Map.of(FIELD_NUMBER, number))));
             } catch (CarrierApiException | RestClientException e) {
                 // одна сбойная квитанция не должна обрывать весь журнал
                 log.warn("Байкал: квитанция {} пропущена: {}", number, e.getMessage());
@@ -191,6 +203,9 @@ public class BaikalClient implements CarrierClient {
         int read = 0;
         for (int page = 0; ; page++) {
             JsonNode list = post(path, Map.of("date", period, "navigation", Map.of("page", page, "size", pageSize)));
+            if (list == null) {
+                throw new CarrierApiException("Байкал Сервис вернул пустой ответ на " + path);
+            }
             JsonNode items = array(list, listKey);
             items.forEach(action);
             read += items.size();
@@ -206,11 +221,11 @@ public class BaikalClient implements CarrierClient {
         forEachListed(REQUEST_LIST_PATH, "requestList", REQUEST_PAGE_SIZE, period, requests::add);
         for (JsonNode request : requests) {
             String waybill = text(request, "trackingnumber");
-            String statusName = text(request.path("status"), "name");
+            String statusName = text(request.path(FIELD_STATUS), "name");
             if (waybill == null || (statusName != null && statusName.toLowerCase(Locale.ROOT).contains(REQUEST_DONE_MARK))) {
                 continue;
             }
-            JsonNode cargo = request.path("cargoList").path(0);
+            JsonNode cargo = request.path(FIELD_CARGO_LIST).path(0);
             String from = text(request, "from");
             String to = text(request, "to");
             Instant created = instant(request, "date");
@@ -221,10 +236,10 @@ public class BaikalClient implements CarrierClient {
                 status = new CarrierShipmentStatus(ShipmentStatusCode.CANCELLED, statusName, from, to, null);
             }
             items.add(new JournalItem(waybill,
-                    text(cargo.path("consignor"), "name"), text(cargo.path("consignor").path("legalNaturalPerson"), "firstField"),
-                    text(cargo.path("consignee"), "name"), text(cargo.path("consignee").path("legalNaturalPerson"), "firstField"),
+                    text(cargo.path(FIELD_CONSIGNOR), "name"), text(cargo.path(FIELD_CONSIGNOR).path("legalNaturalPerson"), "firstField"),
+                    text(cargo.path(FIELD_CONSIGNEE), "name"), text(cargo.path(FIELD_CONSIGNEE).path("legalNaturalPerson"), "firstField"),
                     from, to, null, null, text(cargo, "referenceNumber"), status,
-                    new ShipmentCargo(decimal(request, "weight"), decimal(request, "volume"), integer(request, "cargocount"),
+                    new ShipmentCargo(decimal(request, FIELD_WEIGHT), decimal(request, FIELD_VOLUME), integer(request, "cargocount"),
                             null, null, null, null, null, null, null, null)));
         }
     }
@@ -235,9 +250,9 @@ public class BaikalClient implements CarrierClient {
      * (порядок {@link ShipmentStatusCode}): запись не станет DELIVERED, пока не выдан каждый груз.
      */
     private static JournalItem toReceipt(String waybill, JsonNode detail) {
-        JsonNode first = detail.path("cargoList").path(0);
-        String from = text(first.path("departure"), "name");
-        String to = text(first.path("destination"), "name");
+        JsonNode first = detail.path(FIELD_CARGO_LIST).path(0);
+        String from = text(first.path(FIELD_DEPARTURE), "name");
+        String to = text(first.path(FIELD_DESTINATION), "name");
         BigDecimal weight = null;
         BigDecimal volume = null;
         Integer places = null;
@@ -245,17 +260,17 @@ public class BaikalClient implements CarrierClient {
         // плательщики услуг по всем грузам; ключ — ИНН, а без него название
         Map<String, ShipmentPayer> payers = new LinkedHashMap<>();
         CarrierShipmentStatus status = null;
-        for (JsonNode cargo : detail.path("cargoList")) {
+        for (JsonNode cargo : detail.path(FIELD_CARGO_LIST)) {
             JsonNode goods = cargo.path("cargo");
-            weight = sum(weight, decimal(goods, "weight"));
-            volume = sum(volume, decimal(goods, "volume"));
+            weight = sum(weight, decimal(goods, FIELD_WEIGHT));
+            volume = sum(volume, decimal(goods, FIELD_VOLUME));
             Integer cargoPlaces = integer(goods, "places");
             if (cargoPlaces != null) {
                 places = places == null ? cargoPlaces : places + cargoPlaces;
             }
-            String number = text(cargo, "number");
+            String number = text(cargo, FIELD_NUMBER);
             if (number != null) {
-                packages.add(new ShipmentPackage(number, decimal(goods, "weight"), null, null, null));
+                packages.add(new ShipmentPackage(number, decimal(goods, FIELD_WEIGHT), null, null, null));
             }
             for (JsonNode service : cargo.path("services")) {
                 String payerName = text(service.path("payer"), "name");
@@ -264,7 +279,7 @@ public class BaikalClient implements CarrierClient {
                     payers.putIfAbsent(payerInn != null ? payerInn : payerName, new ShipmentPayer(payerName, payerInn, null));
                 }
             }
-            String statusName = text(cargo.path("status"), "name");
+            String statusName = text(cargo.path(FIELD_STATUS), "name");
             if (statusName != null) {
                 CarrierShipmentStatus s = toStatus(statusName, from, to, null);
                 if (status == null || (s.code() != null && (status.code() == null || s.code().ordinal() < status.code().ordinal()))) {
@@ -275,8 +290,8 @@ public class BaikalClient implements CarrierClient {
         ShipmentCargo base = toCargo(detail, first);
         boolean delivered = status != null && status.code() == ShipmentStatusCode.DELIVERED;
         return new JournalItem(waybill,
-                text(first.path("consignor"), "name"), text(first.path("consignor"), "inn"),
-                text(first.path("consignee"), "name"), text(first.path("consignee"), "inn"),
+                text(first.path(FIELD_CONSIGNOR), "name"), text(first.path(FIELD_CONSIGNOR), "inn"),
+                text(first.path(FIELD_CONSIGNEE), "name"), text(first.path(FIELD_CONSIGNEE), "inn"),
                 from, to, instant(detail, "date"), instant(first, "dateArrivalPlane"), text(first, "referenceNumber"), status,
                 new ShipmentCargo(weight, volume, places, base.cost(), base.paid(), base.fromAddress(), base.toAddress(),
                         delivered ? base.deliveredAt() : null, null, packages.isEmpty() ? null : packages,
@@ -284,7 +299,10 @@ public class BaikalClient implements CarrierClient {
     }
 
     private static BigDecimal sum(BigDecimal total, BigDecimal value) {
-        return value == null ? total : total == null ? value : total.add(value);
+        if (value == null) {
+            return total;
+        }
+        return total == null ? value : total.add(value);
     }
 
     /** Из трекинга известна только сумма (sum); без неё груза нет. */
@@ -301,16 +319,19 @@ public class BaikalClient implements CarrierClient {
      */
     private static ShipmentCargo toCargo(JsonNode detail, JsonNode item) {
         JsonNode goods = item.path("cargo");
-        JsonNode total = item.has("total") ? item.path("total") : detail.path("total");
+        JsonNode total = item.has(FIELD_TOTAL) ? item.path(FIELD_TOTAL) : detail.path(FIELD_TOTAL);
         BigDecimal sum = decimal(total, "sum");
         BigDecimal paid = decimal(total, "paid");
-        JsonNode destination = item.path("destination");
-        Boolean toAddress = text(destination.path("delivery"), "address") != null
-                || text(destination.path("pickup"), "address") != null ? Boolean.TRUE
-                : text(destination.path("terminal"), "name") != null ? Boolean.FALSE : null;
-        return new ShipmentCargo(decimal(goods, "weight"), decimal(goods, "volume"), integer(goods, "places"), sum,
+        JsonNode destination = item.path(FIELD_DESTINATION);
+        Boolean toAddress = null;
+        if (text(destination.path("delivery"), FIELD_ADDRESS) != null || text(destination.path("pickup"), FIELD_ADDRESS) != null) {
+            toAddress = Boolean.TRUE;
+        } else if (text(destination.path("terminal"), "name") != null) {
+            toAddress = Boolean.FALSE;
+        }
+        return new ShipmentCargo(decimal(goods, FIELD_WEIGHT), decimal(goods, FIELD_VOLUME), integer(goods, "places"), sum,
                 sum == null || paid == null ? null : paid.compareTo(sum) >= 0,
-                item.has("departure") ? text(item.path("departure").path("pickup"), "address") != null : null,
+                item.has(FIELD_DEPARTURE) ? text(item.path(FIELD_DEPARTURE).path("pickup"), FIELD_ADDRESS) != null : null,
                 toAddress, instant(item, "dateIssued"), null, null, null);
     }
 

@@ -27,6 +27,8 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class Order1CKafkaProducer {
 
+    private static final String RECIPIENT_LABEL = "Получатель: ";
+
     private final KafkaTopicsProperties topics;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final WarehousePointRepository warehousePointRepository;
@@ -113,7 +115,7 @@ public class Order1CKafkaProducer {
             lines.add("Терминал: " + String.join(", ", Stream.of(order.getTerminalName(), order.getTerminalAddress())
                     .filter(StringUtils::hasText).toList()));
             if (order.getPickupRecipientName() != null) {
-                lines.add("Получатель: " + order.getPickupRecipientName()
+                lines.add(RECIPIENT_LABEL + order.getPickupRecipientName()
                         + (order.getPickupRecipientPhone() != null ? ", " + order.getPickupRecipientPhone() : ""));
             }
         } else if (isPickup) {
@@ -123,14 +125,14 @@ public class Order1CKafkaProducer {
                                 + joinAddress(wp.getPostalCode(), wp.getCity(), wp.getStreet(), wp.getBuilding(), null)));
             }
             if (order.getPickupRecipientName() != null) {
-                lines.add("Получатель: " + order.getPickupRecipientName()
+                lines.add(RECIPIENT_LABEL + order.getPickupRecipientName()
                         + (order.getPickupRecipientPhone() != null ? ", " + order.getPickupRecipientPhone() : ""));
             }
         } else if (address != null) {
             lines.add("Адрес доставки: " + joinAddress(address.getPostalCode(), address.getCity(),
                     address.getStreet(), address.getBuilding(), address.getApartment()));
             if (address.getRecipientName() != null) {
-                lines.add("Получатель: " + address.getRecipientName()
+                lines.add(RECIPIENT_LABEL + address.getRecipientName()
                         + (address.getPhone() != null ? ", " + address.getPhone() : ""));
             }
         }

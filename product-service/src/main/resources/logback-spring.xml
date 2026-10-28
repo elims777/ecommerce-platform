@@ -51,40 +51,39 @@
         <appender-ref ref="FILE_ERROR"/>
     </logger>
 
-    <logger name="ru.rfsnab.productservice.service" level="DEBUG" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE_ALL"/>
-        <appender-ref ref="FILE_ERROR"/>
-    </logger>
-
-    <logger name="ru.rfsnab.productservice.repository" level="DEBUG" additivity="false">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE_ALL"/>
-        <appender-ref ref="FILE_ERROR"/>
-    </logger>
-
     <logger name="ru.rfsnab.productservice.exception" level="WARN" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE_ALL"/>
         <appender-ref ref="FILE_ERROR"/>
     </logger>
 
+    <springProfile name="!prod">
+    <logger name="ru.rfsnab.productservice.service" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_ERROR"/>
+    </logger>
+    <logger name="ru.rfsnab.productservice.repository" level="DEBUG" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_ALL"/>
+        <appender-ref ref="FILE_ERROR"/>
+    </logger>
     <logger name="ru.rfsnab.productservice.aspect" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE_ALL"/>
         <appender-ref ref="FILE_ERROR"/>
     </logger>
-
     <logger name="ru.rfsnab.productservice.security" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE_ALL"/>
         <appender-ref ref="FILE_ERROR"/>
     </logger>
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+    </springProfile>
 
     <logger name="org.springframework.boot" level="INFO"/>
     <logger name="org.springframework.web" level="INFO"/>
     <logger name="org.springframework.data" level="INFO"/>
-    <logger name="org.hibernate.SQL" level="DEBUG"/>
     <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="WARN"/>
     <logger name="com.zaxxer.hikari" level="INFO"/>
 
