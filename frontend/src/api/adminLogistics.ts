@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { AddShipmentRequest, CarrierCode, CarrierDto, CarrierSyncReport, CarrierUpdateRequest, ShipmentDto, ShipmentFilters, WarehousePointRequest } from '@/types/delivery';
+import type { AddShipmentRequest, CarrierCode, CarrierDto, CarrierSyncReport, CarrierUpdateRequest, ShipmentDto, ShipmentFilters, ShipmentStats, WarehousePointRequest } from '@/types/delivery';
 import type { OrderDto, WarehousePointDto } from '@/types/order';
 import type { Page } from '@/types/product';
 
@@ -95,6 +95,12 @@ export const importShipments = async (): Promise<void> => {
 /** Идёт ли сейчас импорт журнала ТК */
 export const getShipmentImportStatus = async (): Promise<{ running: boolean }> => {
     const { data } = await apiClient.get<{ running: boolean }>('/v1/admin/shipments/import');
+    return data;
+};
+
+/** Сводка по отправлениям для дашборда */
+export const getShipmentStats = async (): Promise<ShipmentStats> => {
+    const { data } = await apiClient.get<ShipmentStats>('/v1/admin/shipments/stats');
     return data;
 };
 

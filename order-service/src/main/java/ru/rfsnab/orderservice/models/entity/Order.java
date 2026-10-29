@@ -121,6 +121,7 @@ public class Order {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "customer_type", nullable = false, length = 10)
+    @Builder.Default
     private CustomerType customerType = CustomerType.B2C;
 
     @Column(name = "company_name", length = 255)

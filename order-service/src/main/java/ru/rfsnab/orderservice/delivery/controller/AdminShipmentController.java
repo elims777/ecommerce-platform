@@ -19,6 +19,7 @@ import ru.rfsnab.orderservice.delivery.models.dto.DocumentFile;
 import ru.rfsnab.orderservice.delivery.models.dto.LinkShipmentRequest;
 import ru.rfsnab.orderservice.delivery.models.dto.ShipmentDto;
 import ru.rfsnab.orderservice.delivery.models.dto.ShipmentImportStatus;
+import ru.rfsnab.orderservice.delivery.models.dto.ShipmentStatsResponse;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentDirection;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentStatusCode;
@@ -63,6 +64,13 @@ public class AdminShipmentController {
         ShipmentFilter filter = new ShipmentFilter(carrier, direction, statusCode, city, counterparty, search, from, to,
                 problem, notFound, stale, awaitingMore);
         return ResponseEntity.ok(shipmentService.getJournal(filter, pageable));
+    }
+
+    /** Счётчики для карточки «Логистика» на дашборде. */
+    @GetMapping("/stats")
+    @Operation(summary = "Сводка по отправлениям для дашборда")
+    public ResponseEntity<ShipmentStatsResponse> getStats() {
+        return ResponseEntity.ok(shipmentService.getStats());
     }
 
     /** Запустить импорт журналов ТК сейчас: 202, если запущен; 409, если импорт уже идёт. */

@@ -48,5 +48,6 @@ public class Recipient {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "recipient", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<RecipientAddress> addresses = new ArrayList<>();
 }

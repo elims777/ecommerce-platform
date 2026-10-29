@@ -51,7 +51,7 @@ class ShipmentServiceRaceTest {
         when(pec.fetchStatuses(List.of("1"))).thenReturn(Map.of("1", new CarrierShipmentStatus(null, null, null, null, null)));
         ShipmentService service = new ShipmentService(shipments, mock(CarrierRepository.class), orders, List.of(pec),
                 mock(OrderStatusAdvancer.class), mock(OrderKafkaProducer.class), tx,
-                Mappers.getMapper(ShipmentMapper.class));
+                Mappers.getMapper(ShipmentMapper.class), "");
 
         assertThatThrownBy(() -> service.add(orderId, new AddShipmentRequest(CarrierCode.PEC, "1", ShipmentMode.SINGLE), 7L))
                 .isInstanceOf(ShipmentAlreadyExistsException.class);
