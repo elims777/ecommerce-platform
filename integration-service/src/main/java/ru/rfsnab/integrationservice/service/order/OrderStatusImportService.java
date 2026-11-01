@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -228,7 +229,8 @@ public class OrderStatusImportService {
                                String errorMessage, LocalDateTime startedAt) {
         try {
             LocalDateTime completedAt = LocalDateTime.now();
-            long durationMs = Duration.between(startedAt, completedAt).toMillis();
+            long durationMs = Duration.between(startedAt.atZone(ZoneId.systemDefault()).toInstant(),
+                    completedAt.atZone(ZoneId.systemDefault()).toInstant()).toMillis();
 
             ImportLog logEntry = ImportLog.builder()
                     .exchangeType(exchangeType)

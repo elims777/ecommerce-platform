@@ -26,7 +26,7 @@ import java.util.List;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @SuppressWarnings("resource")
 @ActiveProfiles("test")
-public class BaseIntegrationTest {
+public abstract class BaseIntegrationTest {
     private static final String JWT_SECRET = "test-secret-key-for-testing-must-be-at-least-256-bits-long-for-hs256";
     protected static WireMockServer wireMock;
     protected static GenericContainer<?> redis;

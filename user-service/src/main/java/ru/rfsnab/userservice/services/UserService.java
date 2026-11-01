@@ -202,7 +202,8 @@ public class UserService {
 
         LocalDateTime lastSent = user.getLastVerificationEmailAt();
         if (lastSent != null && lastSent.isAfter(LocalDateTime.now().minusMinutes(10))) {
-            long secondsLeft = java.time.Duration.between(LocalDateTime.now(), lastSent.plusMinutes(10)).getSeconds();
+            long secondsLeft = java.time.Duration.between(java.time.Instant.now(),
+                    lastSent.plusMinutes(10).atZone(java.time.ZoneId.systemDefault()).toInstant()).getSeconds();
             throw new ResendTooSoonException("Повторная отправка будет доступна через " + secondsLeft + " сек.");
         }
 

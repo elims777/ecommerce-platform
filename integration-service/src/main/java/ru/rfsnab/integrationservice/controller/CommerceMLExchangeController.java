@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 /**
@@ -65,7 +66,8 @@ public class CommerceMLExchangeController {
      * Единая точка входа протокола CommerceML.
      * 1С вызывает этот endpoint с параметрами type и mode.
      */
-    @RequestMapping(produces = MediaType.TEXT_PLAIN_VALUE)
+    @RequestMapping(produces = MediaType.TEXT_PLAIN_VALUE,
+            method = {RequestMethod.GET, RequestMethod.POST})
     public ResponseEntity<String> exchange(
             @RequestParam("type") String type,
             @RequestParam("mode") String mode,
@@ -231,7 +233,8 @@ public class CommerceMLExchangeController {
             if (existing.isPresent()) {
                 ImportLog entry = existing.get();
                 long durationMs = entry.getStartedAt() != null
-                        ? Duration.between(entry.getStartedAt(), now).toMillis()
+                        ? Duration.between(entry.getStartedAt().atZone(ZoneId.systemDefault()).toInstant(),
+                                now.atZone(ZoneId.systemDefault()).toInstant()).toMillis()
                         : 0L;
                 entry.setStatus(ImportStatus.SUCCESS);
                 entry.setUpdated(count);

@@ -11,7 +11,10 @@ public final class EmailMasker {
     }
 
     public static String mask(String email) {
-        int at = email == null ? -1 : email.indexOf('@');
+        if (email == null) {
+            return MASK;
+        }
+        int at = email.indexOf('@');
         return at < 1 ? MASK : email.charAt(0) + MASK + email.substring(at);
     }
 }

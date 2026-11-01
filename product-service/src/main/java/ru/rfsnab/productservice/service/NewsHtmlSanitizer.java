@@ -29,10 +29,10 @@ public class NewsHtmlSanitizer {
 
     /** Незакрытые опасные теги (например <script src=...> без пары). */
     private static final Pattern DANGEROUS_SELF = Pattern.compile(
-            "(?is)<\\s*/?\\s*(script|style|iframe|object|embed|form|svg|math)\\b[^>]*>"
+            "(?is)<\\s*+/?\\s*+(script|style|iframe|object|embed|form|svg|math)\\b[^>]*+>"
     );
 
-    private static final Pattern TAG = Pattern.compile("(?is)<\\s*(/?)\\s*([a-z0-9]+)([^>]*)>");
+    private static final Pattern TAG = Pattern.compile("(?is)<\\s*+(/?)\\s*+([a-z0-9]++)([^>]*+)>");
 
     /** on*-обработчики: onclick, onerror и прочие. */
     private static final Pattern EVENT_ATTR = Pattern.compile("(?is)\\son[a-z]+\\s*=\\s*(\"[^\"]*\"|'[^']*'|[^\\s>]+)");

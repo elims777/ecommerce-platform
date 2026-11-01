@@ -33,6 +33,7 @@ import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -481,7 +482,8 @@ public class FtkImportService {
     private void saveFtkLog(ImportLog logEntry, LocalDateTime startedAt, int resumeAttempts,
                             FtkImportResult result, Exception error, List<ImportItemResult> errors) {
         LocalDateTime completedAt = LocalDateTime.now();
-        long durationMs = Duration.between(startedAt, completedAt).toMillis();
+        long durationMs = Duration.between(startedAt.atZone(ZoneId.systemDefault()).toInstant(),
+                completedAt.atZone(ZoneId.systemDefault()).toInstant()).toMillis();
 
         ImportStatus status;
         if (error != null) {
