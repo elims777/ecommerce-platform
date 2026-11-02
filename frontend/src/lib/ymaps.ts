@@ -28,7 +28,7 @@ interface Ymaps3Global {
     import: (name: string) => Promise<unknown>;
 }
 
-const CLUSTERER_MODULE = '@yandex/ymaps3-clusterer@0.0.1';
+const CLUSTERER_MODULE = '@yandex/ymaps3-clusterer@0.0.13';
 
 let kitPromise: Promise<YmapsKit | null> | null = null;
 
@@ -44,7 +44,10 @@ const loadScript = (src: string) => new Promise<void>((resolve, reject) => {
 const loadKit = async (): Promise<YmapsKit | null> => {
     if (!YANDEX_MAPS_KEY) return null;
     try {
-        await loadScript(`https://api-maps.yandex.ru/v3/?apikey=${YANDEX_MAPS_KEY}&lang=ru_RU`);
+        // После HMR модуль обнуляется, но window.ymaps3 уже на странице — скрипт повторно не вставляем
+        if (!(window as unknown as { ymaps3?: unknown }).ymaps3) {
+            await loadScript(`https://api-maps.yandex.ru/v3/?apikey=${YANDEX_MAPS_KEY}&lang=ru_RU`);
+        }
         const ymaps3 = (window as unknown as { ymaps3: Ymaps3Global }).ymaps3;
         const [reactifyPkg] = await Promise.all([
             ymaps3.import('@yandex/ymaps3-reactify') as Promise<{ reactify: { bindTo: (r: unknown, d: unknown) => ReactifyModule } }>,
