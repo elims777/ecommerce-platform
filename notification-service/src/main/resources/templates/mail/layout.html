@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
+    <title>РФСнаб</title>
     <style>
         body, table, td { font-family: Arial, system-ui, sans-serif; }
     </style>
@@ -9,7 +10,7 @@
 <body>
 
 <!--/* Хедер письма: тёмная навигационная плашка с логотипом (CID) */-->
-<table th:fragment="header" width="100%" cellpadding="0" cellspacing="0" border="0"
+<table th:fragment="header" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
        style="max-width:600px; margin:0 auto; background-color:#1E3A5F;">
     <tr>
         <td align="center" style="width:100%; padding:24px 0; background-color:#1E3A5F;">
@@ -20,7 +21,7 @@
 </table>
 
 <!--/* Кнопка-хелпер: стилизованная ссылка красного цвета */-->
-<table th:fragment="button(url, text)" width="100%" cellpadding="0" cellspacing="0" border="0">
+<table th:fragment="button(url, text)" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
     <tr>
         <td align="center" style="padding:16px 0;">
             <a th:href="${url}" th:text="${text}"
@@ -32,7 +33,7 @@
 </table>
 
 <!--/* Футер письма: серый фон, контакты компании */-->
-<table th:fragment="footer" width="100%" cellpadding="0" cellspacing="0" border="0"
+<table th:fragment="footer" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
        style="max-width:600px; margin:0 auto; background-color:#F2F2F2;">
     <tr>
         <td align="center"

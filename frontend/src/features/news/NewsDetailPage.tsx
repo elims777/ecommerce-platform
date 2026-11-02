@@ -27,12 +27,16 @@ const NewsDetailPage = () => {
         return <Alert type="error" title="Новость не найдена" showIcon />;
     }
 
+    const metaDescription = (new DOMParser().parseFromString(news.contentHtml, 'text/html').body.textContent ?? '')
+        .replaceAll('\n', ' ').replaceAll('\r', ' ').replaceAll('\t', ' ')
+        .split(' ').filter(Boolean).join(' ').slice(0, 160);
+
     return (
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
             <title>{`${news.title} — РФснаб`}</title>
             <meta
                 name="description"
-                content={news.contentHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160)}
+                content={metaDescription}
             />
             <Breadcrumb
                 style={{ marginBottom: 16 }}

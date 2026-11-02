@@ -217,7 +217,7 @@ const AdminProductEditPage = () => {
     return (
         <div>
             {/* Header */}
-            <div className="rf-admin-back" onClick={() => navigate(-1)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(-1); } }}>
+            <div className="rf-admin-back" onClick={() => navigate(-1)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); void navigate(-1); } }}>
                 <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M10 4L6 8l4 4"/>
                 </svg>
@@ -645,7 +645,7 @@ const AdminProductEditPage = () => {
                                     style={{ ...inputStyle, width: '100%' }}
                                     placeholder="Найти родительский товар..."
                                     value={parentSearch}
-                                    onChange={(e) => handleParentSearch(e.target.value)}
+                                    onChange={(e) => void handleParentSearch(e.target.value)}
                                 />
                                 {parentSearchResults.length > 0 && (
                                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: 'var(--surface)', border: '1px solid var(--line-2)', borderRadius: 'var(--r-2)', boxShadow: '0 4px 12px rgba(0,0,0,.08)', maxHeight: 200, overflowY: 'auto' }}>

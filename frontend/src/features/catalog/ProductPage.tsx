@@ -190,8 +190,10 @@ const ProductPage = () => {
     }
 
     const sortedImages = sortImages(product.images || []);
-    const metaDescription = (product.shortDescription || product.description || '')
-        .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+    const metaDescriptionHtml = product.shortDescription || product.description || '';
+    const metaDescription = (new DOMParser().parseFromString(metaDescriptionHtml, 'text/html').body.textContent ?? '')
+        .replaceAll('\n', ' ').replaceAll('\r', ' ').replaceAll('\t', ' ')
+        .split(' ').filter(Boolean).join(' ').slice(0, 160);
 
     return (
         <>

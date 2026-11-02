@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
+    <title>Новый заказ</title>
 </head>
 <body style="margin:0; padding:0; background-color:#F2F2F2;">
 
 <div th:replace="~{mail/layout :: header}"></div>
 
-<table width="600" cellpadding="0" cellspacing="0" border="0"
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
        style="width:600px; max-width:600px; margin:0 auto; background-color:#FFFFFF;">
     <tr>
         <td style="padding:32px 24px; font-family:Arial, system-ui, sans-serif;">
@@ -18,9 +19,9 @@
 
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
                 <tr style="background-color:#1E3A5F;">
-                    <td width="64%" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Товар</td>
-                    <td width="14%" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif; white-space:nowrap;" align="center">Кол-во</td>
-                    <td width="22%" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif; white-space:nowrap;" align="right">Цена</td>
+                    <th width="64%" align="left" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Товар</th>
+                    <th width="14%" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif; white-space:nowrap;" align="center">Кол-во</th>
+                    <th width="22%" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif; white-space:nowrap;" align="right">Цена</th>
                 </tr>
                 <tr th:each="item : ${items}" style="border-bottom:1px solid #EEEEEE;">
                     <td width="64%" style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif; word-break:break-word;">
