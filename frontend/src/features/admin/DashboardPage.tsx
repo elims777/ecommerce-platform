@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getAdminOrders, getOrderStats } from '@/api/adminOrders';
 import { getProductStats } from '@/api/adminProducts';
 import { getUserStats } from '@/api/adminUsers';
+import { getShipmentStats } from '@/api/adminLogistics';
 import { OrderStatusLabels } from '@/types/order';
 import { extractEnumCode } from '@/utils/enumUtils';
 import type { OrderSummaryDto, OrderStatus } from '@/types/order';
@@ -30,10 +31,6 @@ const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
   REFUNDED:              { cls: 'rf-badge-neutral',              label: 'Возврат средств' },
   AWAITING_CONFIRMATION: { cls: 'rf-badge-warn',                 label: 'Ожидает подтверждения' },
 };
-
-const KPI_CARDS = [
-  { label: 'К отгрузке', value: '—', unit: '', accent: 'green', sub: 'Сегодня' },
-];
 
 const formatCount = (n: number) => new Intl.NumberFormat('ru-RU').format(n);
 
@@ -155,6 +152,32 @@ const OrderStatsCard = () => {
   );
 };
 
+/** Сводка по отправлениям транспортных компаний. */
+const LogisticsStatsCard = () => {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['adminShipmentStats'],
+    queryFn: getShipmentStats,
+  });
+
+  const rows: Array<[string, number | undefined]> = [
+    ['К нам', data?.incoming],
+    ['От нас', data?.outgoing],
+    ['Ожидает оплаты', data?.awaitingPayment],
+    ['Надо отгрузить', 0], // связка отгрузок с заказами ещё не доработана
+  ];
+
+  return (
+    <StatsCard
+      label="Логистика"
+      total={data ? data.incoming + data.outgoing : undefined}
+      caption="в пути"
+      rows={rows}
+      isLoading={isLoading}
+      isError={isError}
+    />
+  );
+};
+
 const DashboardPage = () => {
   const { data: recentPage, isLoading } = useQuery({
     queryKey: ['dashboardRecentOrders'],
@@ -170,16 +193,7 @@ const DashboardPage = () => {
         <ProductStatsCard />
         <UserStatsCard />
         <OrderStatsCard />
-        {KPI_CARDS.map((kpi) => (
-          <div key={kpi.label} className={`rf-kpi-card${kpi.accent ? ' ' + kpi.accent : ''}`}>
-            <div className="rf-kpi-label">{kpi.label}</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-              <span className="rf-kpi-value">{kpi.value}</span>
-              {kpi.unit && <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>{kpi.unit}</span>}
-            </div>
-            <div className="rf-kpi-sub">{kpi.sub}</div>
-          </div>
-        ))}
+        <LogisticsStatsCard />
       </div>
 
       {/* Chart area placeholder */}

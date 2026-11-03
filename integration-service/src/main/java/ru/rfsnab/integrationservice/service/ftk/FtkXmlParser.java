@@ -202,7 +202,14 @@ public class FtkXmlParser {
      * "Пара (2 шт.)" → "Пара". Пробелы по краям тримятся.
      */
     private String cleanUnitName(String name) {
-        return name.replaceFirst("\\s*\\(\\d+\\s*шт\\.?\\)\\s*$", "").trim();
+        String trimmed = name.trim();
+        if (trimmed.endsWith(")")) {
+            int open = trimmed.lastIndexOf('(');
+            if (open >= 0 && trimmed.substring(open + 1, trimmed.length() - 1).matches("\\d+\\s*шт\\.?")) {
+                return trimmed.substring(0, open).trim();
+            }
+        }
+        return trimmed;
     }
 
     // ──────────────────────────────────────────────────────────────────────

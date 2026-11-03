@@ -18,7 +18,7 @@ import org.testcontainers.utility.DockerImageName;
 @SpringBootTest
 @SuppressWarnings("resource")
 @ActiveProfiles("test")
-public class BaseIntegrationTest {
+public abstract class BaseIntegrationTest {
 
     protected static final PostgreSQLContainer<?> postgres;
     protected static final KafkaContainer kafka;

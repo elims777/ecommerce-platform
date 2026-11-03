@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
+    <title>Импорт каталога ФТК</title>
 </head>
 <body style="margin:0; padding:0; background-color:#F2F2F2;">
 
 <div th:replace="~{mail/layout :: header}"></div>
 
-<table width="600" cellpadding="0" cellspacing="0" border="0"
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
        style="width:600px; max-width:600px; margin:0 auto; background-color:#FFFFFF;">
     <tr>
         <td style="padding:32px 24px; font-family:Arial, system-ui, sans-serif;">
@@ -25,8 +26,8 @@
 
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
                 <tr style="background-color:#1E3A5F;">
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Показатель</td>
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Значение</td>
+                    <th align="left" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Показатель</th>
+                    <th style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Значение</th>
                 </tr>
                 <tr style="border-bottom:1px solid #EEEEEE;">
                     <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;">Получено товаров</td>
@@ -62,8 +63,8 @@
                 <h3 style="color:#1E3A5F; margin:0 0 8px; font-size:15px;">Причины ошибок</h3>
                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
                     <tr style="background-color:#1E3A5F;">
-                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="30%">Код товара</td>
-                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="70%">Сообщение</td>
+                        <th align="left" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="30%">Код товара</th>
+                        <th align="left" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="70%">Сообщение</th>
                     </tr>
                     <tr th:each="err : ${rootErrors}" style="border-bottom:1px solid #EEEEEE;">
                         <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif; word-break:break-word;" th:text="${err.externalId}"></td>

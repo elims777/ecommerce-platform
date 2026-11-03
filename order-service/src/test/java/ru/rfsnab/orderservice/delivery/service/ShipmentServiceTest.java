@@ -30,6 +30,7 @@ import ru.rfsnab.orderservice.delivery.models.dto.DocumentFile;
 import ru.rfsnab.orderservice.delivery.models.dto.ShipmentDocumentDto;
 import ru.rfsnab.orderservice.delivery.models.dto.ShipmentDto;
 import ru.rfsnab.orderservice.delivery.models.dto.ShipmentFilter;
+import ru.rfsnab.orderservice.delivery.models.dto.ShipmentStatsResponse;
 import ru.rfsnab.orderservice.delivery.models.dto.event.ShipmentNotFoundEvent;
 import ru.rfsnab.orderservice.delivery.models.entity.Shipment;
 import ru.rfsnab.orderservice.delivery.models.entity.ShipmentDocument;
@@ -38,6 +39,7 @@ import ru.rfsnab.orderservice.delivery.models.entity.ShipmentPayer;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentDirection;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentMode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentPayerRole;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentSource;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentStatusCode;
 import ru.rfsnab.orderservice.delivery.repository.CarrierRepository;
@@ -113,7 +115,7 @@ class ShipmentServiceTest extends BaseIntegrationTest {
         when(pec.supportsStatusTracking()).thenReturn(false);
         when(pec.fetchStatuses(any())).thenAnswer(FOUND);
         service = new ShipmentService(shipmentRepository, carrierRepository, orderRepository,
-                List.of(dellin, pec), advancer, kafka, transactionTemplate, Mappers.getMapper(ShipmentMapper.class));
+                List.of(dellin, pec), advancer, kafka, transactionTemplate, Mappers.getMapper(ShipmentMapper.class), "");
     }
 
     @AfterEach
@@ -766,7 +768,7 @@ class ShipmentServiceTest extends BaseIntegrationTest {
             CarrierClient noDownload = mock(CarrierClient.class, CALLS_REAL_METHODS);
             doReturn(CarrierCode.PEC).when(noDownload).code();
             ShipmentService withNoDownload = new ShipmentService(shipmentRepository, carrierRepository, orderRepository,
-                    List.of(noDownload), advancer, kafka, transactionTemplate, Mappers.getMapper(ShipmentMapper.class));
+                    List.of(noDownload), advancer, kafka, transactionTemplate, Mappers.getMapper(ShipmentMapper.class), "");
             Shipment s = withDocuments(CarrierCode.PEC, "12345", List.of(new ShipmentDocument("invoice", "Счёт", "ref")));
 
             assertThatThrownBy(() -> withNoDownload.downloadDocument(s.getId(), "invoice"))
@@ -916,6 +918,90 @@ class ShipmentServiceTest extends BaseIntegrationTest {
             assertThat(s.getDirection()).isEqualTo(ShipmentDirection.OUTGOING);
             assertThat(s.getOrder().getId()).isEqualTo(order.getId());
             assertThat(s.getCarrierStatusCode()).isEqualTo(ShipmentStatusCode.IN_TRANSIT);
+        }
+    }
+
+    @Nested
+    @DisplayName("Сводка для дашборда")
+    class Stats {
+
+        private static final String OUR_INN = "7700000001";
+
+        private ShipmentService withInn(String inn) {
+            return new ShipmentService(shipmentRepository, carrierRepository, orderRepository,
+                    List.of(dellin), advancer, kafka, transactionTemplate, Mappers.getMapper(ShipmentMapper.class), inn);
+        }
+
+        private Shipment unpaid(String waybill, ShipmentDirection direction, ShipmentStatusCode code,
+                                List<ShipmentPayer> payers) {
+            Shipment s = shipment(null, CarrierCode.DELLIN, waybill, code);
+            s.setDirection(direction);
+            s.setPaid(false);
+            s.setSender("ООО Ромашка");
+            s.setSenderInn("5400000001");
+            s.setReceiver("ИП Клиент");
+            s.setReceiverInn("5400000002");
+            s.setPayers(payers);
+            return shipmentRepository.save(s);
+        }
+
+        @Test
+        @DisplayName("входящие и исходящие считаются только по активным статусам, без статуса — не считаются")
+        void countsActiveByDirection() {
+            Shipment in = shipment(null, CarrierCode.DELLIN, "S1", ShipmentStatusCode.IN_TRANSIT);
+            in.setDirection(ShipmentDirection.INCOMING);
+            shipmentRepository.save(in);
+            shipment(null, CarrierCode.DELLIN, "S2", ShipmentStatusCode.PROBLEM);
+            shipment(null, CarrierCode.DELLIN, "S3", ShipmentStatusCode.DELIVERED);
+            shipment(null, CarrierCode.DELLIN, "S4", ShipmentStatusCode.NOT_FOUND);
+            shipment(null, CarrierCode.DELLIN, "S5", null);
+
+            ShipmentStatsResponse stats = service.getStats();
+
+            assertThat(stats.incoming()).isEqualTo(1);
+            assertThat(stats.outgoing()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("пустая таблица — нули")
+        void emptyTable() {
+            assertThat(service.getStats()).isEqualTo(new ShipmentStatsResponse(0, 0, 0));
+        }
+
+        @Test
+        @DisplayName("оплачиваем мы: по нашему ИНН, по роли SENDER при OUTGOING, по названию получателя при INCOMING")
+        void weAreThePayer() {
+            unpaid("P1", ShipmentDirection.INCOMING, ShipmentStatusCode.IN_TRANSIT,
+                    List.of(new ShipmentPayer("Кто-то", OUR_INN, ShipmentPayerRole.THIRD)));
+            unpaid("P2", ShipmentDirection.OUTGOING, ShipmentStatusCode.IN_TRANSIT,
+                    List.of(new ShipmentPayer("Кто-то", "999", ShipmentPayerRole.SENDER)));
+            unpaid("P3", ShipmentDirection.INCOMING, null,
+                    List.of(new ShipmentPayer(" ип клиент ", null, null)));
+
+            assertThat(withInn(" " + OUR_INN + " , 123").getStats().awaitingPayment()).isEqualTo(3);
+        }
+
+        @Test
+        @DisplayName("третья сторона, чужая сторона, оплаченные, отменённые и ненайденные не считаются")
+        void notOurPayment() {
+            unpaid("N1", ShipmentDirection.OUTGOING, ShipmentStatusCode.IN_TRANSIT,
+                    List.of(new ShipmentPayer("Третьи", "111", null)));
+            unpaid("N2", ShipmentDirection.OUTGOING, ShipmentStatusCode.IN_TRANSIT,
+                    List.of(new ShipmentPayer("ИП Клиент", "5400000002", null)));
+            unpaid("N3", ShipmentDirection.INCOMING, ShipmentStatusCode.CANCELLED,
+                    List.of(new ShipmentPayer("Кто-то", OUR_INN, null)));
+            unpaid("N4", ShipmentDirection.INCOMING, ShipmentStatusCode.NOT_FOUND,
+                    List.of(new ShipmentPayer("Кто-то", OUR_INN, null)));
+            Shipment paid = unpaid("N5", ShipmentDirection.INCOMING, ShipmentStatusCode.IN_TRANSIT,
+                    List.of(new ShipmentPayer("Кто-то", OUR_INN, null)));
+            paid.setPaid(true);
+            shipmentRepository.save(paid);
+            Shipment unknownPaid = unpaid("N6", ShipmentDirection.INCOMING, ShipmentStatusCode.IN_TRANSIT,
+                    List.of(new ShipmentPayer("Кто-то", OUR_INN, null)));
+            unknownPaid.setPaid(null);
+            shipmentRepository.save(unknownPaid);
+
+            assertThat(withInn(OUR_INN).getStats().awaitingPayment()).isZero();
         }
     }
 }

@@ -1,13 +1,14 @@
 package ru.rfsnab.orderservice.delivery.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import ru.rfsnab.orderservice.delivery.client.CarrierClient;
 import ru.rfsnab.orderservice.delivery.client.CarrierShipmentStatus;
@@ -23,17 +24,21 @@ import ru.rfsnab.orderservice.delivery.models.dto.AddShipmentRequest;
 import ru.rfsnab.orderservice.delivery.models.dto.DocumentFile;
 import ru.rfsnab.orderservice.delivery.models.dto.ShipmentDto;
 import ru.rfsnab.orderservice.delivery.models.dto.ShipmentFilter;
+import ru.rfsnab.orderservice.delivery.models.dto.ShipmentStatsResponse;
 import ru.rfsnab.orderservice.delivery.models.dto.event.ShipmentNotFoundEvent;
 import ru.rfsnab.orderservice.delivery.models.entity.Carrier;
 import ru.rfsnab.orderservice.delivery.models.entity.Shipment;
 import ru.rfsnab.orderservice.delivery.models.entity.ShipmentDocument;
+import ru.rfsnab.orderservice.delivery.models.entity.ShipmentPayer;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentDirection;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentMode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentPayerRole;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentSource;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentStatusCode;
 import ru.rfsnab.orderservice.delivery.repository.CarrierRepository;
 import ru.rfsnab.orderservice.delivery.repository.ShipmentRepository;
+import ru.rfsnab.orderservice.delivery.repository.projection.ShipmentCountsProjection;
 import ru.rfsnab.orderservice.delivery.repository.ShipmentSpecifications;
 import ru.rfsnab.orderservice.exception.InvalidOrderStateException;
 import ru.rfsnab.orderservice.exception.OrderNotFoundException;
@@ -43,11 +48,13 @@ import ru.rfsnab.orderservice.repository.OrderRepository;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -59,7 +66,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ShipmentService {
 
     /** Сколько статус не должен меняться, чтобы остановить опрос («Нет движения»). */
@@ -67,6 +73,14 @@ public class ShipmentService {
 
     /** Сколько накладная должна быть не найдена в ТК, чтобы менеджеру ушло письмо. */
     public static final Duration NOT_FOUND_NOTIFY_AFTER = Duration.ofHours(24);
+
+    /** Статусы «в работе» для счётчиков дашборда. */
+    private static final List<ShipmentStatusCode> ACTIVE_CODES = List.of(ShipmentStatusCode.CREATED,
+            ShipmentStatusCode.IN_TRANSIT, ShipmentStatusCode.ARRIVED_AT_TERMINAL, ShipmentStatusCode.PROBLEM);
+
+    /** Статусы, при которых оплата не ожидается. */
+    private static final List<ShipmentStatusCode> NO_PAYMENT_CODES = List.of(ShipmentStatusCode.CANCELLED,
+            ShipmentStatusCode.NOT_FOUND);
 
     private static final String SHIPMENT_NOT_FOUND = "Отправление не найдено: ";
 
@@ -78,6 +92,24 @@ public class ShipmentService {
     private final OrderKafkaProducer kafkaProducer;
     private final TransactionTemplate transactionTemplate;
     private final ShipmentMapper shipmentMapper;
+    private final Set<String> companyInns;
+
+    /** companyInn — ИНН наших компаний через запятую; по ним определяем, что отправление оплачиваем мы. */
+    public ShipmentService(ShipmentRepository shipmentRepository, CarrierRepository carrierRepository,
+                           OrderRepository orderRepository, List<CarrierClient> clients, OrderStatusAdvancer advancer,
+                           OrderKafkaProducer kafkaProducer, TransactionTemplate transactionTemplate,
+                           ShipmentMapper shipmentMapper, @Value("${company.inn:}") String companyInn) {
+        this.shipmentRepository = shipmentRepository;
+        this.carrierRepository = carrierRepository;
+        this.orderRepository = orderRepository;
+        this.clients = clients;
+        this.advancer = advancer;
+        this.kafkaProducer = kafkaProducer;
+        this.transactionTemplate = transactionTemplate;
+        this.shipmentMapper = shipmentMapper;
+        this.companyInns = Arrays.stream(companyInn.split(",")).map(String::trim).filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
+    }
 
     /**
      * Вносит накладную к заказу, предварительно проверив её в ТК: ненайденная накладная не сохраняется.
@@ -152,6 +184,54 @@ public class ShipmentService {
         Map<CarrierCode, Carrier> carriers = carriersByCode();
         return shipmentRepository.findAll(ShipmentSpecifications.of(filter), pageable)
                 .map(s -> shipmentMapper.toDto(s, carriers.get(s.getCarrierCode())));
+    }
+
+    /** Сводка для дашборда: активные входящие/исходящие и неоплаченные отправления, которые оплачиваем мы. */
+    @Transactional(readOnly = true)
+    public ShipmentStatsResponse getStats() {
+        ShipmentCountsProjection counts = shipmentRepository.countActiveByDirection(
+                ShipmentDirection.INCOMING, ShipmentDirection.OUTGOING, ACTIVE_CODES);
+        long awaitingPayment = shipmentRepository.findUnpaid(NO_PAYMENT_CODES).stream().filter(this::weArePayer).count();
+        return new ShipmentStatsResponse(counts.getIncoming(), counts.getOutgoing(), awaitingPayment);
+    }
+
+    /** Оплачиваем ли мы отправление: наш ИНН среди плательщиков либо платит наша сторона (отправитель/получатель). */
+    private boolean weArePayer(Shipment s) {
+        if (s.getPayers() == null) {
+            return false;
+        }
+        return s.getPayers().stream().anyMatch(p -> {
+            if (p.inn() != null && companyInns.contains(p.inn().trim())) {
+                return true;
+            }
+            ShipmentPayerRole role = resolveRole(s, p);
+            return (role == ShipmentPayerRole.SENDER && s.getDirection() == ShipmentDirection.OUTGOING)
+                    || (role == ShipmentPayerRole.RECEIVER && s.getDirection() == ShipmentDirection.INCOMING);
+        });
+    }
+
+    /** Роль плательщика как на фронте (utils/shipment.ts): явная, иначе по ИНН, затем по названию. */
+    private static ShipmentPayerRole resolveRole(Shipment s, ShipmentPayer p) {
+        if (p.role() != null) {
+            return p.role();
+        }
+        if (p.inn() != null && p.inn().equals(s.getSenderInn())) {
+            return ShipmentPayerRole.SENDER;
+        }
+        if (p.inn() != null && p.inn().equals(s.getReceiverInn())) {
+            return ShipmentPayerRole.RECEIVER;
+        }
+        if (sameName(p.name(), s.getSender())) {
+            return ShipmentPayerRole.SENDER;
+        }
+        if (sameName(p.name(), s.getReceiver())) {
+            return ShipmentPayerRole.RECEIVER;
+        }
+        return ShipmentPayerRole.THIRD;
+    }
+
+    private static boolean sameName(String a, String b) {
+        return a != null && b != null && a.trim().equalsIgnoreCase(b.trim());
     }
 
     /** Отправления заказов одним запросом: id заказа → его отправления. Заказы без отправлений в карту не попадают. */

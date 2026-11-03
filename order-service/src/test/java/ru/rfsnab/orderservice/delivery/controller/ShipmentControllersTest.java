@@ -27,6 +27,7 @@ import ru.rfsnab.orderservice.delivery.exception.WaybillNotFoundInCarrierExcepti
 import ru.rfsnab.orderservice.delivery.models.dto.AddShipmentRequest;
 import ru.rfsnab.orderservice.delivery.models.dto.DocumentFile;
 import ru.rfsnab.orderservice.delivery.models.dto.ShipmentDto;
+import ru.rfsnab.orderservice.delivery.models.dto.ShipmentStatsResponse;
 import ru.rfsnab.orderservice.delivery.models.dto.ShipmentFilter;
 import ru.rfsnab.orderservice.delivery.models.entity.Shipment;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
@@ -99,6 +100,25 @@ class ShipmentControllersTest extends BaseIntegrationTest {
                 .shipmentMode(ShipmentMode.MULTIPLE).shipmentsComplete(true).build();
         order.setItems(new ArrayList<>());
         return order;
+    }
+
+    @Nested
+    @DisplayName("GET /admin/shipments/stats")
+    class StatsEndpoint {
+
+        @Test
+        @DisplayName("401 без токена, 403 для USER, 200 для ADMIN с тремя счётчиками")
+        void stats() throws Exception {
+            when(shipmentService.getStats()).thenReturn(new ShipmentStatsResponse(3, 5, 2));
+
+            mockMvc.perform(get("/api/v1/admin/shipments/stats")).andExpect(status().isUnauthorized());
+            mockMvc.perform(get("/api/v1/admin/shipments/stats").with(auth("ROLE_USER"))).andExpect(status().isForbidden());
+            mockMvc.perform(get("/api/v1/admin/shipments/stats").with(auth("ROLE_ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.incoming").value(3))
+                    .andExpect(jsonPath("$.outgoing").value(5))
+                    .andExpect(jsonPath("$.awaitingPayment").value(2));
+        }
     }
 
     @Nested

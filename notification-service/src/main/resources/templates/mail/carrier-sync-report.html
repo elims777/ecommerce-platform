@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
+    <title>Синхронизация терминалов ТК</title>
 </head>
 <body style="margin:0; padding:0; background-color:#F2F2F2;">
 
 <div th:replace="~{mail/layout :: header}"></div>
 
-<table width="600" cellpadding="0" cellspacing="0" border="0"
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
        style="width:600px; max-width:600px; margin:0 auto; background-color:#FFFFFF;">
     <tr>
         <td style="padding:32px 24px; font-family:Arial, system-ui, sans-serif;">
@@ -19,14 +20,14 @@
 
             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
                 <tr style="background-color:#1E3A5F;">
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">ТК</td>
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Статус</td>
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Получено</td>
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Добавлено</td>
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Обновлено</td>
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Деактив.</td>
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Пропущено</td>
-                    <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Время, с</td>
+                    <th align="left" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">ТК</th>
+                    <th align="left" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;">Статус</th>
+                    <th style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Получено</th>
+                    <th style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Добавлено</th>
+                    <th style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Обновлено</th>
+                    <th style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Деактив.</th>
+                    <th style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Пропущено</th>
+                    <th style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" align="right">Время, с</th>
                 </tr>
                 <th:block th:each="r : ${reports}">
                     <tr style="border-bottom:1px solid #EEEEEE;">
@@ -52,8 +53,8 @@
                 </h3>
                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;">
                     <tr style="background-color:#1E3A5F;">
-                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="30%">ID точки</td>
-                        <td style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="70%">Причина</td>
+                        <th align="left" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="30%">ID точки</th>
+                        <th align="left" style="padding:8px 12px; color:#FFFFFF; font-size:13px; font-family:Arial, system-ui, sans-serif;" width="70%">Причина</th>
                     </tr>
                     <tr th:each="item : ${r.skippedItems}" style="border-bottom:1px solid #EEEEEE;">
                         <td style="padding:8px 12px; color:#1A1A1A; font-size:13px; font-family:Arial, system-ui, sans-serif;" th:text="${item.externalId}"></td>

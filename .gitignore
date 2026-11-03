@@ -67,3 +67,8 @@ graphify-out/
 
 # MCP-конфиг локальной сессии Claude Code
 .mcp.json
+# Kimi Code (wiki, local config)
+.kimi-code/
+
+# Локальный SonarQube для статического анализа
+infra/docker-compose.sonarqube.yml

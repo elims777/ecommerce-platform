@@ -6,7 +6,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ru.rfsnab.orderservice.delivery.models.entity.Shipment;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
+import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentDirection;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.ShipmentStatusCode;
+import ru.rfsnab.orderservice.delivery.repository.projection.ShipmentCountsProjection;
 import ru.rfsnab.orderservice.models.entity.enums.OrderStatus;
 
 import java.util.Collection;
@@ -46,4 +48,23 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long>, JpaSp
     List<Shipment> findPollable(@Param("carrier") CarrierCode carrier,
                                 @Param("finalCodes") Collection<ShipmentStatusCode> finalCodes,
                                 @Param("finishedOrderStatuses") Collection<OrderStatus> finishedOrderStatuses);
+
+    /** Число активных входящих и исходящих отправлений (статус из {@code activeCodes}). */
+    @Query("""
+            SELECT COALESCE(SUM(CASE WHEN s.direction = :incoming THEN 1 ELSE 0 END), 0) AS incoming,
+                   COALESCE(SUM(CASE WHEN s.direction = :outgoing THEN 1 ELSE 0 END), 0) AS outgoing
+            FROM Shipment s
+            WHERE s.carrierStatusCode IN :activeCodes
+            """)
+    ShipmentCountsProjection countActiveByDirection(@Param("incoming") ShipmentDirection incoming,
+                                                    @Param("outgoing") ShipmentDirection outgoing,
+                                                    @Param("activeCodes") Collection<ShipmentStatusCode> activeCodes);
+
+    /** Неоплаченные отправления без отменённых и ненайденных; плательщика (jsonb) проверяет сервис. */
+    @Query("""
+            SELECT s FROM Shipment s
+            WHERE s.paid = false
+              AND (s.carrierStatusCode IS NULL OR s.carrierStatusCode NOT IN :excludedCodes)
+            """)
+    List<Shipment> findUnpaid(@Param("excludedCodes") Collection<ShipmentStatusCode> excludedCodes);
 }

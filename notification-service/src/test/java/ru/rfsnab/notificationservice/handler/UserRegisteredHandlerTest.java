@@ -130,8 +130,8 @@ public class UserRegisteredHandlerTest {
             EmailVerificationToken savedToken = tokenCaptor.getValue();
 
             long hoursDiff = java.time.Duration.between(
-                    savedToken.getCreatedAt(),
-                    savedToken.getExpiresAt()
+                    savedToken.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant(),
+                    savedToken.getExpiresAt().atZone(java.time.ZoneId.systemDefault()).toInstant()
             ).toHours();
             assertThat(hoursDiff).isEqualTo(1);
         }

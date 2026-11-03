@@ -207,7 +207,7 @@ const CartPage = () => {
                     Для юридических лиц доступна оплата по счёту и работа по договору.
                 </div>
                 <NavLink
-                    to="/catalog"
+                    to="/"
                     style={{
                         display: 'inline-flex', alignItems: 'center', gap: 8,
                         height: 'var(--btn-h-base)', padding: '0 28px', background: 'var(--brand-red)', color: '#fff',
@@ -215,7 +215,7 @@ const CartPage = () => {
                         cursor: 'pointer', fontFamily: 'var(--font-body)',
                     }}
                 >
-                    Перейти в каталог <ArrRight />
+                    Вернуться на главную <ArrRight />
                 </NavLink>
             </div>
         );

@@ -110,6 +110,13 @@ export interface ShipmentFilters {
     size?: number;
 }
 
+/** Сводка по отправлениям для дашборда */
+export interface ShipmentStats {
+    incoming: number;
+    outgoing: number;
+    awaitingPayment: number;
+}
+
 /** Тип точки ТК. Для СДЭК — PVZ и POSTAMAT, для остальных — TERMINAL */
 export type PointType = 'TERMINAL' | 'PVZ' | 'POSTAMAT';
 

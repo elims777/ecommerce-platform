@@ -116,6 +116,7 @@ const SortableCatItem = ({ cat, selectedId, onSelect }: SortableCatItemProps) =>
                     ref={setActivatorNodeRef}
                     {...listeners}
                     {...attributes}
+                    role="button" tabIndex={0}
                     onClick={(e) => e.stopPropagation()}
                     style={{ cursor: 'grab', display: 'inline-flex', flexShrink: 0, color: '#999', touchAction: 'none', padding: '0 2px' }}
                 >
@@ -1556,7 +1557,7 @@ const AdminCatalogPage = () => {
                                 </SortableContext>
                                 <DragOverlay>
                                     {draggingProduct && (
-                                        <table className="rf-admin-table rf-catalog-table" style={{ background: 'var(--surface)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', borderRadius: 4, opacity: 0.95 }}>
+                                        <table role="presentation" className="rf-admin-table rf-catalog-table" style={{ background: 'var(--surface)', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', borderRadius: 4, opacity: 0.95 }}>
                                             <tbody>
                                                 <tr>
                                                     <td colSpan={10} style={{ padding: '6px 12px', fontSize: 13, fontWeight: 500, color: 'var(--ink-1)', whiteSpace: 'nowrap' }}>
