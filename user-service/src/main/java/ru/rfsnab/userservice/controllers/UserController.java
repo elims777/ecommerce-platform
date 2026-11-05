@@ -150,7 +150,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('INTERNAL') or hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(UserMapper.mapToUserDto(userService.findById(id)));
     }

@@ -189,4 +189,30 @@ class JWTServiceTest {
             assertThat(jwtService.extractEmail(token)).isEqualTo("company@example.com");
         }
     }
+
+    @Test
+    @DisplayName("generateToken() - access токен содержит typ=access")
+    void generateToken_HasAccessTyp() {
+        String token = jwtService.generateToken(USER_ID, USER_EMAIL, USER_ROLES);
+
+        assertThat(jwtService.extractTokenType(token)).isEqualTo(JWTService.TOKEN_TYPE_ACCESS);
+    }
+
+    @Test
+    @DisplayName("generateRefreshToken() - refresh токен содержит typ=refresh")
+    void generateRefreshToken_HasRefreshTyp() {
+        String token = jwtService.generateRefreshToken(USER_ID, USER_EMAIL, USER_ROLES);
+
+        assertThat(jwtService.extractTokenType(token)).isEqualTo(JWTService.TOKEN_TYPE_REFRESH);
+    }
+
+    @Test
+    @DisplayName("B2B токены - access содержит typ=access, refresh содержит typ=refresh")
+    void generateToken_B2b_HasTyp() {
+        String access = jwtService.generateToken(5L, "company@example.com", "B2B", "ООО «Ромашка»", "1234567890");
+        String refresh = jwtService.generateRefreshToken(5L, "company@example.com", "B2B", "ООО «Ромашка»", "1234567890");
+
+        assertThat(jwtService.extractTokenType(access)).isEqualTo(JWTService.TOKEN_TYPE_ACCESS);
+        assertThat(jwtService.extractTokenType(refresh)).isEqualTo(JWTService.TOKEN_TYPE_REFRESH);
+    }
 }

@@ -37,6 +37,7 @@ public class InternalTokenFilter extends OncePerRequestFilter {
             "/v1/users/inactive",
             "/v1/users/*/inactivity-email-sent",
             "/v1/users/*/verify",
+            "/v1/users/*",
             "/v1/users/authenticate",
             "/v1/users/oauth2-login",
             "/api/v1/legal-entities/authenticate",

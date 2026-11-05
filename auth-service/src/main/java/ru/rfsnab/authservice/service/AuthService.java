@@ -101,6 +101,9 @@ public class AuthService {
         if(!jwtService.validateToken(refreshToken)){
             throw new JwtException("Недопустимый токен");
         }
+        if (!JWTService.TOKEN_TYPE_REFRESH.equals(jwtService.extractTokenType(refreshToken))) {
+            throw new JwtException("Недопустимый токен");
+        }
         Long userId = jwtService.extractUserId(refreshToken);
         String email = jwtService.extractEmail(refreshToken);
 
@@ -119,7 +122,12 @@ public class AuthService {
                     .build();
         }
 
-        List<String> roles = jwtService.extractRolesFromToken(refreshToken);
+        UserDtoResponse user = fetchUserById(userId);
+        if (!user.isActive()) {
+            log.warn("Refresh отклонён: аккаунт заблокирован, userId={}", userId);
+            throw new JwtException("Аккаунт заблокирован");
+        }
+        List<String> roles = roleExtractor.extractRoles(user);
 
         String accessToken = jwtService.generateToken(userId, email, roles);
         String newRefreshToken = jwtService.generateRefreshToken(userId, email, roles);
@@ -317,6 +325,26 @@ public class AuthService {
             }
         } catch (HttpClientErrorException.NotFound e) {
             throw new JwtException("Юрлицо не найдено");
+        } catch (HttpClientErrorException e) {
+            log.error(USER_SERVICE_ERROR_LOG, e.getMessage());
+            throw new AuthServiceException("Ошибка обновления токена. Попробуйте позже");
+        }
+    }
+
+    /**
+     * Данные пользователя из user-service по internal-токену.
+     * 404 → JwtException (401, клиент разлогинится); остальные ошибки → AuthServiceException (502).
+     */
+    private UserDtoResponse fetchUserById(Long userId) {
+        try {
+            UserDtoResponse user = restTemplate.exchange(userServiceUrl + "/v1/users/" + userId,
+                    HttpMethod.GET, internalRequest(), UserDtoResponse.class).getBody();
+            if (user == null) {
+                throw new AuthServiceException("Не удалось получить данные пользователя");
+            }
+            return user;
+        } catch (HttpClientErrorException.NotFound e) {
+            throw new JwtException("Пользователь не найден");
         } catch (HttpClientErrorException e) {
             log.error(USER_SERVICE_ERROR_LOG, e.getMessage());
             throw new AuthServiceException("Ошибка обновления токена. Попробуйте позже");
