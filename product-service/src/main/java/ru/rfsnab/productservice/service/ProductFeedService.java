@@ -50,6 +50,13 @@ public class ProductFeedService {
     /** Лимит Яндекса на описание страницы каталога — 81 символ. */
     private static final int MAX_COLLECTION_DESCRIPTION_LENGTH = 81;
     private static final String COLLECTION_DESCRIPTION_SUFFIX = " в интернет-магазине РФснаб";
+    /** Кастомные элементы YML, по которым Директ строит фильтры в ЕПК. */
+    private static final String CUSTOM_SCORE = "custom_score";
+    private static final String CUSTOM_PRIORITY_LABEL = "custom_label_0";
+    private static final String PRIORITY_SCORE_HIGH = "10";
+    private static final String PRIORITY_SCORE_DEFAULT = "1";
+    private static final String PRIORITY_LABEL_HIGH = "high";
+    private static final String PRIORITY_LABEL_DEFAULT = "normal";
     private static final DateTimeFormatter FEED_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final ZoneId FEED_ZONE = ZoneId.of("Europe/Moscow");
     /** Символы, недопустимые в XML 1.0: управляющие (кроме \t \n \r), одиночные суррогаты, ￾, ￿. */
@@ -64,17 +71,20 @@ public class ProductFeedService {
     private final ProductImageRepository imageRepository;
     private final CategoryService categoryService;
     private final NewsRepository newsRepository;
+    private final FeedPriorityCategories priorityCategories;
     private final String siteUrl;
 
     public ProductFeedService(ProductRepository productRepository,
                               ProductImageRepository imageRepository,
                               CategoryService categoryService,
                               NewsRepository newsRepository,
+                              FeedPriorityCategories priorityCategories,
                               @Value("${site.base-url:https://rfsnab.ru}") String siteUrl) {
         this.productRepository = productRepository;
         this.imageRepository = imageRepository;
         this.categoryService = categoryService;
         this.newsRepository = newsRepository;
+        this.priorityCategories = priorityCategories;
         this.siteUrl = siteUrl;
     }
 
@@ -249,6 +259,9 @@ public class ProductFeedService {
                 text(w, "collectionId", String.valueOf(id));
             }
         }
+        boolean priority = hasCategory && priorityCategories.contains(p.getCategory().getId());
+        text(w, CUSTOM_SCORE, priority ? PRIORITY_SCORE_HIGH : PRIORITY_SCORE_DEFAULT);
+        text(w, CUSTOM_PRIORITY_LABEL, priority ? PRIORITY_LABEL_HIGH : PRIORITY_LABEL_DEFAULT);
         w.writeEndElement();
         return hasCategory;
     }

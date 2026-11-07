@@ -92,6 +92,11 @@ product-service:
   import:
     chunk-size: 25
 
+# Приоритетные категории YML-фида (ID через запятую): их товары уходят в ЕПК
+# с custom_score=10 / custom_label_0=high для отдельного фильтра
+feed:
+  priority-category-ids: "${FEED_PRIORITY_CATEGORY_IDS:}"
+
 app:
   kafka:
     topic:

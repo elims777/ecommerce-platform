@@ -333,6 +333,8 @@ services:
       INTERNAL_SECRET: ${INTERNAL_SECRET}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # приоритетные категории YML-фида для ЕПК (ID через запятую)
+      FEED_PRIORITY_CATEGORY_IDS: ${FEED_PRIORITY_CATEGORY_IDS:-75,26,190,153,95,91}
     volumes:
       - /var/log/rfsnab/product-service:/var/log/rfsnab/product-service
     depends_on:
