@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -19,6 +20,7 @@ import ru.rfsnab.productservice.repository.NewsRepository;
 import ru.rfsnab.productservice.repository.ProductImageRepository;
 import ru.rfsnab.productservice.repository.ProductRepository;
 import ru.rfsnab.productservice.service.CategoryService;
+import ru.rfsnab.productservice.service.FeedPriorityCategories;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
@@ -30,6 +32,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -42,12 +45,13 @@ class ProductFeedControllerIntegrationTest extends BaseIntegrationTest {
     private static final String SITEMAP_URL = "/api/v1/products/sitemap.xml";
     private static final String SPECIAL_NAME = "Труба & \"Фитинг\" <1> «Люкс»";
 
-    @Autowired MockMvc mockMvc;
+    @Autowired @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection") MockMvc mockMvc;
     @Autowired ProductRepository productRepository;
     @Autowired ProductImageRepository imageRepository;
     @Autowired CategoryRepository categoryRepository;
     @Autowired CategoryService categoryService;
     @Autowired NewsRepository newsRepository;
+    @MockitoBean FeedPriorityCategories priorityCategories;
 
     private Category category;
 
@@ -121,11 +125,25 @@ class ProductFeedControllerIntegrationTest extends BaseIntegrationTest {
         assertThat(child(offer, "url")).isEqualTo("https://rfsnab.ru/products/" + ok.getId());
         assertThat(child(offer, "categoryId")).isEqualTo(String.valueOf(category.getId()));
         assertThat(child(offer, "picture")).endsWith("k" + ok.getId() + ".jpg");
+        assertThat(child(offer, "custom_score")).isEqualTo("1");
+        assertThat(child(offer, "custom_label_0")).isEqualTo("normal");
         assertThat(offer(doc, inactive)).isNull();
         assertThat(offer(doc, variant)).isNull();
         assertThat(offer(doc, noImage)).isNull();
         assertThat(offer(doc, zeroPrice)).isNull();
         assertThat(doc.getElementsByTagName("category").getLength()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("фид: товар приоритетной категории получает custom_score=10 и custom_label_0=high")
+    void feed_priorityCategoryGetsHighScore() throws Exception {
+        Product p = save("Кран", true, false, "100.00", true);
+        when(priorityCategories.contains(category.getId())).thenReturn(true);
+
+        Element offer = offer(fetchXml(FEED_URL), p);
+
+        assertThat(child(offer, "custom_score")).isEqualTo("10");
+        assertThat(child(offer, "custom_label_0")).isEqualTo("high");
     }
 
     @Test

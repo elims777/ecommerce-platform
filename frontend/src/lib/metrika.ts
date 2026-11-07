@@ -1,20 +1,16 @@
 /**
- * Яндекс.Метрика — отложенная загрузка с отсевом ботов.
+ * Яндекс.Метрика — счётчик грузится сразу при старте приложения.
  *
- * Счётчика нет в index.html: скрипт вставляется из JS после первого
- * взаимодействия пользователя. Боты, которые не кликают и не скроллят,
- * счётчик не запускают и в статистику не попадают.
+ * Роботов отсекают два механизма: дешёвый префильтр по User-Agent/webdriver здесь
+ * и настройка счётчика «фильтровать роботов по поведению» на стороне Метрики.
+ * Отложенная загрузка по взаимодействию не используется: она теряла реальные
+ * визиты с мгновенным отказом, из-за чего данные расходились с Директом.
  */
 
 const COUNTER_ID = import.meta.env.VITE_YM_ID as string | undefined;
 
 const BOT_UA =
     /bot|crawl|spider|slurp|headless|phantom|lighthouse|googlebot|bingbot|ahrefs|semrush|mj12|dotbot|petalbot|python-requests|curl|wget|scrapy|go-http/i;
-
-const INTERACTION_EVENTS = ['pointerdown', 'keydown', 'scroll', 'touchstart'] as const;
-
-/** Резервный запуск, если взаимодействия так и не было (мс). */
-const FALLBACK_DELAY = 4000;
 
 declare global {
     interface Window {
@@ -24,17 +20,12 @@ declare global {
 }
 
 let started = false;
-/** Хиты, накопленные до фактической загрузки скрипта. */
-let pendingHit: string | null = null;
-/** Цели, достигнутые до фактической загрузки скрипта. */
-const pendingGoals: string[] = [];
 
 const isBot = (): boolean => {
     const nav = window.navigator;
     if (nav.webdriver) return true;
     if (BOT_UA.test(nav.userAgent)) return true;
-    if (!nav.languages || nav.languages.length === 0) return true;
-    return false;
+    return !nav.languages || nav.languages.length === 0;
 };
 
 const injectCounter = () => {
@@ -42,6 +33,8 @@ const injectCounter = () => {
 
     window.dataLayer = window.dataLayer || [];
 
+    // Очередь команд: tag.js разберёт её при загрузке, поэтому hit/reachGoal
+    // можно отправлять сразу после init, не дожидаясь скрипта.
     window.ym =
         window.ym ||
         function (...args: unknown[]) {
@@ -62,19 +55,9 @@ const injectCounter = () => {
         webvisor: true,
         ecommerce: 'dataLayer',
     });
-
-    if (pendingHit) {
-        window.ym(id, 'hit', pendingHit);
-        pendingHit = null;
-    }
-
-    pendingGoals.splice(0).forEach((goal) => window.ym?.(id, 'reachGoal', goal));
 };
 
-/**
- * Ставит счётчик в очередь на загрузку по первому взаимодействию.
- * Повторные вызовы игнорируются.
- */
+/** Инициализирует счётчик. Повторные вызовы игнорируются. */
 export const initMetrika = () => {
     if (started) return;
     if (!import.meta.env.PROD) return;
@@ -82,37 +65,19 @@ export const initMetrika = () => {
     if (isBot()) return;
 
     started = true;
-
-    const start = () => {
-        window.clearTimeout(timerId);
-        INTERACTION_EVENTS.forEach((event) => window.removeEventListener(event, start));
-        injectCounter();
-    };
-
-    const timerId = window.setTimeout(start, FALLBACK_DELAY);
-    INTERACTION_EVENTS.forEach((event) =>
-        window.addEventListener(event, start, { once: true, passive: true }),
-    );
+    injectCounter();
 };
 
 /** Просмотр страницы при смене роута в SPA. */
 export const trackPageView = (url: string) => {
     if (!started) return;
-    if (window.ym) {
-        window.ym(Number(COUNTER_ID), 'hit', url);
-    } else {
-        pendingHit = url;
-    }
+    window.ym?.(Number(COUNTER_ID), 'hit', url);
 };
 
-/** Достижение цели. До загрузки tag.js цель ждёт в очереди. */
+/** Достижение цели. */
 export const reachGoal = (name: string) => {
     if (!started) return;
-    if (window.ym) {
-        window.ym(Number(COUNTER_ID), 'reachGoal', name);
-    } else {
-        pendingGoals.push(name);
-    }
+    window.ym?.(Number(COUNTER_ID), 'reachGoal', name);
 };
 
 /** Метрика режет контейнер ecommerce на 8192 символах; берём с запасом. */

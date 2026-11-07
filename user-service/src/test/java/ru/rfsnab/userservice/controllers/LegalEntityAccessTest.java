@@ -13,6 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.rfsnab.userservice.models.LegalEntity;
+import ru.rfsnab.userservice.models.UserEntity;
 import ru.rfsnab.userservice.models.UserLegalEntity;
 import ru.rfsnab.userservice.models.enums.LinkStatus;
 import ru.rfsnab.userservice.models.enums.VerificationStatus;
@@ -236,5 +237,35 @@ class LegalEntityAccessTest {
         mockMvc.perform(put(LEGAL_URL + "/password").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"passwordHash\":\"hash\"}"))
                 .andExpect(status().isOk());
+    }
+
+    private void stubUser(long id) {
+        when(userService.findById(id)).thenReturn(UserEntity.builder()
+                .id(id).email("user" + id + "@example.com").active(true).build());
+    }
+
+    @Test
+    @WithMockUser(username = "internal-service", authorities = "ROLE_INTERNAL")
+    @DisplayName("GET /v1/users/{id} для INTERNAL -> 200")
+    void getUserByIdAllowedForInternal() throws Exception {
+        stubUser(10L);
+
+        mockMvc.perform(get("/v1/users/10")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "1", authorities = "ROLE_ADMIN")
+    @DisplayName("GET /v1/users/{id} для ADMIN -> 200")
+    void getUserByIdAllowedForAdmin() throws Exception {
+        stubUser(10L);
+
+        mockMvc.perform(get("/v1/users/10")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "10", authorities = "ROLE_USER")
+    @DisplayName("GET /v1/users/{id} обычному пользователю -> 403")
+    void getUserByIdForbiddenForUser() throws Exception {
+        mockMvc.perform(get("/v1/users/10")).andExpect(status().isForbidden());
     }
 }

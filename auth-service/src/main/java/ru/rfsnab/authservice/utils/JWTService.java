@@ -24,6 +24,9 @@ public class JWTService {
     private static final String CLAIM_CLIENT_TYPE = "clientType";
     private static final String ROLE_USER = "ROLE_USER";
     private static final String CLAIM_EMAIL = "email";
+    private static final String CLAIM_TYP = "typ";
+    public static final String TOKEN_TYPE_ACCESS = "access";
+    public static final String TOKEN_TYPE_REFRESH = "refresh";
 
     private final JWTProperties jwtProperties;
 
@@ -44,6 +47,7 @@ public class JWTService {
                 .claim(CLAIM_EMAIL, email)
                 .claim(CLAIM_ROLES, roles)
                 .claim(CLAIM_CLIENT_TYPE, "B2C")
+                .claim(CLAIM_TYP, TOKEN_TYPE_ACCESS)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis()+jwtProperties.getExpirationMs()))
                 .signWith(getSignedKey())
@@ -59,6 +63,7 @@ public class JWTService {
                 .claim(CLAIM_EMAIL, email)
                 .claim(CLAIM_ROLES, roles)
                 .claim(CLAIM_CLIENT_TYPE, "B2C")
+                .claim(CLAIM_TYP, TOKEN_TYPE_REFRESH)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis()+jwtProperties.getRefreshExpirationMs()))
                 .signWith(getSignedKey())
@@ -71,6 +76,7 @@ public class JWTService {
                 .claim(CLAIM_EMAIL, email)
                 .claim(CLAIM_CLIENT_TYPE, clientType)
                 .claim(CLAIM_ROLES, List.of(ROLE_USER))
+                .claim(CLAIM_TYP, TOKEN_TYPE_ACCESS)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtProperties.getExpirationMs()))
                 .signWith(getSignedKey())
@@ -83,6 +89,7 @@ public class JWTService {
                 .claim(CLAIM_EMAIL, email)
                 .claim(CLAIM_CLIENT_TYPE, clientType)
                 .claim(CLAIM_ROLES, List.of(ROLE_USER))
+                .claim(CLAIM_TYP, TOKEN_TYPE_REFRESH)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpirationMs()))
                 .signWith(getSignedKey())
@@ -96,6 +103,7 @@ public class JWTService {
                 .claim(CLAIM_EMAIL, email)
                 .claim(CLAIM_CLIENT_TYPE, clientType)
                 .claim(CLAIM_ROLES, List.of(ROLE_USER))
+                .claim(CLAIM_TYP, TOKEN_TYPE_ACCESS)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtProperties.getExpirationMs()));
         if (companyName != null) builder.claim(CLAIM_COMPANY_NAME, companyName);
@@ -110,6 +118,7 @@ public class JWTService {
                 .claim(CLAIM_EMAIL, email)
                 .claim(CLAIM_CLIENT_TYPE, clientType)
                 .claim(CLAIM_ROLES, List.of(ROLE_USER))
+                .claim(CLAIM_TYP, TOKEN_TYPE_REFRESH)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtProperties.getRefreshExpirationMs()));
         if (companyName != null) builder.claim(CLAIM_COMPANY_NAME, companyName);
@@ -127,6 +136,13 @@ public class JWTService {
 
     public String extractInn(String token) {
         return extractClaims(token).get("inn", String.class);
+    }
+
+    /**
+     * Извлечение типа токена (access/refresh); у токенов старого формата — null
+     */
+    public String extractTokenType(String token) {
+        return extractClaims(token).get(CLAIM_TYP, String.class);
     }
 
     /**

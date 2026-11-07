@@ -70,6 +70,12 @@ class InternalTokenFilterTest {
     @Test
     @DisplayName("путь вне INTERNAL_PATHS: фильтр пропускается целиком (shouldNotFilter), даже с валидным токеном роли нет")
     void validTokenOnNonInternalPathDoesNotGrantRole() throws Exception {
-        assertThat(run("/v1/users/1", SECRET)).isNull();
+        assertThat(run("/api/v1/products/1", SECRET)).isNull();
+    }
+
+    @Test
+    @DisplayName("валидный токен на /v1/users/{id} выдаёт ROLE_INTERNAL (для refresh в auth-service)")
+    void validTokenOnUserByIdGrantsRole() throws Exception {
+        assertThat(run("/v1/users/1", SECRET)).isNotNull();
     }
 }

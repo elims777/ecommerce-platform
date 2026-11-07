@@ -207,7 +207,7 @@ class AuthServiceTest {
     // ==================== refresh() Tests ====================
 
     @Test
-    @DisplayName("refresh() - валидный refresh token возвращает новые токены")
+    @DisplayName("refresh() - валидный refresh token возвращает новые токены, роли из user-service")
     void refresh_ValidToken_ReturnsNewTokens() {
         // Given
         String oldRefreshToken = "old.refresh.token";
@@ -215,10 +215,15 @@ class AuthServiceTest {
         String newRefreshToken = "new.refresh.token";
 
         when(jwtService.validateToken(oldRefreshToken)).thenReturn(true);
-        // ИЗМЕНЕНО: теперь данные берутся из токена, без запроса в user-service
+        when(jwtService.extractTokenType(oldRefreshToken)).thenReturn(JWTService.TOKEN_TYPE_REFRESH);
         when(jwtService.extractUserId(oldRefreshToken)).thenReturn(USER_ID);
         when(jwtService.extractEmail(oldRefreshToken)).thenReturn(USER_EMAIL);
-        when(jwtService.extractRolesFromToken(oldRefreshToken)).thenReturn(userRoles);
+
+        validUserResponse.setActive(true);
+        when(restTemplate.exchange(eq(USER_SERVICE_URL + "/v1/users/" + USER_ID),
+                eq(HttpMethod.GET), any(HttpEntity.class), eq(UserDtoResponse.class)))
+                .thenReturn(ResponseEntity.ok(validUserResponse));
+        when(roleExtractor.extractRoles(validUserResponse)).thenReturn(userRoles);
 
         when(jwtService.generateToken(USER_ID, USER_EMAIL, userRoles)).thenReturn(newAccessToken);
         when(jwtService.generateRefreshToken(USER_ID, USER_EMAIL, userRoles)).thenReturn(newRefreshToken);
@@ -233,13 +238,96 @@ class AuthServiceTest {
         assertThat(result.getTokenType()).isEqualTo("Bearer");
 
         verify(jwtService).validateToken(oldRefreshToken);
-        verify(jwtService).extractUserId(oldRefreshToken);
-        verify(jwtService).extractEmail(oldRefreshToken);
-        verify(jwtService).extractRolesFromToken(oldRefreshToken);
         verify(jwtService).generateToken(USER_ID, USER_EMAIL, userRoles);
         verify(jwtService).generateRefreshToken(USER_ID, USER_EMAIL, userRoles);
-        // ИЗМЕНЕНО: проверяем что НЕТ запроса к user-service
-        verifyNoInteractions(restTemplate);
+        // Роли берутся из user-service, а не из старого токена
+        verify(jwtService, never()).extractRolesFromToken(anyString());
+        verify(restTemplate).exchange(eq(USER_SERVICE_URL + "/v1/users/" + USER_ID),
+                eq(HttpMethod.GET), any(HttpEntity.class), eq(UserDtoResponse.class));
+    }
+
+    @Test
+    @DisplayName("refresh() - access token вместо refresh → JwtException")
+    void refresh_AccessToken_ThrowsJwtException() {
+        String accessToken = "access.token";
+        when(jwtService.validateToken(accessToken)).thenReturn(true);
+        when(jwtService.extractTokenType(accessToken)).thenReturn(JWTService.TOKEN_TYPE_ACCESS);
+
+        assertThatThrownBy(() -> authService.refresh(accessToken))
+                .isInstanceOf(JwtException.class)
+                .hasMessageContaining("Недопустимый токен");
+
+        verify(jwtService, never()).extractUserId(anyString());
+        verify(jwtService, never()).generateToken(anyLong(), anyString(), anyList());
+    }
+
+    @Test
+    @DisplayName("refresh() - токен старого формата без typ → JwtException")
+    void refresh_TokenWithoutTyp_ThrowsJwtException() {
+        String oldFormatToken = "old.format.token";
+        when(jwtService.validateToken(oldFormatToken)).thenReturn(true);
+        when(jwtService.extractTokenType(oldFormatToken)).thenReturn(null);
+
+        assertThatThrownBy(() -> authService.refresh(oldFormatToken))
+                .isInstanceOf(JwtException.class)
+                .hasMessageContaining("Недопустимый токен");
+
+        verify(jwtService, never()).extractUserId(anyString());
+    }
+
+    @Test
+    @DisplayName("refresh() B2C - аккаунт заблокирован → JwtException, токены не выдаются")
+    void refresh_B2cInactiveUser_ThrowsJwtException() {
+        String token = "blocked.refresh.token";
+        when(jwtService.validateToken(token)).thenReturn(true);
+        when(jwtService.extractTokenType(token)).thenReturn(JWTService.TOKEN_TYPE_REFRESH);
+        when(jwtService.extractUserId(token)).thenReturn(USER_ID);
+        when(jwtService.extractEmail(token)).thenReturn(USER_EMAIL);
+
+        validUserResponse.setActive(false);
+        when(restTemplate.exchange(eq(USER_SERVICE_URL + "/v1/users/" + USER_ID),
+                eq(HttpMethod.GET), any(HttpEntity.class), eq(UserDtoResponse.class)))
+                .thenReturn(ResponseEntity.ok(validUserResponse));
+
+        assertThatThrownBy(() -> authService.refresh(token))
+                .isInstanceOf(JwtException.class)
+                .hasMessageContaining("Аккаунт заблокирован");
+
+        verify(jwtService, never()).generateToken(anyLong(), anyString(), anyList());
+    }
+
+    @Test
+    @DisplayName("refresh() B2C - пользователь удалён (404) → JwtException")
+    void refresh_B2cUserNotFound_ThrowsJwtException() {
+        String token = "deleted.refresh.token";
+        when(jwtService.validateToken(token)).thenReturn(true);
+        when(jwtService.extractTokenType(token)).thenReturn(JWTService.TOKEN_TYPE_REFRESH);
+        when(jwtService.extractUserId(token)).thenReturn(USER_ID);
+        when(jwtService.extractEmail(token)).thenReturn(USER_EMAIL);
+
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(UserDtoResponse.class)))
+                .thenThrow(HttpClientErrorException.NotFound.create(
+                        HttpStatus.NOT_FOUND, "Not Found", HttpHeaders.EMPTY, null, null));
+
+        assertThatThrownBy(() -> authService.refresh(token))
+                .isInstanceOf(JwtException.class);
+    }
+
+    @Test
+    @DisplayName("refresh() B2C - user-service ответил 500 → AuthServiceException (502)")
+    void refresh_B2cUserServiceError_ThrowsAuthServiceException() {
+        String token = "error.refresh.token";
+        when(jwtService.validateToken(token)).thenReturn(true);
+        when(jwtService.extractTokenType(token)).thenReturn(JWTService.TOKEN_TYPE_REFRESH);
+        when(jwtService.extractUserId(token)).thenReturn(USER_ID);
+        when(jwtService.extractEmail(token)).thenReturn(USER_EMAIL);
+
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(UserDtoResponse.class)))
+                .thenThrow(HttpClientErrorException.create(
+                        HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error", HttpHeaders.EMPTY, null, null));
+
+        assertThatThrownBy(() -> authService.refresh(token))
+                .isInstanceOf(AuthServiceException.class);
     }
 
     @Test
@@ -264,6 +352,7 @@ class AuthServiceTest {
     void refresh_B2bToken_KeepsB2bContext() {
         String oldRefreshToken = "old.b2b.refresh";
         when(jwtService.validateToken(oldRefreshToken)).thenReturn(true);
+        when(jwtService.extractTokenType(oldRefreshToken)).thenReturn(JWTService.TOKEN_TYPE_REFRESH);
         when(jwtService.extractUserId(oldRefreshToken)).thenReturn(5L);
         when(jwtService.extractEmail(oldRefreshToken)).thenReturn("company@example.com");
         when(jwtService.extractClientType(oldRefreshToken)).thenReturn("B2B");
@@ -530,6 +619,7 @@ class AuthServiceTest {
 
     private void stubB2bRefreshToken(String token) {
         when(jwtService.validateToken(token)).thenReturn(true);
+        when(jwtService.extractTokenType(token)).thenReturn(JWTService.TOKEN_TYPE_REFRESH);
         when(jwtService.extractUserId(token)).thenReturn(5L);
         when(jwtService.extractEmail(token)).thenReturn("company@example.com");
         when(jwtService.extractClientType(token)).thenReturn("B2B");
