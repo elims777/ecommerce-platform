@@ -23,6 +23,8 @@ spring:
             # Login — строгий лимит (brute force защита)
             - id: auth-login
               uri: http://localhost:9000
+              metadata:
+                global-rate: 20
               predicates:
                 - Path=/api/v1/auth/login
                 - Method=POST
@@ -38,6 +40,8 @@ spring:
             # Register B2C — строгий лимит
             - id: auth-register
               uri: http://localhost:9000
+              metadata:
+                global-rate: 10
               predicates:
                 - Path=/api/v1/register
                 - Method=POST
@@ -52,6 +56,8 @@ spring:
             # Register legal entity (proxy через auth-service -> user-service)
             - id: auth-register-legal
               uri: http://localhost:9000
+              metadata:
+                global-rate: 10
               predicates:
                 - Path=/api/v1/register/legal
                 - Method=POST
@@ -60,6 +66,23 @@ spring:
                   args:
                     redis-rate-limiter.replenishRate: 3
                     redis-rate-limiter.burstCapacity: 5
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
+            # Забыл пароль — защита от злоупотребления рассылкой (per-IP фильтр + общий лимит metadata.global-rate)
+            - id: auth-forgot-password
+              uri: http://localhost:9000
+              metadata:
+                global-rate: 5
+              predicates:
+                - Path=/api/v1/auth/forgot-password
+                - Method=POST
+              filters:
+                - RewritePath=/api(?<segment>/?.*), ${segment}
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 1
+                    redis-rate-limiter.burstCapacity: 3
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@ipKeyResolver}"
 
@@ -94,6 +117,13 @@ spring:
               uri: http://localhost:9000
               predicates:
                 - Path=/login/oauth2/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 7
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
             # Регистрация через Яндекс (/auth/oauth2/register/yandex)
             - id: auth-pages
@@ -113,6 +143,13 @@ spring:
               uri: http://localhost:9000
               predicates:
                 - Path=/verify-email
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
             # === USER-SERVICE (:8081) ===
             - id: user-api
@@ -172,6 +209,13 @@ spring:
               uri: http://localhost:8082
               predicates:
                 - Path=/api/verification/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
 
             # === PRODUCT-SERVICE (:8083) ===
             - id: product-api
@@ -268,6 +312,22 @@ spring:
                   args:
                     redis-rate-limiter.replenishRate: 15
                     redis-rate-limiter.burstCapacity: 25
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@ipKeyResolver}"
+
+            # Создание заказа — защита от флуда (per-IP фильтр + общий лимит metadata.global-rate)
+            - id: orders-create
+              uri: http://localhost:8084
+              metadata:
+                global-rate: 10
+              predicates:
+                - Path=/api/v1/orders
+                - Method=POST
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 2
+                    redis-rate-limiter.burstCapacity: 5
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@ipKeyResolver}"
 
