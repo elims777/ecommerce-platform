@@ -56,6 +56,10 @@ public abstract class BaseIntegrationTest {
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
+        // Отдельная БД: flushDb в тестах лимитов не должен чистить чужой Redis
+        // (при fallback на localhost это может быть рабочий dev-инстанс)
+        registry.add("spring.data.redis.database", () -> "15");
+
         // Redis
         if (useLocalRedis) {
             registry.add("spring.data.redis.host", () -> "localhost");
