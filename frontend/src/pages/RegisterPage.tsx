@@ -130,7 +130,7 @@ const RegisterPage = () => {
     const ConsentFields = () => (
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <Form.Item
-                name="privacyPolicy" valuePropName="checked" noStyle
+                name="privacyPolicy" valuePropName="checked" style={{ marginBottom: 0 }}
                 rules={[{ validator: (_, v) => v ? Promise.resolve() : Promise.reject(new Error('Необходимо принять политику конфиденциальности')) }]}
             >
                 <Checkbox style={{ fontSize: 'var(--text-base)', color: 'var(--ink-2)' }}>
@@ -139,7 +139,7 @@ const RegisterPage = () => {
                 </Checkbox>
             </Form.Item>
             <Form.Item
-                name="personalData" valuePropName="checked" noStyle
+                name="personalData" valuePropName="checked" style={{ marginBottom: 0 }}
                 rules={[{ validator: (_, v) => v ? Promise.resolve() : Promise.reject(new Error('Необходимо дать согласие на обработку персональных данных')) }]}
             >
                 <Checkbox style={{ fontSize: 'var(--text-base)', color: 'var(--ink-2)' }}>
@@ -147,7 +147,7 @@ const RegisterPage = () => {
                     <a href="/personal-data" target="_blank" className="consent-link">обработку персональных данных</a>
                 </Checkbox>
             </Form.Item>
-            <Form.Item name="newsletterConsent" valuePropName="checked" noStyle>
+            <Form.Item name="newsletterConsent" valuePropName="checked" style={{ marginBottom: 0 }}>
                 <Checkbox style={{ fontSize: 'var(--text-base)', color: 'var(--ink-2)' }}>
                     Хочу получать новости, акции и специальные предложения
                 </Checkbox>
@@ -237,38 +237,38 @@ const RegisterPage = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: twoColFields, gap: 12 }}>
                                 <div>
                                     <label htmlFor="firstname" style={labelStyle}>Имя</label>
-                                    <Form.Item name="firstname" noStyle rules={[{ required: true, message: 'Введите имя' }, { min: 2, message: 'Минимум 2 символа' }]}>
+                                    <Form.Item name="firstname" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите имя' }, { min: 2, message: 'Минимум 2 символа' }]}>
                                         <Input style={inputStyle} placeholder="Иван" />
                                     </Form.Item>
                                 </div>
                                 <div>
                                     <label htmlFor="lastname" style={labelStyle}>Фамилия</label>
-                                    <Form.Item name="lastname" noStyle rules={[{ required: true, message: 'Введите фамилию' }, { min: 2, message: 'Минимум 2 символа' }]}>
+                                    <Form.Item name="lastname" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите фамилию' }, { min: 2, message: 'Минимум 2 символа' }]}>
                                         <Input style={inputStyle} placeholder="Иванов" />
                                     </Form.Item>
                                 </div>
                             </div>
                             <div style={{ marginTop: 14 }}>
                                 <label htmlFor="phone" style={labelStyle}>Телефон</label>
-                                <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\d{10}$/, message: 'Введите 10 цифр номера' }]}>
+                                <Form.Item name="phone" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\d{10}$/, message: 'Введите 10 цифр номера' }]}>
                                     <PhoneInput style={inputStyle} placeholder="9001234567" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 14 }}>
                                 <label htmlFor="email" style={labelStyle}>E-mail</label>
-                                <Form.Item name="email" noStyle rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный формат email' }]}>
+                                <Form.Item name="email" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный формат email' }]}>
                                     <Input style={inputStyle} placeholder="ivan@company.ru" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 14 }}>
                                 <label htmlFor="password" style={labelStyle}>Пароль</label>
-                                <Form.Item name="password" noStyle rules={[{ required: true, message: 'Введите пароль' }, { min: 8, message: 'Минимум 8 символов' }]}>
+                                <Form.Item name="password" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите пароль' }, { min: 8, message: 'Минимум 8 символов' }]}>
                                     <Input.Password style={inputStyle} placeholder="Минимум 8 символов" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 14 }}>
                                 <label htmlFor="confirmPassword" style={labelStyle}>Подтверждение пароля</label>
-                                <Form.Item name="confirmPassword" noStyle dependencies={['password']} rules={[
+                                <Form.Item name="confirmPassword" style={{ marginBottom: 0 }} dependencies={['password']} rules={[
                                     { required: true, message: 'Подтвердите пароль' },
                                     ({ getFieldValue }) => ({ validator(_, value) { if (!value || getFieldValue('password') === value) return Promise.resolve(); return Promise.reject(new Error('Пароли не совпадают')); } }),
                                 ]}>
@@ -288,7 +288,7 @@ const RegisterPage = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: twoColFields, gap: 12 }}>
                                 <div>
                                     <label htmlFor="inn" style={labelStyle}>ИНН</label>
-                                    <Form.Item name="inn" noStyle rules={[
+                                    <Form.Item name="inn" style={{ marginBottom: 0 }} rules={[
                                         { required: true, message: 'Введите ИНН' },
                                         { pattern: /^\d{10}$|^\d{12}$/, message: 'ИНН — 10 или 12 цифр' },
                                     ]}>
@@ -297,7 +297,7 @@ const RegisterPage = () => {
                                 </div>
                                 <div>
                                     <label htmlFor="ogrn" style={labelStyle}>ОГРН</label>
-                                    <Form.Item name="ogrn" noStyle rules={[
+                                    <Form.Item name="ogrn" style={{ marginBottom: 0 }} rules={[
                                         { required: true, message: 'Введите ОГРН' },
                                         { pattern: /^\d{13}$|^\d{15}$/, message: 'ОГРН — 13 или 15 цифр' },
                                     ]}>
@@ -307,33 +307,33 @@ const RegisterPage = () => {
                             </div>
                             <div style={{ marginTop: 12 }}>
                                 <label htmlFor="fullName" style={labelStyle}>Полное название организации</label>
-                                <Form.Item name="fullName" noStyle rules={[{ required: true, message: 'Введите название' }]}>
+                                <Form.Item name="fullName" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите название' }]}>
                                     <Input style={inputStyle} placeholder='ООО "Ромашка"' />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 12 }}>
                                 <label htmlFor="director" style={labelStyle}>Директор (ФИО)</label>
-                                <Form.Item name="director" noStyle rules={[{ required: true, message: 'Введите ФИО директора' }]}>
+                                <Form.Item name="director" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите ФИО директора' }]}>
                                     <Input style={inputStyle} placeholder="Иванов Иван Иванович" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 12 }}>
                                 <label htmlFor="legalCity" style={labelStyle}>Юридический адрес</label>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: 8 }}>
-                                    <Form.Item name="legalCity" noStyle rules={[{ required: true, message: 'Город' }]}>
+                                    <Form.Item name="legalCity" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Город' }]}>
                                         <Input style={inputStyle} placeholder="Город" />
                                     </Form.Item>
-                                    <Form.Item name="legalStreet" noStyle rules={[{ required: true, message: 'Улица' }]}>
+                                    <Form.Item name="legalStreet" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Улица' }]}>
                                         <Input style={inputStyle} placeholder="Улица" />
                                     </Form.Item>
-                                    <Form.Item name="legalBuilding" noStyle rules={[{ required: true, message: 'Дом' }]}>
+                                    <Form.Item name="legalBuilding" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Дом' }]}>
                                         <Input style={inputStyle} placeholder="Дом" />
                                     </Form.Item>
                                 </div>
                             </div>
                             <div style={{ marginTop: 12 }}>
                                 <label htmlFor="phone" style={labelStyle}>Телефон</label>
-                                <Form.Item name="phone" noStyle rules={[
+                                <Form.Item name="phone" style={{ marginBottom: 0 }} rules={[
                                     { required: true, message: 'Введите телефон' },
                                     { pattern: /^\d{10}$/, message: 'Введите 10 цифр номера' },
                                 ]}>
@@ -342,19 +342,19 @@ const RegisterPage = () => {
                             </div>
                             <div style={{ marginTop: 12 }}>
                                 <label htmlFor="email" style={labelStyle}>E-mail</label>
-                                <Form.Item name="email" noStyle rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный формат email' }]}>
+                                <Form.Item name="email" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите email' }, { type: 'email', message: 'Некорректный формат email' }]}>
                                     <Input style={inputStyle} placeholder="info@company.ru" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 12 }}>
                                 <label htmlFor="password" style={labelStyle}>Пароль</label>
-                                <Form.Item name="password" noStyle rules={[{ required: true, message: 'Введите пароль' }, { min: 8, message: 'Минимум 8 символов' }]}>
+                                <Form.Item name="password" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите пароль' }, { min: 8, message: 'Минимум 8 символов' }]}>
                                     <Input.Password style={inputStyle} placeholder="Минимум 8 символов" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 12 }}>
                                 <label htmlFor="confirmPassword" style={labelStyle}>Подтверждение пароля</label>
-                                <Form.Item name="confirmPassword" noStyle dependencies={['password']} rules={[
+                                <Form.Item name="confirmPassword" style={{ marginBottom: 0 }} dependencies={['password']} rules={[
                                     { required: true, message: 'Подтвердите пароль' },
                                     ({ getFieldValue }) => ({ validator(_, value) { if (!value || getFieldValue('password') === value) return Promise.resolve(); return Promise.reject(new Error('Пароли не совпадают')); } }),
                                 ]}>

@@ -2,7 +2,7 @@ import { Input } from 'antd';
 import type { InputProps } from 'antd';
 import { toPhoneInput } from '../utils/phone';
 
-type PhoneInputProps = Omit<InputProps, 'value' | 'onChange' | 'addonBefore'> & {
+type PhoneInputProps = Omit<InputProps, 'value' | 'onChange' | 'prefix'> & {
     value?: string;
     onChange?: (value: string) => void;
 };
@@ -11,7 +11,7 @@ type PhoneInputProps = Omit<InputProps, 'value' | 'onChange' | 'addonBefore'> & 
 const PhoneInput = ({ value, onChange, ...rest }: PhoneInputProps) => (
     <Input
         {...rest}
-        addonBefore="+7"
+        prefix="+7"
         inputMode="numeric"
         maxLength={10}
         value={toPhoneInput(value)}

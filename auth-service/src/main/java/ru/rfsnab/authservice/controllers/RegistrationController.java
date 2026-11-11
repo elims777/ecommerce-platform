@@ -50,19 +50,19 @@ public class RegistrationController {
                     );
             if(created==null){
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(Map.of("error", "Failed to create user: empty response"));
+                        .body(Map.of("error", "Не удалось создать пользователя: пустой ответ"));
             }
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (HttpClientErrorException.Conflict e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new ErrorResponse("User already exists"));
+                    .body(new ErrorResponse("Пользователь с таким email уже зарегистрирован"));
         } catch (HttpClientErrorException.BadRequest e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new ErrorResponse("Invalid registration data"));
+                    .body(new ErrorResponse("Некорректные данные регистрации"));
         } catch (Exception e) {
             log.error("Registration failed", e); // добавь логгер!
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ErrorResponse("Registration failed due to internal error"));
+                    .body(new ErrorResponse("Не удалось зарегистрировать пользователя. Попробуйте позже"));
         }
     }
 
