@@ -43,6 +43,7 @@ public class EmailService {
     private static final String KEY_TERMINAL_ADDRESS = "terminalAddress";
     private static final String STATUS_FAILED = "FAILED";
     private static final String STATUS_PARTIAL = "PARTIAL";
+    private static final String STATUS_INTERRUPTED = "INTERRUPTED";
     private static final String SUBJECT_SUFFIX = " — РФСнаб";
     private static final String KEY_TRACK_URL = "trackUrl";
     private static final String ORDERS_PATH = "/orders";
@@ -384,6 +385,7 @@ public class EmailService {
         model.put("rootErrors", event.errors() == null ? List.of() :
                 event.errors().stream().filter(err -> !err.cascade()).toList());
         model.put("rootCause", event.rootCause());
+        model.put("classifierReplaced", event.classifierReplaced());
 
         String subject = importSubject(event);
         if (STATUS_FAILED.equals(event.status()) || STATUS_PARTIAL.equals(event.status())) {
@@ -418,6 +420,9 @@ public class EmailService {
         sb.append("Фото: обработано ").append(event.imagesProcessed())
                 .append(", с ошибками ").append(event.imagesFailed()).append('\n');
         sb.append("Каскадных ошибок: ").append(event.cascadeCount()).append('\n');
+        if (event.classifierReplaced()) {
+            sb.append("Категории: классификатор подменён во время импорта — дерево категорий могло сбиться\n");
+        }
         sb.append('\n');
         sb.append("=== ПРИЧИНА СБОЯ ===\n");
         String reason = rootErrors.isEmpty() ? null : rootErrors.get(0).message();
@@ -457,6 +462,9 @@ public class EmailService {
     }
 
     String importSubject(ImportEvent event) {
+        if (STATUS_INTERRUPTED.equals(event.status())) {
+            return "Импорт каталога ФТК — ПРЕРВАН";
+        }
         if (STATUS_FAILED.equals(event.status())) {
             return "Импорт каталога ФТК — ОШИБКА";
         }
@@ -505,6 +513,7 @@ public class EmailService {
             case "SUCCESS" -> "Успешно";
             case STATUS_PARTIAL -> "Частично с ошибками";
             case STATUS_FAILED -> "Провален";
+            case STATUS_INTERRUPTED -> "Прерван (рестарт сервиса)";
             default -> status;
         };
     }

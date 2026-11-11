@@ -54,6 +54,9 @@ public class FtkImportResumer {
         }
         importLogRepository.saveAll(unfinished);
 
+        // Письмо о прерванном прогоне — иначе краш импорта нигде не виден, кроме логов
+        unfinished.forEach(entry -> importService.publishInterruptedImport(entry.getStartedAt()));
+
         if (maxAttempts >= MAX_RESUME_ATTEMPTS) {
             log.error("ФТК-импорт прерван {} раз подряд — автовозобновление остановлено, требуется ручной запуск",
                     maxAttempts + 1);

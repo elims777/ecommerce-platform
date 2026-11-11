@@ -62,6 +62,11 @@ class EmailServiceImportReportTest {
 
     private ImportEvent createEvent(String status, int failed, List<ImportEvent.ImportError> errors,
                                      String errorStacktrace, String rootCause) {
+        return createEvent(status, failed, errors, errorStacktrace, rootCause, false);
+    }
+
+    private ImportEvent createEvent(String status, int failed, List<ImportEvent.ImportError> errors,
+                                     String errorStacktrace, String rootCause, boolean classifierReplaced) {
         return new ImportEvent(
                 "FTK_IMPORT_COMPLETED",
                 status,
@@ -72,7 +77,8 @@ class EmailServiceImportReportTest {
                 0,
                 errors,
                 errorStacktrace,
-                rootCause
+                rootCause,
+                classifierReplaced
         );
     }
 
@@ -108,7 +114,7 @@ class EmailServiceImportReportTest {
                     100, 0, 100, 0, 0,
                     50, 12,
                     60_000L, LocalDateTime.of(2026, 8, 13, 3, 0),
-                    0, List.of(), null, null);
+                    0, List.of(), null, null, false);
 
             String subject = emailService.importSubject(event);
 
@@ -124,6 +130,16 @@ class EmailServiceImportReportTest {
             String subject = emailService.importSubject(event);
 
             assertThat(subject).contains("успешно");
+        }
+
+        @Test
+        @DisplayName("status=INTERRUPTED -> тема 'ПРЕРВАН'")
+        void interruptedStatus_SubjectContainsInterrupted() {
+            ImportEvent event = createEvent("INTERRUPTED", 0, List.of(), null);
+
+            String subject = emailService.importSubject(event);
+
+            assertThat(subject).contains("ПРЕРВАН");
         }
     }
 
@@ -153,6 +169,26 @@ class EmailServiceImportReportTest {
             String text = emailService.buildImportReportFile(event);
 
             assertThat(text).doesNotContain("=== СТЕКТРЕЙС ===");
+        }
+
+        @Test
+        @DisplayName("классификатор подменён -> есть строка про сбитое дерево категорий")
+        void classifierReplaced_HasCategoryWarning() {
+            ImportEvent event = createEvent("SUCCESS", 0, List.of(), null, null, true);
+
+            String text = emailService.buildImportReportFile(event);
+
+            assertThat(text).contains("дерево категорий могло сбиться");
+        }
+
+        @Test
+        @DisplayName("классификатор не подменялся -> строки про категории нет")
+        void classifierNotReplaced_NoCategoryWarning() {
+            ImportEvent event = createEvent("SUCCESS", 0, List.of(), null);
+
+            String text = emailService.buildImportReportFile(event);
+
+            assertThat(text).doesNotContain("дерево категорий");
         }
 
         @Test

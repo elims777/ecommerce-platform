@@ -209,6 +209,10 @@ public class FtkImportService {
                     .filter(Objects::nonNull)
                     .toList();
 
+            // Если во время маппинга другой импорт (1С) подменил или сбросил классификатор,
+            // категории выше разрешились по чужому дереву — сообщаем об этом в отчёте.
+            boolean classifierReplaced = categoryMapper.currentClassifier() != classifier;
+
             BatchImportResult batchResult = sendBatch(dtos);
             log.info("ФТК batch-импорт: created={}, updated={}, unchanged={}, failed={}",
                     batchResult.created(), batchResult.updated(), batchResult.unchanged(), batchResult.failed());
@@ -243,7 +247,8 @@ public class FtkImportService {
             log.info("ФТК изображения: ok={}, failed={}, skipped={}", imagesOk, imagesFailed, imagesSkipped);
 
             FtkImportResult result = new FtkImportResult(limited.size(), batchResult.created(),
-                    batchResult.updated(), batchResult.unchanged(), batchResult.failed(), imagesOk, imagesFailed, imagesSkipped);
+                    batchResult.updated(), batchResult.unchanged(), batchResult.failed(), imagesOk, imagesFailed,
+                    imagesSkipped, classifierReplaced);
             saveFtkLog(logEntry, startedAt, resumeAttempts, result, null, batchResult.errors());
             return result;
 
@@ -324,7 +329,7 @@ public class FtkImportService {
             }
 
             FtkImportResult result = new FtkImportResult(products.size(), batchResult.created(),
-                    batchResult.updated(), batchResult.unchanged(), batchResult.failed(), imagesOk, imagesFailed, 0);
+                    batchResult.updated(), batchResult.unchanged(), batchResult.failed(), imagesOk, imagesFailed, 0, false);
             saveFtkLog(null, startedAt, 0, result, null, batchResult.errors());
             return result;
 
@@ -590,10 +595,29 @@ public class FtkImportService {
                 .startedAt(startedAt)
                 .errors(eventErrors)
                 .cascadeCount(cascadeCount)
+                .classifierReplaced(result != null && result.classifierReplaced())
                 .errorStacktrace(errorStacktrace)
                 .rootCause(error != null ? describeRootCause(error) : null)
                 .build();
 
+        sendEvent(event);
+    }
+
+    /**
+     * Публикует событие о прерванном импорте (краш JVM / рестарт сервиса) —
+     * чтобы менеджер получил письмо и о таком прогоне, а не только о завершённых.
+     */
+    public void publishInterruptedImport(LocalDateTime startedAt) {
+        sendEvent(FtkImportCompletedEvent.builder()
+                .eventType(FtkImportCompletedEvent.EVENT_TYPE)
+                .status(ImportStatus.INTERRUPTED.name())
+                .startedAt(startedAt)
+                .errors(List.of())
+                .rootCause("Импорт прерван перезапуском сервиса")
+                .build());
+    }
+
+    private void sendEvent(FtkImportCompletedEvent event) {
         try {
             kafkaTemplate.send(kafkaTopics.getImportEvents(), FtkImportCompletedEvent.EVENT_TYPE, event)
                     .whenComplete((r, ex) -> {
@@ -656,6 +680,7 @@ public class FtkImportService {
             int failed,
             int imagesOk,
             int imagesFailed,
-            int imagesSkipped
+            int imagesSkipped,
+            boolean classifierReplaced
     ) {}
 }

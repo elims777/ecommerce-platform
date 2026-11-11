@@ -18,7 +18,8 @@ public record ImportEvent(
         int cascadeCount,
         List<ImportError> errors,
         String errorStacktrace,
-        String rootCause
+        String rootCause,
+        boolean classifierReplaced
 ) {
     public record ImportError(String externalId, String message, boolean cascade) {}
 }

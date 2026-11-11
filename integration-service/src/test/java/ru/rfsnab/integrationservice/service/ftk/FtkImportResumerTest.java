@@ -66,6 +66,7 @@ class FtkImportResumerTest {
         assertThat(row.getErrorMessage()).contains("прерван");
         assertThat(row.getCompletedAt()).isNotNull();
         verify(importLogRepository).saveAll(List.of(row));
+        verify(importService).publishInterruptedImport(row.getStartedAt());
         verify(importService).resumeImportFromFtp(1);
     }
 
@@ -96,6 +97,7 @@ class FtkImportResumerTest {
         resumer.resumeUnfinishedImport();
 
         assertThat(row.getStatus()).isEqualTo(ImportStatus.INTERRUPTED);
+        verify(importService).publishInterruptedImport(row.getStartedAt());
         verify(importService, never()).resumeImportFromFtp(anyInt());
     }
 }

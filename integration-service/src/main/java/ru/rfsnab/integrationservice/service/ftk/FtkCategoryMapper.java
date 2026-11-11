@@ -62,6 +62,11 @@ public class FtkCategoryMapper {
         this.rootCategorySlug = rootSlug;
     }
 
+    /** Текущий классификатор — импорт сверяет его с загруженным, чтобы заметить подмену другим импортом. */
+    public ClassifierData currentClassifier() {
+        return classifierData;
+    }
+
     /**
      * Возвращает categoryId для UUID группы из классификатора.
      * Создаёт категорию через product-service если её ещё нет.
