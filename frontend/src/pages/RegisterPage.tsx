@@ -7,6 +7,8 @@ import type { AxiosError } from 'axios';
 import { register, registerLegal } from '@/api/auth';
 import type { RegisterLegalRequest } from '@/api/auth';
 import { reachGoal } from '@/lib/metrika';
+import PhoneInput from '@/components/PhoneInput';
+import { toPhoneValue } from '@/utils/phone';
 
 type AccountType = 'personal' | 'legal';
 
@@ -57,7 +59,7 @@ const RegisterPage = () => {
         setLoading(true);
         try {
             const { email, password, firstname, lastname, surname, phone } = values;
-            const request: RegisterRequest = { email, password, firstname, lastname, surname, phone, newsletterConsent: values.newsletterConsent ?? false };
+            const request: RegisterRequest = { email, password, firstname, lastname, surname, phone: toPhoneValue(phone), newsletterConsent: values.newsletterConsent ?? false };
             await register(request);
             reachGoal('register_success');
             messageApi.success('Регистрация прошла успешно! Проверьте почту для подтверждения аккаунта.');
@@ -78,7 +80,7 @@ const RegisterPage = () => {
         setLoading(true);
         try {
             const { inn, ogrn, fullName, director, phone, email, password, legalCity, legalStreet, legalBuilding, legalPostalCode } = values;
-            const request: RegisterLegalRequest = { inn, ogrn, fullName, director, phone, email, password, legalCity, legalStreet, legalBuilding, legalPostalCode };
+            const request: RegisterLegalRequest = { inn, ogrn, fullName, director, phone: toPhoneValue(phone), email, password, legalCity, legalStreet, legalBuilding, legalPostalCode };
             await registerLegal(request);
             reachGoal('register_success');
             messageApi.success('Заявка на регистрацию отправлена! Проверьте почту — ссылка для подтверждения.');
@@ -248,8 +250,8 @@ const RegisterPage = () => {
                             </div>
                             <div style={{ marginTop: 14 }}>
                                 <label htmlFor="phone" style={labelStyle}>Телефон</label>
-                                <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\+?\d{11}$/, message: 'Телефон должен содержать 11 цифр' }]}>
-                                    <Input style={inputStyle} placeholder="+79001234567" />
+                                <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\d{10}$/, message: 'Введите 10 цифр номера' }]}>
+                                    <PhoneInput style={inputStyle} placeholder="9001234567" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 14 }}>
@@ -333,9 +335,9 @@ const RegisterPage = () => {
                                 <label htmlFor="phone" style={labelStyle}>Телефон</label>
                                 <Form.Item name="phone" noStyle rules={[
                                     { required: true, message: 'Введите телефон' },
-                                    { pattern: /^\+?\d{11}$/, message: 'Телефон должен содержать 11 цифр' },
+                                    { pattern: /^\d{10}$/, message: 'Введите 10 цифр номера' },
                                 ]}>
-                                    <Input style={inputStyle} placeholder="+79001234567" />
+                                    <PhoneInput style={inputStyle} placeholder="9001234567" />
                                 </Form.Item>
                             </div>
                             <div style={{ marginTop: 12 }}>

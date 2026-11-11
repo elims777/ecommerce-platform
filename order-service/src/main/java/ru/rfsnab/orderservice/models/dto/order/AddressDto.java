@@ -1,6 +1,7 @@
 package ru.rfsnab.orderservice.models.dto.order;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.Builder;
 
 @Builder
@@ -19,6 +20,7 @@ public record AddressDto(
         String postalCode,
 
         @NotBlank(message = "Phone is required")
+        @Pattern(regexp = "^\\+7\\d{10}$", message = "Телефон должен быть в формате +7XXXXXXXXXX")
         String phone,
 
         @NotBlank(message = "Recipient name is required")

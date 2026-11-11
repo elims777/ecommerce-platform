@@ -5,6 +5,8 @@ import { useAuthStore } from '@/store/authStore';
 import { getCities, getTerminals } from '@/api/delivery';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import PointsPicker from './PointsPicker';
+import PhoneInput from '@/components/PhoneInput';
+import { toPhoneInput } from '@/utils/phone';
 import type { CarrierCode, CarrierTerminalDto, PointType } from '@/types/delivery';
 
 const { Text } = Typography;
@@ -68,7 +70,7 @@ const TerminalPicker = ({ current }: TerminalPickerProps) => {
             form.setFieldValue('pickupRecipientName', [user.firstname, user.lastname].filter(Boolean).join(' '));
         }
         if (!form.getFieldValue('pickupRecipientPhone') && user.phone) {
-            form.setFieldValue('pickupRecipientPhone', user.phone);
+            form.setFieldValue('pickupRecipientPhone', toPhoneInput(user.phone));
         }
     }, [user, form]);
 
@@ -142,10 +144,10 @@ const TerminalPicker = ({ current }: TerminalPickerProps) => {
                 label="Телефон получателя"
                 rules={[
                     { required: true, message: 'Укажите телефон' },
-                    { pattern: /^\+?\d{11}$/, message: 'Введите 11 цифр' },
+                    { pattern: /^\d{10}$/, message: 'Введите 10 цифр номера' },
                 ]}
             >
-                <Input placeholder="+79001234567" />
+                <PhoneInput placeholder="9001234567" />
             </Form.Item>
         </>
     );

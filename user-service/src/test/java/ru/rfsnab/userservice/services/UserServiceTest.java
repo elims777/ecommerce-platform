@@ -155,13 +155,13 @@ class UserServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
-        UserEntity result = userService.updateUser(1L, new UpdateUserRequest("Новое", "Имя", "Отчество", "79001112233"));
+        UserEntity result = userService.updateUser(1L, new UpdateUserRequest("Новое", "Имя", "Отчество", "+79001112233"));
 
         // Then
         assertThat(result.getFirstname()).isEqualTo("Новое");
         assertThat(result.getLastname()).isEqualTo("Имя");
         assertThat(result.getSurname()).isEqualTo("Отчество");
-        assertThat(result.getPhone()).isEqualTo("79001112233");
+        assertThat(result.getPhone()).isEqualTo("+79001112233");
         assertThat(result.getEmail()).isEqualTo("test@test.com");
         assertThat(result.getPassword()).isEqualTo("password");
         assertThat(result.getRoles()).containsExactly(role);
@@ -174,9 +174,9 @@ class UserServiceTest {
     @DisplayName("Update user с телефоном другого пользователя бросает UserAlreadyExistsException")
     void updateUser_whenPhoneTakenByAnother_throwsException() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.existsByPhoneAndIdNot("79001112233", 1L)).thenReturn(true);
+        when(userRepository.existsByPhoneAndIdNot("+79001112233", 1L)).thenReturn(true);
 
-        assertThatThrownBy(() -> userService.updateUser(1L, new UpdateUserRequest("A", "B", null, "79001112233")))
+        assertThatThrownBy(() -> userService.updateUser(1L, new UpdateUserRequest("A", "B", null, "+79001112233")))
                 .isInstanceOf(UserAlreadyExistsException.class);
         verify(userRepository, never()).save(any(UserEntity.class));
     }
@@ -185,13 +185,13 @@ class UserServiceTest {
     @DisplayName("Update user со своим же телефоном проходит без ошибки")
     void updateUser_whenPhoneIsOwn_succeeds() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.existsByPhoneAndIdNot("79001112233", 1L)).thenReturn(false);
+        when(userRepository.existsByPhoneAndIdNot("+79001112233", 1L)).thenReturn(false);
         when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        UserEntity result = userService.updateUser(1L, new UpdateUserRequest("A", "B", null, "79001112233"));
+        UserEntity result = userService.updateUser(1L, new UpdateUserRequest("A", "B", null, "+79001112233"));
 
-        assertThat(result.getPhone()).isEqualTo("79001112233");
-        verify(userRepository).existsByPhoneAndIdNot("79001112233", 1L);
+        assertThat(result.getPhone()).isEqualTo("+79001112233");
+        verify(userRepository).existsByPhoneAndIdNot("+79001112233", 1L);
         verify(userRepository).save(user);
     }
 
@@ -213,9 +213,9 @@ class UserServiceTest {
     @DisplayName("Update user admin с телефоном другого пользователя бросает UserAlreadyExistsException")
     void updateUserAdmin_whenPhoneTakenByAnother_throwsException() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.existsByPhoneAndIdNot("79001112233", 1L)).thenReturn(true);
+        when(userRepository.existsByPhoneAndIdNot("+79001112233", 1L)).thenReturn(true);
 
-        assertThatThrownBy(() -> userService.updateUserAdmin(1L, "A", "B", "79001112233"))
+        assertThatThrownBy(() -> userService.updateUserAdmin(1L, "A", "B", "+79001112233"))
                 .isInstanceOf(UserAlreadyExistsException.class);
         verify(userRepository, never()).save(any(UserEntity.class));
     }
@@ -224,13 +224,13 @@ class UserServiceTest {
     @DisplayName("Update user admin со своим же телефоном проходит без ошибки")
     void updateUserAdmin_whenPhoneIsOwn_succeeds() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.existsByPhoneAndIdNot("79001112233", 1L)).thenReturn(false);
+        when(userRepository.existsByPhoneAndIdNot("+79001112233", 1L)).thenReturn(false);
         when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        UserEntity result = userService.updateUserAdmin(1L, "A", "B", "79001112233");
+        UserEntity result = userService.updateUserAdmin(1L, "A", "B", "+79001112233");
 
-        assertThat(result.getPhone()).isEqualTo("79001112233");
-        verify(userRepository).existsByPhoneAndIdNot("79001112233", 1L);
+        assertThat(result.getPhone()).isEqualTo("+79001112233");
+        verify(userRepository).existsByPhoneAndIdNot("+79001112233", 1L);
         verify(userRepository).save(user);
     }
 
@@ -241,7 +241,7 @@ class UserServiceTest {
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateUser(99L, new UpdateUserRequest("A", "B", null, "79001112233")))
+        assertThatThrownBy(() -> userService.updateUser(99L, new UpdateUserRequest("A", "B", null, "+79001112233")))
                 .isInstanceOf(UserNotFoundException.class)
                 .hasMessageContaining("User with id = 99 not found");
         verify(userRepository, times(1)).findById(99L);

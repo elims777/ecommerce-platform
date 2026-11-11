@@ -19,6 +19,8 @@ import {
     type UpdateLegalEntityRequest,
     type LegalEntityResponse,
 } from '@/api/legalEntity';
+import PhoneInput from '@/components/PhoneInput';
+import { toPhoneInput, toPhoneValue } from '@/utils/phone';
 
 // ─── Общие стили ──────────────────────────────────────────────
 const sectionStyle: React.CSSProperties = {
@@ -84,7 +86,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
             directorTitle: entity.directorTitle ?? '',
             basisOfAuthority: entity.basisOfAuthority ?? '',
             office: entity.office ?? '',
-            phone: entity.phone,
+            phone: toPhoneInput(entity.phone),
             legalCity: entity.legalCity,
             legalStreet: entity.legalStreet,
             legalBuilding: entity.legalBuilding,
@@ -133,7 +135,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                     </div>
                 </div>
 
-                <Form form={form} layout="vertical" onFinish={(v) => updateMutation.mutate(v)}>
+                <Form form={form} layout="vertical" onFinish={(v) => updateMutation.mutate({ ...v, phone: toPhoneValue(v.phone) })}>
                     {/* Организация */}
                     <div style={sectionStyle}>
                         <div style={headerStyle}>
@@ -223,8 +225,8 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                                 </div>
                                 <div>
                                     <label htmlFor="phone" style={labelStyle}>Телефон</label>
-                                    <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
-                                        <Input style={inputStyle} placeholder="+79001234567" />
+                                    <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Обязательное поле' }, { pattern: /^\d{10}$/, message: 'Введите 10 цифр номера' }]}>
+                                        <PhoneInput style={inputStyle} placeholder="9001234567" />
                                     </Form.Item>
                                 </div>
                             </div>
@@ -575,7 +577,7 @@ const B2CProfilePage = () => {
     });
 
     const handleEdit = () => {
-        form.setFieldsValue({ firstname: user.firstname, lastname: user.lastname, surname: user.surname || '', phone: user.phone || '' });
+        form.setFieldsValue({ firstname: user.firstname, lastname: user.lastname, surname: user.surname || '', phone: toPhoneInput(user.phone) });
         setEditing(true);
     };
 
@@ -597,7 +599,7 @@ const B2CProfilePage = () => {
                 </div>
                 <div style={{ padding: 20 }}>
                     {editing ? (
-                        <Form<UpdateProfileRequest> form={form} layout="vertical" onFinish={(v) => updateMutation.mutate(v)}>
+                        <Form<UpdateProfileRequest> form={form} layout="vertical" onFinish={(v) => updateMutation.mutate({ ...v, phone: toPhoneValue(v.phone) })}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                                 <div><label htmlFor="lastname" style={labelStyle}>Фамилия</label>
                                     <Form.Item name="lastname" noStyle rules={[{ required: true, message: 'Введите фамилию' }, { min: 2, message: 'Минимум 2 символа' }]}>
@@ -615,8 +617,8 @@ const B2CProfilePage = () => {
                                     </Form.Item>
                                 </div>
                                 <div><label htmlFor="phone" style={labelStyle}>Телефон</label>
-                                    <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\+?\d{11}$/, message: '11 цифр' }]}>
-                                        <Input style={inputStyle} placeholder="+79001234567" />
+                                    <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\d{10}$/, message: 'Введите 10 цифр номера' }]}>
+                                        <PhoneInput style={inputStyle} placeholder="9001234567" />
                                     </Form.Item>
                                 </div>
                             </div>
