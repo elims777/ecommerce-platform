@@ -43,11 +43,11 @@ class UserAccessTest {
     private static final String B2B_AUTHORITY = "CLIENT_B2B";
     private static final String UPDATE_URL = "/v1/users/" + USER_ID;
     private static final String UPDATE_BODY = """
-            {"firstname":"Иван","lastname":"Петров","surname":"Сидорович","phone":"79001112233",
+            {"firstname":"Иван","lastname":"Петров","surname":"Сидорович","phone":"+79001112233",
              "email":"hacker@evil.com","password":"newpassword","roles":[{"id":2,"name":"ROLE_ADMIN"}]}
             """;
     private static final String OAUTH2_BODY = """
-            {"email":"oauth@test.com","password":"password123","firstname":"A","lastname":"B","phone":"79001112233"}
+            {"email":"oauth@test.com","password":"password123","firstname":"A","lastname":"B","phone":"+79001112233"}
             """;
     private static final String AUTH_BODY = "{\"email\":\"a@test.com\",\"password\":\"password123\"}";
     private static final String PASSWORD_BODY = "{\"passwordHash\":\"hash\"}";
@@ -97,7 +97,7 @@ class UserAccessTest {
         mockMvc.perform(put(UPDATE_URL).contentType(MediaType.APPLICATION_JSON).content(UPDATE_BODY))
                 .andExpect(status().isOk());
 
-        verify(userService).updateUser(USER_ID, new UpdateUserRequest("Иван", "Петров", "Сидорович", "79001112233"));
+        verify(userService).updateUser(USER_ID, new UpdateUserRequest("Иван", "Петров", "Сидорович", "+79001112233"));
     }
 
     @Test

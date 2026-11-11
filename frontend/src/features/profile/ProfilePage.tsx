@@ -19,6 +19,8 @@ import {
     type UpdateLegalEntityRequest,
     type LegalEntityResponse,
 } from '@/api/legalEntity';
+import PhoneInput from '@/components/PhoneInput';
+import { toPhoneInput, toPhoneValue } from '@/utils/phone';
 
 // ─── Общие стили ──────────────────────────────────────────────
 const sectionStyle: React.CSSProperties = {
@@ -84,7 +86,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
             directorTitle: entity.directorTitle ?? '',
             basisOfAuthority: entity.basisOfAuthority ?? '',
             office: entity.office ?? '',
-            phone: entity.phone,
+            phone: toPhoneInput(entity.phone),
             legalCity: entity.legalCity,
             legalStreet: entity.legalStreet,
             legalBuilding: entity.legalBuilding,
@@ -133,7 +135,7 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                     </div>
                 </div>
 
-                <Form form={form} layout="vertical" onFinish={(v) => updateMutation.mutate(v)}>
+                <Form form={form} layout="vertical" onFinish={(v) => updateMutation.mutate({ ...v, phone: toPhoneValue(v.phone) })}>
                     {/* Организация */}
                     <div style={sectionStyle}>
                         <div style={headerStyle}>
@@ -143,25 +145,25 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                                 <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
                                     <label htmlFor="fullName" style={labelStyle}>Полное наименование</label>
-                                    <Form.Item name="fullName" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
+                                    <Form.Item name="fullName" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Обязательное поле' }]}>
                                         <Input style={inputStyle} />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 14 }}>
                                     <label htmlFor="director" style={labelStyle}>Руководитель (ФИО)</label>
-                                    <Form.Item name="director" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
+                                    <Form.Item name="director" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Обязательное поле' }]}>
                                         <Input style={inputStyle} placeholder="Иванов Иван Иванович" />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 14 }}>
                                     <label htmlFor="directorTitle" style={labelStyle}>Должность руководителя</label>
-                                    <Form.Item name="directorTitle" noStyle>
+                                    <Form.Item name="directorTitle" style={{ marginBottom: 0 }}>
                                         <Input style={inputStyle} placeholder="Генеральный директор" />
                                     </Form.Item>
                                 </div>
                                 <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
                                     <label htmlFor="basisOfAuthority" style={labelStyle}>Действует на основании</label>
-                                    <Form.Item name="basisOfAuthority" noStyle>
+                                    <Form.Item name="basisOfAuthority" style={{ marginBottom: 0 }}>
                                         <Input style={inputStyle} placeholder="Устава, доверенности №... от..." />
                                     </Form.Item>
                                 </div>
@@ -178,31 +180,31 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                                 <div style={{ gridColumn: '1 / -1', marginBottom: 14 }}>
                                     <label htmlFor="legalCity" style={labelStyle}>Город</label>
-                                    <Form.Item name="legalCity" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
+                                    <Form.Item name="legalCity" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Обязательное поле' }]}>
                                         <Input style={inputStyle} />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 14 }}>
                                     <label htmlFor="legalStreet" style={labelStyle}>Улица</label>
-                                    <Form.Item name="legalStreet" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
+                                    <Form.Item name="legalStreet" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Обязательное поле' }]}>
                                         <Input style={inputStyle} />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 14 }}>
                                     <label htmlFor="legalBuilding" style={labelStyle}>Дом / корпус</label>
-                                    <Form.Item name="legalBuilding" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
+                                    <Form.Item name="legalBuilding" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Обязательное поле' }]}>
                                         <Input style={inputStyle} />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 14 }}>
                                     <label htmlFor="office" style={labelStyle}>Офис / помещение</label>
-                                    <Form.Item name="office" noStyle>
+                                    <Form.Item name="office" style={{ marginBottom: 0 }}>
                                         <Input style={inputStyle} placeholder="офис 101" />
                                     </Form.Item>
                                 </div>
                                 <div style={{ marginBottom: 0 }}>
                                     <label htmlFor="legalPostalCode" style={labelStyle}>Индекс</label>
-                                    <Form.Item name="legalPostalCode" noStyle>
+                                    <Form.Item name="legalPostalCode" style={{ marginBottom: 0 }}>
                                         <Input style={inputStyle} placeholder="123456" />
                                     </Form.Item>
                                 </div>
@@ -223,8 +225,8 @@ const B2BProfilePage = ({ legalId }: { legalId: number }) => {
                                 </div>
                                 <div>
                                     <label htmlFor="phone" style={labelStyle}>Телефон</label>
-                                    <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Обязательное поле' }]}>
-                                        <Input style={inputStyle} placeholder="+79001234567" />
+                                    <Form.Item name="phone" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Обязательное поле' }, { pattern: /^\d{10}$/, message: 'Введите 10 цифр номера' }]}>
+                                        <PhoneInput style={inputStyle} placeholder="9001234567" />
                                     </Form.Item>
                                 </div>
                             </div>
@@ -575,7 +577,7 @@ const B2CProfilePage = () => {
     });
 
     const handleEdit = () => {
-        form.setFieldsValue({ firstname: user.firstname, lastname: user.lastname, surname: user.surname || '', phone: user.phone || '' });
+        form.setFieldsValue({ firstname: user.firstname, lastname: user.lastname, surname: user.surname || '', phone: toPhoneInput(user.phone) });
         setEditing(true);
     };
 
@@ -597,26 +599,26 @@ const B2CProfilePage = () => {
                 </div>
                 <div style={{ padding: 20 }}>
                     {editing ? (
-                        <Form<UpdateProfileRequest> form={form} layout="vertical" onFinish={(v) => updateMutation.mutate(v)}>
+                        <Form<UpdateProfileRequest> form={form} layout="vertical" onFinish={(v) => updateMutation.mutate({ ...v, phone: toPhoneValue(v.phone) })}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
                                 <div><label htmlFor="lastname" style={labelStyle}>Фамилия</label>
-                                    <Form.Item name="lastname" noStyle rules={[{ required: true, message: 'Введите фамилию' }, { min: 2, message: 'Минимум 2 символа' }]}>
+                                    <Form.Item name="lastname" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите фамилию' }, { min: 2, message: 'Минимум 2 символа' }]}>
                                         <Input style={inputStyle} placeholder="Фамилия" />
                                     </Form.Item>
                                 </div>
                                 <div><label htmlFor="firstname" style={labelStyle}>Имя</label>
-                                    <Form.Item name="firstname" noStyle rules={[{ required: true, message: 'Введите имя' }, { min: 2, message: 'Минимум 2 символа' }]}>
+                                    <Form.Item name="firstname" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите имя' }, { min: 2, message: 'Минимум 2 символа' }]}>
                                         <Input style={inputStyle} placeholder="Имя" />
                                     </Form.Item>
                                 </div>
                                 <div><label htmlFor="surname" style={labelStyle}>Отчество</label>
-                                    <Form.Item name="surname" noStyle>
+                                    <Form.Item name="surname" style={{ marginBottom: 0 }}>
                                         <Input style={inputStyle} placeholder="Необязательно" />
                                     </Form.Item>
                                 </div>
                                 <div><label htmlFor="phone" style={labelStyle}>Телефон</label>
-                                    <Form.Item name="phone" noStyle rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\+?\d{11}$/, message: '11 цифр' }]}>
-                                        <Input style={inputStyle} placeholder="+79001234567" />
+                                    <Form.Item name="phone" style={{ marginBottom: 0 }} rules={[{ required: true, message: 'Введите телефон' }, { pattern: /^\d{10}$/, message: 'Введите 10 цифр номера' }]}>
+                                        <PhoneInput style={inputStyle} placeholder="9001234567" />
                                     </Form.Item>
                                 </div>
                             </div>

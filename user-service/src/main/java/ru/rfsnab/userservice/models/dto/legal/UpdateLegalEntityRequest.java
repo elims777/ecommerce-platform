@@ -11,7 +11,7 @@ public record UpdateLegalEntityRequest(
         @Size(max = 200, message = "Основание полномочий не должно превышать 200 символов") String basisOfAuthority,
         @Size(max = 50, message = "Офис не должен превышать 50 символов") String office,
 
-        @NotBlank @Pattern(regexp = "\\+?\\d{11}", message = "Некорректный формат телефона")
+        @NotBlank @Pattern(regexp = "^\\+7\\d{10}$", message = "Телефон должен быть в формате +7XXXXXXXXXX")
         String phone,
 
         @NotBlank @Size(max = 150, message = "Город не должен превышать 150 символов") String legalCity,

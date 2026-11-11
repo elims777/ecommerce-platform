@@ -473,6 +473,48 @@ class FtkImportServiceTest {
             verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(3));
         }
 
+        /** Минимальный успешный прогон одной порции — для проверок опубликованного события. */
+        private FtkImportCompletedEvent runSinglePartAndCaptureEvent() throws Exception {
+            when(ftpClient.getRootDir()).thenReturn("/webdata/000000003/");
+            when(ftpClient.findFileByPrefix("/webdata/000000003/", "import___"))
+                    .thenReturn("/webdata/000000003/import___1.xml");
+            when(ftpClient.openStream("/webdata/000000003/import___1.xml")).thenReturn(stream());
+            when(xmlParser.parseClassifier(any())).thenReturn(classifier);
+
+            mockFullPart(1, List.of(partProduct("1", 1)));
+
+            when(categoryMapper.resolveCategory(anyString())).thenReturn(42L);
+            when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
+                    .thenReturn(ResponseEntity.ok(okResponse(1, 0)));
+
+            service.doImportFromFtp();
+
+            ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+            verify(kafkaTemplate).send(eq("import-events"), anyString(), captor.capture());
+            return (FtkImportCompletedEvent) captor.getValue();
+        }
+
+        @Test
+        @DisplayName("другой импорт подменил классификатор — событие помечено classifierReplaced")
+        void classifierReplacedDuringImport_IsReportedInEvent() throws Exception {
+            when(categoryMapper.currentClassifier())
+                    .thenReturn(new ClassifierData(Map.of(), Map.of(), Map.of(), Map.of()));
+
+            FtkImportCompletedEvent event = runSinglePartAndCaptureEvent();
+
+            assertThat(event.classifierReplaced()).isTrue();
+        }
+
+        @Test
+        @DisplayName("классификатор не подменялся — classifierReplaced=false")
+        void classifierUntouched_FlagIsFalse() throws Exception {
+            when(categoryMapper.currentClassifier()).thenReturn(classifier);
+
+            FtkImportCompletedEvent event = runSinglePartAndCaptureEvent();
+
+            assertThat(event.classifierReplaced()).isFalse();
+        }
+
         @Test
         @DisplayName("картинка с уже существующим fileKey не перекачивается — imagesSkipped++")
         void shouldSkipImageAlreadyUploaded() throws Exception {

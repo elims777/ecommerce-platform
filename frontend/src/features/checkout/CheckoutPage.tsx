@@ -41,6 +41,7 @@ import type { CreateOrderRequest } from '@/types/order';
 import type { CarrierCode } from '@/types/delivery';
 import type { AxiosError } from 'axios';
 import { handleProfileIncomplete } from '@/utils/profileGate';
+import { toPhoneValue } from '@/utils/phone';
 import DeliveryStep from './DeliveryStep';
 import RecipientStep from './RecipientStep';
 import SummaryStep from './SummaryStep';
@@ -210,7 +211,7 @@ const createRecipientMutation = useMutation({
                 if (manualInput) {
                     const newRecipient = await createRecipientMutation.mutateAsync({
                         name: values.newRecipientName!,
-                        phone: values.newRecipientPhone!,
+                        phone: toPhoneValue(values.newRecipientPhone),
                     });
                     await createAddressMutation.mutateAsync({
                         recipientId: newRecipient.id,
@@ -229,7 +230,7 @@ const createRecipientMutation = useMutation({
                         building: values.newBuilding!,
                         apartment: values.newApartment,
                         postalCode: values.newPostalCode,
-                        phone: values.newRecipientPhone!,
+                        phone: toPhoneValue(values.newRecipientPhone),
                         recipientName: values.newRecipientName!,
                     };
                 } else {
@@ -254,7 +255,7 @@ const createRecipientMutation = useMutation({
                 request.carrierCode = values.carrierCode;
                 request.carrierTerminalId = values.carrierTerminalId;
                 request.pickupRecipientName = values.pickupRecipientName;
-                request.pickupRecipientPhone = values.pickupRecipientPhone;
+                request.pickupRecipientPhone = toPhoneValue(values.pickupRecipientPhone);
             }
 
             if (values.deliveryMethod === DeliveryMethod.PICKUP && values.warehousePointId) {

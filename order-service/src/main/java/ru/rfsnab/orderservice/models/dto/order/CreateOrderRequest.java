@@ -1,6 +1,7 @@
 package ru.rfsnab.orderservice.models.dto.order;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import ru.rfsnab.orderservice.delivery.models.entity.enums.CarrierCode;
 import ru.rfsnab.orderservice.models.entity.enums.DeliveryMethod;
@@ -27,7 +28,7 @@ public record CreateOrderRequest(
         @Size(max = 100, message = "Имя получателя не должно превышать 100 символов")
         String pickupRecipientName,
 
-        @Size(max = 20, message = "Телефон получателя не должен превышать 20 символов")
+        @Pattern(regexp = "^\\+7\\d{10}$", message = "Телефон получателя должен быть в формате +7XXXXXXXXXX")
         String pickupRecipientPhone,
 
         String comment,

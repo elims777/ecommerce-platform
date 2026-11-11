@@ -17,6 +17,7 @@ public record RegisterLegalEntityRequest(
 
         @NotBlank String fullName,
         String director,
+        @Pattern(regexp = "^\\+7\\d{10}$", message = "Телефон должен быть в формате +7XXXXXXXXXX")
         String phone,
 
         @NotBlank @Email String email,

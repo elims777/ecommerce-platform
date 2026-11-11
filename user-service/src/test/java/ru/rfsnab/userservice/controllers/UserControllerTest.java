@@ -95,7 +95,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
-                "79991234567",
+                "+79991234567",
                 true,
                 false
         );
@@ -125,7 +125,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
-                "79991234567",
+                "+79991234567",
                 true,
                 false
         );
@@ -165,7 +165,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
-                "79991234567",
+                "+79991234567",
                 true,
                 false
         );
@@ -203,7 +203,7 @@ class UserControllerTest {
                 "Firstname",
                 "Lastname",
                 "Surname",
-                "79991234567",
+                "+79991234567",
                 true,
                 false
         );
@@ -269,7 +269,7 @@ class UserControllerTest {
     @DisplayName("PUT /v1/users/{id} - success returns OK")
     void updateUser_Success_ReturnsOk() throws Exception {
         // Given
-        UpdateUserRequest request = new UpdateUserRequest("Updated", "Name", null, "79001112233");
+        UpdateUserRequest request = new UpdateUserRequest("Updated", "Name", null, "+79001112233");
 
         UserEntity updatedUser = UserEntity.builder()
                 .id(1L)
@@ -295,7 +295,7 @@ class UserControllerTest {
     @Test
     @DisplayName("PUT /v1/users/{id} - имя длиннее 50 символов возвращает 400")
     void updateUser_TooLongFirstname_ReturnsBadRequest() throws Exception {
-        String body = "{\"firstname\":\"" + "а".repeat(51) + "\",\"lastname\":\"Name\",\"phone\":\"79001112233\"}";
+        String body = "{\"firstname\":\"" + "а".repeat(51) + "\",\"lastname\":\"Name\",\"phone\":\"+79001112233\"}";
 
         mockMvc.perform(put("/v1/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -313,7 +313,7 @@ class UserControllerTest {
 
         mockMvc.perform(put("/v1/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new UpdateUserRequest("A", "B", null, "79001112233"))))
+                        .content(objectMapper.writeValueAsString(new UpdateUserRequest("A", "B", null, "+79001112233"))))
                 .andExpect(status().isConflict());
     }
 
@@ -373,7 +373,7 @@ class UserControllerTest {
 
         mockMvc.perform(patch("/v1/users/1/admin")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"firstname\":\"A\",\"lastname\":\"B\",\"phone\":\"79001112233\"}"))
+                        .content("{\"firstname\":\"A\",\"lastname\":\"B\",\"phone\":\"+79001112233\"}"))
                 .andExpect(status().isConflict());
     }
 

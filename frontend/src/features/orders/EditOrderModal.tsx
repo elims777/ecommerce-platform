@@ -14,6 +14,8 @@ import { warehouseToPickerPoint } from '@/features/checkout/warehouseToPickerPoi
 import TerminalPicker from '@/features/checkout/TerminalPicker';
 import AddressSuggest from '@/features/checkout/AddressSuggest';
 import { extractEnumCode } from '@/utils/enumUtils';
+import PhoneInput from '@/components/PhoneInput';
+import { toPhoneInput, toPhoneValue } from '@/utils/phone';
 import type { OrderDto, UpdateOrderItemRequest } from '@/types/order';
 import type { CarrierCode } from '@/types/delivery';
 import type { AxiosError } from 'axios';
@@ -98,9 +100,9 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
             carrierCode: order.carrierCode ?? undefined,
             carrierTerminalId: order.carrierTerminalId ?? undefined,
             pickupRecipientName: order.pickupRecipientName ?? undefined,
-            pickupRecipientPhone: order.pickupRecipientPhone ?? undefined,
+            pickupRecipientPhone: toPhoneInput(order.pickupRecipientPhone) || undefined,
             recipientName: order.deliveryAddress?.recipientName,
-            phone: order.deliveryAddress?.phone,
+            phone: toPhoneInput(order.deliveryAddress?.phone),
             city: order.deliveryAddress?.city,
             street: order.deliveryAddress?.street,
             building: order.deliveryAddress?.building,
@@ -120,11 +122,11 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
                 || values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL) ? values.carrierCode : undefined,
             carrierTerminalId: values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL ? values.carrierTerminalId : undefined,
             pickupRecipientName: values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL ? values.pickupRecipientName : undefined,
-            pickupRecipientPhone: values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL ? values.pickupRecipientPhone : undefined,
+            pickupRecipientPhone: values.deliveryMethod === DeliveryMethod.CARRIER_TERMINAL ? toPhoneValue(values.pickupRecipientPhone) : undefined,
             deliveryAddress: (values.deliveryMethod === DeliveryMethod.CARRIER_ADDRESS
                 || values.deliveryMethod === DeliveryMethod.SUPPLIER_DELIVERY) ? {
                 recipientName: values.recipientName!,
-                phone: values.phone!,
+                phone: toPhoneValue(values.phone),
                 city: values.city!,
                 street: values.street!,
                 building: values.building!,
@@ -225,8 +227,8 @@ const EditOrderModal = ({ order, open, onClose, onSuccess }: EditOrderModalProps
                         <Form.Item name="recipientName" label="Получатель" rules={[{ required: true, message: 'Укажите получателя' }]}>
                             <Input />
                         </Form.Item>
-                        <Form.Item name="phone" label="Телефон" rules={[{ required: true, message: 'Укажите телефон' }]}>
-                            <Input />
+                        <Form.Item name="phone" label="Телефон" rules={[{ required: true, message: 'Укажите телефон' }, { pattern: /^\d{10}$/, message: 'Введите 10 цифр номера' }]}>
+                            <PhoneInput placeholder="9001234567" />
                         </Form.Item>
                         <AddressSuggest fields={{ city: 'city', street: 'street', building: 'building', postalCode: 'postalCode' }} />
                         <Form.Item name="city" label="Город" rules={[{ required: true, message: 'Укажите город' }]}>

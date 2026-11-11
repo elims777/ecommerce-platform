@@ -53,7 +53,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private static final int TEMP_PASSWORD_LENGTH = 16;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
-    private static final String PLACEHOLDER_PHONE = "00000000000";
+    private static final String PLACEHOLDER_PHONE = "+70000000000";
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -211,7 +211,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     }
 
     /**
-     * Извлекает телефон из атрибута default_phone (Yandex), нормализует до 11 цифр.
+     * Извлекает телефон из атрибута default_phone (Yandex), нормализует до формата +7XXXXXXXXXX.
      * Возвращает null, если пользователь не дал доступ к телефону.
      */
     @SuppressWarnings("unchecked")
@@ -228,7 +228,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         if (digits.length() == 11 && digits.startsWith("8")) {
             digits = "7" + digits.substring(1);
         }
-        return digits.length() == 11 ? digits : null;
+        return digits.length() == 11 ? "+" + digits : null;
     }
 
     /**

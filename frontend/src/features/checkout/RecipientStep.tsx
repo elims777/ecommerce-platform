@@ -3,6 +3,7 @@ import { EnvironmentOutlined, PlusOutlined, UserOutlined } from '@ant-design/ico
 import { DeliveryMethod } from '@/types/order';
 import AddressSuggest from './AddressSuggest';
 import type { RecipientDto, RecipientAddressDto } from '@/api/recipients';
+import PhoneInput from '@/components/PhoneInput';
 
 const { Text } = Typography;
 
@@ -140,12 +141,12 @@ const RecipientStep = ({
                                 rules={[
                                     { required: true, message: 'Укажите телефон' },
                                     {
-                                        pattern: /^\+?\d{11}$/,
-                                        message: 'Введите 11 цифр',
+                                        pattern: /^\d{10}$/,
+                                        message: 'Введите 10 цифр номера',
                                     },
                                 ]}
                             >
-                                <Input placeholder="+79001234567" />
+                                <PhoneInput placeholder="9001234567" />
                             </Form.Item>
                         </Col>
                     </Row>

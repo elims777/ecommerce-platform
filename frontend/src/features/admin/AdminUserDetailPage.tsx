@@ -12,6 +12,7 @@ import type { UpdateUserAdminRequest, LegalEntityDto } from '@/api/adminUsers';
 import { getAdminOrders } from '@/api/adminOrders';
 import { OrderStatusLabels } from '@/types/order';
 import { extractEnumCode } from '@/utils/enumUtils';
+import { toPhoneInput, toPhoneValue } from '@/utils/phone';
 import { useAuthStore } from '@/store/authStore';
 import type { OrderSummaryDto, OrderStatus } from '@/types/order';
 
@@ -144,7 +145,7 @@ const AdminUserDetailPage = () => {
 
   const openEditModal = () => {
     if (!user) return;
-    setEditForm({ firstname: user.firstname, lastname: user.lastname, phone: user.phone ?? '' });
+    setEditForm({ firstname: user.firstname, lastname: user.lastname, phone: toPhoneInput(user.phone) });
     dialogRef.current?.showModal();
   };
 
@@ -409,13 +410,25 @@ const AdminUserDetailPage = () => {
                 {field === 'lastname' ? 'Фамилия' : field === 'firstname' ? 'Имя' : 'Телефон'}
                 {field !== 'phone' && <span style={{ color: 'var(--brand-red)' }}> *</span>}
               </span>
-              <input
-                type="text"
-                value={editForm[field] ?? ''}
-                placeholder={field === 'phone' ? '+7 900 000 00 00' : ''}
-                onChange={(e) => setEditForm((f) => ({ ...f, [field]: e.target.value }))}
-                style={{ height: 36, padding: '0 10px', borderRadius: 'var(--r-2)', border: '1px solid var(--line-2)', fontSize: 13, background: 'var(--surface)', color: 'var(--ink-1)', outline: 'none' }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', height: 36, borderRadius: 'var(--r-2)', border: '1px solid var(--line-2)', background: 'var(--surface)', overflow: 'hidden' }}>
+                {field === 'phone' && (
+                  <span style={{ padding: '0 10px', fontSize: 13, color: 'var(--ink-3)', borderRight: '1px solid var(--line-2)' }}>+7</span>
+                )}
+                <input
+                  type="text"
+                  value={editForm[field] ?? ''}
+                  placeholder={field === 'phone' ? '9000000000' : ''}
+                  maxLength={field === 'phone' ? 10 : undefined}
+                  inputMode={field === 'phone' ? 'numeric' : undefined}
+                  onChange={(e) => setEditForm((f) => ({
+                    ...f,
+                    [field]: field === 'phone'
+                      ? e.target.value.replace(/\D/g, '').slice(0, 10)
+                      : e.target.value,
+                  }))}
+                  style={{ flex: 1, minWidth: 0, height: '100%', padding: '0 10px', border: 'none', fontSize: 13, background: 'transparent', color: 'var(--ink-1)', outline: 'none' }}
+                />
+              </div>
             </label>
           ))}
         </div>
@@ -424,7 +437,7 @@ const AdminUserDetailPage = () => {
           <button
             className="rf-btn rf-btn-sm rf-btn-primary"
             disabled={editMutation.isPending}
-            onClick={() => editMutation.mutate(editForm)}
+            onClick={() => editMutation.mutate({ ...editForm, phone: editForm.phone ? toPhoneValue(editForm.phone) : undefined })}
           >
             {editMutation.isPending ? 'Сохранение…' : 'Сохранить'}
           </button>

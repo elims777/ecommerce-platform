@@ -284,7 +284,7 @@ class OAuth2LoginSuccessHandlerTest {
 
         verify(restTemplate).postForEntity(
                 eq(USER_SERVICE_URL + "/v1/users/oauth2-login"),
-                argThat((HttpEntity<RegistrationRequest> req) -> "79001234567".equals(req.getBody().getPhone())),
+                argThat((HttpEntity<RegistrationRequest> req) -> "+79001234567".equals(req.getBody().getPhone())),
                 eq(UserDtoResponse.class)
         );
     }
@@ -340,7 +340,7 @@ class OAuth2LoginSuccessHandlerTest {
 
         verify(restTemplate).postForEntity(
                 eq(USER_SERVICE_URL + "/v1/users/oauth2-login"),
-                argThat((HttpEntity<RegistrationRequest> req) -> "00000000000".equals(req.getBody().getPhone())),
+                argThat((HttpEntity<RegistrationRequest> req) -> "+70000000000".equals(req.getBody().getPhone())),
                 eq(UserDtoResponse.class)
         );
     }

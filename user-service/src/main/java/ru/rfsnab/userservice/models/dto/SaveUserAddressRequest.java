@@ -1,6 +1,7 @@
 package ru.rfsnab.userservice.models.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Builder;
 
@@ -19,7 +20,7 @@ public record SaveUserAddressRequest(
         String recipientName,
 
         @NotBlank(message = "Телефон обязателен")
-        @Size(max = 20)
+        @Pattern(regexp = "^\\+7\\d{10}$", message = "Телефон должен быть в формате +7XXXXXXXXXX")
         String phone,
 
         @NotBlank(message = "Город обязателен")
