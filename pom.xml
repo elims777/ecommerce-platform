@@ -49,6 +49,10 @@
         <jackson-bom.version>2.21.1</jackson-bom.version>
         <netty.version>4.1.132.Final</netty.version>
         <tomcat.version>10.1.54</tomcat.version>
+        <sonar-maven-plugin.version>5.1.0.4751</sonar-maven-plugin.version>
+        <sonar.projectKey>ru.rfsnab:ecommerce-platform</sonar.projectKey>
+        <sonar.projectName>ecommerce-platform</sonar.projectName>
+        <sonar.host.url>http://127.0.0.1:9473</sonar.host.url>
     </properties>
 
     <dependencyManagement>
@@ -178,6 +182,14 @@
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <!-- Анализ SonarQube: mvn sonar:sonar -Dsonar.token=$SONAR_TOKEN (токен только из env) -->
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>${sonar-maven-plugin.version}</version>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <!-- Maven Compiler Plugin -->

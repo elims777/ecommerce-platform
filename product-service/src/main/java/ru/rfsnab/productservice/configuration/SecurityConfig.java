@@ -58,6 +58,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, CATEGORIES_PATH).permitAll()
                         .requestMatchers(HttpMethod.GET, PRODUCTS_PATH).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/import/batch").hasRole(ROLE_INTERNAL)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products/import/exclude").hasRole(ROLE_INTERNAL)
                         .requestMatchers(HttpMethod.POST, "/api/v1/products/external/**").hasRole(ROLE_INTERNAL)
                         .requestMatchers(HttpMethod.POST, "/api/v1/categories/upsert-by-external-id").hasRole(ROLE_INTERNAL)
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()

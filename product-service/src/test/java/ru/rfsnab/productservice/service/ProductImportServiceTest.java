@@ -5,6 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.inOrder;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ProductImportService Unit Tests")
@@ -84,7 +86,7 @@ class ProductImportServiceTest {
         lenient().when(categoryRepository.findBySlug("import-1c")).thenReturn(Optional.of(importCategory));
         lenient().when(productRepository.findAllSlugs()).thenReturn(List.of());
         pushkin = Warehouse.builder().id(2L).code(WAREHOUSE_CODE).name("Склад Пушкин").city("Пушкин").build();
-        when(warehouseService.requireActiveByCode(WAREHOUSE_CODE)).thenReturn(pushkin);
+        lenient().when(warehouseService.requireActiveByCode(WAREHOUSE_CODE)).thenReturn(pushkin);
     }
 
     // ==================== upsertChildVariants() — категория ребёнка ====================
@@ -430,6 +432,49 @@ class ProductImportServiceTest {
                     .warehouseCode(WAREHOUSE_CODE).build()))
                     .isInstanceOf(BusinessException.class)
                     .hasMessage("Склад PUSHKIN не найден");
+        }
+    }
+
+    // ==================== excludeByExternalIds() — удаление слива остатков ====================
+
+    @Nested
+    @DisplayName("excludeByExternalIds()")
+    class ExcludeByExternalIdsTests {
+
+        @Test
+        @DisplayName("удаляет сначала варианты, затем родителей и возвращает общее число")
+        void deletesChildrenBeforeParents() {
+            Product parent = Product.builder().id(1L).externalId("FTK-1").name("Товар").build();
+            Product child = Product.builder().id(2L).externalId("FTK-1.001")
+                    .parentProductId(1L).isVariantChild(true).build();
+            when(productRepository.findByExternalIdIn(List.of("FTK-1"))).thenReturn(List.of(parent));
+            when(productRepository.findByParentProductIdInOrderByParentProductIdAscDisplayOrderAsc(List.of(1L)))
+                    .thenReturn(List.of(child));
+
+            int deleted = importService.excludeByExternalIds(List.of("FTK-1"));
+
+            assertThat(deleted).isEqualTo(2);
+            InOrder inOrder = inOrder(productRepository);
+            inOrder.verify(productRepository).deleteAllById(List.of(2L));
+            inOrder.verify(productRepository).deleteAllById(List.of(1L));
+        }
+
+        @Test
+        @DisplayName("пустой список — 0, удаление не вызывается")
+        void emptyListReturnsZero() {
+            assertThat(importService.excludeByExternalIds(List.of())).isZero();
+
+            verify(productRepository, never()).deleteAllById(any());
+        }
+
+        @Test
+        @DisplayName("товары не найдены — 0, удаление не вызывается")
+        void nothingFoundReturnsZero() {
+            when(productRepository.findByExternalIdIn(List.of("FTK-404"))).thenReturn(List.of());
+
+            assertThat(importService.excludeByExternalIds(List.of("FTK-404"))).isZero();
+
+            verify(productRepository, never()).deleteAllById(any());
         }
     }
 }

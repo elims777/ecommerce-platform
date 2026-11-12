@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import ru.rfsnab.productservice.dto.BatchProductImportRequest;
 import ru.rfsnab.productservice.dto.BatchProductImportResponse;
+import ru.rfsnab.productservice.dto.ExcludeProductsRequest;
+import ru.rfsnab.productservice.dto.ExcludeProductsResponse;
 import ru.rfsnab.productservice.service.ProductImportService;
 
 /**
@@ -28,5 +30,14 @@ public class ProductImportController {
             @Valid @RequestBody BatchProductImportRequest request){
         BatchProductImportResponse response = productImportService.importBatch(request);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Удалить товары по externalId (слив остатков ФТК)
+     */
+    @PostMapping("/import/exclude")
+    public ResponseEntity<ExcludeProductsResponse> excludeProducts(@RequestBody ExcludeProductsRequest request) {
+        int deleted = productImportService.excludeByExternalIds(request.externalIds());
+        return ResponseEntity.ok(new ExcludeProductsResponse(deleted));
     }
 }
