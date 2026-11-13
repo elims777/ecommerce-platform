@@ -411,6 +411,10 @@ class FtkImportServiceTest {
         }
 
         private FtkProduct partProduct(String article, int part) {
+            return partProduct(article, part, Map.of());
+        }
+
+        private FtkProduct partProduct(String article, int part, Map<String, String> properties) {
             return FtkProduct.builder()
                     .productUuid(article)
                     .article(article)
@@ -420,7 +424,7 @@ class FtkImportServiceTest {
                     .groupUuid("GRP")
                     .unitOfMeasure("шт")
                     .partNumber(part)
-                    .properties(Map.of())
+                    .properties(properties)
                     .variants(List.of(FtkVariant.builder()
                             .offerUuid(null).article(article).price(BigDecimal.ONE)
                             .stockQuantity(0).attributes(Map.of()).vatRate(null)
@@ -618,6 +622,67 @@ class FtkImportServiceTest {
             verify(xmlParser, never()).assemble(any(), any(), any(), any(), eq(classifier), eq(2));
             verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(1));
             verify(xmlParser).assemble(any(), any(), any(), any(), eq(classifier), eq(3));
+        }
+
+        /** Готовит импорт одной порции: корневой классификатор + порция 1; порции 2 и 3 пустые. */
+        private void mockSinglePartImport(List<FtkProduct> partProducts) throws Exception {
+            when(ftpClient.getRootDir()).thenReturn("/webdata/000000003/");
+            when(ftpClient.findFileByPrefix("/webdata/000000003/", "import___"))
+                    .thenReturn("/webdata/000000003/import___1.xml");
+            when(ftpClient.openStream("/webdata/000000003/import___1.xml")).thenReturn(stream());
+            when(xmlParser.parseClassifier(any())).thenReturn(classifier);
+
+            mockFullPart(1, partProducts);
+            mockFullPart(2, List.of());
+            mockFullPart(3, List.of());
+
+            when(categoryMapper.resolveCategory(anyString())).thenReturn(42L);
+        }
+
+        @Test
+        @DisplayName("товар «Распродажа» не идёт в batch, а уходит на /import/exclude")
+        void clearanceProduct_ExcludedFromBatchAndDeleted() throws Exception {
+            mockSinglePartImport(List.of(
+                    partProduct("1", 1, Map.of("Признак акция", "Распродажа")),
+                    partProduct("2", 1)));
+            when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
+                    .thenReturn(ResponseEntity.ok(okResponse(1, 0)));
+
+            service.doImportFromFtp();
+
+            ArgumentCaptor<BatchImportRequest> batchCaptor = ArgumentCaptor.forClass(BatchImportRequest.class);
+            verify(productServiceRestTemplate).postForEntity(anyString(), batchCaptor.capture(), eq(BatchImportResponse.class));
+            assertThat(batchCaptor.getValue().getItems())
+                    .extracting(ProductImportItemDto::getExternalId)
+                    .containsExactly("FTK-2");
+
+            ArgumentCaptor<Object> excludeCaptor = ArgumentCaptor.forClass(Object.class);
+            verify(productServiceRestTemplate).postForEntity(
+                    eq("http://product-service:8083/api/v1/products/import/exclude"),
+                    excludeCaptor.capture(), eq(Void.class));
+            @SuppressWarnings("unchecked")
+            Map<String, Object> excludeBody = (Map<String, Object>) excludeCaptor.getValue();
+            assertThat(excludeBody).containsEntry("externalIds", List.of("FTK-1"));
+        }
+
+        @Test
+        @DisplayName("«Спец.предложение» и товар без метки импортируются, в exclude не попадают")
+        void nonClearanceProducts_ImportedAndNotExcluded() throws Exception {
+            mockSinglePartImport(List.of(
+                    partProduct("1", 1, Map.of("Признак акция", "Спец.предложение")),
+                    partProduct("2", 1)));
+            when(productServiceRestTemplate.postForEntity(anyString(), any(), eq(BatchImportResponse.class)))
+                    .thenReturn(ResponseEntity.ok(okResponse(2, 0)));
+
+            service.doImportFromFtp();
+
+            ArgumentCaptor<BatchImportRequest> batchCaptor = ArgumentCaptor.forClass(BatchImportRequest.class);
+            verify(productServiceRestTemplate).postForEntity(anyString(), batchCaptor.capture(), eq(BatchImportResponse.class));
+            assertThat(batchCaptor.getValue().getItems())
+                    .extracting(ProductImportItemDto::getExternalId)
+                    .containsExactly("FTK-1", "FTK-2");
+
+            verify(productServiceRestTemplate, never()).postForEntity(anyString(), any(), eq(Void.class));
         }
     }
 

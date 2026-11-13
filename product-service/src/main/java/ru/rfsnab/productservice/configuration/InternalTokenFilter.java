@@ -32,6 +32,7 @@ public class InternalTokenFilter extends OncePerRequestFilter {
 
     private static final List<String> INTERNAL_PATHS = List.of(
             "/api/v1/products/import/batch",
+            "/api/v1/products/import/exclude",
             "/api/v1/products/external/**",
             "/api/v1/categories/upsert-by-external-id"
     );

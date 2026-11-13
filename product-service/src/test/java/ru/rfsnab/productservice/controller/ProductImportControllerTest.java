@@ -83,6 +83,37 @@ class ProductImportControllerTest {
     }
 
     @Test
+    @DisplayName("POST /import/exclude — удаляет родителя вместе с вариантами")
+    void shouldDeleteProductWithVariantsByExternalId() throws Exception {
+        Product parent = productRepository.save(Product.builder()
+                .name("Костюм зимний").slug("kostyum-zimniy").source("FTK")
+                .externalId("FTK-87479247").isActive(true).build());
+        productRepository.save(Product.builder()
+                .name("Костюм зимний (размер 50)").slug("kostyum-zimniy-50").source("FTK")
+                .externalId("FTK-87479247.001").parentProductId(parent.getId())
+                .isVariantChild(true).isActive(true).build());
+
+        mockMvc.perform(post("/api/v1/products/import/exclude")
+                        .header("X-Internal-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"externalIds\":[\"FTK-87479247\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deleted").value(2));
+
+        assertThat(productRepository.findByExternalId("FTK-87479247")).isEmpty();
+        assertThat(productRepository.findByExternalId("FTK-87479247.001")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("POST /import/exclude без X-Internal-Token — 401")
+    void excludeWithoutInternalToken_Unauthorized() throws Exception {
+        mockMvc.perform(post("/api/v1/products/import/exclude")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"externalIds\":[\"FTK-1\"]}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @WithMockUser
     @DisplayName("POST /import/batch — создаёт товар с description и material")
     void shouldImportProductWithDescriptionAndMaterial() throws Exception {

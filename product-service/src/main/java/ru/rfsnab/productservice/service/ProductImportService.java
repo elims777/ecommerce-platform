@@ -7,6 +7,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import ru.rfsnab.productservice.configuration.CacheConfig;
 import ru.rfsnab.productservice.dto.BatchProductImportRequest;
@@ -527,6 +528,41 @@ public class ProductImportService {
         private static BigDecimal normalize(BigDecimal value) {
             return value != null ? value.stripTrailingZeros() : null;
         }
+    }
+
+    /**
+     * Удаление товаров по externalId (слив остатков ФТК). Сначала удаляются дочерние
+     * варианты, затем родители. Склеенные записи 1С отвязывает FK ON DELETE SET NULL.
+     */
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.FACETS_CACHE, allEntries = true),
+            @CacheEvict(value = CacheConfig.PRODUCT_STATS_CACHE, allEntries = true)
+    })
+    public int excludeByExternalIds(List<String> externalIds) {
+        if (externalIds == null || externalIds.isEmpty()) {
+            return 0;
+        }
+        List<Long> parentIds = productRepository.findByExternalIdIn(externalIds).stream()
+                .map(Product::getId)
+                .distinct()
+                .toList();
+        if (parentIds.isEmpty()) {
+            return 0;
+        }
+        List<Long> childIds = productRepository
+                .findByParentProductIdInOrderByParentProductIdAscDisplayOrderAsc(parentIds).stream()
+                .map(Product::getId)
+                .distinct()
+                .toList();
+        if (!childIds.isEmpty()) {
+            productRepository.deleteAllById(childIds);
+        }
+        productRepository.deleteAllById(parentIds);
+        int deleted = childIds.size() + parentIds.size();
+        log.info("Удаление слива остатков: родителей={}, вариантов={}, всего={}",
+                parentIds.size(), childIds.size(), deleted);
+        return deleted;
     }
 
     private BatchProductImportResponse buildResponse(int totalReceived, List<ImportItemResult> results) {

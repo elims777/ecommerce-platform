@@ -56,8 +56,11 @@ public class FtkImportService {
 
     public static final String EXCHANGE_TYPE_FTK = "FTK_CATALOG";
 
-    private static final String SOURCE           = "FTK";
-    private static final String BATCH_IMPORT_URI = "/api/v1/products/import/batch";
+    private static final String SOURCE              = "FTK";
+    private static final String BATCH_IMPORT_URI    = "/api/v1/products/import/batch";
+    private static final String EXCLUDE_IMPORT_URI  = "/api/v1/products/import/exclude";
+    private static final String CLEARANCE_PROPERTY  = "Признак акция";
+    private static final String CLEARANCE_VALUE     = "Распродажа";
 
     /** Сколько ИСХОДНЫХ (не каскадных) ошибок хранить в error_message (TEXT, но не нужно полотно на 500 строк) */
     private static final int MAX_ERRORS_IN_LOG = 50;
@@ -194,13 +197,20 @@ public class FtkImportService {
             }
             log.info("ФТК: всего собрано {} товаров из {} порций", allProducts.size(), FtkFtpClient.GOODS_PARTS_COUNT);
 
+            // Товары «Распродажа» (слив остатков) не импортируются и удаляются из product-service
+            List<FtkProduct> clearance = allProducts.stream().filter(this::isClearance).toList();
+            List<FtkProduct> importable = allProducts.stream().filter(p -> !isClearance(p)).toList();
+            if (!clearance.isEmpty()) {
+                log.info("ФТК: слив остатков — исключено {} товаров", clearance.size());
+            }
+
             // 7. Лимит
             int limit = cfg.getImportLimit();
-            List<FtkProduct> limited = (limit > 0 && allProducts.size() > limit)
-                    ? allProducts.subList(0, limit)
-                    : allProducts;
-            if (limit > 0 && allProducts.size() > limit) {
-                log.info("ФТК: применён лимит {} из {}", limit, allProducts.size());
+            List<FtkProduct> limited = (limit > 0 && importable.size() > limit)
+                    ? importable.subList(0, limit)
+                    : importable;
+            if (limit > 0 && importable.size() > limit) {
+                log.info("ФТК: применён лимит {} из {}", limit, importable.size());
             }
 
             // 8. Маппинг и batch-импорт
@@ -216,6 +226,8 @@ public class FtkImportService {
             BatchImportResult batchResult = sendBatch(dtos);
             log.info("ФТК batch-импорт: created={}, updated={}, unchanged={}, failed={}",
                     batchResult.created(), batchResult.updated(), batchResult.unchanged(), batchResult.failed());
+
+            excludeClearance(clearance);
 
             // 9. Изображения — все картинки каждого товара, кроме уже загруженных ранее
             List<String> externalIdsWithImages = limited.stream()
@@ -408,6 +420,12 @@ public class FtkImportService {
         return "FTK-" + article;
     }
 
+    private boolean isClearance(FtkProduct p) {
+        if (p.getProperties() == null) return false;
+        String value = p.getProperties().get(CLEARANCE_PROPERTY);
+        return value != null && CLEARANCE_VALUE.equalsIgnoreCase(value.trim());
+    }
+
     // ══════════════════════════════════════════════════════════════
     // Batch send
     // ══════════════════════════════════════════════════════════════
@@ -455,6 +473,23 @@ public class FtkImportService {
         }
 
         return new BatchImportResult(created, updated, unchanged, failed, errors);
+    }
+
+    /**
+     * Удаляет в product-service товары слива остатков. Ошибка не валит импорт —
+     * следующий прогон повторит удаление.
+     */
+    private void excludeClearance(List<FtkProduct> clearance) {
+        if (clearance.isEmpty()) return;
+        List<String> externalIds = clearance.stream()
+                .map(p -> buildProductExternalId(p.getArticle()))
+                .toList();
+        try {
+            String url = properties.getProductService().getUrl() + EXCLUDE_IMPORT_URI;
+            productServiceRestTemplate.postForEntity(url, Map.of("externalIds", externalIds), Void.class);
+        } catch (Exception e) {
+            log.error("ФТК: не удалось удалить товары слива остатков из product-service: {}", e.getMessage(), e);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
