@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ClickableCard } from '@/components/navigation';
 import { Spin, Grid, App } from 'antd';
@@ -65,46 +66,90 @@ const HIDDEN_CATEGORY_IDS = new Set([1]);
 const formatNewsDate = (iso: string | null): string =>
     iso ? new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) : '';
 
-const NewsRow = ({ news }: { news: NewsItem }) => (
-    <ClickableCard
-        to={`/news/${news.slug}`}
-        style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '8px 6px', borderRadius: 'var(--r-3)',
-            transition: 'background .12s',
-        }}
-        onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'var(--surface-2)'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'; }}
-    >
-        <div style={{
-            width: 40, height: 40, borderRadius: 'var(--r-2)', flexShrink: 0,
-            background: 'var(--surface-2)', overflow: 'hidden',
-        }}>
-            {news.coverImageUrl && (
-                <img
-                    src={news.coverImageUrl}
-                    alt=""
-                    width={40}
-                    height={40}
-                    loading="lazy"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+const NEWS_SLIDE_INTERVAL_MS = 3000;
+
+/** Слайдер новостей: обложка на весь блок, автолистание с паузой при наведении. */
+const NewsSlider = ({ news }: { news: NewsItem[] }) => {
+    const [index, setIndex] = useState(0);
+    const pausedRef = useRef(false);
+
+    useEffect(() => {
+        if (news.length < 2) return;
+        const id = setInterval(() => {
+            if (!pausedRef.current) setIndex((i) => (i + 1) % news.length);
+        }, NEWS_SLIDE_INTERVAL_MS);
+        return () => clearInterval(id);
+    }, [news.length]);
+
+    return (
+        <div
+            style={{ position: 'relative', flex: 1, minHeight: 260, borderRadius: 'var(--r-4)', overflow: 'hidden', background: 'var(--brand-navy)' }}
+            onMouseEnter={() => { pausedRef.current = true; }}
+            onMouseLeave={() => { pausedRef.current = false; }}
+        >
+            {news.map((item, i) => (
+                <ClickableCard
+                    key={item.id}
+                    to={`/news/${item.slug}`}
+                    aria-hidden={i !== index}
+                    tabIndex={i === index ? 0 : -1}
+                    style={{
+                        position: 'absolute', inset: 0, display: 'block',
+                        opacity: i === index ? 1 : 0, transition: 'opacity .6s',
+                        pointerEvents: i === index ? 'auto' : 'none',
+                    }}
+                >
+                    {item.coverImageUrl && (
+                        <img
+                            src={item.coverImageUrl}
+                            alt=""
+                            loading="lazy"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                    )}
+                    {/* усиленный скрим: градиент с трети высоты + тень на тексте — читается на любой обложке */}
+                    <div style={{
+                        position: 'absolute', left: 0, right: 0, bottom: 0,
+                        padding: '96px 18px 30px',
+                        background: 'linear-gradient(transparent, rgba(0,0,0,.45) 35%, rgba(0,0,0,.88) 75%)',
+                        color: '#fff',
+                    }}>
+                        <div style={{
+                            fontSize: 'var(--text-lg)', fontWeight: 600, lineHeight: 1.3,
+                            textShadow: '0 1px 8px rgba(0,0,0,.45)',
+                            display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2,
+                            overflow: 'hidden',
+                        }}>
+                            {item.title}
+                        </div>
+                        <div style={{ fontSize: 'var(--text-sm)', color: 'rgba(255,255,255,.9)', marginTop: 4, textShadow: '0 1px 6px rgba(0,0,0,.4)' }}>
+                            {formatNewsDate(item.publishedAt)}
+                        </div>
+                    </div>
+                </ClickableCard>
+            ))}
+            {news.length > 1 && (
+                <div style={{ position: 'absolute', bottom: 10, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
+                    {news.map((item, i) => (
+                        <button
+                            key={item.id}
+                            type="button"
+                            aria-label={`Новость ${i + 1}`}
+                            onClick={() => setIndex(i)}
+                            style={{
+                                // как точки фото в карточке товара: активная — вытянутая
+                                width: i === index ? 16 : 6, height: 6, padding: 0, border: 'none', cursor: 'pointer',
+                                borderRadius: 3, transition: 'width .2s',
+                                background: i === index ? '#fff' : 'rgba(255,255,255,.55)',
+                                boxShadow: '0 1px 4px rgba(0,0,0,.5)',
+                            }}
+                        />
+                    ))}
+                </div>
             )}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-                fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--ink-1)',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-                {news.title}
-            </div>
-            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
-                {formatNewsDate(news.publishedAt)}
-            </div>
-        </div>
-        <ArrRight width={12} height={12} />
-    </ClickableCard>
-);
+    );
+};
 
 type ShowcaseTab = 'hits' | 'sales' | 'new';
 
@@ -115,6 +160,13 @@ const SHOWCASE_TABS: { key: ShowcaseTab; label: string }[] = [
 ];
 
 const SHOWCASE_SCROLL_STEP = 320; // ширина карточки + gap
+
+// общая строка заголовка колонок витрины: одинаковая высота → карусель и новости начинаются на одной линии
+const SHOWCASE_HEAD_ROW: CSSProperties = { display: 'flex', alignItems: 'baseline', marginBottom: 18, minHeight: 40 };
+const SHOWCASE_H2: CSSProperties = {
+    fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600,
+    letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0,
+};
 
 const SHOWCASE_ADVANTAGES = [
     { icon: <GridIcon />, text: 'Широкий ассортимент' },
@@ -191,121 +243,111 @@ const Showcase = ({ onAddToCart }: { onAddToCart: (productId: number) => void })
 
     return (
         <div>
-            {/* Заголовок + табы */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 24, marginBottom: 18, flexWrap: 'wrap' }}>
-                <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 'var(--text-3xl)', fontWeight: 600, letterSpacing: '-0.012em', color: 'var(--ink-1)', margin: 0 }}>
-                    Витрина
-                </h2>
-                <div style={{ display: 'flex', gap: 20 }}>
-                    {SHOWCASE_TABS.map((t) => (
-                        <button
-                            key={t.key}
-                            type="button"
-                            onClick={() => setTab(t.key)}
-                            style={{
-                                background: 'none', border: 'none', cursor: 'pointer',
-                                fontFamily: 'var(--font-body)', fontSize: 'var(--text-base)',
-                                padding: '4px 0',
-                                borderBottom: tab === t.key ? '2px solid var(--brand-red)' : '2px solid transparent',
-                                color: tab === t.key ? 'var(--ink-1)' : 'var(--ink-3)',
-                                fontWeight: tab === t.key ? 600 : 400,
-                            }}
-                        >
-                            {t.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Карусель + правая колонка */}
+            {/* Две колонки, у каждой свой заголовок: верх и низ карусели и новостей совпадают */}
             <div style={{ display: 'flex', gap: 16, flexDirection: isMobile ? 'column' : 'row' }}>
-                <div
-                    style={{ flex: showSidebar ? '0 0 68%' : '1 1 auto', minWidth: 0, position: 'relative' }}
-                    onMouseEnter={() => { pausedRef.current = true; }}
-                    onMouseLeave={() => { pausedRef.current = false; }}
-                >
-                    {activeLoading ? (
-                        <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div>
-                    ) : products.length > 0 ? (
-                        <>
-                            <div
-                                ref={scrollRef}
-                                style={{
-                                    display: 'flex', gap: 14, overflowX: 'auto',
-                                    scrollSnapType: 'x mandatory',
-                                    paddingBottom: 8,
-                                    scrollbarWidth: 'thin',
-                                    scrollbarColor: 'var(--line-2) transparent',
-                                }}
-                            >
-                                {products.map((product) => (
-                                    <div key={product.id} style={{ flex: '0 0 auto', scrollSnapAlign: 'start' }}>
-                                        <ProductCard product={product} onAddToCart={onAddToCart} />
-                                    </div>
-                                ))}
-                            </div>
-                            {!isMobile && (
-                                <>
-                                    <button
-                                        type="button"
-                                        aria-label="Прокрутить назад"
-                                        onClick={() => scrollByAmount(-1)}
-                                        style={{
-                                            position: 'absolute', left: -14, top: '40%',
-                                            width: 32, height: 32, borderRadius: 'var(--r-full)',
-                                            background: 'var(--surface)', border: '1px solid var(--line-1)',
-                                            color: 'var(--ink-1)', cursor: 'pointer',
-                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                            boxShadow: 'var(--shadow-2)',
-                                        }}
-                                    >
-                                        <ChevLeft />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        aria-label="Прокрутить вперёд"
-                                        onClick={() => scrollByAmount(1)}
-                                        style={{
-                                            position: 'absolute', right: -14, top: '40%',
-                                            width: 32, height: 32, borderRadius: 'var(--r-full)',
-                                            background: 'var(--surface)', border: '1px solid var(--line-1)',
-                                            color: 'var(--ink-1)', cursor: 'pointer',
-                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                            boxShadow: 'var(--shadow-2)',
-                                        }}
-                                    >
-                                        <ChevRight />
-                                    </button>
-                                </>
-                            )}
-                        </>
-                    ) : null}
+                <div style={{ flex: showSidebar ? '0 0 68%' : '1 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ ...SHOWCASE_HEAD_ROW, gap: 24, flexWrap: 'wrap' }}>
+                        <h2 style={SHOWCASE_H2}>Витрина</h2>
+                        <div style={{ display: 'flex', gap: 20 }}>
+                            {SHOWCASE_TABS.map((t) => (
+                                <button
+                                    key={t.key}
+                                    type="button"
+                                    onClick={() => setTab(t.key)}
+                                    style={{
+                                        background: 'none', border: 'none', cursor: 'pointer',
+                                        fontFamily: 'var(--font-body)', fontSize: 'var(--text-base)',
+                                        padding: '4px 0',
+                                        borderBottom: tab === t.key ? '2px solid var(--brand-red)' : '2px solid transparent',
+                                        color: tab === t.key ? 'var(--ink-1)' : 'var(--ink-3)',
+                                        fontWeight: tab === t.key ? 600 : 400,
+                                    }}
+                                >
+                                    {t.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div
+                        style={{ position: 'relative' }}
+                        onMouseEnter={() => { pausedRef.current = true; }}
+                        onMouseLeave={() => { pausedRef.current = false; }}
+                    >
+                        {activeLoading ? (
+                            <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" /></div>
+                        ) : products.length > 0 ? (
+                            <>
+                                <div
+                                    ref={scrollRef}
+                                    style={{
+                                        display: 'flex', gap: 14, overflowX: 'auto',
+                                        scrollSnapType: 'x mandatory',
+                                        // полоса прокрутки не нужна: есть стрелки, автопрокрутка и свайп
+                                        scrollbarWidth: 'none',
+                                    }}
+                                >
+                                    {products.map((product) => (
+                                        <div key={product.id} style={{ flex: '0 0 auto', scrollSnapAlign: 'start' }}>
+                                            <ProductCard product={product} onAddToCart={onAddToCart} />
+                                        </div>
+                                    ))}
+                                </div>
+                                {!isMobile && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            aria-label="Прокрутить назад"
+                                            onClick={() => scrollByAmount(-1)}
+                                            style={{
+                                                position: 'absolute', left: -14, top: '40%',
+                                                width: 32, height: 32, borderRadius: 'var(--r-full)',
+                                                background: 'var(--surface)', border: '1px solid var(--line-1)',
+                                                color: 'var(--ink-1)', cursor: 'pointer',
+                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                boxShadow: 'var(--shadow-2)',
+                                            }}
+                                        >
+                                            <ChevLeft />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            aria-label="Прокрутить вперёд"
+                                            onClick={() => scrollByAmount(1)}
+                                            style={{
+                                                position: 'absolute', right: -14, top: '40%',
+                                                width: 32, height: 32, borderRadius: 'var(--r-full)',
+                                                background: 'var(--surface)', border: '1px solid var(--line-1)',
+                                                color: 'var(--ink-1)', cursor: 'pointer',
+                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                boxShadow: 'var(--shadow-2)',
+                                            }}
+                                        >
+                                            <ChevRight />
+                                        </button>
+                                    </>
+                                )}
+                            </>
+                        ) : null}
+                    </div>
                 </div>
 
                 {showSidebar && (
-                    <div style={{ width: '32%', background: 'var(--surface)', border: '1px solid var(--line-1)', borderRadius: 'var(--r-4)', padding: 16 }}>
-                        <div style={{
-                            display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-                            marginBottom: 10, gap: 8,
-                        }}>
-                            <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--ink-1)' }}>
-                                Новости
-                            </div>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ ...SHOWCASE_HEAD_ROW, justifyContent: 'space-between', gap: 8 }}>
+                            <h2 style={SHOWCASE_H2}>Новости</h2>
                             {latestNews.length > 0 && (
-                                <Link to="/news" style={{ fontSize: 'var(--text-sm)', color: 'var(--brand-navy)' }}>
+                                <Link to="/news" style={{ fontSize: 'var(--text-base)', color: 'var(--brand-navy)', fontWeight: 500 }}>
                                     Все новости
                                 </Link>
                             )}
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            {latestNews.length === 0 ? (
-                                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)', padding: '8px 6px' }}>
-                                    Новостей пока нет
-                                </div>
-                            ) : (
-                                latestNews.map((item) => <NewsRow key={item.id} news={item} />)
-                            )}
-                        </div>
+                        {latestNews.length === 0 ? (
+                            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>
+                                Новостей пока нет
+                            </div>
+                        ) : (
+                            <NewsSlider news={latestNews} />
+                        )}
                     </div>
                 )}
             </div>
