@@ -16,6 +16,7 @@ import { isAdmin } from '@/types/auth';
 import type { MenuProps } from 'antd';
 import CatalogMegaMenu from '@/features/catalog/CatalogMegaMenu';
 import PriceListModal from '@/components/PriceListModal';
+import { reachGoal } from '@/lib/metrika';
 
 const TOPBAR_H = 36;
 const MAIN_H = 76;
@@ -258,7 +259,11 @@ const ClientLayout = () => {
                             <span style={{ opacity: 0.35 }}>·</span>
                         </>
                     )}
-                    <a style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#fff', cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    <a
+                        href={`tel:${company.phone.free.replace(/[^+\d]/g, '')}`}
+                        onClick={() => reachGoal('phone_click')}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#fff', cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}
+                    >
                         <PhoneIcon /> {company.phone.free}
                     </a>
                 </div>
@@ -544,6 +549,13 @@ const ClientLayout = () => {
                     <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <PinIcon /> <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink-3)' }}>{company.address.full}</span>
                     </div>
+                    <a
+                        href={`tel:${company.phone.free.replace(/[^+\d]/g, '')}`}
+                        onClick={() => { setMobileNavOpen(false); reachGoal('phone_click'); }}
+                        style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--ink-1)' }}
+                    >
+                        <PhoneIcon /> {company.phone.free}
+                    </a>
                 </div>
             </Drawer>
 
@@ -597,7 +609,7 @@ const ClientLayout = () => {
                             <div style={footerHeadingStyle}>Компания</div>
                             <div style={footerColumnStyle}>
                                 <NavLink to="/about" style={footerLinkStyle} {...footerLinkHover}>О компании</NavLink>
-                                <span style={footerTextStyle}>{company.phone.free}</span>
+                                <a href={`tel:${company.phone.free.replace(/[^+\d]/g, '')}`} onClick={() => reachGoal('phone_click')} style={footerLinkStyle} {...footerLinkHover}>{company.phone.free}</a>
                                 <a href={`mailto:${company.email.sales}`} style={footerLinkStyle} {...footerLinkHover}>{company.email.sales}</a>
                                 <span style={footerTextStyle}>{company.workHours}</span>
                                 <span style={footerTextStyle}>{company.address.city}</span>
